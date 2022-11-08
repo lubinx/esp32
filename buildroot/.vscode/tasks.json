@@ -1,0 +1,22 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "compile",
+            "type": "shell",
+            "command": "cmake -B./build -GNinja && ninja -C./build",
+            "group": "build",
+            "presentation": {
+                "echo": false,
+                "clear": true,
+                "focus": true,
+                "panel": "shared",
+                "reveal": "always"
+            },
+            "problemMatcher": {
+                "base": "$gcc",
+                "fileLocation": "autoDetect"
+            }
+        }
+    ]
+}
