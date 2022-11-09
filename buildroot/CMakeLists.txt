@@ -8,27 +8,49 @@ include(idf.cmake)
 
 project(buildroot)
 
-__component_add(${CMAKE_CURRENT_LIST_DIR}/bootloader ${PROJECT_NAME})
-__component_add(${IDF_PATH}/components/bootloader/subproject/components/micro-ecc ${PROJECT_NAME})
+function(IDF_component_add COMPONENT_NAME) # NOTE: *override* add optional args: prefix dir
+    # prefix
+    list(POP_FRONT ARGN prefix)
+    if (NOT prefix)
+        idf_build_get_property(prefix __PREFIX)
+    endif()
 
-IDF_glob_default_components()
+    if (${COMPONENT_NAME} MATCHES "${IDF_PATH}/components*")
+        set(COMPONENT_DIR ${COMPONENT_NAME})
+        get_filename_component(COMPONENT_NAME ${COMPONENT_DIR} NAME_WE)
+    else()
+        list(POP_FRONT ARGN dir)
+        if (NOT dir)
+            set(dir "${IDF_PATH}/components")
+        endif()
+
+        set(COMPONENT_DIR "${dir}/${COMPONENT_NAME}")
+    endif()
+
+    __component_add(${COMPONENT_DIR} ${prefix})
+endfunction()
+
+IDF_component_add("bootloader" ${PROJECT_NAME} ${CMAKE_CURRENT_LIST_DIR})
+# __component_add(${CMAKE_CURRENT_LIST_DIR}/bootloader ${PROJECT_NAME})
+IDF_component_add("micro-ecc" ${PROJECT_NAME} "${IDF_PATH}/components/bootloader/subproject/components")
 
 # A number of these components are implemented as config-only when built in the bootloader
 set(COMPONENTS
     bootloader
-    freertos
     bootloader_support
-    partition_table
     esptool_py
-    newlib
+    esp_hw_support
+    esp_system
+    freertos
     hal
+    # partition_table
     soc
     log
     spi_flash
+    micro-ecc
     efuse
     esp_system
-    esp_hw_support
-    esp_system
+    newlib
 )
 
 set(BOOTLOADER_BUILD 1)
@@ -40,75 +62,4 @@ idf_build_set_property(__COMPONENT_REQUIRES_COMMON "${common_req}")
 # TODO: -fPIC code?
 # idf_build_set_property(C_COMPILE_OPTIONS "-fPIC" APPEND)
 
-macro(idf_project project_name)
-    message(STATUS "Building ESP-IDF components for target ${IDF_TARGET}")
-
-    idf_build_get_property(component_targets __COMPONENT_TARGETS)
-    foreach(component_target ${component_targets})
-        __component_get_property(component_name ${component_target} COMPONENT_NAME)
-
-        if(component_name IN_LIST COMPONENTS)
-            list(APPEND components ${component_name})
-        endif()
-    endforeach()
-
-    idf_build_process(${IDF_TARGET}
-        SDKCONFIG ${SDKCONFIG}
-        PROJECT_NAME ${CMAKE_PROJECT_NAME}
-        PROJECT_DIR ${CMAKE_CURRENT_LIST_DIR}
-        PROJECT_VER "${project_ver}"
-        COMPONENTS "${components}"
-    )
-
-    set(project_elf ${CMAKE_PROJECT_NAME}.elf)
-
-    # Create a dummy file to work around CMake requirement of having a source file while adding an
-    # executable. This is also used by idf_size.py to detect the target
-    set(project_elf_src ${CMAKE_BINARY_DIR}/project_elf_src_${IDF_TARGET}.c)
-    add_custom_command(OUTPUT ${project_elf_src}
-        COMMAND ${CMAKE_COMMAND} -E touch ${project_elf_src}
-        VERBATIM)
-    add_custom_target(_project_elf_src DEPENDS "${project_elf_src}")
-    add_executable(${project_elf} "${project_elf_src}")
-    add_dependencies(${project_elf} _project_elf_src)
-
-    if(__PROJECT_GROUP_LINK_COMPONENTS)
-        target_link_libraries(${project_elf} PRIVATE "-Wl,--start-group")
-    endif()
-
-    idf_build_get_property(build_components BUILD_COMPONENT_ALIASES)
-
-    foreach(build_component ${build_components})
-        __component_get_target(build_component_target ${build_component})
-        __component_get_property(whole_archive ${build_component_target} WHOLE_ARCHIVE)
-
-        if(whole_archive)
-            message(STATUS "Component ${build_component} will be linked with -Wl,--whole-archive")
-            target_link_libraries(${project_elf} PRIVATE
-                "-Wl,--whole-archive"
-                ${build_component}
-                "-Wl,--no-whole-archive")
-        else()
-            target_link_libraries(${project_elf} PRIVATE ${build_component})
-        endif()
-    endforeach()
-
-    if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
-        set(mapfile "${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}.map")
-        set(idf_target "${IDF_TARGET}")
-        string(TOUPPER ${idf_target} idf_target)
-
-        # Add cross-reference table to the map file
-        target_link_options(${project_elf} PRIVATE "-Wl,--cref")
-        # Add this symbol as a hint for idf_size.py to guess the target name
-        target_link_options(${project_elf} PRIVATE "-Wl,--defsym=IDF_TARGET_${idf_target}=0")
-        # Enable map file output
-        target_link_options(${project_elf} PRIVATE "-Wl,--Map=${mapfile}")
-        unset(idf_target)
-    endif()
-
-    idf_build_executable(${project_elf})
-endmacro()
-
-
-idf_project(bootloader)
+IDF_build_application()
