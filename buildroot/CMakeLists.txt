@@ -17,6 +17,11 @@ function(IDF_component_add COMPONENT_NAME) # NOTE: *override* add optional args:
     if (NOT prefix)
         idf_build_get_property(prefix __PREFIX)
     endif()
+    # dir
+    list(POP_FRONT ARGN dir)
+    if (NOT dir)
+        set(dir "${IDF_PATH}/components")
+    endif()
 
     if (${COMPONENT_NAME} MATCHES "${IDF_PATH}/components*")
         set(COMPONENT_DIR ${COMPONENT_NAME})
@@ -24,16 +29,10 @@ function(IDF_component_add COMPONENT_NAME) # NOTE: *override* add optional args:
 
         set(COMPONENT_BIN_DIR "${CMAKE_BINARY_DIR}/esp-idf/${COMPONENT_NAME}")
     else()
-        list(POP_FRONT ARGN dir)
-        if (NOT dir)
-            set(dir "${IDF_PATH}/components")
-        endif()
-
         set(COMPONENT_DIR "${dir}/${COMPONENT_NAME}")
         set(COMPONENT_BIN_DIR "${CMAKE_BINARY_DIR}/${COMPONENT_NAME}")
     endif()
 
-    message(STATUS "Register Components: ${COMPONENT_ALIAS}")
     __component_add(${COMPONENT_DIR} ${prefix})
 
     # variable for calling add_subdirectory()
@@ -45,45 +44,54 @@ function(IDF_component_add COMPONENT_NAME) # NOTE: *override* add optional args:
     #   COMPONENT_LIB:
     #       # NOTE: COMPONENT_LIB is 2 underscores,
     #       validated after calling add_subdirectory() -> idf_component_register()
-    # set(COMPONENT_ALIAS "${prefix}::${COMPONENT_NAME}")
-    # set(COMPONENT_TARGET "___${prefix}_${COMPONENT_NAME}")
+    set(COMPONENT_ALIAS "${prefix}::${COMPONENT_NAME}")
+    set(COMPONENT_TARGET "___${prefix}_${COMPONENT_NAME}")
 
-
+    message(STATUS "Add component: ${COMPONENT_ALIAS}")
     # set(__idf_component_context 1)
+
+    # set(target ${IDF_TARGET})
+    # if (EXISTS ${COMPONENT_DIR}/project_include.cmake)
+    #     include(${COMPONENT_DIR}/project_include.cmake)
+    # endif()
+
     # add_subdirectory(${COMPONENT_DIR} ${COMPONENT_BIN_DIR})
-    # set(__idf_component_context 0)
 
     # __component_get_property(reqs ${COMPONENT_TARGET} __REQUIRES)
     # __component_get_property(priv_reqs ${COMPONENT_TARGET} __PRIV_REQUIRES)
+    # set(__idf_component_context 0)
 
-    # foreach(iter ${priv_reqs})
-    #     LIST(APPEND reqs ${iter})
-    # endforeach()
+    # list(APPEND reqs ${priv_reqs})
 endfunction()
 
-IDF_component_add("bootloader" ${PROJECT_NAME} ${CMAKE_CURRENT_LIST_DIR})
-# __component_add(${CMAKE_CURRENT_LIST_DIR}/bootloader ${PROJECT_NAME})
-IDF_component_add("micro-ecc" ${PROJECT_NAME} "${IDF_PATH}/components/bootloader/subproject/components")
-# IDF_component_add("bootloader_support")
+# add_subdirectory(${IDF_PATH} ${CMAKE_BINARY_DIR}/esp-idf)
+# set(CONFIG_APP_BUILD_GENERATE_BINARIES 1)
 
-# A number of these components are implemented as config-only when built in the bootloader
-set(COMPONENTS
-    bootloader
-    bootloader_support
-    esptool_py
-    esp_hw_support
-    esp_system
-    freertos
-    hal
-    # partition_table
-    soc
-    log
-    spi_flash
-    micro-ecc
-    efuse
-    esp_system
-    newlib
-)
+# NOTE: *override*
+# function(__build_expand_requirements component_target)
+# endfunction()
+
+IDF_component_add("bootloader" ${PROJECT_NAME} ${CMAKE_CURRENT_LIST_DIR})
+IDF_component_add("micro-ecc" ${PROJECT_NAME} "${IDF_PATH}/components/bootloader/subproject/components")
+IDF_component_add("partition_table" ${PROJECT_NAME} ${CMAKE_CURRENT_LIST_DIR})
+
+IDF_component_add("soc")
+IDF_component_add("esp_rom")
+
+IDF_component_add("xtensa")
+IDF_component_add("log")
+IDF_component_add("hal")
+IDF_component_add("efuse")
+IDF_component_add("spi_flash")
+IDF_component_add("bootloader_support")
+IDF_component_add("esp_app_format")
+IDF_component_add("esp_common")
+IDF_component_add("esp_hw_support")
+IDF_component_add("esp_system")
+IDF_component_add("newlib")
+IDF_component_add("freertos")
+
+IDF_component_add("esptool_py")
 
 set(common_req log esp_rom esp_common esp_hw_support newlib)
 idf_build_set_property(__COMPONENT_REQUIRES_COMMON "${common_req}")

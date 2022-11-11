@@ -252,9 +252,9 @@ function(__component_get_requirements)
 
     include(${component_requires_file})
 
-    file(REMOVE ${build_properties_file})
-    file(REMOVE ${component_properties_file})
-    file(REMOVE ${component_requires_file})
+    # file(REMOVE ${build_properties_file})
+    # file(REMOVE ${component_properties_file})
+    # file(REMOVE ${component_requires_file})
 endfunction()
 
 # __component_add_sources, __component_check_target, __component_add_include_dirs

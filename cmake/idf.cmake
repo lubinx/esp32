@@ -14,15 +14,23 @@ if (NOT IDF_PATH)
     set(IDF_PATH $ENV{IDF_PATH})
 endif()
 if (NOT IDF_PATH)
-    message(STATUS "variable ${IDF_PATH} is not set, default set to $ENV{HOME}/esp-idf")
+    message(STATUS "variable IDF_PATH is not set, default set to $ENV{HOME}/esp-idf")
     set(IDF_PATH "$ENV{HOME}/esp-idf")
+endif()
+
+if (NOT IDF_ENV_PATH)
+    set(IDF_ENV_PATH $ENV{IDF_ENV_PATH})
+endif()
+if (NOT IDF_ENV_PATH)
+    message(STATUS "variable IDF_ENV_PATH is not set, default set to $ENV{HOME}/.espressif")
+    set(IDF_ENV_PATH "$ENV{HOME}/.espressif")
 endif()
 
 set(CMAKE_TOOLCHAIN_FILE ${IDF_PATH}/tools/cmake/toolchain-${IDF_TARGET}.cmake)
 set(SDKCONFIG "${CMAKE_CURRENT_LIST_DIR}/sdkconfig")
 
 # set(IDF_CMAKE_PATH ${IDF_PATH}/tools/cmake)
-set(IDF_CMAKE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake_idf)
+set(IDF_CMAKE_PATH ${CMAKE_CURRENT_LIST_DIR}/../cmake_idf)
 
 include(${IDF_CMAKE_PATH}/build.cmake)
 include(${IDF_CMAKE_PATH}/component.cmake)
@@ -49,16 +57,21 @@ function(__build_init)
     # setup for idf_build_set_property() / idf_build_get_property()
     add_library(__idf_build_target STATIC IMPORTED GLOBAL)
 
-    # get git submodules from ${IDF_PATH} if submodules was not initialized
-    git_submodule_check(${IDF_PATH})
+    # All targets built under this scope is with the ESP-IDF build system
+    idf_build_set_property(COMPILE_DEFINITIONS "ESP_PLATFORM" APPEND)
 
     # __build_get_idf_git_revision()
+    #   get git submodules from ${IDF_PATH} if submodules was not initialized
+    git_submodule_check(${IDF_PATH})
     idf_build_set_property(COMPILE_DEFINITIONS "IDF_VER=\"$ENV{IDF_VERSION}\"")
 
     idf_build_set_property(IDF_TARGET ${IDF_TARGET})
     idf_build_set_property(IDF_PATH ${IDF_PATH})
     idf_build_set_property(IDF_CMAKE_PATH ${IDF_CMAKE_PATH})
-    idf_build_set_property(PYTHON "python")
+
+    # search python: narrow to idfx.x_* should be only 1 result
+    file(GLOB python_dir "${IDF_ENV_PATH}/python_env/idf${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}_*")
+    idf_build_set_property(PYTHON "${python_dir}/bin/python")
 
     # this is for ${IDF_PATH}/CMakeList.txt
     set(prefix "idf")
@@ -75,6 +88,12 @@ function(__build_init)
     endif()
 
     idf_build_set_property(__COMPONENT_REQUIRES_COMMON "${requires_common}")
+
+# build defaults
+    # __build_set_default(PROJECT_DIR ${CMAKE_SOURCE_DIR})
+    # __build_set_default(PROJECT_NAME ${CMAKE_PROJECT_NAME})
+    # __build_set_default(PROJECT_VER 1)
+    # __build_set_default(BUILD_DIR ${CMAKE_BINARY_DIR})
 endfunction()
 
 macro(idf_component_register)   # NOTE: *override* for direct set __REQUIRES & __PRIV_REQUIRES
@@ -99,90 +118,20 @@ macro(idf_component_register)   # NOTE: *override* for direct set __REQUIRES & _
     # set(COMPONENT_LIB ${COMPONENT_LIB} PARENT_SCOPE)
 endmacro()
 
-
-# NOTE: *override*
-function(__build_expand_requirements component_target)
-    # Since there are circular dependencies, make sure that we do not infinitely
-    # expand requirements for each component.
-    idf_build_get_property(component_targets_seen __COMPONENT_TARGETS_SEEN)
-    __component_get_property(component_registered ${component_target} __COMPONENT_REGISTERED)
-    if(component_target IN_LIST component_targets_seen OR NOT component_registered)
-        return()
-    endif()
-
-    idf_build_set_property(__COMPONENT_TARGETS_SEEN ${component_target} APPEND)
-
-    get_property(reqs TARGET ${component_target} PROPERTY REQUIRES)
-    get_property(priv_reqs TARGET ${component_target} PROPERTY PRIV_REQUIRES)
-    __component_get_property(component_name ${component_target} COMPONENT_NAME)
-    __component_get_property(component_alias ${component_target} COMPONENT_ALIAS)
-    idf_build_get_property(common_reqs __COMPONENT_REQUIRES_COMMON)
-    list(APPEND reqs ${common_reqs})
-
-    if(reqs)
-        list(REMOVE_DUPLICATES reqs)
-        list(REMOVE_ITEM reqs ${component_alias} ${component_name})
-    endif()
-
-    foreach(req ${reqs})
-        __build_resolve_and_add_req(_component_target ${component_target} ${req} __REQUIRES)
-        __build_expand_requirements(${_component_target})
-    endforeach()
-
-    foreach(req ${priv_reqs})
-        __build_resolve_and_add_req(_component_target ${component_target} ${req} __PRIV_REQUIRES)
-        __build_expand_requirements(${_component_target})
-    endforeach()
-
-    idf_build_get_property(build_component_targets __BUILD_COMPONENT_TARGETS)
-    if(NOT component_target IN_LIST build_component_targets)
-        idf_build_set_property(__BUILD_COMPONENT_TARGETS ${component_target} APPEND)
-
-        __component_get_property(component_lib ${component_target} COMPONENT_LIB)
-        idf_build_set_property(__BUILD_COMPONENTS ${component_lib} APPEND)
-
-        idf_build_get_property(prefix __PREFIX)
-        __component_get_property(component_prefix ${component_target} __PREFIX)
-
-        __component_get_property(component_alias ${component_target} COMPONENT_ALIAS)
-
-        idf_build_set_property(BUILD_COMPONENT_ALIASES ${component_alias} APPEND)
-
-        # Only put in the prefix in the name if it is not the default one
-        if(component_prefix STREQUAL prefix)
-            __component_get_property(component_name ${component_target} COMPONENT_NAME)
-            idf_build_set_property(BUILD_COMPONENTS ${component_name} APPEND)
-        else()
-            idf_build_set_property(BUILD_COMPONENTS ${component_alias} APPEND)
-        endif()
-    endif()
+function(depgraph_add_edge)
 endfunction()
 
 function(IDF_build_application)
-    message(STATUS "Building ESP-IDF components for target ${IDF_TARGET}")
+    # message(STATUS "Building ESP-IDF components for target ${IDF_TARGET}")
+    idf_build_get_property(SDKCONFIG_DEFAULTS SDKCONFIG_DEFAULTS)
+    if (EXISTS "${CMAKE_CURRENT_LIST_DIR}/sdkconfig.defaults")
+        list(APPEND SDKCONFIG_DEFAULTS "${CMAKE_CURRENT_LIST_DIR}/sdkconfig.defaults")
+    endif()
 
-    idf_build_get_property(prefix __PREFIX)
-    file(GLOB component_dirs ${IDF_PATH}/components/*)
-
-    foreach(component_dir ${component_dirs})
-        if(IS_DIRECTORY ${component_dir})
-            __component_dir_quick_check(is_component ${component_dir})
-            if(is_component)
-                __component_add(${component_dir} ${prefix})
-            endif()
-        endif()
-    endforeach()
-
-    idf_build_get_property(component_targets __COMPONENT_TARGETS)
-    foreach(component_target ${component_targets})
-        __component_get_property(component_name ${component_target} COMPONENT_NAME)
-
-        if(component_name IN_LIST COMPONENTS)
-            list(APPEND components ${component_name})
-        endif()
-    endforeach()
+    # message(FATAL_ERROR "${SDKCONFIG_DEFAULTS}")
 
     idf_build_process(${IDF_TARGET}
+        SDKCONFIG_DEFAULTS "${SDKCONFIG_DEFAULTS}"
         SDKCONFIG ${SDKCONFIG}
         PROJECT_NAME ${CMAKE_PROJECT_NAME}
         PROJECT_DIR ${CMAKE_CURRENT_LIST_DIR}
