@@ -19,11 +19,10 @@ if (NOT IDF_PATH)
 endif()
 
 set(CMAKE_TOOLCHAIN_FILE ${IDF_PATH}/tools/cmake/toolchain-${IDF_TARGET}.cmake)
+set(SDKCONFIG "${CMAKE_CURRENT_LIST_DIR}/sdkconfig")
 
 # set(IDF_CMAKE_PATH ${IDF_PATH}/tools/cmake)
 set(IDF_CMAKE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake_idf)
-
-set(SDKCONFIG "${CMAKE_CURRENT_LIST_DIR}/sdkconfig")
 
 include(${IDF_CMAKE_PATH}/build.cmake)
 include(${IDF_CMAKE_PATH}/component.cmake)
@@ -78,30 +77,28 @@ function(__build_init)
     idf_build_set_property(__COMPONENT_REQUIRES_COMMON "${requires_common}")
 endfunction()
 
-function(foo var)
-    if (NOT var)
-        message("variable is not set")
+macro(idf_component_register)   # NOTE: *override* for direct set __REQUIRES & __PRIV_REQUIRES
+    set(multi_value REQUIRES PRIV_REQUIRES)
+    cmake_parse_arguments(_ "" "" "${multi_value}" "${ARGN}")
+
+    if (NOT COMPONENT_TARGET)
+        idf_build_get_property(prefix __PREFIX)
+        set(COMPONENT_TARGET "___${prefix}_${COMPONENT_NAME}")
     endif()
 
-    list(LENGTH var count)
-    if (3 EQUAL ${count})
-        return()
+    _idf_component_register(${ARGV})
+
+    if (__REQUIRES)
+        __component_set_property(${COMPONENT_TARGET} __REQUIRES ${__REQUIRES})
+    endif()
+    if (__PRIV_REQUIRES)
+        __component_set_property(${COMPONENT_TARGET} __PRIV_REQUIRES ${__PRIV_REQUIRES})
     endif()
 
-    message("foo iter: ${count}")
-    foreach(iter ${var})
-        message(${iter})
-    endforeach()
+    # macro for PARENT_SCROPE variables
+    # set(COMPONENT_LIB ${COMPONENT_LIB} PARENT_SCOPE)
+endmacro()
 
-    list(APPEND var ${count})
-    foo("${var}")
-endfunction()
-
-function(foobar)
-    foo("${var}")
-endfunction()
-
-foobar()
 
 # NOTE: *override*
 function(__build_expand_requirements component_target)
