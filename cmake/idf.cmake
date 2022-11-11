@@ -32,6 +32,9 @@ set(SDKCONFIG "${CMAKE_CURRENT_LIST_DIR}/sdkconfig")
 # set(IDF_CMAKE_PATH ${IDF_PATH}/tools/cmake)
 set(IDF_CMAKE_PATH ${CMAKE_CURRENT_LIST_DIR}/../cmake_idf)
 
+set(SDKCONFIG "${CMAKE_CURRENT_LIST_DIR}/sdkconfig")
+set(BOOTLOADER_BUILD 0)
+
 include(${IDF_CMAKE_PATH}/build.cmake)
 include(${IDF_CMAKE_PATH}/component.cmake)
 include(${IDF_CMAKE_PATH}/git_submodules.cmake)
@@ -41,46 +44,65 @@ include(${IDF_CMAKE_PATH}/utilities.cmake)
 include(${IDF_CMAKE_PATH}/version.cmake)
 
 # targets.cmake
+#   NOTE: *override* to do nothing
     function(__target_check)
     endfunction()
 # targets.cmake
 
 # tool_version_check.cmake
+#   NOTE: *override* to do nothing
     function(check_expected_tool_version tool_name tool_path)
         # required by ${IDF_PATH}/components/<dir>/project_include.cmake
         #   esp_common/project_include.cmake is only SEEN using this function
     endfunction()
 # tool_version_check.cmake
 
+#   NOTE: *override* to do nothing
+macro(__build_set_default)
+endmacro()
+
 # NOTE: *override*
 function(__build_init)
+    # get git submodules from ${IDF_PATH} if submodules was not initialized
+    git_submodule_check(${IDF_PATH})
+
     # setup for idf_build_set_property() / idf_build_get_property()
     add_library(__idf_build_target STATIC IMPORTED GLOBAL)
-
-    # All targets built under this scope is with the ESP-IDF build system
-    idf_build_set_property(COMPILE_DEFINITIONS "ESP_PLATFORM" APPEND)
-
-    # __build_get_idf_git_revision()
-    #   get git submodules from ${IDF_PATH} if submodules was not initialized
-    git_submodule_check(${IDF_PATH})
-    idf_build_set_property(COMPILE_DEFINITIONS "IDF_VER=\"$ENV{IDF_VERSION}\"")
 
     idf_build_set_property(IDF_TARGET ${IDF_TARGET})
     idf_build_set_property(IDF_PATH ${IDF_PATH})
     idf_build_set_property(IDF_CMAKE_PATH ${IDF_CMAKE_PATH})
 
+    idf_build_set_property(PROJECT_DIR ${CMAKE_SOURCE_DIR})
+    idf_build_set_property(BUILD_DIR ${CMAKE_BINARY_DIR})
+
+    idf_build_set_property(SDKCONFIG "${CMAKE_SOURCE_DIR}/sdkconfig") # PROJECT_DIR
+    idf_build_set_property(SDKCONFIG_DEFAULTS "")
+
+    if("${IDF_TARGET}" STREQUAL "esp32" OR "${IDF_TARGET}" STREQUAL "esp32s2" OR "${IDF_TARGET}" STREQUAL "esp32s3")
+        idf_build_set_property(IDF_TARGET_ARCH "xtensa")
+    elseif("${IDF_TARGET}" STREQUAL "linux")
+        # No arch specified for linux host builds at the moment
+        idf_build_set_property(IDF_TARGET_ARCH "")
+    else()
+        idf_build_set_property(IDF_TARGET_ARCH "riscv")
+    endif()
+
+    # __build_get_idf_git_revision()
+    idf_build_set_property(COMPILE_DEFINITIONS "IDF_VER=\"$ENV{IDF_VERSION}\"")
+
+    # this is for build esp-idf components
+    idf_build_set_property(__PREFIX "idf")
+
     # search python: narrow to idfx.x_* should be only 1 result
     file(GLOB python_dir "${IDF_ENV_PATH}/python_env/idf${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}_*")
     idf_build_set_property(PYTHON "${python_dir}/bin/python")
-
-    # this is for ${IDF_PATH}/CMakeList.txt
-    set(prefix "idf")
-    idf_build_set_property(__PREFIX ${prefix})
 
     __build_set_default_build_specifications()
     __build_set_lang_version()
     __kconfig_init()
 
+# TODO: remove these
     if("${IDF_TARGET}" STREQUAL "linux")
         set(requires_common freertos log esp_rom esp_common linux)
     else()
@@ -88,47 +110,64 @@ function(__build_init)
     endif()
 
     idf_build_set_property(__COMPONENT_REQUIRES_COMMON "${requires_common}")
-
-# build defaults
-    # __build_set_default(PROJECT_DIR ${CMAKE_SOURCE_DIR})
-    # __build_set_default(PROJECT_NAME ${CMAKE_PROJECT_NAME})
-    # __build_set_default(PROJECT_VER 1)
-    # __build_set_default(BUILD_DIR ${CMAKE_BINARY_DIR})
+####################
 endfunction()
 
-macro(idf_component_register)   # NOTE: *override* for direct set __REQUIRES & __PRIV_REQUIRES
-    set(multi_value REQUIRES PRIV_REQUIRES)
-    cmake_parse_arguments(_ "" "" "${multi_value}" "${ARGN}")
-
-    if (NOT COMPONENT_TARGET)
-        idf_build_get_property(prefix __PREFIX)
-        set(COMPONENT_TARGET "___${prefix}_${COMPONENT_NAME}")
-    endif()
-
-    _idf_component_register(${ARGV})
-
-    if (__REQUIRES)
-        __component_set_property(${COMPONENT_TARGET} __REQUIRES ${__REQUIRES})
-    endif()
-    if (__PRIV_REQUIRES)
-        __component_set_property(${COMPONENT_TARGET} __PRIV_REQUIRES ${__PRIV_REQUIRES})
-    endif()
-
-    # macro for PARENT_SCROPE variables
-    # set(COMPONENT_LIB ${COMPONENT_LIB} PARENT_SCOPE)
-endmacro()
-
+# NOTE: *override* to do nothing
 function(depgraph_add_edge)
 endfunction()
 
+# NOTE: *override* to redirect
+function(__component_get_requirements)
+endfunction()
+
+# NOTE: *override* to redirect
+function(__kconfig_generate_config)
+endfunction()
+
 function(IDF_build_application)
-    # message(STATUS "Building ESP-IDF components for target ${IDF_TARGET}")
-    idf_build_get_property(SDKCONFIG_DEFAULTS SDKCONFIG_DEFAULTS)
-    if (EXISTS "${CMAKE_CURRENT_LIST_DIR}/sdkconfig.defaults")
-        list(APPEND SDKCONFIG_DEFAULTS "${CMAKE_CURRENT_LIST_DIR}/sdkconfig.defaults")
+    # CMAKE_PROJECT_<VAR> only available after project()
+    idf_build_set_property(PROJECT_NAME ${CMAKE_PROJECT_NAME})
+    if (NOT CMAKE_PROJECT_VERSION)
+        idf_build_set_property(PROJECT_VER 1)
+    else()
+        idf_build_set_property(PROJECT_VER ${CMAKE_PROJECT_VERSION})
     endif()
 
-    # message(FATAL_ERROR "${SDKCONFIG_DEFAULTS}")
+    message(STATUS "Building ESP-IDF components for target ${IDF_TARGET}")
+
+    file(GLOB component_dirs ${IDF_PATH}/components/*)
+    idf_build_get_property(prefix  __PREFIX)
+
+    foreach(component_dir ${component_dirs})
+        if(IS_DIRECTORY ${component_dir})
+            __component_dir_quick_check(is_component ${component_dir})
+            if(is_component)
+                __component_add(${component_dir} ${prefix})
+            endif()
+        endif()
+    endforeach()
+
+    # redirect call
+    ___component_get_requirements()
+
+    # gathering all components kconfig
+    idf_build_get_property(component_targets __COMPONENT_TARGETS)
+    idf_build_set_property(__BUILD_COMPONENT_TARGETS "${component_targets}" APPEND)
+    # redirect call
+    idf_build_get_property(sdkconfig SDKCONFIG)
+    idf_build_get_property(sdkconfig_defaults SDKCONFIG_DEFAULTS)
+    ___kconfig_generate_config("${sdkconfig}" "${sdkconfig_defaults}")
+    idf_build_unset_property(__BUILD_COMPONENT_TARGETS)
+
+    idf_build_get_property(component_targets __COMPONENT_TARGETS)
+    foreach(component_target ${component_targets})
+        __component_get_property(component_name ${component_target} COMPONENT_NAME)
+
+        if(component_name IN_LIST COMPONENTS)
+            list(APPEND components ${component_name})
+        endif()
+    endforeach()
 
     idf_build_process(${IDF_TARGET}
         SDKCONFIG_DEFAULTS "${SDKCONFIG_DEFAULTS}"
@@ -189,7 +228,13 @@ function(IDF_build_application)
     idf_build_executable(${project_elf})
 endfunction()
 
-function(IDF_buildroot)
-endfunction()
+macro(IDF_buildroot)
+    set(BOOTLOADER_BUILD 1)
+
+    idf_build_set_property(BOOTLOADER_BUILD "${BOOTLOADER_BUILD}")
+    idf_build_set_property(COMPILE_DEFINITIONS "BOOTLOADER_BUILD=1" APPEND)
+
+    IDF_build_application()
+endmacro()
 
 __build_init()
