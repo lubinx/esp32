@@ -3,11 +3,11 @@
 cmake_minimum_required(VERSION 3.5)
 
 set(SDKCONFIG "${CMAKE_CURRENT_LIST_DIR}/sdkconfig")
-include(../cmake/idf.cmake)
+include(idf.cmake)
 
 project(buildroot)
 
-function(IDF_component_add COMPONENT_NAME) # NOTE: *override* add optional args: prefix dir
+function(__component_add COMPONENT_NAME) # NOTE: *override* add optional args: prefix dir
     # prefix
     list(POP_FRONT ARGN prefix)
     if (NOT prefix)
@@ -17,8 +17,6 @@ function(IDF_component_add COMPONENT_NAME) # NOTE: *override* add optional args:
     if (${COMPONENT_NAME} MATCHES "${IDF_PATH}/components*")
         set(COMPONENT_DIR ${COMPONENT_NAME})
         get_filename_component(COMPONENT_NAME ${COMPONENT_DIR} NAME_WE)
-
-        set(COMPONENT_BIN_DIR "${CMAKE_BINARY_DIR}/esp-idf/${COMPONENT_NAME}")
     else()
         list(POP_FRONT ARGN dir)
         if (NOT dir)
@@ -26,13 +24,10 @@ function(IDF_component_add COMPONENT_NAME) # NOTE: *override* add optional args:
         endif()
 
         set(COMPONENT_DIR "${dir}/${COMPONENT_NAME}")
-        set(COMPONENT_BIN_DIR "${CMAKE_BINARY_DIR}/${COMPONENT_NAME}")
     endif()
 
-    message(STATUS "Register Components: ${COMPONENT_ALIAS}")
-    __component_add(${COMPONENT_DIR} ${prefix})
+    ___component_add(${COMPONENT_DIR} ${prefix})
 
-    # variable for calling add_subdirectory()
     #   COMPONENT_DIR / COMPONENT_BIN_DIR
     #   COMPONENT_NAME
     #   COMPONENT_ALIAS
@@ -41,12 +36,12 @@ function(IDF_component_add COMPONENT_NAME) # NOTE: *override* add optional args:
     #   COMPONENT_LIB:
     #       # NOTE: COMPONENT_LIB is 2 underscores,
     #       validated after calling add_subdirectory() -> idf_component_register()
-    # set(COMPONENT_ALIAS "${prefix}::${COMPONENT_NAME}")
-    # set(COMPONENT_TARGET "___${prefix}_${COMPONENT_NAME}")
-
+    set(COMPONENT_ALIAS "${prefix}::${COMPONENT_NAME}")
+    set(COMPONENT_TARGET "___${prefix}_${COMPONENT_NAME}")
+    message(STATUS "Add Components: ${COMPONENT_ALIAS}")
 
     # set(__idf_component_context 1)
-    # add_subdirectory(${COMPONENT_DIR} ${COMPONENT_BIN_DIR})
+    # include(${COMPONENT_DIR} OPTIONAL)
     # set(__idf_component_context 0)
 
     # __component_get_property(reqs ${COMPONENT_TARGET} __REQUIRES)
@@ -57,10 +52,8 @@ function(IDF_component_add COMPONENT_NAME) # NOTE: *override* add optional args:
     # endforeach()
 endfunction()
 
-IDF_component_add("bootloader" ${PROJECT_NAME} ${CMAKE_CURRENT_LIST_DIR})
-# __component_add(${CMAKE_CURRENT_LIST_DIR}/bootloader ${PROJECT_NAME})
-IDF_component_add("micro-ecc" ${PROJECT_NAME} "${IDF_PATH}/components/bootloader/subproject/components")
-# IDF_component_add("bootloader_support")
+__component_add("bootloader" ${PROJECT_NAME} ${CMAKE_CURRENT_LIST_DIR})
+__component_add("micro-ecc" ${PROJECT_NAME} "${IDF_PATH}/components/bootloader/subproject/components")
 
 # A number of these components are implemented as config-only when built in the bootloader
 set(COMPONENTS
