@@ -3,37 +3,49 @@ if(__idf_env_set)
     return ()
 endif()
 
-if (NOT IDF_TARGET)
-    set(IDF_TARGET $ENV{IDF_TARGET})
+if (NOT IDF_PATH)
+    set(IDF_PATH $ENV{IDF_PATH})
 endif()
 if (NOT IDF_TARGET)
-    message(FATAL_ERROR "variable IDF_TARGET is not set: esp32 esp32s2 esp32s3 esp32c3 esp32h2 esp32c2 esp32c6")
+    set(IDF_TARGET "esp32s3")
+    message(STATUS "### variable IDF_TARGET is not set, default set to esp32s3")
 endif()
 
 if (NOT IDF_PATH)
     set(IDF_PATH $ENV{IDF_PATH})
 endif()
 if (NOT IDF_PATH)
-    message(STATUS "variable IDF_PATH is not set, default set to $ENV{HOME}/esp-idf")
     set(IDF_PATH "$ENV{HOME}/esp-idf")
+    message(STATUS "### variable IDF_PATH is not set, default set to $ENV{HOME}/esp-idf")
 endif()
 
 if (NOT IDF_ENV_PATH)
     set(IDF_ENV_PATH $ENV{IDF_ENV_PATH})
 endif()
 if (NOT IDF_ENV_PATH)
-    message(STATUS "variable IDF_ENV_PATH is not set, default set to $ENV{HOME}/.espressif")
+    message(STATUS "### variable IDF_ENV_PATH is not set, default set to $ENV{HOME}/.espressif")
     set(IDF_ENV_PATH "$ENV{HOME}/.espressif")
 endif()
 
-set(CMAKE_TOOLCHAIN_FILE ${IDF_PATH}/tools/cmake/toolchain-${IDF_TARGET}.cmake)
-set(SDKCONFIG "${CMAKE_CURRENT_LIST_DIR}/sdkconfig")
+set(IDF_TARGET ${IDF_TARGET} CACHE STRING "esp-idf build target")
+set(IDF_PATH ${IDF_PATH} CACHE STRING "esp-idf source path")
+set(IDF_ENV_PATH ${IDF_ENV_PATH} CACHE STRING "esp-idf environment tools install path")
 
+set_property(CACHE IDF_TARGET PROPERTY STRINGS esp32 esp32s2 esp32s3 esp32c3 esp32h2 esp32c2 esp32c6)
+
+if (DEFINED ENV{IDF_TARGET})
+    set(IDF_TARGET $ENV{IDF_TARGET})
+endif()
+if (DEFINED ENV{IDF_PATH})
+    set(IDF_PATH $ENV{IDF_PATH})
+endif()
+if (DEFINED ENV{IDF_ENV_PATH})
+    set(IDF_ENV_PATH $ENV{IDF_ENV_PATH})
+endif()
+
+set(CMAKE_TOOLCHAIN_FILE ${IDF_PATH}/tools/cmake/toolchain-${IDF_TARGET}.cmake)
 # set(IDF_CMAKE_PATH ${IDF_PATH}/tools/cmake)
 set(IDF_CMAKE_PATH ${CMAKE_CURRENT_LIST_DIR}/../cmake_idf)
-
-set(SDKCONFIG "${CMAKE_CURRENT_LIST_DIR}/sdkconfig")
-set(BOOTLOADER_BUILD 0)
 
 include(${IDF_CMAKE_PATH}/build.cmake)
 include(${IDF_CMAKE_PATH}/component.cmake)
@@ -43,25 +55,64 @@ include(${IDF_CMAKE_PATH}/ldgen.cmake)
 include(${IDF_CMAKE_PATH}/utilities.cmake)
 include(${IDF_CMAKE_PATH}/version.cmake)
 
-# targets.cmake
-#   NOTE: *override* to do nothing
-    function(__target_check)
-    endfunction()
-# targets.cmake
+# function(foobar var)
+#     set(${var} "foobar" PARENT_SCOPE)
+#     set_property(GLOBAL PROPERTY gvar "FOOBAR set gvar")
+# endfunction()
 
-# tool_version_check.cmake
-#   NOTE: *override* to do nothing
-    function(check_expected_tool_version tool_name tool_path)
-        # required by ${IDF_PATH}/components/<dir>/project_include.cmake
-        #   esp_common/project_include.cmake is only SEEN using this function
-    endfunction()
-# tool_version_check.cmake
+# function(foo)
+#     # set(b "foo")
+#     foobar(test)
+#     message("${test}")
+#     set(b ${b})
+# endfunction()
 
-#   NOTE: *override* to do nothing
+# foo(test)
+
+# get_property(v GLOBAL PROPERTY gvar)
+# message(STATUS ${v})
+
+
+#############################################################################
+# overrides component.cmake
+#############################################################################
+function(__component_get_requirements)
+endfunction()
+
+#############################################################################
+# overrides depgraph.cmake
+#############################################################################
+function(depgraph_add_edge)
+endfunction()
+
+#############################################################################
+# overrides kconfig.cmake
+#   always generate all components config
+#############################################################################
+function(__kconfig_generate_config)
+    idf_build_get_property(component_dirs BUILD_COMPONENT_DIRS)
+endfunction()
+
+#############################################################################
+# overrides targets.cmake
+#############################################################################
+function(__target_check)
+endfunction()
+
+#############################################################################
+# overrides tool_version_check.cmake
+#############################################################################
+function(check_expected_tool_version tool_name tool_path)
+    # required by ${IDF_PATH}/components/<dir>/project_include.cmake
+    #   esp_common/project_include.cmake is only SEEN using this function
+endfunction()
+
+#############################################################################
+# build.cmake
+#############################################################################
 macro(__build_set_default)
 endmacro()
 
-# NOTE: *override*
 function(__build_init)
     # get git submodules from ${IDF_PATH} if submodules was not initialized
     git_submodule_check(${IDF_PATH})
@@ -76,13 +127,12 @@ function(__build_init)
     idf_build_set_property(PROJECT_DIR ${CMAKE_SOURCE_DIR})
     idf_build_set_property(BUILD_DIR ${CMAKE_BINARY_DIR})
 
-    idf_build_set_property(SDKCONFIG "${CMAKE_SOURCE_DIR}/sdkconfig") # PROJECT_DIR
+    idf_build_set_property(SDKCONFIG "${CMAKE_SOURCE_DIR}/sdkconfig") # from PROJECT_DIR
     idf_build_set_property(SDKCONFIG_DEFAULTS "")
 
     if("${IDF_TARGET}" STREQUAL "esp32" OR "${IDF_TARGET}" STREQUAL "esp32s2" OR "${IDF_TARGET}" STREQUAL "esp32s3")
         idf_build_set_property(IDF_TARGET_ARCH "xtensa")
     elseif("${IDF_TARGET}" STREQUAL "linux")
-        # No arch specified for linux host builds at the moment
         idf_build_set_property(IDF_TARGET_ARCH "")
     else()
         idf_build_set_property(IDF_TARGET_ARCH "riscv")
@@ -113,25 +163,21 @@ function(__build_init)
 ####################
 endfunction()
 
-# NOTE: *override* to do nothing
-function(depgraph_add_edge)
-endfunction()
+# NOTE: build initialization
+__build_init()
 
-# NOTE: *override* to redirect
-function(__component_get_requirements)
-endfunction()
-
-# NOTE: *override* to redirect
-function(__kconfig_generate_config)
-endfunction()
-
-function(IDF_build_application)
+function(__gathering_idf_components_deps)
     # CMAKE_PROJECT_<VAR> only available after project()
     idf_build_set_property(PROJECT_NAME ${CMAKE_PROJECT_NAME})
     if (NOT CMAKE_PROJECT_VERSION)
         idf_build_set_property(PROJECT_VER 1)
     else()
         idf_build_set_property(PROJECT_VER ${CMAKE_PROJECT_VERSION})
+    endif()
+
+    if(BOOTLOADER_BUILD)
+        idf_build_set_property(BOOTLOADER_BUILD "${BOOTLOADER_BUILD}")
+        idf_build_set_property(COMPILE_DEFINITIONS "BOOTLOADER_BUILD=1" APPEND)
     endif()
 
     message(STATUS "Building ESP-IDF components for target ${IDF_TARGET}")
@@ -150,15 +196,26 @@ function(IDF_build_application)
 
     # redirect call
     ___component_get_requirements()
+endfunction()
 
-    # gathering all components kconfig
-    idf_build_get_property(component_targets __COMPONENT_TARGETS)
-    idf_build_set_property(__BUILD_COMPONENT_TARGETS "${component_targets}" APPEND)
-    # redirect call
+function(__kconfig_idf_components)
     idf_build_get_property(sdkconfig SDKCONFIG)
     idf_build_get_property(sdkconfig_defaults SDKCONFIG_DEFAULTS)
+
+    # temporary set all components to build
+    idf_build_get_property(component_targets __COMPONENT_TARGETS)
+    idf_build_set_property(__BUILD_COMPONENT_TARGETS "${component_targets}" APPEND)
+
+    # redirect call
     ___kconfig_generate_config("${sdkconfig}" "${sdkconfig_defaults}")
+
+    # reset build components
     idf_build_unset_property(__BUILD_COMPONENT_TARGETS)
+endfunction()
+
+function(IDF_build_application)
+    __gathering_idf_components_deps()
+    __kconfig_idf_components()
 
     idf_build_get_property(component_targets __COMPONENT_TARGETS)
     foreach(component_target ${component_targets})
@@ -231,10 +288,5 @@ endfunction()
 macro(IDF_buildroot)
     set(BOOTLOADER_BUILD 1)
 
-    idf_build_set_property(BOOTLOADER_BUILD "${BOOTLOADER_BUILD}")
-    idf_build_set_property(COMPILE_DEFINITIONS "BOOTLOADER_BUILD=1" APPEND)
-
     IDF_build_application()
 endmacro()
-
-__build_init()

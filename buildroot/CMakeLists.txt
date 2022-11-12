@@ -2,14 +2,10 @@
 # CMakeLists in this exact order for cmake to work correctly
 cmake_minimum_required(VERSION 3.5)
 
-set(IDF_TARGET "esp32s3")
 set(SDKCONFIG "${CMAKE_CURRENT_LIST_DIR}/sdkconfig")
-include(idf.cmake)
+include(../cmake/idf.cmake)
 
 project(buildroot)
-
-set(BOOTLOADER_BUILD 1)
-idf_build_set_property(COMPILE_DEFINITIONS "BOOTLOADER_BUILD=1" APPEND)
 
 function(IDF_component_add COMPONENT_NAME) # NOTE: *override* add optional args: prefix dir
     # prefix
@@ -68,7 +64,8 @@ IDF_component_add("micro-ecc" ${PROJECT_NAME} "${IDF_PATH}/components/bootloader
 
 # A number of these components are implemented as config-only when built in the bootloader
 set(COMPONENTS
-    bootloader
+    # bootloader
+    # micro-ecc
     bootloader_support
     esptool_py
     esp_hw_support
@@ -79,7 +76,6 @@ set(COMPONENTS
     soc
     log
     spi_flash
-    micro-ecc
     efuse
     esp_system
     newlib
