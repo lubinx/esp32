@@ -7,53 +7,8 @@ include(idf.cmake)
 
 project(buildroot)
 
-function(__component_add COMPONENT_NAME) # NOTE: *override* add optional args: prefix dir
-    # prefix
-    list(POP_FRONT ARGN prefix)
-    if (NOT prefix)
-        idf_build_get_property(prefix __PREFIX)
-    endif()
-
-    if (${COMPONENT_NAME} MATCHES "${IDF_PATH}/components*")
-        set(COMPONENT_DIR ${COMPONENT_NAME})
-        get_filename_component(COMPONENT_NAME ${COMPONENT_DIR} NAME_WE)
-    else()
-        list(POP_FRONT ARGN dir)
-        if (NOT dir)
-            set(dir "${IDF_PATH}/components")
-        endif()
-
-        set(COMPONENT_DIR "${dir}/${COMPONENT_NAME}")
-    endif()
-
-    ___component_add(${COMPONENT_DIR} ${prefix})
-
-    #   COMPONENT_DIR / COMPONENT_BIN_DIR
-    #   COMPONENT_NAME
-    #   COMPONENT_ALIAS
-    #   COMPONENT_TARGET:
-    #       # NOTE COMPONENT_TARGET is 3 underscores
-    #   COMPONENT_LIB:
-    #       # NOTE: COMPONENT_LIB is 2 underscores,
-    #       validated after calling add_subdirectory() -> idf_component_register()
-    set(COMPONENT_ALIAS "${prefix}::${COMPONENT_NAME}")
-    set(COMPONENT_TARGET "___${prefix}_${COMPONENT_NAME}")
-    message(STATUS "Add Components: ${COMPONENT_ALIAS}")
-
-    # set(__idf_component_context 1)
-    # include(${COMPONENT_DIR} OPTIONAL)
-    # set(__idf_component_context 0)
-
-    # __component_get_property(reqs ${COMPONENT_TARGET} __REQUIRES)
-    # __component_get_property(priv_reqs ${COMPONENT_TARGET} __PRIV_REQUIRES)
-
-    # foreach(iter ${priv_reqs})
-    #     LIST(APPEND reqs ${iter})
-    # endforeach()
-endfunction()
-
-__component_add("bootloader" ${PROJECT_NAME} ${CMAKE_CURRENT_LIST_DIR})
-__component_add("micro-ecc" ${PROJECT_NAME} "${IDF_PATH}/components/bootloader/subproject/components")
+idf_component_add("bootloader" ${PROJECT_NAME} ${CMAKE_CURRENT_LIST_DIR})
+idf_component_add("micro-ecc" ${PROJECT_NAME} "${IDF_PATH}/components/bootloader/subproject/components")
 
 # A number of these components are implemented as config-only when built in the bootloader
 set(COMPONENTS

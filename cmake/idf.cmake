@@ -35,20 +35,34 @@ set(CMAKE_TOOLCHAIN_FILE ${IDF_PATH}/tools/cmake/toolchain-${IDF_TARGET}.cmake)
 # set(IDF_CMAKE_PATH ${IDF_PATH}/tools/cmake)
 set(IDF_CMAKE_PATH ${CMAKE_CURRENT_LIST_DIR}/../cmake_idf)
 
+#############################################################################
+# 💡 include
+#############################################################################
+include(${IDF_CMAKE_PATH}/version.cmake)
+
+if (IDF_VERSION AND NOT ($ENV{IDF_VERSION} STREQUAL "${IDF_VERSION}"))
+    message(STATUS "❌ IDF_VERSION was changed since last build")
+    message(STATUS "✔️ this is not a fatal, but recommended clear cmake cache\n\n")
+else()
+    set(IDF_VERSION $ENV{IDF_VERSION} CACHE STRING "esp-idf version")
+endif()
+
+# cmake caching python bin fullpath
+if (NOT PYTHON_ENV)
+    # search python: narrow to idfx.x_* should be only 1 result
+    file(GLOB PYTHON_ENV "${IDF_ENV_PATH}/python_env/idf${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}_*")
+    set(PYTHON_ENV "${PYTHON_ENV}/bin/python" CACHE STRING "esp-idf python path")
+endif()
+#############################################################################
 include(${IDF_CMAKE_PATH}/build.cmake)
 include(${IDF_CMAKE_PATH}/component.cmake)
 include(${IDF_CMAKE_PATH}/git_submodules.cmake)
 include(${IDF_CMAKE_PATH}/kconfig.cmake)
 include(${IDF_CMAKE_PATH}/ldgen.cmake)
 include(${IDF_CMAKE_PATH}/utilities.cmake)
-include(${IDF_CMAKE_PATH}/version.cmake)
+#############################################################################
 
-if (IDF_VERSION AND NOT ($ENV{IDF_VERSION} STREQUAL "${IDF_VERSION}"))
-    message(STATUS "❌ IDF_VERSION was changed since last build")
-    message(STATUS "✔️ clear cmake cache to fix\n\n")
-else()
-    set(IDF_VERSION $ENV{IDF_VERSION} CACHE STRING "esp-idf version")
-endif()
+# set_property(GLOBAL PROPERTY list "val" APPEND)
 
 # if (NOT gvar)
 #     set(gvar "hello" CACHE STRING "")
@@ -79,73 +93,95 @@ endif()
 # get_property(v GLOBAL PROPERTY gvar)
 # message(STATUS ${v})
 
-
 #############################################################################
 # overrides component.cmake
 #############################################################################
-function(__component_add component_dir prefix)
-    idf_build_get_property(component_targets __COMPONENT_TARGETS)
-    get_filename_component(abs_dir ${component_dir} ABSOLUTE)
-    get_filename_component(base_dir ${abs_dir} NAME)
-
-    if(NOT EXISTS "${abs_dir}/CMakeLists.txt")
-        message(FATAL_ERROR "Directory '${component_dir}' does not contain a component.")
+function(__component_add COMPONENT_NAME) # NOTE: *override* add optional args: NAMESPACE COMPONENT_DIR
+    # NAMESPACE
+    list(POP_FRONT ARGN NAMESPACE)
+    if (NOT NAMESPACE)
+        idf_build_get_property(NAMESPACE __PREFIX)
     endif()
 
-    set(component_name ${base_dir})
-    # The component target has three underscores as a prefix. The corresponding component library
-    # only has two.
-    set(component_target ___${prefix}_${component_name})
+    if (${COMPONENT_NAME} MATCHES "${IDF_PATH}/components*")
+        set(COMPONENT_DIR ${COMPONENT_NAME})
+        get_filename_component(COMPONENT_NAME ${COMPONENT_DIR} NAME)
+    else()
+        list(POP_FRONT ARGN COMPONENT_DIR)
 
+        if (NOT COMPONENT_DIR)
+            set(COMPONENT_DIR "${IDF_PATH}/components/${COMPONENT_NAME}")
+        else()
+            set(COMPONENT_DIR "${COMPONENT_DIR}/${COMPONENT_NAME}")
+        endif()
+    endif()
+    if(NOT EXISTS "${COMPONENT_DIR}/CMakeLists.txt")
+        message(FATAL_ERROR "Directory '${COMPONENT_DIR}' does not contain a component.")
+    endif()
+
+    # 💡
+    #   COMPONENT_NAME
+    #   COMPONENT_DIR / COMPONENT_BIN_DIR
+    #   COMPONENT_ALIAS
+    #
+    #   COMPONENT_TARGET
+    #   COMPONENT_LIB
+    #       .The component target has three underscores as a prefix.
+    #       .The corresponding component library only has two.
+    #
+    set(COMPONENT_TARGET ___${NAMESPACE}_${COMPONENT_NAME})
+    set(COMPONENT_LIB __${NAMESPACE}_${COMPONENT_NAME})
+    set(COMPONENT_ALIAS ${NAMESPACE}::${COMPONENT_NAME})
+
+    message(STATUS "Add Components: ${COMPONENT_ALIAS}")
+    idf_build_get_property(component_targets __COMPONENT_TARGETS)
     # If a component of the same name has not been added before If it has been added
     # before just override the properties. As a side effect, components added later
     # 'override' components added earlier.
-    if(NOT component_target IN_LIST component_targets)
-        if(NOT TARGET ${component_target})
-            add_library(${component_target} STATIC IMPORTED)
+    if(NOT COMPONENT_TARGET IN_LIST component_targets)
+        if(NOT TARGET ${COMPONENT_TARGET})
+            add_library(${COMPONENT_TARGET} STATIC IMPORTED)
         endif()
-        idf_build_set_property(__COMPONENT_TARGETS ${component_target} APPEND)
+        idf_build_set_property(__COMPONENT_TARGETS ${COMPONENT_TARGET} APPEND)
     else()
-        message(FATAL_ERROR "break here")
-        __component_get_property(dir ${component_target} COMPONENT_DIR)
-        __component_set_property(${component_target} COMPONENT_OVERRIDEN_DIR ${dir})
+        # message(FATAL_ERROR "break here")
+        __component_get_property(dir ${COMPONENT_TARGET} COMPONENT_DIR)
+        __component_set_property(${COMPONENT_TARGET} COMPONENT_OVERRIDEN_DIR ${dir})
     endif()
 
-    set(component_lib __${prefix}_${component_name})
-    set(component_dir ${abs_dir})
-    set(component_alias ${prefix}::${component_name}) # The 'alias' of the component library,
-                                                    # used to refer to the component outside
-                                                    # the build system. Users can use this name
-                                                    # to resolve ambiguity with component names
-                                                    # and to link IDF components to external targets.
-
     # Set the basic properties of the component
-    __component_set_property(${component_target} COMPONENT_LIB ${component_lib})
-    __component_set_property(${component_target} COMPONENT_NAME ${component_name})
-    __component_set_property(${component_target} COMPONENT_DIR ${component_dir})
-    __component_set_property(${component_target} COMPONENT_ALIAS ${component_alias})
-
-    __component_set_property(${component_target} __PREFIX ${prefix})
+    __component_set_property(${COMPONENT_TARGET} __PREFIX ${NAMESPACE})
+    __component_set_property(${COMPONENT_TARGET} COMPONENT_NAME ${COMPONENT_NAME})
+    __component_set_property(${COMPONENT_TARGET} COMPONENT_DIR ${COMPONENT_DIR})
+    __component_set_property(${COMPONENT_TARGET} COMPONENT_ALIAS ${COMPONENT_ALIAS})
+    __component_set_property(${COMPONENT_TARGET} COMPONENT_LIB ${COMPONENT_LIB})
 
     # Set Kconfig related properties on the component
-    __kconfig_component_init(${component_target})
+    __kconfig_component_init(${COMPONENT_TARGET})
 
     # set BUILD_COMPONENT_DIRS build property
-    idf_build_set_property(BUILD_COMPONENT_DIRS ${component_dir} APPEND)
+    idf_build_set_property(BUILD_COMPONENT_DIRS ${COMPONENT_DIR} APPEND)
+
+    # set(__idf_component_context 1)
+    # include(${COMPONENT_DIR} OPTIONAL)
+    # set(__idf_component_context 0)
+
+    # __component_get_property(reqs ${COMPONENT_TARGET} __REQUIRES)
+    # __component_get_property(priv_reqs ${COMPONENT_TARGET} __PRIV_REQUIRES)
+
+    # foreach(iter ${priv_reqs})
+    #     LIST(APPEND reqs ${iter})
+    # endforeach()
+endfunction()
+
+function(idf_component_add COMPONENT_NAME NAMESPACE DIR)
+    __component_add(${COMPONENT_NAME} ${NAMESPACE} ${DIR})
 endfunction()
 
 #############################################################################
 # overrides depgraph.cmake
 #############################################################################
 function(depgraph_add_edge)
-endfunction()
-
-#############################################################################
-# overrides kconfig.cmake
-#   always generate all components config
-#############################################################################
-function(__kconfig_generate_config)
-    idf_build_get_property(component_dirs BUILD_COMPONENT_DIRS)
 endfunction()
 
 #############################################################################
@@ -196,12 +232,11 @@ function(__build_init)
     # __build_get_idf_git_revision()
     idf_build_set_property(COMPILE_DEFINITIONS "IDF_VER=\"${IDF_VERSION}\"")
 
-    # this is for build esp-idf components
-    idf_build_set_property(__PREFIX esp-idf)
+    # python
+    idf_build_set_property(PYTHON "${PYTHON_ENV}")
 
-    # search python: narrow to idfx.x_* should be only 1 result
-    file(GLOB python_dir "${IDF_ENV_PATH}/python_env/idf${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}_*")
-    idf_build_set_property(PYTHON "${python_dir}/bin/python")
+    # build esp-idf components
+    idf_build_set_property(__PREFIX esp-idf)
 
     __build_set_default_build_specifications()
     __build_set_lang_version()
@@ -218,15 +253,16 @@ function(__build_init)
 ####################
 
     # cmake cache all directory of ${IDF_PATH}/components
-    if (NOT IDF_COMPONENT_DIRS_CACHE)
-        set(IDF_COMPONENT_DIRS_CACHE "${IDF_PATH}" CACHE STRING "")
-        file(GLOB dirs ${IDF_PATH}/components/*)
+    if (NOT IDF_COMPONENTS_CACHE)
+        set(IDF_COMPONENTS_CACHE "${IDF_PATH}/components" CACHE STRING "")
+        file(GLOB dirs "${IDF_PATH}/components/*")
 
         foreach(dir ${dirs})
             if(IS_DIRECTORY ${dir})
                 __component_dir_quick_check(is_component ${dir})
                 if(is_component)
-                    set_property(CACHE IDF_COMPONENT_DIRS_CACHE PROPERTY STRINGS ${dir} APPEND)
+                    get_filename_component(component_name ${dir} NAME)
+                    set_property(CACHE IDF_COMPONENTS_CACHE PROPERTY STRINGS ${component_name} APPEND)
                 endif()
             endif()
         endforeach()
@@ -235,8 +271,9 @@ function(__build_init)
     message(STATUS "Building ESP-IDF components for target ${IDF_TARGET}")
 endfunction()
 
-# NOTE: build initialization
+# 💡 build initialization
 __build_init()
+#############################################################################
 
 function(IDF_build_application)
     # CMAKE_PROJECT_<VAR> only available after project()
@@ -252,25 +289,12 @@ function(IDF_build_application)
         idf_build_set_property(COMPILE_DEFINITIONS "BOOTLOADER_BUILD=1" APPEND)
     endif()
 
-    idf_build_get_property(prefix __PREFIX)
+    idf_build_get_property(NAMESPACE __PREFIX)
 
-    get_property(component_dirs CACHE IDF_COMPONENT_DIRS_CACHE PROPERTY STRINGS)
-    foreach(component_dir ${component_dirs})
-        __component_add(${component_dir} ${prefix})
+    get_property(idf_components CACHE IDF_COMPONENTS_CACHE PROPERTY STRINGS)
+    foreach(component ${idf_components})
+        __component_add("${IDF_PATH}/components/${component}" ${NAMESPACE})
     endforeach()
-
-    idf_build_get_property(sdkconfig SDKCONFIG)
-    idf_build_get_property(sdkconfig_defaults SDKCONFIG_DEFAULTS)
-
-    # temporary set all components to build
-    idf_build_get_property(component_targets __COMPONENT_TARGETS)
-    idf_build_set_property(__BUILD_COMPONENT_TARGETS "${component_targets}" APPEND)
-
-    # redirect call
-    ___kconfig_generate_config("${sdkconfig}" "${sdkconfig_defaults}")
-
-    # reset build components
-    idf_build_unset_property(__BUILD_COMPONENT_TARGETS)
 
     idf_build_get_property(component_targets __COMPONENT_TARGETS)
     foreach(component_target ${component_targets})
@@ -319,7 +343,7 @@ function(IDF_build_application)
                 ${build_component}
                 "-Wl,--no-whole-archive")
         else()
-            message(STATUS "######## Add link_library: ${build_component}")
+            message(STATUS "🔗 Add link library: ${build_component}")
             target_link_libraries(${project_elf} PRIVATE ${build_component})
         endif()
     endforeach()
