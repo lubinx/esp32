@@ -1,8 +1,3 @@
-get_property(__idf_env_set GLOBAL PROPERTY __IDF_ENV_SET)
-if(__idf_env_set)
-    return ()
-endif()
-
 if (NOT IDF_TARGET)
     set(IDF_TARGET "esp32s3" CACHE STRING "esp-idf build target")
     message(STATUS "❓ variable IDF_TARGET is not set, default set to esp32s3")
@@ -14,9 +9,9 @@ if (NOT IDF_PATH)
         set(IDF_PATH $ENV{IDF_PATH})
     else()
         set(IDF_PATH "$ENV{HOME}/esp-idf")
+        message(STATUS "❓ variable IDF_PATH is not set, default set to $ENV{HOME}/esp-idf")
     endif()
     set(IDF_PATH ${IDF_PATH} CACHE STRING "esp-idf source path")
-    message(STATUS "❓ variable IDF_PATH is not set, default set to $ENV{HOME}/esp-idf")
 elseif (DEFINED ENV{IDF_PATH} AND NOT ($ENV{IDF_PATH} STREQUAL ${IDF_PATH}))
     message(STATUS "❌ IDF_PATH was changed since last build")
     message(STATUS "✔️ clear cmake cache to fix\n\n")
@@ -31,9 +26,45 @@ if (NOT IDF_ENV_PATH)
     message(STATUS "❓ variable IDF_ENV_PATH is not set, default set to ${IDF_ENV_PATH}")
 endif()
 
-set(CMAKE_TOOLCHAIN_FILE ${IDF_PATH}/tools/cmake/toolchain-${IDF_TARGET}.cmake)
 # set(IDF_CMAKE_PATH ${IDF_PATH}/tools/cmake)
 set(IDF_CMAKE_PATH ${CMAKE_CURRENT_LIST_DIR}/../cmake_idf)
+
+
+# toolchain & default compile options
+set(CMAKE_TOOLCHAIN_FILE
+    ${IDF_PATH}/tools/cmake/toolchain-${IDF_TARGET}.cmake
+)
+set(COMPILE_OPTIONS
+    "-ffunction-sections"
+    "-fdata-sections"
+    # warning-related flags
+    "-Wall"
+    "-Werror=all"
+    "-Wno-error=unused-function"
+    "-Wno-error=unused-variable"
+    "-Wno-error=deprecated-declarations"
+    "-Wextra"
+    "-Wno-unused-parameter"
+    "-Wno-sign-compare"
+    # ignore multiple enum conversion warnings since gcc 11
+    # TODO: IDF-5163
+    # "-Wno-enum-conversion"
+)
+set(C_COMPILE_OPTIONS
+    "-std=gnu17"
+)
+set(CXX_COMPILE_OPTIONS
+    "-std=gnu++20"
+)
+set(ASM_COMPILE_OPTIONS
+    ""
+)
+set(COMPILE_DEFINITIONS
+    ""
+)
+set(LINK_OPTIONS
+   ""
+)
 
 #############################################################################
 # 💡 include
@@ -53,130 +84,17 @@ if (NOT PYTHON_ENV)
     file(GLOB PYTHON_ENV "${IDF_ENV_PATH}/python_env/idf${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}_*")
     set(PYTHON_ENV "${PYTHON_ENV}/bin/python" CACHE STRING "esp-idf python path")
 endif()
-#############################################################################
 include(${IDF_CMAKE_PATH}/build.cmake)
 include(${IDF_CMAKE_PATH}/component.cmake)
 include(${IDF_CMAKE_PATH}/git_submodules.cmake)
 include(${IDF_CMAKE_PATH}/kconfig.cmake)
 include(${IDF_CMAKE_PATH}/ldgen.cmake)
 include(${IDF_CMAKE_PATH}/utilities.cmake)
-#############################################################################
-
-# set_property(GLOBAL PROPERTY list "val" APPEND)
-
-# if (NOT gvar)
-#     set(gvar "hello" CACHE STRING "")
-#     message("cache defined")
-
-#     set_property(CACHE gvar PROPERTY STRINGS "l1" APPEND)
-#     set_property(CACHE gvar PROPERTY STRINGS "l2" APPEND)
-# else()
-#     message(STATUS gvar)
-#     get_property(v CACHE gvar PROPERTY STRINGS)
-#     message (STATUS "  ${v}")
-# endif()
-# message(FATAL_ERROR "\n\nbreak")
-
-# function(foobar var)
-#     set(${var} "foobar" PARENT_SCOPE)
-# endfunction()
-
-# function(foo)
-#     # set(b "foo")
-#     foobar(test)
-#     message("${test}")
-#     set(b ${b})
-# endfunction()
-
-# foo(test)
-
-# get_property(v GLOBAL PROPERTY gvar)
-# message(STATUS ${v})
 
 #############################################################################
 # overrides component.cmake
 #############################################################################
-function(__component_add COMPONENT_NAME) # NOTE: *override* add optional args: NAMESPACE COMPONENT_DIR
-    # NAMESPACE
-    list(POP_FRONT ARGN NAMESPACE)
-    if (NOT NAMESPACE)
-        idf_build_get_property(NAMESPACE __PREFIX)
-    endif()
 
-    if (${COMPONENT_NAME} MATCHES "${IDF_PATH}/components*")
-        set(COMPONENT_DIR ${COMPONENT_NAME})
-        get_filename_component(COMPONENT_NAME ${COMPONENT_DIR} NAME)
-    else()
-        list(POP_FRONT ARGN COMPONENT_DIR)
-
-        if (NOT COMPONENT_DIR)
-            set(COMPONENT_DIR "${IDF_PATH}/components/${COMPONENT_NAME}")
-        else()
-            set(COMPONENT_DIR "${COMPONENT_DIR}/${COMPONENT_NAME}")
-        endif()
-    endif()
-    if(NOT EXISTS "${COMPONENT_DIR}/CMakeLists.txt")
-        message(FATAL_ERROR "Directory '${COMPONENT_DIR}' does not contain a component.")
-    endif()
-
-    # 💡
-    #   COMPONENT_NAME
-    #   COMPONENT_DIR / COMPONENT_BIN_DIR
-    #   COMPONENT_ALIAS
-    #
-    #   COMPONENT_TARGET
-    #   COMPONENT_LIB
-    #       .The component target has three underscores as a prefix.
-    #       .The corresponding component library only has two.
-    #
-    set(COMPONENT_TARGET ___${NAMESPACE}_${COMPONENT_NAME})
-    set(COMPONENT_LIB __${NAMESPACE}_${COMPONENT_NAME})
-    set(COMPONENT_ALIAS ${NAMESPACE}::${COMPONENT_NAME})
-
-    message(STATUS "Add Components: ${COMPONENT_ALIAS}")
-    idf_build_get_property(component_targets __COMPONENT_TARGETS)
-    # If a component of the same name has not been added before If it has been added
-    # before just override the properties. As a side effect, components added later
-    # 'override' components added earlier.
-    if(NOT COMPONENT_TARGET IN_LIST component_targets)
-        if(NOT TARGET ${COMPONENT_TARGET})
-            add_library(${COMPONENT_TARGET} STATIC IMPORTED)
-        endif()
-        idf_build_set_property(__COMPONENT_TARGETS ${COMPONENT_TARGET} APPEND)
-    else()
-        # message(FATAL_ERROR "break here")
-        __component_get_property(dir ${COMPONENT_TARGET} COMPONENT_DIR)
-        __component_set_property(${COMPONENT_TARGET} COMPONENT_OVERRIDEN_DIR ${dir})
-    endif()
-
-    # Set the basic properties of the component
-    __component_set_property(${COMPONENT_TARGET} __PREFIX ${NAMESPACE})
-    __component_set_property(${COMPONENT_TARGET} COMPONENT_NAME ${COMPONENT_NAME})
-    __component_set_property(${COMPONENT_TARGET} COMPONENT_DIR ${COMPONENT_DIR})
-    __component_set_property(${COMPONENT_TARGET} COMPONENT_ALIAS ${COMPONENT_ALIAS})
-    __component_set_property(${COMPONENT_TARGET} COMPONENT_LIB ${COMPONENT_LIB})
-
-    # Set Kconfig related properties on the component
-    __kconfig_component_init(${COMPONENT_TARGET})
-
-    # set BUILD_COMPONENT_DIRS build property
-    idf_build_set_property(BUILD_COMPONENT_DIRS ${COMPONENT_DIR} APPEND)
-
-    # set(__idf_component_context 1)
-    # include(${COMPONENT_DIR} OPTIONAL)
-    # set(__idf_component_context 0)
-
-    # __component_get_property(reqs ${COMPONENT_TARGET} __REQUIRES)
-    # __component_get_property(priv_reqs ${COMPONENT_TARGET} __PRIV_REQUIRES)
-
-    # foreach(iter ${priv_reqs})
-    #     LIST(APPEND reqs ${iter})
-    # endforeach()
-endfunction()
-
-function(idf_component_add COMPONENT_NAME NAMESPACE DIR)
-    __component_add(${COMPONENT_NAME} ${NAMESPACE} ${DIR})
-endfunction()
 
 #############################################################################
 # overrides depgraph.cmake
@@ -204,12 +122,24 @@ endfunction()
 macro(__build_set_default)
 endmacro()
 
+macro(__build_set_default_build_specifications)
+endmacro()
+
+macro(__build_set_lang_version)
+endmacro()
+
 function(__build_init)
     # get git submodules from ${IDF_PATH} if submodules was not initialized
     git_submodule_check(${IDF_PATH})
 
     # setup for idf_build_set_property() / idf_build_get_property()
     add_library(__idf_build_target STATIC IMPORTED GLOBAL)
+
+    # __build_set_default_build_specifications
+    idf_build_set_property(COMPILE_DEFINITIONS "${COMPILE_DEFINITIONS}")
+    idf_build_set_property(COMPILE_OPTIONS "${COMPILE_OPTIONS}")
+    idf_build_set_property(C_COMPILE_OPTIONS "${C_COMPILE_OPTIONS}")
+    idf_build_set_property(CXX_COMPILE_OPTIONS "${CXX_COMPILE_OPTIONS}")
 
     idf_build_set_property(IDF_TARGET ${IDF_TARGET})
     idf_build_set_property(IDF_PATH ${IDF_PATH})
@@ -238,7 +168,6 @@ function(__build_init)
     # build esp-idf components
     idf_build_set_property(__PREFIX esp-idf)
 
-    __build_set_default_build_specifications()
     __build_set_lang_version()
     __kconfig_init()
 
@@ -273,6 +202,66 @@ endfunction()
 
 # 💡 build initialization
 __build_init()
+#############################################################################
+
+function(__build_expand_requirements component_target)
+    # Since there are circular dependencies, make sure that we do not infinitely
+    # expand requirements for each component.
+    idf_build_get_property(component_targets_seen __COMPONENT_TARGETS_SEEN)
+    __component_get_property(component_registered ${component_target} __COMPONENT_REGISTERED)
+    if(component_target IN_LIST component_targets_seen OR NOT component_registered)
+        return()
+    endif()
+
+    idf_build_set_property(__COMPONENT_TARGETS_SEEN ${component_target} APPEND)
+
+    get_property(reqs TARGET ${component_target} PROPERTY REQUIRES)
+    get_property(priv_reqs TARGET ${component_target} PROPERTY PRIV_REQUIRES)
+    __component_get_property(component_name ${component_target} COMPONENT_NAME)
+    __component_get_property(component_alias ${component_target} COMPONENT_ALIAS)
+    idf_build_get_property(common_reqs __COMPONENT_REQUIRES_COMMON)
+    list(APPEND reqs ${common_reqs})
+
+    if(reqs)
+        list(REMOVE_DUPLICATES reqs)
+        list(REMOVE_ITEM reqs ${component_alias} ${component_name})
+    endif()
+
+    foreach(req ${reqs})
+        depgraph_add_edge(${component_name} ${req} REQUIRES)
+        __build_resolve_and_add_req(_component_target ${component_target} ${req} __REQUIRES)
+        __build_expand_requirements(${_component_target})
+    endforeach()
+
+    foreach(req ${priv_reqs})
+        depgraph_add_edge(${component_name} ${req} PRIV_REQUIRES)
+        __build_resolve_and_add_req(_component_target ${component_target} ${req} __PRIV_REQUIRES)
+        __build_expand_requirements(${_component_target})
+    endforeach()
+
+    idf_build_get_property(build_component_targets __BUILD_COMPONENT_TARGETS)
+    if(NOT component_target IN_LIST build_component_targets)
+        idf_build_set_property(__BUILD_COMPONENT_TARGETS ${component_target} APPEND)
+
+        __component_get_property(component_lib ${component_target} COMPONENT_LIB)
+        idf_build_set_property(__BUILD_COMPONENTS ${component_lib} APPEND)
+
+        idf_build_get_property(prefix __PREFIX)
+        __component_get_property(component_prefix ${component_target} __PREFIX)
+
+        __component_get_property(component_alias ${component_target} COMPONENT_ALIAS)
+
+        idf_build_set_property(BUILD_COMPONENT_ALIASES ${component_alias} APPEND)
+
+        # Only put in the prefix in the name if it is not the default one
+        if(component_prefix STREQUAL prefix)
+            __component_get_property(component_name ${component_target} COMPONENT_NAME)
+            idf_build_set_property(BUILD_COMPONENTS ${component_name} APPEND)
+        else()
+            idf_build_set_property(BUILD_COMPONENTS ${component_alias} APPEND)
+        endif()
+    endif()
+endfunction()
 #############################################################################
 
 function(IDF_build_application)
@@ -367,5 +356,27 @@ endfunction()
 
 macro(IDF_buildroot)
     set(BOOTLOADER_BUILD 1)
+    idf_build_set_property(BOOTLOADER_BUILD "${BOOTLOADER_BUILD}")
+
+    set(COMPONENTS
+        # partition_table
+        bootloader_support
+        esptool_py
+        esp_hw_support
+        esp_system
+        freertos
+        hal
+        soc
+        log
+        spi_flash
+        efuse
+        esp_system
+        newlib
+    )
+
+    # set(requires_common cxx newlib freertos esp_hw_support heap log soc hal esp_rom esp_common esp_system)
+    set(common_req log esp_rom esp_common esp_hw_support newlib)
+    idf_build_set_property(__COMPONENT_REQUIRES_COMMON "${common_req}")
+
     IDF_build_application()
 endmacro()
