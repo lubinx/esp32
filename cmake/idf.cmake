@@ -29,7 +29,6 @@ endif()
 # set(IDF_CMAKE_PATH ${IDF_PATH}/tools/cmake)
 set(IDF_CMAKE_PATH ${CMAKE_CURRENT_LIST_DIR}/../cmake_idf)
 
-
 # toolchain & default compile options
 set(CMAKE_TOOLCHAIN_FILE
     ${IDF_PATH}/tools/cmake/toolchain-${IDF_TARGET}.cmake
@@ -84,7 +83,7 @@ if (NOT PYTHON_ENV)
     file(GLOB PYTHON_ENV "${IDF_ENV_PATH}/python_env/idf${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}_*")
     set(PYTHON_ENV "${PYTHON_ENV}/bin/python" CACHE STRING "esp-idf python path")
 endif()
-include(${IDF_CMAKE_PATH}/build.cmake)
+include(${IDF_CMAKE_PATH}/new_build.cmake)
 include(${IDF_CMAKE_PATH}/component.cmake)
 include(${IDF_CMAKE_PATH}/git_submodules.cmake)
 include(${IDF_CMAKE_PATH}/kconfig.cmake)

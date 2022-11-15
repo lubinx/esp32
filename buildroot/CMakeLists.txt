@@ -19,82 +19,92 @@ macro(idf_component_register)
         set(single_value
             KCONFIG KCONFIG_PROJBUILD
         )
-        set(multi_value SRCS SRC_DIRS EXCLUDE_SRCS
+        set(multi_value
+            SRCS SRC_DIRS EXCLUDE_SRCS
             INCLUDE_DIRS PRIV_INCLUDE_DIRS LDFRAGMENTS REQUIRES
             PRIV_REQUIRES REQUIRED_IDF_TARGETS EMBED_FILES EMBED_TXTFILES
         )
         cmake_parse_arguments(_ "${options}" "${single_value}" "${multi_value}" ${ARGN})
 
-        __component_set_property(${COMPONENT_TARGET} PRIV_REQUIRES "${__PRIV_REQUIRES}")
+        if(__REQUIRED_IDF_TARGETS)
+            if(NOT IDF_TARGET IN_LIST __REQUIRED_IDF_TARGETS)
+                message(FATAL_ERROR "Component ${COMPONENT_NAME} only supports targets: ${__REQUIRED_IDF_TARGETS}")
+            endif()
+        endif()
+
         __component_set_property(${COMPONENT_TARGET} REQUIRES "${__REQUIRES}")
+        __component_set_property(${COMPONENT_TARGET} PRIV_REQUIRES "${__PRIV_REQUIRES}")
         __component_set_property(${COMPONENT_TARGET} KCONFIG "${__KCONFIG}")
         __component_set_property(${COMPONENT_TARGET} KCONFIG_PROJBUILD "${__KCONFIG_PROJBUILD}")
 
-        message("=== ${NAMESPACE}::${COMPONENT_NAME}")
-        message("\tcomponent dir: ${COMPONENT_DIR}")
-        message("\tbuild dir: ${COMPONENT_BUILD_DIR}")
+        get_property(depends GLOBAL PROPERTY COMPONENTS_DEPENDS)
+        foreach(iter ${__REQUIRES} ${__PRIV_REQUIRES})
+            if (NOT iter IN_LIST depends)
+                set_property(GLOBAL PROPERTY COMPONENTS_DEPENDS ${iter} APPEND)
+            endif()
+        endforeach()
 
-        # tick is here, macro will cause caller to return at here
+        # set( "${__KCONFIG}")
+        # set( "${__KCONFIG_PROJBUILD}")
+
+        message("\tcomponent dir: ${COMPONENT_DIR}")
+        if (__REQUIRES)
+            message("\tdepends: ${__REQUIRES}")
+        endif()
+        if (__PRIV_REQUIRES)
+            message("\tprivate depends: ${__PRIV_REQUIRES}")
+        endif()
+        message("")
+
+        # ⚓tick is here, macro will cause caller to return
         return()
     else()
         _idf_component_register(${ARGV})
     endif()
 endmacro()
 
-function(target_linker_script target deptype scriptfiles)
-    if(__idf_component_context)
-        _target_linker_script(${ARGV})
-    endif()
-endfunction()
-
-
-function(add_component COMPONENT_NAME) # NOTE: *override* add optional args: NAMESPACE COMPONENT_DIR
+function(idf_component_add COMPONENT_DIR) # NOTE: *override* optional: NAMESPACE
     # NAMESPACE
     list(POP_FRONT ARGN NAMESPACE)
-    if (NOT NAMESPACE)
-        idf_build_get_property(NAMESPACE __PREFIX)
-    endif()
 
-    if (${COMPONENT_NAME} MATCHES "${IDF_PATH}/components*")
-        set(COMPONENT_DIR ${COMPONENT_NAME})
-        get_filename_component(COMPONENT_NAME ${COMPONENT_DIR} NAME)
+    get_filename_component(COMPONENT_NAME ${COMPONENT_DIR} NAME)
+    get_filename_component(PARENT_DIR ${COMPONENT_DIR} DIRECTORY)
+
+    if (${PARENT_DIR} STREQUAL "${IDF_PATH}/components")
+        if (NOT NAMESPACE)
+            idf_build_get_property(NAMESPACE __PREFIX)
+        endif()
     else()
-        list(POP_FRONT ARGN COMPONENT_DIR)
-
-        if (NOT COMPONENT_DIR)
-            set(COMPONENT_DIR "${IDF_PATH}/components/${COMPONENT_NAME}")
-        else()
-            set(COMPONENT_DIR "${COMPONENT_DIR}/${COMPONENT_NAME}")
+        if (NOT NAMESPACE)
+            set(NAMESPACE ${PROJECT_NAME})
         endif()
     endif()
-    if(NOT EXISTS "${COMPONENT_DIR}/CMakeLists.txt")
-        message(FATAL_ERROR "Directory '${COMPONENT_DIR}' does not contain a component.")
-    endif()
+
+    set(COMPONENT_ALIAS ${NAMESPACE}::${COMPONENT_NAME}_TEST)
     set(COMPONENT_BUILD_DIR "${CMAKE_BINARY_DIR}/${NAMESPACE}/${COMPONENT_NAME}")
 
-    # 💡
-    #   COMPONENT_NAME
-    #   COMPONENT_DIR / COMPONENT_BUILD_DIR
-    #
-    #   COMPONENT_ALIAS
     #   COMPONENT_TARGET
     #   COMPONENT_LIB
     #       .The component target has three underscores as a prefix.
     #       .The corresponding component library only has two.
-    #
-    set(COMPONENT_ALIAS ${NAMESPACE}::${COMPONENT_NAME}_TEST)
     set(COMPONENT_TARGET ___${NAMESPACE}_${COMPONENT_NAME}_TEST)
     set(COMPONENT_LIB __${NAMESPACE}_${COMPONENT_NAME}_TEST)
 
-    get_property(components_resolved GLOBAL PROPERTY RESOLVED_COMPONENTS)
-    if(COMPONENT_TARGET IN_LIST components_resolved)
+    get_property(components_resolved GLOBAL PROPERTY COMPONENTS_RESOLVED)
+    if(NOT COMPONENT_NAME IN_LIST components_resolved)
+        if(NOT EXISTS "${COMPONENT_DIR}/CMakeLists.txt")
+            message(FATAL_ERROR "Directory '${COMPONENT_DIR}' does not contain a component.")
+        endif()
+        set_property(GLOBAL PROPERTY COMPONENTS_RESOLVED ${COMPONENT_NAME} APPEND)
+    else()
         message(WARNING "Components ${COMPONENT_NAME} was already added.")
         return()
     endif()
 
-    message(STATUS "dynamic Add Components: ${COMPONENT_ALIAS}")
-    set_property(GLOBAL PROPERTY RESOLVED_COMPONENTS ${COMPONENT_TARGET} APPEND)
-
+    message(STATUS "Add Components: ${COMPONENT_ALIAS}")
+    # TODO: sub components
+    # if (EXISTS "${COMPONENT_DIR}/components")
+    # endif()
     add_library(${COMPONENT_TARGET} STATIC IMPORTED)
 
     # Set the basic properties of the component
@@ -106,54 +116,47 @@ function(add_component COMPONENT_NAME) # NOTE: *override* add optional args: NAM
     # build dir
     __component_set_property(${COMPONENT_TARGET} COMPONENT_BUILD_DIR ${COMPONENT_BUILD_DIR})
 
-    # add_subdirectory(${COMPONENT_DIR} ${COMPONENT_BUILD_DIR})
-
     # Set Kconfig related properties on the component
-    # __kconfig_component_init(${COMPONENT_TARGET})
-
+    __kconfig_component_init(${COMPONENT_TARGET})
     # set BUILD_COMPONENT_DIRS build property
-    # idf_build_set_property(BUILD_COMPONENT_DIRS ${COMPONENT_DIR} APPEND)
+    idf_build_set_property(BUILD_COMPONENT_DIRS ${COMPONENT_DIR} APPEND)
 
-    # set(__idf_component_context 1)
-    # include(${COMPONENT_DIR} OPTIONAL)
-    # set(__idf_component_context 0)
-
-    # __component_get_property(reqs ${COMPONENT_TARGET} __REQUIRES)
-    # __component_get_property(priv_reqs ${COMPONENT_TARGET} __PRIV_REQUIRES)
-
-    # foreach(iter ${priv_reqs})
-    #     LIST(APPEND reqs ${iter})
-    # endforeach()
+    # ⚓ call macro idf_component_register()
+    include(${COMPONENT_DIR}/CMakeLists.txt)
+    # ⚓ unreachable here, returned by macro expansion
 endfunction()
 
-# add_component("bootloader" ${PROJECT_NAME} ${CMAKE_CURRENT_LIST_DIR})
-# add_component("bootloader_support")
-# return()
+function(idf_resolve_component_depends)
+    while(1)
+        get_property(deps GLOBAL PROPERTY COMPONENTS_DEPENDS)
+        list(POP_FRONT deps iter)
+        set_property(GLOBAL PROPERTY COMPONENTS_DEPENDS ${deps})
 
-idf_component_add("bootloader" ${PROJECT_NAME} ${CMAKE_CURRENT_LIST_DIR})
-idf_component_add("micro-ecc" ${PROJECT_NAME} "${IDF_PATH}/components/bootloader/subproject/components")
+        if (iter)
+            get_property(components_resolved GLOBAL PROPERTY COMPONENTS_RESOLVED)
 
-# A number of these components are implemented as config-only when built in the bootloader
-set(COMPONENTS
-    # bootloader
-    # micro-ecc
-    bootloader_support
-    esptool_py
-    esp_hw_support
-    esp_system
-    freertos
-    hal
-    # partition_table
-    soc
-    log
-    spi_flash
-    efuse
-    esp_system
-    newlib
-)
+            if (NOT iter IN_LIST components_resolved)
+                message("Resolve deps: ${iter}")
+                idf_component_add("${IDF_PATH}/components/${iter}")
+            endif()
+        else()
+            break()
+        endif()
+    endwhile()
 
-set(common_req log esp_rom esp_common esp_hw_support newlib)
-idf_build_set_property(__COMPONENT_REQUIRES_COMMON "${common_req}")
+    message("\n\n")
+endfunction()
+
+set(BOOTLOADER_BUILD 1)
+idf_component_add("${CMAKE_CURRENT_LIST_DIR}/bootloader")
+idf_component_add("${IDF_PATH}/components/bootloader/subproject/components/micro-ecc")
+idf_component_add("${CMAKE_CURRENT_LIST_DIR}/esp_app_format")
+
+idf_resolve_component_depends()
+
+__component_add("${CMAKE_CURRENT_LIST_DIR}/bootloader" ${PROJECT_NAME} )
+__component_add("${IDF_PATH}/components/bootloader/subproject/components/micro-ecc" ${PROJECT_NAME})
+__component_add("${CMAKE_CURRENT_LIST_DIR}/esp_app_format" ${PROJECT_NAME} )
 
 # TODO: -fPIC code?
 # idf_build_set_property(C_COMPILE_OPTIONS "-fPIC" APPEND)
