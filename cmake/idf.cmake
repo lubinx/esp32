@@ -177,6 +177,8 @@ function(__build_init)
     idf_build_set_property(IDF_TARGET_ARCH ${IDF_TARGET_ARCH})
     idf_build_set_property(IDF_PATH ${IDF_PATH})
     idf_build_set_property(IDF_CMAKE_PATH ${IDF_CMAKE_PATH})
+    # python
+    idf_build_set_property(PYTHON "${PYTHON_ENV}")
 
     idf_build_set_property(PROJECT_DIR ${CMAKE_SOURCE_DIR})
     idf_build_set_property(BUILD_DIR ${CMAKE_BINARY_DIR})
@@ -187,24 +189,11 @@ function(__build_init)
     # __build_get_idf_git_revision()
     idf_build_set_property(COMPILE_DEFINITIONS "IDF_VER=\"$ENV{IDF_VERSION}\"")
 
-    # python
-    idf_build_set_property(PYTHON "${PYTHON_ENV}")
-
     # build esp-idf components
     idf_build_set_property(__PREFIX esp-idf)
 
     __build_set_lang_version()
     __kconfig_init()
-
-# TODO: remove these
-    if("${IDF_TARGET}" STREQUAL "linux")
-        set(requires_common freertos log esp_rom esp_common linux)
-    else()
-        set(requires_common cxx newlib freertos esp_hw_support heap log soc hal esp_rom esp_common esp_system)
-    endif()
-
-    idf_build_set_property(__COMPONENT_REQUIRES_COMMON "${requires_common}")
-####################
 
     # cmake cache all directory of ${IDF_PATH}/components
     if (NOT IDF_COMPONENTS_CACHE)
@@ -269,12 +258,13 @@ function(idf_component_add COMPONENT_DIR) # NOTE: *override* optional: NAMESPACE
 
         # TODO: remove this
         idf_build_set_property(__COMPONENT_TARGETS ${COMPONENT_TARGET} APPEND)
+        idf_build_set_property(__BUILD_COMPONENT_TARGETS ${COMPONENT_TARGET} APPEND)
+        idf_build_set_property(BUILD_COMPONENT_ALIASES ${COMPONENT_ALIAS} APPEND)
     else()
         message(WARNING "Components ${COMPONENT_NAME} was already added.")
         return()
     endif()
 
-    message(STATUS "Add Components: ${COMPONENT_ALIAS}")
     # TODO: sub components
     # if (EXISTS "${COMPONENT_DIR}/components")
     # endif()
@@ -322,8 +312,9 @@ macro(idf_component_register)
 
         __component_set_property(${COMPONENT_TARGET} REQUIRES "${__REQUIRES}")
         __component_set_property(${COMPONENT_TARGET} PRIV_REQUIRES "${__PRIV_REQUIRES}")
-        __component_set_property(${COMPONENT_TARGET} KCONFIG "${__KCONFIG}")
-        __component_set_property(${COMPONENT_TARGET} KCONFIG_PROJBUILD "${__KCONFIG_PROJBUILD}")
+
+        __component_set_property(${COMPONENT_TARGET} KCONFIG "${__KCONFIG}" APPEND)
+        __component_set_property(${COMPONENT_TARGET} KCONFIG_PROJBUILD "${__KCONFIG_PROJBUILD}" APPEND)
 
         get_property(depends GLOBAL PROPERTY COMPONENTS_DEPENDS)
         foreach(iter ${__REQUIRES} ${__PRIV_REQUIRES})
@@ -332,6 +323,7 @@ macro(idf_component_register)
             endif()
         endforeach()
 
+        message(STATUS "Add Components: ${COMPONENT_ALIAS}")
         message("\tcomponent dir: ${COMPONENT_DIR}")
         if (__REQUIRES)
             message("\tdepends: ${__REQUIRES}")
@@ -444,6 +436,9 @@ function(idf_resolve_component_depends)
 
     message("Resolve ESP-IDF required components")
 
+    if (NOT "freertos" IN_LIST components_resolved)
+        idf_component_add("${IDF_PATH}/components/freertos")
+    endif()
     if (NOT "log" IN_LIST components_resolved)
         idf_component_add("${IDF_PATH}/components/log")
     endif()
