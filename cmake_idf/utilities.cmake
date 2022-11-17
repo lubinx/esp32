@@ -97,9 +97,9 @@ function(target_add_binary_data target embed_file embed_type)
         -D "SOURCE_FILE=${embed_srcfile}"
         ${rename_to_arg}
         -D "FILE_TYPE=${embed_type}"
-        -P "${IDF_CMAKE_PATH}/scripts/data_file_embed_asm.cmake"
+        -P "${idf_path}/tools/cmake/scripts/data_file_embed_asm.cmake"
         MAIN_DEPENDENCY "${embed_file}"
-        DEPENDS "${IDF_CMAKE_PATH}/scripts/data_file_embed_asm.cmake" ${__DEPENDS}
+        DEPENDS "${idf_path}/tools/cmake/scripts/data_file_embed_asm.cmake" ${__DEPENDS}
         WORKING_DIRECTORY "${build_dir}"
         VERBATIM)
 
@@ -213,7 +213,7 @@ function(fail_at_build_time target_name message_line0)
         ${message_lines}
         COMMAND ${CMAKE_COMMAND} -E remove "${filename}"
         COMMAND ${CMAKE_COMMAND} -E env FAIL_MESSAGE=${fail_message}
-                ${CMAKE_COMMAND} -P ${IDF_CMAKE_PATH}/scripts/fail.cmake
+                ${CMAKE_COMMAND} -P ${idf_path}/tools/cmake/scripts/fail.cmake
         VERBATIM)
 endfunction()
 
@@ -234,7 +234,7 @@ function(fail_target target_name message_line0)
     add_custom_target(${target_name}
         ${message_lines}
         COMMAND ${CMAKE_COMMAND} -E env FAIL_MESSAGE=${fail_message}
-                ${CMAKE_COMMAND} -P ${IDF_CMAKE_PATH}/scripts/fail.cmake
+                ${CMAKE_COMMAND} -P ${idf_path}/tools/cmake/scripts/fail.cmake
         VERBATIM)
 endfunction()
 

@@ -126,6 +126,7 @@ function(__build_set_lang_version)
     if(NOT IDF_TARGET STREQUAL "linux")
         # Building for chip targets: we use a known version of the toolchain.
         # Use latest supported versions.
+        # Please update docs/en/api-guides/cplusplus.rst when changing this.
         set(c_std gnu17)
         set(cxx_std gnu++20)
     else()
@@ -224,7 +225,7 @@ function(__build_init idf_path)
     endforeach()
 
     if("${target}" STREQUAL "linux")
-        set(requires_common freertos log esp_rom esp_common linux)
+        set(requires_common freertos log esp_rom esp_common esp_system linux)
         idf_build_set_property(__COMPONENT_REQUIRES_COMMON "${requires_common}")
     else()
         # Set components required by all other components in the build

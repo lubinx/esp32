@@ -216,7 +216,7 @@ function(__component_get_requirements)
         -D "BUILD_PROPERTIES_FILE=${build_properties_file}"
         -D "COMPONENT_PROPERTIES_FILE=${component_properties_file}"
         -D "COMPONENT_REQUIRES_FILE=${component_requires_file}"
-        -P "${IDF_CMAKE_PATH}/scripts/component_get_requirements.cmake"
+        -P "${idf_path}/tools/cmake/scripts/component_get_requirements.cmake"
         RESULT_VARIABLE result
         ERROR_VARIABLE error)
 
@@ -252,9 +252,9 @@ function(__component_get_requirements)
 
     include(${component_requires_file})
 
-    # file(REMOVE ${build_properties_file})
-    # file(REMOVE ${component_properties_file})
-    # file(REMOVE ${component_requires_file})
+    file(REMOVE ${build_properties_file})
+    file(REMOVE ${component_properties_file})
+    file(REMOVE ${component_requires_file})
 endfunction()
 
 # __component_add_sources, __component_check_target, __component_add_include_dirs

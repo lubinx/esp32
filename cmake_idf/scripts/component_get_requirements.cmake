@@ -12,9 +12,9 @@ function(idf_build_get_property var property)
     set(${var} ${${property}} PARENT_SCOPE)
 endfunction()
 
-idf_build_get_property(IDF_CMAKE_PATH IDF_CMAKE_PATH)
-include(${IDF_CMAKE_PATH}/utilities.cmake)
-include(${IDF_CMAKE_PATH}/version.cmake)
+idf_build_get_property(idf_path IDF_PATH)
+include(${idf_path}/tools/cmake/utilities.cmake)
+include(${idf_path}/tools/cmake/version.cmake)
 
 function(__component_get_property var component_target property)
     set(_property __component_${component_target}_${property})
