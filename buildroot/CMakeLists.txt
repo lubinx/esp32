@@ -2,11 +2,12 @@
 # CMakeLists in this exact order for cmake to work correctly
 cmake_minimum_required(VERSION 3.5)
 
+set(BOOTLOADER_BUILD 1)
+
 include(idf.cmake)
 project(buildroot)
 
 macro(IDF_buildroot)
-    set(BOOTLOADER_BUILD 1)
     idf_build_set_property(BOOTLOADER_BUILD "${BOOTLOADER_BUILD}")
 
     idf_component_add("${CMAKE_CURRENT_LIST_DIR}/bootloader")
@@ -15,10 +16,10 @@ macro(IDF_buildroot)
     idf_component_add("${CMAKE_CURRENT_LIST_DIR}/partition_table")
 
     # set(requires_common cxx newlib freertos esp_hw_support heap log soc hal esp_rom esp_common esp_system)
-    set(common_req
-        log esp_rom esp_common esp_hw_support freertos esptool_py
-    )
-    idf_build_set_property(__COMPONENT_REQUIRES_COMMON "${common_req}")
+    # set(common_req
+    #     freertos newlib log esp_rom esp_common esp_hw_support esptool_py
+    # )
+    # idf_build_set_property(__COMPONENT_REQUIRES_COMMON "${common_req}")
 
     idf_build()
 endmacro()

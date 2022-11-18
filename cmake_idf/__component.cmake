@@ -64,64 +64,6 @@ function(__component_get_target var name_or_alias)
     endif()
 endfunction()
 
-# __component_add_sources, __component_check_target, __component_add_include_dirs
-#
-# Utility macros for component registration. Adds source files and checks target requirements,
-# and adds include directories respectively.
-macro(__component_add_sources sources)
-    set(sources "")
-    if(__SRCS)
-        if(__SRC_DIRS)
-            message(WARNING "SRCS and SRC_DIRS are both specified; ignoring SRC_DIRS.")
-        endif()
-        foreach(src ${__SRCS})
-            get_filename_component(src "${src}" ABSOLUTE BASE_DIR ${COMPONENT_DIR})
-            list(APPEND sources ${src})
-        endforeach()
-    else()
-        if(__SRC_DIRS)
-            foreach(dir ${__SRC_DIRS})
-                get_filename_component(abs_dir ${dir} ABSOLUTE BASE_DIR ${COMPONENT_DIR})
-
-                if(NOT IS_DIRECTORY ${abs_dir})
-                    message(FATAL_ERROR "SRC_DIRS entry '${dir}' does not exist.")
-                endif()
-
-                file(GLOB dir_sources "${abs_dir}/*.c" "${abs_dir}/*.cpp" "${abs_dir}/*.S")
-                list(SORT dir_sources)
-
-                if(dir_sources)
-                    foreach(src ${dir_sources})
-                        get_filename_component(src "${src}" ABSOLUTE BASE_DIR ${COMPONENT_DIR})
-                        list(APPEND sources "${src}")
-                    endforeach()
-                else()
-                    message(WARNING "No source files found for SRC_DIRS entry '${dir}'.")
-                endif()
-            endforeach()
-        endif()
-
-        if(__EXCLUDE_SRCS)
-            foreach(src ${__EXCLUDE_SRCS})
-                get_filename_component(src "${src}" ABSOLUTE)
-                list(REMOVE_ITEM sources "${src}")
-            endforeach()
-        endif()
-    endif()
-
-    list(REMOVE_DUPLICATES sources)
-endmacro()
-
-macro(__component_add_include_dirs lib dirs type)
-    foreach(dir ${dirs})
-        get_filename_component(_dir ${dir} ABSOLUTE BASE_DIR ${CMAKE_CURRENT_LIST_DIR})
-        if(NOT IS_DIRECTORY ${_dir})
-            message(FATAL_ERROR "Include directory '${_dir}' is not a directory.")
-        endif()
-        target_include_directories(${lib} ${type} ${_dir})
-    endforeach()
-endmacro()
-
 # __component_set_dependencies, __component_set_all_dependencies
 #
 #  Links public and private requirements for the currently processed component
