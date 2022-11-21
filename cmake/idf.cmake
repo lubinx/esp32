@@ -120,9 +120,6 @@ include(${IDF_CMAKE_PATH}/utilities.cmake)
 include(${IDF_CMAKE_PATH}/kconfig.cmake)
 include(${IDF_CMAKE_PATH}/ldgen.cmake)
 
-# TODO: planning to remove this
-include(${IDF_CMAKE_PATH}/__component.cmake)
-
 # tool_version_check.cmake
 function(check_expected_tool_version tool_name tool_path)
 endfunction()
@@ -145,7 +142,9 @@ endfunction()
 __git_submodule_check_once()
 
 #############################################################################
-# idf_build_get_property() / idf_build_set_property()
+#   idf_build_get_property()
+#   idf_build_set_property()
+#   idf_component_get_property() / idf_component_get_property()
 #############################################################################
 function(idf_build_get_property var property)
     cmake_parse_arguments(_ "GENERATOR_EXPRESSION" "" "" ${ARGN})
@@ -163,6 +162,59 @@ function(idf_build_set_property property value)
         set_property(TARGET __idf_build_target APPEND PROPERTY ${property} ${value})
     else()
         set_property(TARGET __idf_build_target PROPERTY ${property} ${value})
+    endif()
+endfunction()
+
+function(idf_component_optional_requires type) # "type: PRIVATE/PUBLIC/INTERFACE" "...reqs"
+    set(reqs ${ARGN})
+    idf_build_get_property(build_components BUILD_COMPONENTS)
+
+    foreach(req ${reqs})
+        if(req IN_LIST build_components)
+            idf_component_get_property(req_lib ${req} COMPONENT_LIB)
+            target_link_libraries(${COMPONENT_LIB} ${type} ${req_lib})
+        endif()
+    endforeach()
+endfunction()
+
+function(__component_get_target var name_or_alias)
+    set(${var} ${name_or_alias} PARENT_SCOPE)
+endfunction()
+
+function(__component_get_property var component_target property)
+    get_property(val TARGET ${component_target} PROPERTY ${property})
+    set(${var} "${val}" PARENT_SCOPE)
+endfunction()
+
+function(idf_component_get_property var component property)
+    cmake_parse_arguments(_ "GENERATOR_EXPRESSION" "" "" ${ARGN})
+    __component_get_target(component_target ${component})
+
+    if(__GENERATOR_EXPRESSION)
+        set(val "$<TARGET_PROPERTY:${component_target},${property}>")
+    else()
+        __component_get_property(val ${component_target} ${property})
+    endif()
+    set(${var} "${val}" PARENT_SCOPE)
+endfunction()
+
+function(__component_set_property component_target property val)
+    cmake_parse_arguments(_ "APPEND" "" "" ${ARGN})
+    if(__APPEND)
+        set_property(TARGET ${component_target} APPEND PROPERTY ${property} "${val}")
+    else()
+        set_property(TARGET ${component_target} PROPERTY ${property} "${val}")
+    endif()
+endfunction()
+
+function(idf_component_set_property component property val)
+    cmake_parse_arguments(_ "APPEND" "" "" ${ARGN})
+    __component_get_target(component_target ${component})
+
+    if(__APPEND)
+        __component_set_property(${component_target} ${property} "${val}" APPEND)
+    else()
+        __component_set_property(${component_target} ${property} "${val}")
     endif()
 endfunction()
 
@@ -249,33 +301,32 @@ __idf_build_init()
 #############################################################################
 # idf_component_add() / idf_component_register()
 #############################################################################
-function(idf_component_add COMPONENT_DIR) # optional: NAMESPACE
-    # NAMESPACE
-    list(POP_FRONT ARGN NAMESPACE)
+function(idf_component_add component_dir) # optional: prefix
+    # prefix
+    list(POP_FRONT ARGN prefix)
 
-    get_filename_component(COMPONENT_NAME ${COMPONENT_DIR} NAME)
-    get_filename_component(__parent_dir ${COMPONENT_DIR} DIRECTORY)
+    get_filename_component(COMPONENT_NAME ${component_dir} NAME)
+    get_filename_component(__parent_dir ${component_dir} DIRECTORY)
 
     if (${__parent_dir} STREQUAL "${IDF_PATH}/components")
-        if (NOT NAMESPACE)
-            idf_build_get_property(NAMESPACE __PREFIX)
+        if (NOT prefix)
+            idf_build_get_property(prefix __PREFIX)
         endif()
     else()
-        if (NOT NAMESPACE)
-            set(NAMESPACE ${PROJECT_NAME})
+        if (NOT prefix)
+            set(prefix ${PROJECT_NAME})
         endif()
     endif()
     unset(__parent_dir)
 
-    set(COMPONENT_TARGET ___${NAMESPACE}_${COMPONENT_NAME})
-    set(COMPONENT_LIB ${NAMESPACE}_${COMPONENT_NAME})
-
-    set(COMPONENT_ALIAS ${NAMESPACE}::${COMPONENT_NAME})
+    set(COMPONENT_TARGET ${COMPONENT_NAME})
+    set(COMPONENT_LIB ${prefix}_${COMPONENT_NAME})
+    set(COMPONENT_ALIAS ${prefix}::${COMPONENT_NAME})
 
     get_property(components_resolved GLOBAL PROPERTY COMPONENTS_RESOLVED)
     if(NOT COMPONENT_NAME IN_LIST components_resolved)
-        if(NOT EXISTS "${COMPONENT_DIR}/CMakeLists.txt")
-            message(FATAL_ERROR "Directory '${COMPONENT_DIR}' does not contain a component.")
+        if(NOT EXISTS "${component_dir}/CMakeLists.txt")
+            message(FATAL_ERROR "Directory '${component_dir}' does not contain a component.")
         endif()
         set_property(GLOBAL PROPERTY COMPONENTS_RESOLVED ${COMPONENT_NAME} APPEND)
     else()
@@ -284,31 +335,31 @@ function(idf_component_add COMPONENT_DIR) # optional: NAMESPACE
     endif()
 
     # TODO: sub components
-    # if (EXISTS "${COMPONENT_DIR}/components")
+    # if (EXISTS "${component_dir}/components")
     # endif()
     add_library(${COMPONENT_TARGET} STATIC IMPORTED)
 
     # TODO: remove this
     idf_build_set_property(__COMPONENT_TARGETS ${COMPONENT_TARGET} APPEND)
     idf_build_set_property(__BUILD_COMPONENT_TARGETS ${COMPONENT_TARGET} APPEND)
-    idf_build_set_property(BUILD_COMPONENT_ALIASES ${COMPONENT_ALIAS} APPEND)
+    # idf_build_set_property(BUILD_COMPONENT_ALIASES ${COMPONENT_ALIAS} APPEND)
 
     # Set the basic properties of the component
-    __component_set_property(${COMPONENT_TARGET} __PREFIX ${NAMESPACE})
-    __component_set_property(${COMPONENT_TARGET} COMPONENT_NAME ${COMPONENT_NAME})
-    __component_set_property(${COMPONENT_TARGET} COMPONENT_ALIAS ${COMPONENT_ALIAS})
-    __component_set_property(${COMPONENT_TARGET} COMPONENT_LIB ${COMPONENT_LIB})
-    __component_set_property(${COMPONENT_TARGET} COMPONENT_DIR ${COMPONENT_DIR})
+    idf_component_set_property(${COMPONENT_TARGET} __PREFIX ${prefix})
+    idf_component_set_property(${COMPONENT_TARGET} COMPONENT_NAME ${COMPONENT_NAME})
+    idf_component_set_property(${COMPONENT_TARGET} COMPONENT_ALIAS ${COMPONENT_ALIAS})
+    idf_component_set_property(${COMPONENT_TARGET} COMPONENT_LIB ${COMPONENT_LIB})
+    idf_component_set_property(${COMPONENT_TARGET} COMPONENT_DIR ${component_dir})
     # build dir
-    __component_set_property(${COMPONENT_TARGET} COMPONENT_BUILD_DIR "${CMAKE_BINARY_DIR}/${NAMESPACE}/${COMPONENT_NAME}")
+    idf_component_set_property(${COMPONENT_TARGET} COMPONENT_BUILD_DIR "${CMAKE_BINARY_DIR}/${prefix}/${COMPONENT_NAME}")
 
     # Set Kconfig related properties on the component
     __kconfig_component_init(${COMPONENT_TARGET})
     # set BUILD_COMPONENT_DIRS build property
-    idf_build_set_property(BUILD_COMPONENT_DIRS ${COMPONENT_DIR} APPEND)
+    idf_build_set_property(BUILD_COMPONENT_DIRS ${component_dir} APPEND)
 
     # ⚓ call macro idf_component_register()
-    include(${COMPONENT_DIR}/CMakeLists.txt)
+    include(${component_dir}/CMakeLists.txt)
     # ⚓ unreachable here, returned by macro expansion
 endfunction()
 
@@ -333,18 +384,10 @@ macro(idf_component_register)
             endif()
         endif()
 
-        idf_build_get_property(common_requires __COMPONENT_REQUIRES_COMMON)
-        if (common_requires)
-            list(APPEND __REQUIRES "${common_requires}")
-            list(REMOVE_ITEM __REQUIRES ${COMPONENT_NAME})
-            list(REMOVE_DUPLICATES __REQUIRES)
-        endif()
-        __component_set_property(${COMPONENT_TARGET} REQUIRES "${__REQUIRES}")
-        __component_set_property(${COMPONENT_TARGET} PRIV_REQUIRES "${__PRIV_REQUIRES}")
-        __component_set_property(${COMPONENT_TARGET} __COMPONENT_REGISTERED 1)
-
-        __component_set_property(${COMPONENT_TARGET} KCONFIG "${__KCONFIG}" APPEND)
-        __component_set_property(${COMPONENT_TARGET} KCONFIG_PROJBUILD "${__KCONFIG_PROJBUILD}" APPEND)
+        idf_component_set_property(${COMPONENT_TARGET} REQUIRES "${__REQUIRES}")
+        idf_component_set_property(${COMPONENT_TARGET} PRIV_REQUIRES "${__PRIV_REQUIRES}")
+        idf_component_set_property(${COMPONENT_TARGET} KCONFIG "${__KCONFIG}" APPEND)
+        idf_component_set_property(${COMPONENT_TARGET} KCONFIG_PROJBUILD "${__KCONFIG_PROJBUILD}" APPEND)
 
         get_property(depends GLOBAL PROPERTY COMPONENTS_DEPENDS)
         foreach(iter ${__REQUIRES} ${__PRIV_REQUIRES})
@@ -372,31 +415,49 @@ macro(idf_component_register)
 endmacro()
 
 function(__inherited_component_register)
+    # Create the final target for the component. This target is the target that is
+    # visible outside the build system.
+    idf_component_get_property(component_lib ${component_target} COMPONENT_LIB)
+
     # Add component manifest to the list of dependencies
     set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${COMPONENT_DIR}/idf_component.yml")
 
-    # Create the final target for the component. This target is the target that is
-    # visible outside the build system.
-    __component_get_property(component_lib ${component_target} COMPONENT_LIB)
-
-    # Use generator expression so that users can append/override flags even after call to
-    # idf_build_process
     idf_build_get_property(include_directories INCLUDE_DIRECTORIES GENERATOR_EXPRESSION)
-    idf_build_get_property(compile_options COMPILE_OPTIONS GENERATOR_EXPRESSION)
-    idf_build_get_property(compile_definitions COMPILE_DEFINITIONS GENERATOR_EXPRESSION)
-    idf_build_get_property(c_compile_options C_COMPILE_OPTIONS GENERATOR_EXPRESSION)
-    idf_build_get_property(cxx_compile_options CXX_COMPILE_OPTIONS GENERATOR_EXPRESSION)
-    idf_build_get_property(asm_compile_options ASM_COMPILE_OPTIONS GENERATOR_EXPRESSION)
-    idf_build_get_property(common_reqs ___COMPONENT_REQUIRES_COMMON)
-
     include_directories("${include_directories}")
-    add_compile_options("${compile_options}")
-    add_compile_definitions("${compile_definitions}")
-    add_c_compile_options("${c_compile_options}")
-    add_cxx_compile_options("${cxx_compile_options}")
-    add_asm_compile_options("${asm_compile_options}")
+    unset(include_directories)
 
-    idf_build_get_property(config_dir CONFIG_DIR)
+    idf_build_get_property(compile_options COMPILE_OPTIONS GENERATOR_EXPRESSION)
+    add_compile_options("${compile_options}")
+    unset(compile_options)
+
+    idf_build_get_property(compile_definitions COMPILE_DEFINITIONS GENERATOR_EXPRESSION)
+    add_compile_definitions("${compile_definitions}")
+    unset(compile_definitions)
+
+    idf_build_get_property(c_compile_options C_COMPILE_OPTIONS GENERATOR_EXPRESSION)
+    foreach(option ${c_compile_options})
+        add_compile_options($<$<COMPILE_LANGUAGE:C>:${option}>)
+    endforeach()
+    unset(c_compile_options)
+
+    idf_build_get_property(cxx_compile_options CXX_COMPILE_OPTIONS GENERATOR_EXPRESSION)
+    foreach(option ${cxx_compile_options})
+        add_compile_options($<$<COMPILE_LANGUAGE:CXX>:${option}>)
+    endforeach()
+    unset(cxx_compile_options)
+
+    idf_build_get_property(asm_compile_options ASM_COMPILE_OPTIONS GENERATOR_EXPRESSION)
+    foreach(option ${asm_compile_options})
+        add_compile_options($<$<COMPILE_LANGUAGE:ASM>:${option}>)
+    endforeach()
+    unset(asm_compile_options)
+
+    # idf_build_get_property(common_reqs ___COMPONENT_REQUIRES_COMMON)
+    # if(common_reqs)
+    #     list(REMOVE_ITEM common_reqs ${component_lib})
+    #     link_libraries(${common_reqs})
+    # endif()
+    # unset(common_reqs)
 
     # glob sources
     set(sources "")
@@ -447,24 +508,31 @@ function(__inherited_component_register)
     endmacro()
 
     # The contents of 'sources' is from the __component_add_sources call
+    idf_build_get_property(config_dir CONFIG_DIR)
+
     if(sources OR __EMBED_FILES OR __EMBED_TXTFILES)
         add_library(${component_lib} STATIC ${sources})
-        __component_set_property(${component_target} COMPONENT_TYPE LIBRARY)
+        idf_component_set_property(${component_target} COMPONENT_TYPE LIBRARY)
+        idf_component_set_property(${component_target} PRIV_INCLUDE_DIRS "${__PRIV_INCLUDE_DIRS}")
+
         __component_add_include_dirs(${component_lib} "${__INCLUDE_DIRS}" PUBLIC)
         __component_add_include_dirs(${component_lib} "${__PRIV_INCLUDE_DIRS}" PRIVATE)
         __component_add_include_dirs(${component_lib} "${config_dir}" PUBLIC)
+
         set_target_properties(${component_lib} PROPERTIES OUTPUT_NAME ${COMPONENT_NAME} LINKER_LANGUAGE C)
         __ldgen_add_component(${component_lib})
     else()
         add_library(${component_lib} INTERFACE)
-        __component_set_property(${component_target} COMPONENT_TYPE CONFIG_ONLY)
+        idf_component_set_property(${component_target} COMPONENT_TYPE CONFIG_ONLY)
+
         __component_add_include_dirs(${component_lib} "${__INCLUDE_DIRS}" INTERFACE)
         __component_add_include_dirs(${component_lib} "${config_dir}" INTERFACE)
     endif()
+    unset(config_dir)
 
     # Alias the static/interface library created for linking to external targets.
     # The alias is the <prefix>::<component name> name.
-    __component_get_property(component_alias ${component_target} COMPONENT_ALIAS)
+    idf_component_get_property(component_alias ${component_target} COMPONENT_ALIAS)
     add_library(${component_alias} ALIAS ${component_lib})
 
     # Perform other component processing, such as embedding binaries and processing linker
@@ -482,66 +550,52 @@ function(__inherited_component_register)
     endif()
 
     # Set dependencies
-    __component_set_all_dependencies()
+# __component_set_all_dependencies()
+    macro(__component_set_dependencies reqs type)
+        foreach(req ${reqs})
+            if(req IN_LIST build_component_targets)
+                __component_get_property(req_lib ${req} COMPONENT_LIB)
+                target_link_libraries(${component_lib} ${type} ${req_lib})
+            endif()
+        endforeach()
+    endmacro()
 
     __component_get_property(type ${component_target} COMPONENT_TYPE)
+    idf_build_get_property(build_component_targets __BUILD_COMPONENT_TARGETS)
+
+    if(NOT type STREQUAL CONFIG_ONLY)
+        __component_get_property(reqs ${component_target} REQUIRES)
+        __component_set_dependencies("${reqs}" PUBLIC)
+
+        __component_get_property(priv_reqs ${component_target} PRIV_REQUIRES)
+        __component_set_dependencies("${priv_reqs}" PRIVATE)
+
+        message("############### component_target:${component_target}")
+        message("\treqs: ${reqs}")
+        message("\tpriv_reqs: ${priv_reqs}\n")
+
+    else()
+        __component_get_property(reqs ${component_target} REQUIRES)
+        __component_set_dependencies("${reqs}" INTERFACE)
+    endif()
+# __component_set_all_dependencies()
 
     # Fill in the rest of component property
-    __component_set_property(${component_target} SRCS "${sources}")
-    __component_set_property(${component_target} INCLUDE_DIRS "${__INCLUDE_DIRS}")
+    idf_component_set_property(${component_target} SRCS "${sources}")
+    idf_component_set_property(${component_target} INCLUDE_DIRS "${__INCLUDE_DIRS}")
 
-    if(type STREQUAL LIBRARY)
-        __component_set_property(${component_target} PRIV_INCLUDE_DIRS "${__PRIV_INCLUDE_DIRS}")
-    endif()
+    idf_component_set_property(${component_target} LDFRAGMENTS "${__LDFRAGMENTS}")
+    idf_component_set_property(${component_target} EMBED_FILES "${__EMBED_FILES}")
+    idf_component_set_property(${component_target} EMBED_TXTFILES "${__EMBED_TXTFILES}")
+    idf_component_set_property(${component_target} REQUIRED_IDF_TARGETS "${__REQUIRED_IDF_TARGETS}")
 
-    __component_set_property(${component_target} LDFRAGMENTS "${__LDFRAGMENTS}")
-    __component_set_property(${component_target} EMBED_FILES "${__EMBED_FILES}")
-    __component_set_property(${component_target} EMBED_TXTFILES "${__EMBED_TXTFILES}")
-    __component_set_property(${component_target} REQUIRED_IDF_TARGETS "${__REQUIRED_IDF_TARGETS}")
-
-    __component_set_property(${component_target} WHOLE_ARCHIVE ${__WHOLE_ARCHIVE})
+    idf_component_set_property(${component_target} WHOLE_ARCHIVE ${__WHOLE_ARCHIVE})
 
     # COMPONENT_TARGET is deprecated but is made available with same function
     # as COMPONENT_LIB for compatibility.
     set(COMPONENT_TARGET ${component_lib} PARENT_SCOPE)
     # Make the COMPONENT_LIB variable available in the component CMakeLists.txt
     set(COMPONENT_LIB ${component_lib} PARENT_SCOPE)
-endfunction()
-
-function(__idf_resolve_dependencies)
-    message("## Resolve ESP-IDF required components")
-
-    idf_build_get_property(common_requires __COMPONENT_REQUIRES_COMMON)
-    foreach(iter ${common_requires})
-        get_property(components_resolved GLOBAL PROPERTY COMPONENTS_RESOLVED)
-
-        if (NOT iter IN_LIST components_resolved)
-            idf_component_add("${IDF_PATH}/components/${iter}")
-        endif()
-    endforeach()
-
-    function(__resolve_next_deps var)
-        get_property(deps GLOBAL PROPERTY COMPONENTS_DEPENDS)
-        list(POP_FRONT deps dep)
-        set_property(GLOBAL PROPERTY COMPONENTS_DEPENDS ${deps})
-
-        set(${var} ${dep} PARENT_SCOPE)
-    endfunction()
-
-    while(1)
-        __resolve_next_deps(iter)
-
-        if (iter)
-            get_property(components_resolved GLOBAL PROPERTY COMPONENTS_RESOLVED)
-
-            if (NOT iter IN_LIST components_resolved)
-                message("## Resolve dependency: ${iter}")
-                idf_component_add("${IDF_PATH}/components/${iter}")
-            endif()
-        else()
-            break()
-        endif()
-    endwhile()
 endfunction()
 
 #############################################################################
@@ -556,7 +610,37 @@ function(idf_build)
         idf_build_set_property(PROJECT_VER ${CMAKE_PROJECT_VERSION})
     endif()
 
-    __idf_resolve_dependencies()
+    # common required components
+    #   esp-idf all components depends these
+    idf_build_get_property(common_requires __COMPONENT_REQUIRES_COMMON)
+    foreach(iter ${common_requires})
+        get_property(components_resolved GLOBAL PROPERTY COMPONENTS_RESOLVED)
+        if (NOT iter IN_LIST components_resolved)
+            idf_component_add("${IDF_PATH}/components/${iter}")
+        endif()
+    endforeach()
+
+    # resoving all dependencies
+    while(1)
+        get_property(deps GLOBAL PROPERTY COMPONENTS_DEPENDS)
+        list(POP_FRONT deps iter)
+        set_property(GLOBAL PROPERTY COMPONENTS_DEPENDS ${deps})
+
+        if (iter)
+            get_property(components_resolved GLOBAL PROPERTY COMPONENTS_RESOLVED)
+
+            if (NOT iter IN_LIST components_resolved)
+                message("## Resolve dependency: ${iter}")
+                idf_component_add("${IDF_PATH}/components/${iter}")
+            endif()
+        else()
+            break()
+        endif()
+    endwhile()
+
+    # link all dependencies
+    foreach(component_target ${build_component_targets})
+    endforeach()
 
     include(${IDF_CMAKE_PATH}/__build.cmake)
     idf_build_get_property(component_targets __COMPONENT_TARGETS)
@@ -578,7 +662,7 @@ function(idf_build)
 
     # Include each component's project_include.cmake
     foreach(component_target ${build_component_targets})
-        __component_get_property(COMPONENT_DIR ${component_target} COMPONENT_DIR)
+        idf_component_get_property(COMPONENT_DIR ${component_target} COMPONENT_DIR)
         if(EXISTS ${COMPONENT_DIR}/project_include.cmake)
             include(${COMPONENT_DIR}/project_include.cmake)
         endif()
@@ -593,18 +677,18 @@ function(idf_build)
     # # Add each component as a subdirectory, processing each component's CMakeLists.txt
     # foreach(component_target ${build_component_targets})
     #     idf_build_get_property(build_dir BUILD_DIR)
-    #     __component_get_property(NAMESPACE ${component_target} __PREFIX)
+    #     idf_component_get_property(prefix ${component_target} __PREFIX)
 
-    #     __component_get_property(COMPONENT_DIR ${component_target} COMPONENT_DIR)
-    #     __component_get_property(COMPONENT_NAME ${component_target} COMPONENT_NAME)
-    #     __component_get_property(COMPONENT_ALIAS ${component_target} COMPONENT_ALIAS)
+    #     idf_component_get_property(COMPONENT_DIR ${component_target} COMPONENT_DIR)
+    #     idf_component_get_property(COMPONENT_NAME ${component_target} COMPONENT_NAME)
+    #     idf_component_get_property(COMPONENT_ALIAS ${component_target} COMPONENT_ALIAS)
 
-    #     # message("=== ${NAMESPACE}::${COMPONENT_NAME}")
+    #     # message("=== ${prefix}::${COMPONENT_NAME}")
     #     # message("\tcomponent dir: ${COMPONENT_DIR}")
-    #     # message("\tbuild dir: ${build_dir}/${NAMESPACE}/${COMPONENT_NAME}")
+    #     # message("\tbuild dir: ${build_dir}/${prefix}/${COMPONENT_NAME}")
     #     # message("")
 
-    #     add_subdirectory(${COMPONENT_DIR} ${build_dir}/${NAMESPACE}/${COMPONENT_NAME})
+    #     add_subdirectory(${COMPONENT_DIR} ${build_dir}/${prefix}/${COMPONENT_NAME})
     # endforeach()
 
     set(project_elf ${CMAKE_PROJECT_NAME}.elf)
@@ -623,11 +707,11 @@ function(idf_build)
         target_link_libraries(${project_elf} PRIVATE "-Wl,--start-group")
     endif()
 
-    idf_build_get_property(build_components BUILD_COMPONENT_ALIASES)
+    idf_build_get_property(build_components __BUILD_COMPONENT_TARGETS)
 
-    foreach(build_component ${build_components})
-        __component_get_target(build_component_target ${build_component})
-        __component_get_property(whole_archive ${build_component_target} WHOLE_ARCHIVE)
+    foreach(component_target ${build_component_targets})
+        idf_component_get_property(whole_archive ${component_target} WHOLE_ARCHIVE)
+        idf_component_get_property(build_component ${component_target} COMPONENT_ALIAS)
 
         if(whole_archive)
             message(STATUS "Component ${build_component} will be linked with -Wl,--whole-archive")
