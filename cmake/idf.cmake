@@ -3,7 +3,7 @@
 #############################################################################
 if (NOT IDF_TARGET)
     set(IDF_TARGET "esp32s3" CACHE STRING "esp-idf build target")
-    message(STATUS "❓ variable IDF_TARGET is not set, default set to esp32s3")
+    message("❓ variable IDF_TARGET is not set, default set to esp32s3")
 endif()
 set_property(CACHE IDF_TARGET PROPERTY STRINGS esp32 esp32s2 esp32s3 esp32c3 esp32h2 esp32c2 esp32c6)
 # some project_include.cmake direct reference this value
@@ -22,12 +22,12 @@ if (NOT IDF_PATH)
         set(IDF_PATH $ENV{IDF_PATH})
     else()
         set(IDF_PATH "$ENV{HOME}/esp-idf")
-        message(STATUS "❓ variable IDF_PATH is not set, default set to $ENV{HOME}/esp-idf")
+        message("❓ variable IDF_PATH is not set, default set to $ENV{HOME}/esp-idf")
     endif()
     set(IDF_PATH ${IDF_PATH} CACHE STRING "esp-idf source path")
 elseif (DEFINED ENV{IDF_PATH} AND NOT ($ENV{IDF_PATH} STREQUAL ${IDF_PATH}))
-    message(STATUS "❌ IDF_PATH was changed since last build")
-    message(STATUS "✔️ clear cmake cache to fix\n\n")
+    message("❌ IDF_PATH was changed since last build")
+    message("✔️ clear cmake cache to fix\n\n")
     message(FATAL_ERROR)
 endif()
 
@@ -36,7 +36,7 @@ if (NOT IDF_ENV_PATH)
 endif()
 if (NOT IDF_ENV_PATH)
     set(IDF_ENV_PATH "$ENV{HOME}/.espressif")
-    message(STATUS "❓ variable IDF_ENV_PATH is not set, default set to ${IDF_ENV_PATH}")
+    message("❓ variable IDF_ENV_PATH is not set, default set to ${IDF_ENV_PATH}")
 endif()
 
 set(IDF_CMAKE_PATH ${IDF_PATH}/tools/cmake)
@@ -86,6 +86,7 @@ list(REMOVE_DUPLICATES ASM_COMPILE_OPTIONS)
 
 # COMPILE_DEFINITIONS
 list(APPEND COMPILE_DEFINITIONS
+    "_GNU_SOURCE"
     "ESP_PLATFORM"          # 3party components porting
 )
 list(REMOVE_DUPLICATES COMPILE_DEFINITIONS)
@@ -103,8 +104,8 @@ include(${IDF_CMAKE_PATH}/version.cmake)
 
 # cmake last build idf version
 if (IDF_BUILD_VERSION AND NOT ($ENV{IDF_VERSION} STREQUAL "${IDF_BUILD_VERSION}"))
-    message(STATUS "❌ IDF_VERSION was changed since last build")
-    message(STATUS "✔️ this is not a fatal, but recommended clear cmake cache\n\n")
+    message("❌ IDF_VERSION was changed since last build")
+    message("✔️ this is not a fatal, but recommended clear cmake cache\n\n")
 else()
     set(IDF_BUILD_VERSION $ENV{IDF_VERSION} CACHE STRING "esp-idf version")
 endif()
@@ -131,7 +132,7 @@ function (__git_submodule_check_once)
     # get git submodules from ${IDF_PATH} if submodules was not initialized
     if (NOT GIT_SUBMODULES_CHECKED)
     set(GIT_SUBMODULES_CHECKED true CACHE BOOL "esp-idf git submodule checked")
-        message(STATUS "💡 Checking ESP-IDF components submodules, this will only execute once")
+        message("💡 Checking ESP-IDF components submodules, this will only execute once")
 
         include(${IDF_CMAKE_PATH}/git_submodules.cmake)
         git_submodule_check(${IDF_PATH})
@@ -284,11 +285,13 @@ function(__idf_build_init)
         endif()
     endif()
 
+        #   cxx heap esp_system)
+
     set(common_requires
-        freertos newlib log
-        # cxx
-        esp_common esp_hw_support esp_rom
-        esptool_py
+        freertos newlib
+        log soc hal cxx heap
+        esp_common esp_hw_support esp_rom esp_system
+        # esptool_py
     )
     idf_build_set_property(__COMPONENT_REQUIRES_COMMON "${common_requires}" APPEND)
 
@@ -348,6 +351,8 @@ function(idf_component_add component_dir) # optional: prefix
     idf_build_set_property(__COMPONENT_TARGETS ${component_target} APPEND)
     # kconfig using __BUILD_COMPONENT_TARGETS = __COMPONENT_TARGETS
     idf_build_set_property(__BUILD_COMPONENT_TARGETS ${component_target} APPEND)
+    # some esp-idf components/CMakeLists.txt
+    idf_build_set_property(BUILD_COMPONENTS ${COMPONENT_NAME} APPEND)
 
     # Set the basic properties of the component
     __component_set_property(${component_target} __PREFIX ${prefix})
@@ -595,7 +600,7 @@ function(idf_build)
         endif()
     endwhile()
 
-    message("\n💡 Kconfig generate sdkconfig")
+    message("\n💡 Kconfig")
     # Generate sdkconfig.h/sdkconfig.cmake
     idf_build_get_property(sdkconfig SDKCONFIG)
     idf_build_get_property(sdkconfig_defaults SDKCONFIG_DEFAULTS)
