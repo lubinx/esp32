@@ -8,10 +8,11 @@ include(idf.cmake)
 project(buildroot)
 
 macro(IDF_buildroot)
+    idf_component_add("${CMAKE_CURRENT_LIST_DIR}/log")
     idf_component_add("${CMAKE_CURRENT_LIST_DIR}/bootloader")
     idf_component_add("${IDF_PATH}/components/bootloader/subproject/components/micro-ecc")
     idf_component_add("${CMAKE_CURRENT_LIST_DIR}/obsoleted/esp_app_format")
-    idf_component_add("${CMAKE_CURRENT_LIST_DIR}/obsoleted/partition_table")
+    # idf_component_add("${CMAKE_CURRENT_LIST_DIR}/obsoleted/partition_table")
 
     idf_build()
 endmacro()

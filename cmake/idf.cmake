@@ -55,14 +55,15 @@ list(APPEND COMPILE_OPTIONS
     "-Wall"
     "-Werror=all"
     "-Wno-error=unused-function"
-    "-Wno-error=unused-variable"
     "-Wno-error=deprecated-declarations"
     "-Wextra"
-    "-Wno-unused-parameter"
-    "-Wno-sign-compare"
     # ignore multiple enum conversion warnings since gcc 11
     # TODO: IDF-5163
-    # "-Wno-enum-conversion"
+    "-Wno-unused-parameter"
+    "-Wno-sign-compare"
+    "-Wno-unused-variable"
+    "-Wno-enum-conversion"
+    "-Wno-format"
 )
 list(REMOVE_DUPLICATES COMPILE_OPTIONS)
 
@@ -96,6 +97,13 @@ list(APPEND LINK_OPTIONS
    ""
 )
 list(REMOVE_DUPLICATES LINK_OPTIONS)
+
+list(APPEND __BOOTLOADER_COMPONENTS
+    "bootloader_support"
+    # "esp_hw_support"
+    # "esp_system"
+    "esptool_py"
+)
 
 #############################################################################
 # 💡 include
@@ -180,8 +188,8 @@ function(__component_set_property component_target property val)
     endif()
 endfunction()
 
-function(__component_get_target var name_or_alias)
-    set(${var} ${name_or_alias} PARENT_SCOPE)
+function(__component_get_target var component_name)
+    set(${var} "__${component_name}" PARENT_SCOPE)
 endfunction()
 
 function(idf_component_get_property var component property)
@@ -251,6 +259,7 @@ function(__idf_build_init)
     idf_build_set_property(COMPILE_DEFINITIONS "IDF_VER=\"$ENV{IDF_VERSION}\"" APPEND)
 
     # python
+    idf_build_set_property(__CHECK_PYTHON 0)        # do not check python
     idf_build_set_property(PYTHON "${PYTHON_ENV}")
 
     idf_build_set_property(PROJECT_DIR ${CMAKE_SOURCE_DIR})
@@ -280,20 +289,26 @@ function(__idf_build_init)
 
     # esp-idf components common requires
     if (NOT IDF_TARGET_ARCH STREQUAL "")
-        if (NOT IDF_TARGET_ARCH IN_LIST components_resolved)
-            idf_build_set_property(__COMPONENT_REQUIRES_COMMON ${IDF_TARGET_ARCH} APPEND)
-        endif()
+        idf_build_set_property(__COMPONENT_REQUIRES_COMMON ${IDF_TARGET_ARCH} APPEND)
     endif()
 
-        #   cxx heap esp_system)
-
-    set(common_requires
+    list(APPEND common_requires
         freertos newlib
-        log soc hal cxx heap
-        esp_common esp_hw_support esp_rom esp_system
-        # esptool_py
+        cxx heap
+        log soc hal
+        esp_ringbuf esp_common esp_hw_support esp_rom esp_system
+        esptool_py
     )
+    # if (NOT BOOTLOADER_BUILD)
+    #     LIST(APPEND common_requires
+    #         cxx heap
+    #     )
+    # endif()
     idf_build_set_property(__COMPONENT_REQUIRES_COMMON "${common_requires}" APPEND)
+
+    if (BOOTLOADER_BUILD)
+        set_property(GLOBAL PROPERTY DEPENDED_COMPONENTS "bootloader" APPEND)
+    endif()
 
     message("💡 ESP-IDF environment initialized")
     message("\tComponents path: ${IDF_PATH}")
@@ -325,19 +340,24 @@ function(idf_component_add component_dir) # optional: prefix
         endif()
     endif()
 
-    set(component_target ${COMPONENT_NAME})
+    __component_get_target(component_target ${COMPONENT_NAME})
     set(component_lib ${prefix}_${COMPONENT_NAME})
     # ${IDF_PATH}/CMakeLists.txt
     #   keep COMPONENT_NAME & COMPONENT_DIR & COMPONENT_ALIAS UPPERCASE
     set(COMPONENT_DIR ${component_dir})
     set(COMPONENT_ALIAS ${prefix}::${COMPONENT_NAME})
 
-    get_property(components_resolved GLOBAL PROPERTY COMPONENTS_RESOLVED)
-    if(NOT COMPONENT_NAME IN_LIST components_resolved)
+    idf_build_get_property(component_targets __COMPONENT_TARGETS)
+    if(NOT component_target IN_LIST component_targets)
         if(NOT EXISTS "${component_dir}/CMakeLists.txt")
             message(FATAL_ERROR "Directory '${component_dir}' does not contain a component.")
         endif()
-        set_property(GLOBAL PROPERTY COMPONENTS_RESOLVED ${COMPONENT_NAME} APPEND)
+
+        idf_build_set_property(__COMPONENT_TARGETS ${component_target} APPEND)
+        # kconfig using __BUILD_COMPONENT_TARGETS = __COMPONENT_TARGETS
+        idf_build_set_property(__BUILD_COMPONENT_TARGETS ${component_target} APPEND)
+        # some esp-idf components/CMakeLists.txt
+        idf_build_set_property(BUILD_COMPONENTS ${COMPONENT_NAME} APPEND)
     else()
         message(WARNING "Components ${COMPONENT_NAME} was already added.")
         return()
@@ -347,12 +367,6 @@ function(idf_component_add component_dir) # optional: prefix
     # if (EXISTS "${component_dir}/components")
     # endif()
     add_library(${component_target} STATIC IMPORTED)
-
-    idf_build_set_property(__COMPONENT_TARGETS ${component_target} APPEND)
-    # kconfig using __BUILD_COMPONENT_TARGETS = __COMPONENT_TARGETS
-    idf_build_set_property(__BUILD_COMPONENT_TARGETS ${component_target} APPEND)
-    # some esp-idf components/CMakeLists.txt
-    idf_build_set_property(BUILD_COMPONENTS ${COMPONENT_NAME} APPEND)
 
     # Set the basic properties of the component
     __component_set_property(${component_target} __PREFIX ${prefix})
@@ -367,6 +381,10 @@ function(idf_component_add component_dir) # optional: prefix
     __kconfig_component_init(${component_target})
     # set BUILD_COMPONENT_DIRS build property
     idf_build_set_property(BUILD_COMPONENT_DIRS ${component_dir} APPEND)
+
+    if (COMPONENT_NAME IN_LIST __BOOTLOADER_COMPONENTS)
+        set(BOOTLOADER_BUILD 1)
+    endif()
 
     # ⚓ call macro idf_component_register()
     include(${component_dir}/CMakeLists.txt)
@@ -399,10 +417,10 @@ macro(idf_component_register)
         __component_set_property(${component_target} KCONFIG "${__KCONFIG}" APPEND)
         __component_set_property(${component_target} KCONFIG_PROJBUILD "${__KCONFIG_PROJBUILD}" APPEND)
 
-        get_property(depends GLOBAL PROPERTY COMPONENTS_DEPENDS)
+        get_property(depends GLOBAL PROPERTY DEPENDED_COMPONENTS)
         foreach(iter ${__REQUIRES} ${__PRIV_REQUIRES})
             if (NOT iter IN_LIST depends)
-                set_property(GLOBAL PROPERTY COMPONENTS_DEPENDS ${iter} APPEND)
+                set_property(GLOBAL PROPERTY DEPENDED_COMPONENTS ${iter} APPEND)
             endif()
         endforeach()
 
@@ -575,25 +593,40 @@ endfunction()
 #############################################################################
 function(idf_build)
     message("\n💡 Resolve dependencies")
+    set(GLOBAL_BOOTLOADER_BUILD ${BOOTLOADER_BUILD})
 
     # add esp-idf common required components
     idf_build_get_property(common_requires __COMPONENT_REQUIRES_COMMON)
     foreach(iter ${common_requires})
-        get_property(components_resolved GLOBAL PROPERTY COMPONENTS_RESOLVED)
-        if (NOT iter IN_LIST components_resolved)
+        idf_build_get_property(component_targets __COMPONENT_TARGETS)
+        __component_get_target(req_target ${iter})
+
+        if (NOT req_target IN_LIST component_targets)
+            if (iter IN_LIST __BOOTLOADER_COMPONENTS AND NOT GLOBAL_BOOTLOADER_BUILD)
+                set(BOOTLOADER_BUILD 1)
+            endif()
+
             idf_component_add("${IDF_PATH}/components/${iter}")
+            set(BOOTLOADER_BUILD ${GLOBAL_BOOTLOADER_BUILD})
         endif()
     endforeach()
     # find & add all depended components
     while(1)
-        get_property(deps GLOBAL PROPERTY COMPONENTS_DEPENDS)
+        get_property(deps GLOBAL PROPERTY DEPENDED_COMPONENTS)
         list(POP_FRONT deps iter)
-        set_property(GLOBAL PROPERTY COMPONENTS_DEPENDS ${deps})
+        set_property(GLOBAL PROPERTY DEPENDED_COMPONENTS ${deps})
 
         if (iter)
-            get_property(components_resolved GLOBAL PROPERTY COMPONENTS_RESOLVED)
-            if (NOT iter IN_LIST components_resolved)
+            idf_build_get_property(component_targets __COMPONENT_TARGETS)
+            __component_get_target(req_target ${iter})
+
+            if (NOT req_target IN_LIST component_targets)
+                if (iter IN_LIST __BOOTLOADER_COMPONENTS AND NOT GLOBAL_BOOTLOADER_BUILD)
+                    set(BOOTLOADER_BUILD 1)
+                endif()
+
                 idf_component_add("${IDF_PATH}/components/${iter}")
+                set(BOOTLOADER_BUILD ${GLOBAL_BOOTLOADER_BUILD})
             endif()
         else()
             break()
@@ -610,12 +643,17 @@ function(idf_build)
     include(${sdkconfig_cmake})
 
     idf_build_get_property(component_targets __COMPONENT_TARGETS)
-
     # project_include.cmake
     foreach(component_target ${component_targets})
         __component_get_property(COMPONENT_DIR ${component_target} COMPONENT_DIR)
+        __component_get_property(COMPONENT_NAME ${component_target} COMPONENT_NAME)
+
         if(EXISTS ${COMPONENT_DIR}/project_include.cmake)
+            if (COMPONENT_NAME IN_LIST __BOOTLOADER_COMPONENTS)
+                set(BOOTLOADER_BUILD 1)
+            endif()
             include(${COMPONENT_DIR}/project_include.cmake)
+            set(BOOTLOADER_BUILD ${GLOBAL_BOOTLOADER_BUILD})
         endif()
     endforeach()
 
@@ -636,7 +674,12 @@ function(idf_build)
         __component_get_property(COMPONENT_NAME ${component_target} COMPONENT_NAME)
         __component_get_property(COMPONENT_ALIAS ${component_target} COMPONENT_ALIAS)
 
+        if (COMPONENT_NAME IN_LIST __BOOTLOADER_COMPONENTS AND NOT GLOBAL_BOOTLOADER_BUILD)
+            set(BOOTLOADER_BUILD 1)
+        endif()
+
         add_subdirectory(${COMPONENT_DIR} ${build_dir}/${prefix}/${COMPONENT_NAME})
+        set(BOOTLOADER_BUILD ${GLOBAL_BOOTLOADER_BUILD})
     endforeach()
     unset(__idf_component_context)
 

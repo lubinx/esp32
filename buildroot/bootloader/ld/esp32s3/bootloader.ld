@@ -62,7 +62,8 @@ SECTIONS
     _loader_text_start = ABSOLUTE(.);
 
     *(.stub .gnu.warning .gnu.linkonce.literal.* .gnu.linkonce.t.*.literal .gnu.linkonce.t.*)
-     *(.iram1 .iram1.*) /* catch stray IRAM_ATTR */
+    *(.iram1 .iram1.*) /* catch stray IRAM_ATTR */
+
     *liblog.a:(.literal .text .literal.* .text.*)
     *libgcc.a:(.literal .text .literal.* .text.*)
     *libbootloader_support.a:bootloader_clock_loader.*(.literal .text .literal.* .text.*)
@@ -94,6 +95,7 @@ SECTIONS
     *libesp_hw_support.a:rtc_time.*(.literal .text .literal.* .text.*)
     *libesp_hw_support.a:regi2c_ctrl.*(.literal .text .literal.* .text.*)
     *libefuse.a:*.*(.literal .text .literal.* .text.*)
+
     *(.fini.literal)
     *(.fini)
     *(.gnu.version)
