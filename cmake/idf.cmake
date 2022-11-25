@@ -9,10 +9,10 @@ set_property(CACHE IDF_TARGET PROPERTY STRINGS esp32 esp32s2 esp32s3 esp32c3 esp
 # some project_include.cmake direct reference this value
 set(target ${IDF_TARGET})
 
-if(("${IDF_TARGET}" STREQUAL "esp32") OR ("${IDF_TARGET}" STREQUAL "esp32s2") OR ("${IDF_TARGET}" STREQUAL "esp32s3"))
-    set(IDF_TARGET_ARCH "xtensa")
-elseif("${IDF_TARGET}" STREQUAL "linux")
+if("${IDF_TARGET}" STREQUAL "linux")
     set(IDF_TARGET_ARCH "")
+elseif(("${IDF_TARGET}" STREQUAL "esp32") OR ("${IDF_TARGET}" STREQUAL "esp32s2") OR ("${IDF_TARGET}" STREQUAL "esp32s3"))
+    set(IDF_TARGET_ARCH "xtensa")
 else()
     set(IDF_TARGET_ARCH "riscv")
 endif()
@@ -62,8 +62,8 @@ list(APPEND COMPILE_OPTIONS
     "-Wno-unused-parameter"
     "-Wno-sign-compare"
     "-Wno-unused-variable"
-    "-Wno-enum-conversion"
-    "-Wno-format"
+    # "-Wno-enum-conversion"
+    # "-Wno-format"
 )
 list(REMOVE_DUPLICATES COMPILE_OPTIONS)
 
@@ -98,13 +98,6 @@ list(APPEND LINK_OPTIONS
 )
 list(REMOVE_DUPLICATES LINK_OPTIONS)
 
-list(APPEND __BOOTLOADER_COMPONENTS
-    "bootloader_support"
-    # "esp_hw_support"
-    # "esp_system"
-    "esptool_py"
-)
-
 #############################################################################
 # 💡 include
 #############################################################################
@@ -127,7 +120,7 @@ endif()
 
 include(${IDF_CMAKE_PATH}/utilities.cmake)
 include(${IDF_CMAKE_PATH}/kconfig.cmake)
-include(${IDF_CMAKE_PATH}/ldgen.cmake)
+# include(${IDF_CMAKE_PATH}/ldgen.cmake)
 
 # tool_version_check.cmake
 function(check_expected_tool_version tool_name tool_path)
@@ -293,22 +286,13 @@ function(__idf_build_init)
     endif()
 
     list(APPEND common_requires
-        freertos newlib
-        cxx heap
-        log soc hal
-        esp_ringbuf esp_common esp_hw_support esp_rom esp_system
+        freertos
+        soc hal
+        esp_system esp_ringbuf heap
+        esp_common esp_hw_support esp_rom
         esptool_py
     )
-    # if (NOT BOOTLOADER_BUILD)
-    #     LIST(APPEND common_requires
-    #         cxx heap
-    #     )
-    # endif()
     idf_build_set_property(__COMPONENT_REQUIRES_COMMON "${common_requires}" APPEND)
-
-    if (BOOTLOADER_BUILD)
-        set_property(GLOBAL PROPERTY DEPENDED_COMPONENTS "bootloader" APPEND)
-    endif()
 
     message("💡 ESP-IDF environment initialized")
     message("\tComponents path: ${IDF_PATH}")
@@ -381,10 +365,6 @@ function(idf_component_add component_dir) # optional: prefix
     __kconfig_component_init(${component_target})
     # set BUILD_COMPONENT_DIRS build property
     idf_build_set_property(BUILD_COMPONENT_DIRS ${component_dir} APPEND)
-
-    if (COMPONENT_NAME IN_LIST __BOOTLOADER_COMPONENTS)
-        set(BOOTLOADER_BUILD 1)
-    endif()
 
     # ⚓ call macro idf_component_register()
     include(${component_dir}/CMakeLists.txt)
@@ -475,34 +455,31 @@ function(__inherited_idf_component_register)
     endforeach()
 
     # Glob sources
-    if(__SRCS)
-        foreach(src ${__SRCS})
-            get_filename_component(src "${src}" ABSOLUTE BASE_DIR ${COMPONENT_DIR})
-            list(APPEND sources ${src})
-        endforeach()
-    endif()
     if(__SRC_DIRS)
         foreach(dir ${__SRC_DIRS})
-            get_filename_component(abs_dir ${dir} ABSOLUTE BASE_DIR ${COMPONENT_DIR})
+            get_filename_component(dir ${dir} ABSOLUTE BASE_DIR ${CMAKE_CURRENT_LIST_DIR})
             if(NOT IS_DIRECTORY ${abs_dir})
                 continue()
             endif()
 
             file(GLOB dir_sources "${abs_dir}/*.c" "${abs_dir}/*.cpp" "${abs_dir}/*.S")
             if(dir_sources)
-                foreach(src ${dir_sources})
-                    get_filename_component(src "${src}" ABSOLUTE BASE_DIR ${COMPONENT_DIR})
-                    list(APPEND sources "${src}")
-                endforeach()
+                list(APPEND sources "${dir_sources}")
             else()
                 message(WARNING "No source files found for SRC_DIRS entry '${dir}'.")
             endif()
         endforeach()
     endif()
+    if(__SRCS)
+        foreach(src ${__SRCS})
+            get_filename_component(src ${src} ABSOLUTE BASE_DIR ${CMAKE_CURRENT_LIST_DIR})
+            list(APPEND sources ${src})
+        endforeach()
+    endif()
     if(__EXCLUDE_SRCS)
         foreach(src ${__EXCLUDE_SRCS})
-            get_filename_component(src "${src}" ABSOLUTE)
-            list(REMOVE_ITEM sources "${src}")
+            get_filename_component(src ${src} ABSOLUTE BASE_DIR ${CMAKE_CURRENT_LIST_DIR})
+            list(REMOVE_ITEM sources ${src})
         endforeach()
     endif()
     list(REMOVE_DUPLICATES sources)
@@ -545,7 +522,7 @@ function(__inherited_idf_component_register)
         __component_get_property(priv_reqs ${component_target} PRIV_REQUIRES)
         __component_set_dependencies("${priv_reqs}" PRIVATE)
 
-        __ldgen_add_component(${component_lib})
+        # __ldgen_add_component(${component_lib})
     else()
         add_library(${component_lib} INTERFACE)
 
@@ -566,15 +543,15 @@ function(__inherited_idf_component_register)
         target_add_binary_data(${component_lib} "${file}" "TEXT")
     endforeach()
 
-    if(__LDFRAGMENTS)
-        __ldgen_add_fragment_files("${__LDFRAGMENTS}")
-    endif()
+    # if(__LDFRAGMENTS)
+    #     __ldgen_add_fragment_files("${__LDFRAGMENTS}")
+    # endif()
 
     # Fill in the rest of component property
     __component_set_property(${component_target} SRCS "${sources}")
     __component_set_property(${component_target} INCLUDE_DIRS "${__INCLUDE_DIRS}")
 
-    __component_set_property(${component_target} LDFRAGMENTS "${__LDFRAGMENTS}")
+    # __component_set_property(${component_target} LDFRAGMENTS "${__LDFRAGMENTS}")
     __component_set_property(${component_target} EMBED_FILES "${__EMBED_FILES}")
     __component_set_property(${component_target} EMBED_TXTFILES "${__EMBED_TXTFILES}")
     __component_set_property(${component_target} REQUIRED_IDF_TARGETS "${__REQUIRED_IDF_TARGETS}")
@@ -593,7 +570,6 @@ endfunction()
 #############################################################################
 function(idf_build)
     message("\n💡 Resolve dependencies")
-    set(GLOBAL_BOOTLOADER_BUILD ${BOOTLOADER_BUILD})
 
     # add esp-idf common required components
     idf_build_get_property(common_requires __COMPONENT_REQUIRES_COMMON)
@@ -602,12 +578,7 @@ function(idf_build)
         __component_get_target(req_target ${iter})
 
         if (NOT req_target IN_LIST component_targets)
-            if (iter IN_LIST __BOOTLOADER_COMPONENTS AND NOT GLOBAL_BOOTLOADER_BUILD)
-                set(BOOTLOADER_BUILD 1)
-            endif()
-
             idf_component_add("${IDF_PATH}/components/${iter}")
-            set(BOOTLOADER_BUILD ${GLOBAL_BOOTLOADER_BUILD})
         endif()
     endforeach()
     # find & add all depended components
@@ -621,12 +592,7 @@ function(idf_build)
             __component_get_target(req_target ${iter})
 
             if (NOT req_target IN_LIST component_targets)
-                if (iter IN_LIST __BOOTLOADER_COMPONENTS AND NOT GLOBAL_BOOTLOADER_BUILD)
-                    set(BOOTLOADER_BUILD 1)
-                endif()
-
                 idf_component_add("${IDF_PATH}/components/${iter}")
-                set(BOOTLOADER_BUILD ${GLOBAL_BOOTLOADER_BUILD})
             endif()
         else()
             break()
@@ -649,11 +615,7 @@ function(idf_build)
         __component_get_property(COMPONENT_NAME ${component_target} COMPONENT_NAME)
 
         if(EXISTS ${COMPONENT_DIR}/project_include.cmake)
-            if (COMPONENT_NAME IN_LIST __BOOTLOADER_COMPONENTS)
-                set(BOOTLOADER_BUILD 1)
-            endif()
             include(${COMPONENT_DIR}/project_include.cmake)
-            set(BOOTLOADER_BUILD ${GLOBAL_BOOTLOADER_BUILD})
         endif()
     endforeach()
 
@@ -674,12 +636,7 @@ function(idf_build)
         __component_get_property(COMPONENT_NAME ${component_target} COMPONENT_NAME)
         __component_get_property(COMPONENT_ALIAS ${component_target} COMPONENT_ALIAS)
 
-        if (COMPONENT_NAME IN_LIST __BOOTLOADER_COMPONENTS AND NOT GLOBAL_BOOTLOADER_BUILD)
-            set(BOOTLOADER_BUILD 1)
-        endif()
-
         add_subdirectory(${COMPONENT_DIR} ${build_dir}/${prefix}/${COMPONENT_NAME})
-        set(BOOTLOADER_BUILD ${GLOBAL_BOOTLOADER_BUILD})
     endforeach()
     unset(__idf_component_context)
 
@@ -721,8 +678,8 @@ function(idf_build)
     set_property(TARGET ${project_elf} APPEND PROPERTY LINK_OPTIONS "${link_options}")
 
     # Propagate link dependencies from component library targets to the executable
-    idf_build_get_property(link_depends __LINK_DEPENDS)
-    set_property(TARGET ${project_elf} APPEND PROPERTY LINK_DEPENDS "${link_depends}")
+    # idf_build_get_property(link_depends __LINK_DEPENDS)
+    # set_property(TARGET ${project_elf} APPEND PROPERTY LINK_DEPENDS "${link_depends}")
 
     # Set the EXECUTABLE_NAME and EXECUTABLE properties since there are generator expression
     # from components that depend on it
