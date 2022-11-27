@@ -3,6 +3,7 @@
 !/**/
 !*.*
 !makefile
+!Kconfig
 
 # gcc output
 **/*.o

@@ -51,52 +51,55 @@ set(CMAKE_TOOLCHAIN_FILE ${IDF_PATH}/tools/cmake/toolchain-${IDF_TARGET}.cmake)
 list(APPEND COMPILE_OPTIONS
     "-ffunction-sections"
     "-fdata-sections"
-    # warning-related flags
     "-Wall"
     "-Werror=all"
     "-Wno-error=unused-function"
     "-Wno-error=deprecated-declarations"
     "-Wextra"
-    # ignore multiple enum conversion warnings since gcc 11
-    # TODO: IDF-5163
+)
+
+# extra COMPILE_OPTIONS for build esp-idf components only
+list(APPEND COMPONENT_COMPILE_OPTIONS
+    "-Wno-enum-conversion"
     "-Wno-unused-parameter"
     "-Wno-sign-compare"
-    "-Wno-unused-variable"
-    # "-Wno-enum-conversion"
     # "-Wno-format"
+    # "-Wno-unused-variable"
 )
-list(REMOVE_DUPLICATES COMPILE_OPTIONS)
 
 # C_COMPILE_OPTIONS
 list(APPEND C_COMPILE_OPTIONS
     "-std=gnu17"
 )
-list(REMOVE_DUPLICATES C_COMPILE_OPTIONS)
 
 # CXX_COMPILE_OPTIONS
 list(APPEND CXX_COMPILE_OPTIONS
     "-std=gnu++20"
 )
-list(REMOVE_DUPLICATES CXX_COMPILE_OPTIONS)
 
 # ASM_COMPILE_OPTIONS
 list(APPEND ASM_COMPILE_OPTIONS
     ""
 )
-list(REMOVE_DUPLICATES ASM_COMPILE_OPTIONS)
 
 # COMPILE_DEFINITIONS
 list(APPEND COMPILE_DEFINITIONS
     "_GNU_SOURCE"
     "ESP_PLATFORM"          # 3party components porting
 )
-list(REMOVE_DUPLICATES COMPILE_DEFINITIONS)
 
 # LINK_OPTIONS
 list(APPEND LINK_OPTIONS
    ""
 )
-list(REMOVE_DUPLICATES LINK_OPTIONS)
+
+list(APPEND OBSOLETED_COMPONENTS
+    # merge into esp_system
+    "esp_common"
+    # removed
+    "esp_app_format"
+    "partition_table"
+)
 
 #############################################################################
 # 💡 include
@@ -110,6 +113,9 @@ if (IDF_BUILD_VERSION AND NOT ($ENV{IDF_VERSION} STREQUAL "${IDF_BUILD_VERSION}"
 else()
     set(IDF_BUILD_VERSION $ENV{IDF_VERSION} CACHE STRING "esp-idf version")
 endif()
+list(APPEND COMPILE_DEFINITIONS
+    "IDF_VER=\"$ENV{IDF_VERSION}\""
+)
 
 # cmake caching python fullpath
 if (NOT PYTHON_ENV)
@@ -229,6 +235,12 @@ endfunction()
 # build initialization
 #############################################################################
 function(__idf_build_init)
+    message("💡 ESP-IDF build initialize")
+        message("\tComponents path: ${IDF_PATH}")
+        message("\tTools path: ${IDF_ENV_PATH}")
+        message("\tBuilding target: ${IDF_TARGET}")
+        message("")
+
     # setup for idf_build_set_property() / idf_build_get_property()
     add_library(__idf_build_target STATIC IMPORTED GLOBAL)
 
@@ -238,6 +250,11 @@ function(__idf_build_init)
     idf_build_set_property(IDF_TARGET_ARCH ${IDF_TARGET_ARCH})
 
     # esp-idf compiler options
+    # __build_get_idf_git_revision()
+    list(REMOVE_DUPLICATES COMPILE_DEFINITIONS)
+    list(REMOVE_DUPLICATES COMPILE_OPTIONS)
+    list(REMOVE_DUPLICATES C_COMPILE_OPTIONS)
+    list(REMOVE_DUPLICATES CXX_COMPILE_OPTIONS)
     idf_build_set_property(COMPILE_DEFINITIONS "${COMPILE_DEFINITIONS}")
     idf_build_set_property(COMPILE_OPTIONS "${COMPILE_OPTIONS}")
     idf_build_set_property(C_COMPILE_OPTIONS "${C_COMPILE_OPTIONS}")
@@ -247,9 +264,6 @@ function(__idf_build_init)
         idf_build_set_property(BOOTLOADER_BUILD "${BOOTLOADER_BUILD}")
         idf_build_set_property(COMPILE_DEFINITIONS "BOOTLOADER_BUILD=1" APPEND)
     endif()
-
-    # __build_get_idf_git_revision()
-    idf_build_set_property(COMPILE_DEFINITIONS "IDF_VER=\"$ENV{IDF_VERSION}\"" APPEND)
 
     # python
     idf_build_set_property(__CHECK_PYTHON 0)        # do not check python
@@ -286,19 +300,14 @@ function(__idf_build_init)
     endif()
 
     list(APPEND common_requires
-        freertos
-        soc hal
-        esp_system esp_ringbuf heap
-        esp_common esp_hw_support esp_rom
-        esptool_py
+        "freertos" "esp_system"
+        "heap"
+        "esp_hw_support" "esp_rom"
+        "esptool_py"
     )
     idf_build_set_property(__COMPONENT_REQUIRES_COMMON "${common_requires}" APPEND)
 
-    message("💡 ESP-IDF environment initialized")
-    message("\tComponents path: ${IDF_PATH}")
-    message("\tTools path: ${IDF_ENV_PATH}")
-    message("\tBuilding target: ${IDF_TARGET}")
-    message("")
+    # TODO: common requires add here
 endfunction()
 
 # 💡 build initialization
@@ -392,17 +401,22 @@ macro(idf_component_register)
             endif()
         endif()
 
+        get_property(depends GLOBAL PROPERTY DEPENDED_COMPONENTS)
+        foreach(iter ${__REQUIRES} ${__PRIV_REQUIRES})
+            if (NOT iter IN_LIST OBSOLETED_COMPONENTS)
+                if (NOT iter IN_LIST depends)
+                    set_property(GLOBAL PROPERTY DEPENDED_COMPONENTS ${iter} APPEND)
+                endif()
+            else()
+                list(REMOVE_ITEM __REQUIRES ${iter})
+                list(REMOVE_ITEM __PRIV_REQUIRES ${iter})
+            endif()
+        endforeach()
+
         __component_set_property(${component_target} REQUIRES "${__REQUIRES}")
         __component_set_property(${component_target} PRIV_REQUIRES "${__PRIV_REQUIRES}")
         __component_set_property(${component_target} KCONFIG "${__KCONFIG}" APPEND)
         __component_set_property(${component_target} KCONFIG_PROJBUILD "${__KCONFIG_PROJBUILD}" APPEND)
-
-        get_property(depends GLOBAL PROPERTY DEPENDED_COMPONENTS)
-        foreach(iter ${__REQUIRES} ${__PRIV_REQUIRES})
-            if (NOT iter IN_LIST depends)
-                set_property(GLOBAL PROPERTY DEPENDED_COMPONENTS ${iter} APPEND)
-            endif()
-        endforeach()
 
         message(STATUS "Add Component: ${COMPONENT_ALIAS}")
         message("\tcomponent dir: ${component_dir}")
@@ -464,7 +478,7 @@ function(__inherited_idf_component_register)
 
             file(GLOB dir_sources "${abs_dir}/*.c" "${abs_dir}/*.cpp" "${abs_dir}/*.S")
             if(dir_sources)
-                list(APPEND sources "${dir_sources}")
+                list(APPEND sources ${dir_sources})
             else()
                 message(WARNING "No source files found for SRC_DIRS entry '${dir}'.")
             endif()
@@ -509,6 +523,11 @@ function(__inherited_idf_component_register)
         add_library(${component_lib} STATIC ${sources})
         set_target_properties(${component_lib} PROPERTIES OUTPUT_NAME ${COMPONENT_NAME} LINKER_LANGUAGE C)
 
+        list(REMOVE_DUPLICATES COMPONENT_COMPILE_OPTIONS)
+        foreach(option ${COMPONENT_COMPILE_OPTIONS})
+            target_compile_options(${component_lib} PRIVATE ${option})
+        endforeach()
+
         __component_add_include_dirs(${component_lib} "${config_dir}" PUBLIC)
         __component_add_include_dirs(${component_lib} "${__INCLUDE_DIRS}" PUBLIC)
         __component_add_include_dirs(${component_lib} "${__PRIV_INCLUDE_DIRS}" PRIVATE)
@@ -532,6 +551,7 @@ function(__inherited_idf_component_register)
         __component_get_property(reqs ${component_target} REQUIRES)
         __component_set_dependencies("${reqs}" INTERFACE)
     endif()
+
 
     # Perform other component processing, such as embedding binaries and processing linker
     # script fragments
@@ -569,6 +589,9 @@ endfunction()
 # idf_build()
 #############################################################################
 function(idf_build)
+    # Generate compile_commands.json (needs to come after project call).
+    set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
     message("\n💡 Resolve dependencies")
 
     # add esp-idf common required components

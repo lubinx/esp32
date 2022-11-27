@@ -1,0 +1,1 @@
+rsource "${IDF_PATH}/components/freertos/Kconfig"

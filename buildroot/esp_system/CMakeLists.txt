@@ -11,13 +11,13 @@ list(APPEND srcs
 idf_component_register(
     INCLUDE_DIRS
         "include"
+        "posix"
         "${IDF_PATH}/components/esp_system/include"
     SRCS
         "${srcs}"
     REQUIRES
         "spi_flash"
 )
-target_compile_options(${COMPONENT_LIB} PRIVATE "-Wno-format")
 
 # if(CONFIG_IDF_ENV_FPGA)
 #     # Forces the linker to include fpga stubs from this component

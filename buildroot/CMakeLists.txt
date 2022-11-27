@@ -2,18 +2,23 @@
 # CMakeLists in this exact order for cmake to work correctly
 cmake_minimum_required(VERSION 3.5)
 
-set(BOOTLOADER_BUILD 1)
-include(idf.cmake)
+# set(BOOTLOADER_BUILD 1)
+include(../cmake/idf.cmake)
 
 project(buildroot)
 
 macro(IDF_buildroot)
     idf_component_add("${CMAKE_CURRENT_LIST_DIR}/freertos")
     idf_component_add("${CMAKE_CURRENT_LIST_DIR}/esp_system")
+    idf_component_add("${CMAKE_CURRENT_LIST_DIR}/esp_hw_support")
     idf_component_add("${CMAKE_CURRENT_LIST_DIR}/bootloader")
     idf_component_add("${IDF_PATH}/components/bootloader/subproject/components/micro-ecc")
-    idf_component_add("${CMAKE_CURRENT_LIST_DIR}/obsoleted/esp_app_format")
-    # idf_component_add("${CMAKE_CURRENT_LIST_DIR}/obsoleted/partition_table")
+    idf_component_add("${CMAKE_CURRENT_LIST_DIR}/bootloader_support")
+    idf_component_add("${CMAKE_CURRENT_LIST_DIR}/driver")
+    idf_component_add("${CMAKE_CURRENT_LIST_DIR}/spi_flash")
+
+    idf_component_add("${CMAKE_CURRENT_LIST_DIR}/obsoleted/partition_table")
+    # idf_component_add("${CMAKE_CURRENT_LIST_DIR}/obsoleted/esp_app_format")
 
     idf_build()
 endmacro()
