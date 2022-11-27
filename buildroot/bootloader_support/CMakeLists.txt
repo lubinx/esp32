@@ -1,20 +1,20 @@
 set(component_path "${IDF_PATH}/components/bootloader_support")
 
 list(APPEND srcs
-    "${component_path}/src/bootloader_common.c"
-    "${component_path}/src/bootloader_common_loader.c"
-    "${component_path}/src/bootloader_clock_init.c"
-    "${component_path}/bootloader_flash/src/bootloader_flash.c"
-    "${component_path}/src/bootloader_mem.c"
-    "${component_path}/src/bootloader_random.c"
-    "${component_path}/src/bootloader_random_${IDF_TARGET}.c"
-    "${component_path}/src/esp_image_format.c"
-    "${component_path}/src/flash_encrypt.c"
-    "${component_path}/src/secure_boot.c"
-    "${component_path}/src/flash_partitions.c"
-    "${component_path}/bootloader_flash/src/flash_qio_mode.c"
-    "${component_path}/bootloader_flash/src/bootloader_flash_config_${IDF_TARGET}.c"
-    "${component_path}/src/bootloader_efuse.c"
+    # "${component_path}/src/bootloader_clock_init.c"
+    # "${component_path}/bootloader_flash/src/bootloader_flash.c"
+    # "${component_path}/src/bootloader_mem.c"
+    # "${component_path}/src/bootloader_random.c"
+    # "${component_path}/src/bootloader_random_${IDF_TARGET}.c"
+    # "${component_path}/src/flash_encrypt.c"
+    # "${component_path}/src/secure_boot.c"
+    # "${component_path}/src/flash_partitions.c"
+    # "${component_path}/src/bootloader_efuse.c"
+    # "${component_path}/bootloader_flash/src/flash_qio_mode.c"
+    # "${component_path}/bootloader_flash/src/bootloader_flash_config_${IDF_TARGET}.c"
+    # "${component_path}/src/bootloader_common.c"
+    # "${component_path}/src/bootloader_common_loader.c"
+    # "${component_path}/src/esp_image_format.c"
     # "${component_path}/src/bootloader_utility.c"
 )
 
@@ -24,12 +24,11 @@ list(APPEND include_dirs
 )
 list(APPEND priv_include_dirs
     "${component_path}/private_include"
-    # "${IDF_PATH}/components/esp_app_format/include"
 )
 
 # if(BOOTLOADER_BUILD)
     list(APPEND srcs
-        "${component_path}/src/bootloader_init.c"
+        # "${component_path}/src/bootloader_init.c"
         "${component_path}/src/bootloader_clock_loader.c"
         "${component_path}/src/bootloader_console.c"
         "${component_path}/src/bootloader_console_loader.c"
