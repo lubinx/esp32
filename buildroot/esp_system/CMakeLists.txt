@@ -3,9 +3,12 @@ if(CONFIG_IDF_ENV_FPGA)
 endif()
 
 list(APPEND srcs
+    "startup.c"
     "log.c"
     "libc_retarget.c"
     "${IDF_PATH}/components/esp_system/esp_err.c"
+    # "${IDF_PATH}/components/esp_ipc.c"
+    # "${IDF_PATH}/components/freertos_hooks.c"
 )
 
 idf_component_register(
@@ -16,8 +19,16 @@ idf_component_register(
     SRCS
         "${srcs}"
     REQUIRES
+        "freertos"
+        "soc" "hal"
         "spi_flash"
 )
+list(APPEND scripts
+    "ld/${IDF_TARGET}.ld"
+    "${IDF_PATH}/components/bootloader/subproject/main/ld/${IDF_TARGET}/bootloader.rom.ld"
+)
+target_linker_script(${COMPONENT_LIB} INTERFACE "${scripts}")
+
 
 # if(CONFIG_IDF_ENV_FPGA)
 #     # Forces the linker to include fpga stubs from this component
@@ -30,7 +41,6 @@ idf_component_register(
 
 #     list(APPEND srcs "crosscore_int.c"
 #             "esp_ipc.c"
-#             "esp_err.c"
 #             "freertos_hooks.c"
 #             "int_wdt.c"
 #             "panic.c"

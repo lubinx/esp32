@@ -38,6 +38,7 @@ list(APPEND priv_include_dirs
         "${component_path}/src/${IDF_TARGET}/bootloader_${IDF_TARGET}.c"
     )
 # else()
+
 #     list(APPEND srcs
 #         "${component_path}/src/idf/bootloader_sha.c"
 #     )
@@ -170,4 +171,3 @@ target_link_libraries(${COMPONENT_LIB} INTERFACE "-u abort")
 # if(BOOTLOADER_BUILD)
 #     target_link_libraries(${COMPONENT_LIB} INTERFACE "-u abort")
 # endif()
-

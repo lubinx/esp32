@@ -323,11 +323,11 @@ function(idf_component_add name_or_dir) # optional: prefix
     if (IS_DIRECTORY ${name_or_dir})
         get_filename_component(component_dir ${name_or_dir} ABSOLUTE BASE_DIR ${CMAKE_CURRENT_LIST_DIR})
         get_filename_component(__parent_dir ${component_dir} DIRECTORY)
-        get_filename_component(COMPONENT_NAME ${component_dir} NAME)
+        get_filename_component(component_name ${component_dir} NAME)
     else()
-        set(component_dir "${IDF_PATH}/${name_or_dir}")
-        set(__parent_dir ${IDF_PATH})
-        set(COMPONENT_NAME ${name_or_dir})
+        set(component_dir "${IDF_PATH}/components/${name_or_dir}")
+        set(__parent_dir "${IDF_PATH}/components")
+        set(component_name ${name_or_dir})
     endif()
 
     if (${__parent_dir} STREQUAL "${IDF_PATH}/components")
@@ -340,10 +340,8 @@ function(idf_component_add name_or_dir) # optional: prefix
         endif()
     endif()
 
-    __component_get_target(component_target ${COMPONENT_NAME})
-    set(component_lib ${prefix}_${COMPONENT_NAME})
-
-    set(COMPONENT_DIR ${name_or_dir})
+    __component_get_target(component_target ${component_name})
+    set(component_lib ${prefix}_${component_name})
 
     idf_build_get_property(component_targets __COMPONENT_TARGETS)
     if(NOT component_target IN_LIST component_targets)
@@ -355,9 +353,9 @@ function(idf_component_add name_or_dir) # optional: prefix
         # kconfig using __BUILD_COMPONENT_TARGETS = __COMPONENT_TARGETS
         idf_build_set_property(__BUILD_COMPONENT_TARGETS ${component_target} APPEND)
         # some esp-idf components/CMakeLists.txt
-        idf_build_set_property(BUILD_COMPONENTS ${COMPONENT_NAME} APPEND)
+        idf_build_set_property(BUILD_COMPONENTS ${component_name} APPEND)
     else()
-        message(WARNING "Components ${COMPONENT_NAME} was already added.")
+        message(WARNING "Components ${component_name} was already added.")
         return()
     endif()
 
@@ -368,11 +366,11 @@ function(idf_component_add name_or_dir) # optional: prefix
 
     # Set the basic properties of the component
     __component_set_property(${component_target} __PREFIX ${prefix})
+    __component_set_property(${component_target} COMPONENT_NAME ${component_name})
     __component_set_property(${component_target} COMPONENT_LIB ${component_lib})
-    __component_set_property(${component_target} COMPONENT_NAME ${COMPONENT_NAME})
-    __component_set_property(${component_target} COMPONENT_DIR ${COMPONENT_DIR})
+    __component_set_property(${component_target} COMPONENT_DIR ${component_dir})
     # build dir
-    __component_set_property(${component_target} COMPONENT_BUILD_DIR "${CMAKE_BINARY_DIR}/${prefix}/${COMPONENT_NAME}")
+    __component_set_property(${component_target} COMPONENT_BUILD_DIR "${CMAKE_BINARY_DIR}/${prefix}/${component_name}")
 
     # Set Kconfig related properties on the component
     __kconfig_component_init(${component_target})
@@ -401,7 +399,7 @@ macro(idf_component_register)
     if(NOT __idf_component_context)
         if(__REQUIRED_IDF_TARGETS)
             if(NOT IDF_TARGET IN_LIST __REQUIRED_IDF_TARGETS)
-                message(FATAL_ERROR "Component ${COMPONENT_NAME} only supports targets: ${__REQUIRED_IDF_TARGETS}")
+                message(FATAL_ERROR "Component ${component_name} only supports targets: ${__REQUIRED_IDF_TARGETS}")
             endif()
         endif()
 
@@ -422,7 +420,7 @@ macro(idf_component_register)
         __component_set_property(${component_target} KCONFIG "${__KCONFIG}" APPEND)
         __component_set_property(${component_target} KCONFIG_PROJBUILD "${__KCONFIG_PROJBUILD}" APPEND)
 
-        message(STATUS "Add Component: ${prefix}::${COMPONENT_NAME}")
+        message(STATUS "Add Component: ${prefix}::${component_name}")
         message("\tcomponent dir: ${component_dir}")
         if (__REQUIRES OR __PRIV_REQUIRES)
             if (__REQUIRES)
@@ -448,7 +446,7 @@ function(__inherited_idf_component_register)
     __component_get_property(component_lib ${component_target} COMPONENT_LIB)
 
     # Add component manifest to the list of dependencies
-    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${COMPONENT_DIR}/idf_component.yml")
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${component_dir}/idf_component.yml")
 
     idf_build_get_property(include_directories INCLUDE_DIRECTORIES GENERATOR_EXPRESSION)
         include_directories("${include_directories}")
@@ -525,7 +523,7 @@ function(__inherited_idf_component_register)
 
     if(sources OR __EMBED_FILES OR __EMBED_TXTFILES)
         add_library(${component_lib} STATIC ${sources})
-        set_target_properties(${component_lib} PROPERTIES OUTPUT_NAME ${COMPONENT_NAME} LINKER_LANGUAGE C)
+        set_target_properties(${component_lib} PROPERTIES OUTPUT_NAME ${component_name} LINKER_LANGUAGE C)
 
         list(REMOVE_DUPLICATES COMPONENT_COMPILE_OPTIONS)
         foreach(option ${COMPONENT_COMPILE_OPTIONS})
@@ -539,7 +537,7 @@ function(__inherited_idf_component_register)
         __component_get_property(reqs ${component_target} REQUIRES)
         list(APPEND reqs ${common_reqs})
             list(REMOVE_DUPLICATES reqs)
-            list(REMOVE_ITEM reqs ${COMPONENT_NAME})
+            list(REMOVE_ITEM reqs ${component_name})
         __component_set_dependencies("${reqs}" PUBLIC)
 
         __component_get_property(priv_reqs ${component_target} PRIV_REQUIRES)
@@ -605,7 +603,7 @@ function(idf_build)
         __component_get_target(req_target ${iter})
 
         if (NOT req_target IN_LIST component_targets)
-            idf_component_add("${IDF_PATH}/components/${iter}")
+            idf_component_add(${iter})
         endif()
     endforeach()
     # find & add all depended components
@@ -619,7 +617,7 @@ function(idf_build)
             __component_get_target(req_target ${iter})
 
             if (NOT req_target IN_LIST component_targets)
-                idf_component_add("${IDF_PATH}/components/${iter}")
+                idf_component_add(${iter})
             endif()
         else()
             break()
@@ -638,11 +636,10 @@ function(idf_build)
     idf_build_get_property(component_targets __COMPONENT_TARGETS)
     # project_include.cmake
     foreach(component_target ${component_targets})
-        __component_get_property(COMPONENT_DIR ${component_target} COMPONENT_DIR)
-        __component_get_property(COMPONENT_NAME ${component_target} COMPONENT_NAME)
+        __component_get_property(component_dir ${component_target} COMPONENT_DIR)
 
-        if(EXISTS ${COMPONENT_DIR}/project_include.cmake)
-            include(${COMPONENT_DIR}/project_include.cmake)
+        if(EXISTS ${component_dir}/project_include.cmake)
+            include(${component_dir}/project_include.cmake)
         endif()
     endforeach()
 
@@ -659,10 +656,10 @@ function(idf_build)
     idf_build_get_property(build_dir BUILD_DIR)
     foreach(component_target ${component_targets})
         __component_get_property(prefix ${component_target} __PREFIX)
+        __component_get_property(component_name ${component_target} COMPONENT_NAME)
         __component_get_property(COMPONENT_DIR ${component_target} COMPONENT_DIR)
-        __component_get_property(COMPONENT_NAME ${component_target} COMPONENT_NAME)
 
-        add_subdirectory(${COMPONENT_DIR} ${build_dir}/${prefix}/${COMPONENT_NAME})
+        add_subdirectory(${COMPONENT_DIR} ${build_dir}/${prefix}/${component_name})
     endforeach()
     unset(__idf_component_context)
 
