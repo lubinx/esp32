@@ -126,7 +126,7 @@ endif()
 
 include(${IDF_CMAKE_PATH}/utilities.cmake)
 include(${IDF_CMAKE_PATH}/kconfig.cmake)
-# include(${IDF_CMAKE_PATH}/ldgen.cmake)
+include(${IDF_CMAKE_PATH}/ldgen.cmake)
 
 # tool_version_check.cmake
 function(check_expected_tool_version tool_name tool_path)
@@ -543,7 +543,7 @@ function(__inherited_idf_component_register)
         __component_get_property(priv_reqs ${component_target} PRIV_REQUIRES)
         __component_set_dependencies("${priv_reqs}" PRIVATE)
 
-        # __ldgen_add_component(${component_lib})
+        __ldgen_add_component(${component_lib})
     else()
         add_library(${component_lib} INTERFACE)
 
@@ -565,9 +565,9 @@ function(__inherited_idf_component_register)
         target_add_binary_data(${component_lib} "${file}" "TEXT")
     endforeach()
 
-    # if(__LDFRAGMENTS)
-    #     __ldgen_add_fragment_files("${__LDFRAGMENTS}")
-    # endif()
+    if(__LDFRAGMENTS)
+        __ldgen_add_fragment_files("${__LDFRAGMENTS}")
+    endif()
 
     # Fill in the rest of component property
     __component_set_property(${component_target} SRCS "${sources}")
@@ -591,10 +591,10 @@ endfunction()
 # idf_build()
 #############################################################################
 function(idf_build)
-    # Generate compile_commands.json (needs to come after project call).
-    set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
     message("\n💡 Resolve dependencies")
+
+    # Generate compile_commands.json
+    set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
     # add esp-idf common required components
     idf_build_get_property(common_requires __COMPONENT_REQUIRES_COMMON)
@@ -698,11 +698,13 @@ function(idf_build)
 # idf_build_executable(${project_elf}) ===============================================================
     # Set additional link flags for the executable
     idf_build_get_property(link_options LINK_OPTIONS)
+    # append global link options
+    list(APPEND link_options "${LINK_OPTIONS}")
     set_property(TARGET ${project_elf} APPEND PROPERTY LINK_OPTIONS "${link_options}")
 
     # Propagate link dependencies from component library targets to the executable
-    # idf_build_get_property(link_depends __LINK_DEPENDS)
-    # set_property(TARGET ${project_elf} APPEND PROPERTY LINK_DEPENDS "${link_depends}")
+    idf_build_get_property(link_depends __LINK_DEPENDS)
+    set_property(TARGET ${project_elf} APPEND PROPERTY LINK_DEPENDS "${link_depends}")
 
     # Set the EXECUTABLE_NAME and EXECUTABLE properties since there are generator expression
     # from components that depend on it

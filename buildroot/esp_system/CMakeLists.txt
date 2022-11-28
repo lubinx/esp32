@@ -14,7 +14,35 @@ list(APPEND srcs
     "${component_path}/esp_ipc.c"
     "${component_path}/freertos_hooks.c"
     "${component_path}/panic.c"
+    "${component_path}/esp_system.c"
+    "${component_path}/system_time.c"
+    "${component_path}/stack_check.c"
+    "${component_path}/ubsan.c"
+    "${component_path}/xt_wdt.c"
+    "${component_path}/debug_stubs.c"
 )
+
+if(CONFIG_ESP_SYSTEM_USE_EH_FRAME)
+    list(APPEND srcs
+        "${component_path}/eh_frame_parser.c"
+    )
+endif()
+
+if(CONFIG_ESP_TASK_WDT_EN)
+    list(APPEND srcs
+        "${component_path}/task_wdt/task_wdt.c"
+    )
+
+    if(CONFIG_ESP_TASK_WDT_USE_ESP_TIMER)
+        list(APPEND srcs
+            "${component_path}/task_wdt/task_wdt_impl_esp_timer.c"
+        )
+    else()
+        list(APPEND srcs
+            "${component_path}/task_wdt/task_wdt_impl_timergroup.c"
+        )
+    endif()
+endif()
 
 idf_component_register(
     INCLUDE_DIRS
@@ -31,61 +59,47 @@ idf_component_register(
         "soc" "hal" "efuse"
         "spi_flash"
         "esp_hw_support"
+    # LDFRAGMENTS
+    #     "${component_path}/linker.lf"
+    #     "${component_path}/app.lf"
 )
 add_subdirectory(${component_path}/port "${build_dir}/${prefix}/${component_name}/port")
 
+idf_build_get_property(config_dir CONFIG_DIR)
+idf_build_get_property(sdkconfig_header SDKCONFIG_HEADER)
+set(memap_ld_input "${CMAKE_CURRENT_LIST_DIR}/ld/${IDF_TARGET}.memap.ld.in")
+set(memap_ld_output "${config_dir}/${IDF_TARGET}.memap.ld")
+
+# Preprocess target.memap.ld.in linker script to include configuration, becomes target.memap.ld
+add_custom_command(
+    OUTPUT ${memap_ld_output}
+    COMMAND "${CMAKE_C_COMPILER}" -C -P -x c -E -o ${memap_ld_output} -I ${config_dir}
+        -I "${CMAKE_CURRENT_LIST_DIR}" ${memap_ld_input}
+    MAIN_DEPENDENCY ${memap_ld_input}
+    DEPENDS ${sdkconfig_header}
+    COMMENT "Generating memory.ld linker script..."
+    VERBATIM
+)
+add_custom_target(generate_mem_ld DEPENDS ${memap_ld_output})
+add_dependencies(${COMPONENT_LIB} generate_mem_ld)
+
 list(APPEND scripts
-    "ld/${IDF_TARGET}.ld"
-    "${IDF_PATH}/components/bootloader/subproject/main/ld/${IDF_TARGET}/bootloader.rom.ld"
+    "${memap_ld_output}"
+    "ld/${IDF_TARGET}.sections.ld"
+    # "${IDF_PATH}/components/bootloader/subproject/main/ld/${IDF_TARGET}/bootloader.rom.ld"
 )
 target_linker_script(${COMPONENT_LIB} INTERFACE "${scripts}")
 
+# list(APPEND scripts
+#     "ld/${IDF_TARGET}.ld"
+#     "${IDF_PATH}/components/bootloader/subproject/main/ld/${IDF_TARGET}/bootloader.rom.ld"
+# )
+# target_linker_script(${COMPONENT_LIB} INTERFACE "${scripts}")
 
 # if(CONFIG_IDF_ENV_FPGA)
 #     # Forces the linker to include fpga stubs from this component
 #     target_link_libraries(${COMPONENT_LIB} INTERFACE "-u esp_common_include_fpga_overrides")
 # endif()
-
-# # Force linking UBSAN hooks. If UBSAN is not enabled, the hooks will ultimately be removed
-# # due to -ffunction-sections -Wl,--gc-sections options.
-# target_link_libraries(${COMPONENT_LIB} INTERFACE "-u __ubsan_include")
-
-#     list(APPEND srcs
-#             "esp_system.c"
-#             "startup.c"
-#             "system_time.c"
-#             "stack_check.c"
-#             "ubsan.c"
-#             "xt_wdt.c"
-#             "debug_stubs.c")
-
-#     if(CONFIG_ESP_TASK_WDT_EN)
-#         list(APPEND srcs "task_wdt/task_wdt.c")
-
-#         if(CONFIG_ESP_TASK_WDT_USE_ESP_TIMER)
-#             list(APPEND srcs "task_wdt/task_wdt_impl_esp_timer.c")
-#         else()
-#             list(APPEND srcs "task_wdt/task_wdt_impl_timergroup.c")
-#         endif()
-#     endif()
-
-#     if(CONFIG_ESP_SYSTEM_USE_EH_FRAME)
-#         list(APPEND srcs "eh_frame_parser.c")
-#     endif()
-
-#     idf_component_register(SRCS "${srcs}"
-#                         INCLUDE_DIRS include
-#                         PRIV_REQUIRES spi_flash esp_timer
-#                                     # [refactor-todo] requirements due to init code,
-#                                     # should be removable once using component init functions
-#                                     # link-time registration is used.
-#                                     # [refactor-todo] requires "driver" for headers:
-#                                     # - spi_common_internal.h
-#                                     # [refactor-todo] esp_partition required for virtual efuse
-#                                     # init code. Move to esp_efuse component.
-#                                     pthread bootloader_support efuse driver esp_partition
-#                         LDFRAGMENTS "linker.lf" "app.lf")
-#     add_subdirectory(port)
 
 #     # After system initialization, `start_app` (and its other cores variant) is called.
 #     # This is provided by the user or from another component. Since we can't establish
@@ -119,8 +133,6 @@ endif()
 # [refactor-todo] requirement from the panic handler,
 # need to introduce panic "event" concept to remove this dependency (IDF-2194)
 idf_component_optional_requires(PRIVATE esp_gdbstub)
-
-idf_component_optional_requires(PRIVATE esp_app_format)
 
 if(CONFIG_PM_ENABLE)
     idf_component_optional_requires(PRIVATE pm)

@@ -7,15 +7,14 @@ void esp_newlib_init(void)
 {
 }
 
-__attribute__((weak)) // implemented in time.c
-void esp_newlib_time_init(void)
+// implemented in time.c
+void __attribute__((weak)) esp_newlib_time_init(void)
 {
 }
 
 void IRAM_ATTR esp_reent_init(struct _reent* r)
 {
     memset(r, 0, sizeof(*r));
-
     // r->_stdout = _GLOBAL_REENT->_stdout;
     // r->_stderr = _GLOBAL_REENT->_stderr;
     // r->_stdin  = _GLOBAL_REENT->_stdin;
