@@ -63,6 +63,7 @@ idf_component_register(
     #     "${component_path}/linker.lf"
     #     "${component_path}/app.lf"
 )
+
 add_subdirectory(${component_path}/port "${build_dir}/${prefix}/${component_name}/port")
 
 idf_build_get_property(config_dir CONFIG_DIR)
