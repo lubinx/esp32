@@ -11,7 +11,7 @@
 
 __BEGIN_DECLS
     /* Kept for backward compatibility */
-    #define esp_sync_counters_rtc_and_frc esp_sync_timekeeping_timers
+    // #define esp_sync_counters_rtc_and_frc esp_sync_timekeeping_timers
 
     /**
      * Function which sets up newlib in ROM for use with ESP-IDF
@@ -21,13 +21,11 @@ __BEGIN_DECLS
      * Called from the startup code, not intended to be called from application
      * code.
      */
-static inline
-    void esp_newlib_init(void)
-    {
-    }
+extern __attribute__((nothrow))
+    void esp_newlib_init(void);
 
    /*
-    * Initialize newlib time functions
+    * Initialize newlib time functions,
     */
 extern __attribute__((nothrow))
     void esp_newlib_time_init(void);

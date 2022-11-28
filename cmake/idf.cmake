@@ -61,9 +61,9 @@ list(APPEND COMPILE_OPTIONS
 # extra COMPILE_OPTIONS for build esp-idf components only
 list(APPEND COMPONENT_COMPILE_OPTIONS
     "-Wno-enum-conversion"
-    "-Wno-unused-parameter"
+    "-Wno-format"
     "-Wno-sign-compare"
-    # "-Wno-format"
+    "-Wno-unused-parameter"
     # "-Wno-unused-variable"
 )
 

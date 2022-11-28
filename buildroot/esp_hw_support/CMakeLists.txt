@@ -42,21 +42,25 @@ endif()
 
 if(CONFIG_SOC_GDMA_SUPPORTED)
     list(APPEND srcs
-        "${component_path}/gdma.c"
-        "${component_path}/port/async_memcpy_impl_gdma.c"
+        "${component_path}/dma/gdma.c"
+        "${component_path}/dma/async_memcpy_impl_gdma.c"
     )
 endif()
 
 if(CONFIG_SOC_CP_DMA_SUPPORTED)
     list(APPEND srcs
-        "${component_path}/port/async_memcpy_impl_cp_dma.c"
+        "${component_path}/dma/async_memcpy_impl_cp_dma.c"
     )
 endif()
 
 if(CONFIG_SOC_GDMA_SUPPORTED OR CONFIG_SOC_CP_DMA_SUPPORTED)
     list(APPEND srcs
-        "${component_path}/esp_async_memcpy.c"
+        "${component_path}/dma/esp_async_memcpy.c"
     )
+endif()
+
+if(CONFIG_SOC_GDMA_SUPPORT_ETM)
+    list(APPEND srcs "${component_path}/dma/gdma_etm.c")
 endif()
 
 if(CONFIG_SOC_SYSTIMER_SUPPORTED)
@@ -71,6 +75,11 @@ if(CONFIG_SOC_HMAC_SUPPORTED)
     )
 endif()
 
+if(CONFIG_SOC_DIG_SIGN_SUPPORTED)
+    list(APPEND srcs "${component_path}/esp_ds.c")
+endif()
+
+
 # ESP32C6-TODO
 # if(NOT CONFIG_IDF_TARGET_ESP32C6)
 #     list(APPEND srcs
@@ -78,8 +87,8 @@ endif()
 #     )
 # endif()
 
-# merge add_subdirectory("${component_path}/port/${IDF_TARGET}")
-set(srcs
+# MERGE: add_subdirectory("${component_path}/port/${IDF_TARGET}" "${build_dir}/${prefix}/${component_name}/port")
+list(APPEND srcs
     "${component_path}/port/${IDF_TARGET}/rtc_clk.c"
     "${component_path}/port/${IDF_TARGET}/rtc_clk_init.c"
     "${component_path}/port/${IDF_TARGET}/rtc_init.c"
@@ -88,10 +97,14 @@ set(srcs
     "${component_path}/port/${IDF_TARGET}/rtc_time.c"
     "${component_path}/port/${IDF_TARGET}/chip_info.c"
     # BOOTLOADER_BUILD
-    "${component_path}/port/${IDF_TARGET}/esp_ds.c"
     "${component_path}/port/${IDF_TARGET}/esp_crypto_lock.c"
     "${component_path}/port/${IDF_TARGET}/sar_periph_ctrl.c"
 )
+if(CONFIG_ESP_SYSTEM_MEMPROT_FEATURE)
+    list(APPEND srcs
+        "${component_path}/port/${IDF_TARGET}/esp_memprot.c"
+        "${component_path}/port/esp_memprot_conv.c")
+endif()
 
 idf_component_register(
     INCLUDE_DIRS ${includes} PRIV_INCLUDE_DIRS ${priv_includes}

@@ -3,6 +3,7 @@
 cmake_minimum_required(VERSION 3.5)
 include(../cmake/idf.cmake)
 
+# set (BOOTLOADER_BUILD 1)
 project(buildroot)
 
 macro(IDF_buildroot)

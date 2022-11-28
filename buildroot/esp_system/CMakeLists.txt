@@ -1,3 +1,5 @@
+set(component_path "${IDF_PATH}/components/esp_system")
+
 if(CONFIG_IDF_ENV_FPGA)
     list(APPEND srcs "fpga_overrides.c")
 endif()
@@ -6,9 +8,12 @@ list(APPEND srcs
     "startup.c"
     "log.c"
     "libc_retarget.c"
-    "${IDF_PATH}/components/esp_system/esp_err.c"
-    # "${IDF_PATH}/components/esp_ipc.c"
-    # "${IDF_PATH}/components/freertos_hooks.c"
+    "${component_path}/esp_err.c"
+    "${component_path}/crosscore_int.c"
+    "${component_path}/int_wdt.c"
+    "${component_path}/esp_ipc.c"
+    "${component_path}/freertos_hooks.c"
+    "${component_path}/panic.c"
 )
 
 idf_component_register(
@@ -16,13 +21,19 @@ idf_component_register(
         "include"
         "posix"
         "${IDF_PATH}/components/esp_system/include"
+    PRIV_INCLUDE_DIRS
+        "${component_path}/port/include"
     SRCS
         "${srcs}"
     REQUIRES
         "freertos"
-        "soc" "hal"
+        "bootloader_support"
+        "soc" "hal" "efuse"
         "spi_flash"
+        "esp_hw_support"
 )
+add_subdirectory(${component_path}/port "${build_dir}/${prefix}/${component_name}/port")
+
 list(APPEND scripts
     "ld/${IDF_TARGET}.ld"
     "${IDF_PATH}/components/bootloader/subproject/main/ld/${IDF_TARGET}/bootloader.rom.ld"
@@ -39,11 +50,7 @@ target_linker_script(${COMPONENT_LIB} INTERFACE "${scripts}")
 # # due to -ffunction-sections -Wl,--gc-sections options.
 # target_link_libraries(${COMPONENT_LIB} INTERFACE "-u __ubsan_include")
 
-#     list(APPEND srcs "crosscore_int.c"
-#             "esp_ipc.c"
-#             "freertos_hooks.c"
-#             "int_wdt.c"
-#             "panic.c"
+#     list(APPEND srcs
 #             "esp_system.c"
 #             "startup.c"
 #             "system_time.c"

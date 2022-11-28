@@ -1,58 +1,3 @@
-/*
- * SPDX-FileCopyrightText: 2021-2022 Espressif Systems (Shanghai) CO LTD
- *
- * SPDX-License-Identifier: Apache-2.0
- */
-/** Simplified memory map for the bootloader.
- *  Make sure the bootloader can load into main memory without overwriting itself.
- *
- *  ESP32-S3 ROM static data usage is as follows:
- *  - 0x3fcd7e00 - 0x3fce9704: Shared buffers, used in UART/USB/SPI download mode only
- *  - 0x3fce9710 - 0x3fceb710: PRO CPU stack, can be reclaimed as heap after RTOS startup
- *  - 0x3fceb710 - 0x3fced710: APP CPU stack, can be reclaimed as heap after RTOS startup
- *  - 0x3fced710 - 0x3fcf0000: ROM .bss and .data (not easily reclaimable)
- *
- *  The 2nd stage bootloader can take space up to the end of ROM shared
- *  buffers area (0x3fce9704). For alignment purpose we shall use value (0x3fce9700).
- */
-/**
- *  0x3fcd7e00 ------------------> _dram0_0_start
- *             |               |
- *             |               |
- *             |               |   1. Large buffers that are only used in certain boot modes, see shared_buffers.h
- *             |               |
- *             |               |
- *  0x3fce9710 ------------------> __stack_sentry
- *             |               |
- *             |               |   2. Startup pro cpu stack (freed when IDF app is running)
- *             |               |
- *  0x3fceb710 ------------------> __stack (pro cpu)
- *             |               |
- *             |               |      Startup app cpu stack
- *             |               |
- *  0x3fced710 ------------------> __stack_app (app cpu)
- *             |               |
- *             |               |
- *             |               |   3. Shared memory only used in startup code or nonos/early boot*
- *             |               |      (can be freed when IDF runs)
- *             |               |
- *             |               |
- *  0x3fceee34 ------------------> _dram0_rtos_reserved_start
- *             |               |
- *             |               |
- *             |               |   4. Shared memory used in startup code and when IDF runs
- *             |               |
- *             |               |
- *  0x3fcef770 ------------------> _dram0_rtos_reserved_end
- *             |               |
- *  0x3fcef81c ------------------> _data_start_interface
- *             |               |
- *             |               |   5. End of DRAM is the 'interface' data with constant addresses (ECO compatible)
- *             |               |
- *  0x3fcf0000 ------------------> _data_end_interface
- */
-
-
 /* The offset between Dbus and Ibus. Used to convert between 0x403xxxxx and 0x3fcxxxxx addresses. */
 iram_dram_offset = 0x6f0000;
 
@@ -65,7 +10,7 @@ bootloader_usable_dram_end = 0x3fce9700;
 bootloader_stack_overhead = 0x2000; /* For safety margin between bootloader data section and startup stacks */
 bootloader_dram_seg_len = 0x4000;
 bootloader_iram_loader_seg_len = 0x7000;
-bootloader_iram_seg_len = 0x3000;
+bootloader_iram_seg_len = 0x10000;
 
 /* Start of the lower region is determined by region size and the end of the higher region */
 bootloader_dram_seg_end = bootloader_usable_dram_end - bootloader_stack_overhead;
@@ -75,10 +20,24 @@ bootloader_iram_seg_start = bootloader_iram_loader_seg_start - bootloader_iram_s
 
 MEMORY
 {
-  iram_seg (RWX) :                  org = bootloader_iram_seg_start, len = bootloader_iram_seg_len
-  iram_loader_seg (RWX) :           org = bootloader_iram_loader_seg_start, len = bootloader_iram_loader_seg_len
-  dram_seg (RW) :                   org = bootloader_dram_seg_start, len = bootloader_dram_seg_len
+    iram_seg (RWX) :            org = bootloader_iram_seg_start, len = bootloader_iram_seg_len
+    iram_loader_seg (RWX) :     org = bootloader_iram_loader_seg_start, len = bootloader_iram_loader_seg_len
+    dram_seg (RW) :             org = bootloader_dram_seg_start, len = bootloader_dram_seg_len
+
+    drom0_0_seg (R) :           org = 0x3C000020, len = 0x2000000 - 0x20
+
+    rtc_slow_seg(RW) :          org = 0x50000000, len = 0x2000
+    rtc_iram_seg(RWX) :         org = 0x600fe000, len = 0x2000
 }
+
+REGION_ALIAS("rtc_data_seg", rtc_iram_seg);
+REGION_ALIAS("rtc_data_location", rtc_slow_seg);
+
+/*
+REGION_ALIAS("default_code_seg", iram0_2_seg);
+REGION_ALIAS("default_rodata_seg", drom0_0_seg);
+*/
+
 
 /* The app may use RAM for static allocations up to the start of iram_loader_seg.
  * If you have changed something above and this assert fails:
@@ -101,6 +60,41 @@ SECTIONS
         *(.stub .gnu.warning .gnu.linkonce.literal.* .gnu.linkonce.t.*.literal .gnu.linkonce.t.*)
         *(.iram1 .iram1.*) /* catch stray IRAM_ATTR */
 
+        /* has to load into memory */
+        *call_start_cpu0
+        *libhal.a:cache_hal.*(.literal .text .literal.* .text.*)
+        *libhal.a:mmu_hal.*(.literal .text .literal.* .text.*)
+        /* *libhal.a:efuse_hal.*(.literal .text .literal.* .text.*)
+        *libhal.a:wdt_hal_iram.*(.literal .text .literal.* .text.*) */
+    /*
+        *liblog.a:(.literal .text .literal.* .text.*)
+        *libgcc.a:(.literal .text .literal.* .text.*)
+        *libbootloader_support.a:bootloader_clock_loader.*(.literal .text .literal.* .text.*)
+        *libbootloader_support.a:bootloader_common_loader.*(.literal .text .literal.* .text.*)
+        *libbootloader_support.a:bootloader_flash.*(.literal .text .literal.* .text.*)
+        *libbootloader_support.a:bootloader_random.*(.literal .text .literal.* .text.*)
+        *libbootloader_support.a:bootloader_random*.*(.literal.bootloader_random_disable .text.bootloader_random_disable)
+        *libesp_common.a:fpga_overrides.*(.literal.bootloader_fill_random .text.bootloader_fill_random)
+        *libbootloader_support.a:bootloader_efuse.*(.literal .text .literal.* .text.*)
+        *libbootloader_support.a:bootloader_utility.*(.literal .text .literal.* .text.*)
+        *libbootloader_support.a:bootloader_sha.*(.literal .text .literal.* .text.*)
+        *libbootloader_support.a:bootloader_console_loader.*(.literal .text .literal.* .text.*)
+        *libbootloader_support.a:bootloader_panic.*(.literal .text .literal.* .text.*)
+        *libbootloader_support.a:bootloader_soc.*(.literal .text .literal.* .text.*)
+        *libbootloader_support.a:esp_image_format.*(.literal .text .literal.* .text.*)
+        *libbootloader_support.a:flash_encrypt.*(.literal .text .literal.* .text.*)
+        *libbootloader_support.a:flash_encryption_secure_features.*(.literal .text .literal.* .text.*)
+        *libbootloader_support.a:flash_partitions.*(.literal .text .literal.* .text.*)
+        *libbootloader_support.a:secure_boot.*(.literal .text .literal.* .text.*)
+        *libbootloader_support.a:secure_boot_secure_features.*(.literal .text .literal.* .text.*)
+        *libbootloader_support.a:secure_boot_signatures_bootloader.*(.literal .text .literal.* .text.*)
+        *libmicro-ecc.a:*.*(.literal .text .literal.* .text.*)
+        *libspi_flash.a:*.*(.literal .text .literal.* .text.*)
+        *libesp_hw_support.a:rtc_clk.*(.literal .text .literal.* .text.*)
+        *libesp_hw_support.a:rtc_time.*(.literal .text .literal.* .text.*)
+        *libesp_hw_support.a:regi2c_ctrl.*(.literal .text .literal.* .text.*)
+        *libefuse.a:*.*(.literal .text .literal.* .text.*)
+    */
         *(.fini.literal)
         *(.fini)
         *(.gnu.version)
@@ -114,8 +108,22 @@ SECTIONS
         *(.entry.text)
         *(.init.literal)
         *(.init)
+
+        _stext = .;
+        _text_start = ABSOLUTE(.);
+        *(.literal .text .literal.* .text.* .stub .gnu.warning .gnu.linkonce.literal.* .gnu.linkonce.t.*.literal .gnu.linkonce.t.*)
+        *(.iram .iram.*) /* catch stray IRAM_ATTR */
+        *(.fini.literal)
+        *(.fini)
+        *(.gnu.version)
+
+        _text_end = ABSOLUTE(.);
+        _etext = .;
+
+        _flash_rodata_start = ABSOLUTE(.);
     } > iram_seg
 
+    _flash_rodata_align = ALIGNOF(.iram.text);
 
     /* Shared RAM */
     .dram0.bss (NOLOAD) :
@@ -138,21 +146,14 @@ SECTIONS
         *(COMMON)
         . = ALIGN (8);
         _bss_end = ABSOLUTE(.);
-    } > dram_seg
 
-    .dram0.data :
-    {
-        _data_start = ABSOLUTE(.);
-        *(.data)
-        *(.data.*)
-        *(.gnu.linkonce.d.*)
-        *(.data1)
-        *(.sdata)
-        *(.sdata.*)
-        *(.gnu.linkonce.s.*)
-        *(.gnu.linkonce.s2.*)
-        *(.jcr)
-        _data_end = ABSOLUTE(.);
+        _thread_local_start = ABSOLUTE(.);
+        *(.tdata)
+        *(.tdata.*)
+        *(.tbss)
+        *(.tbss.*)
+        . = ALIGN (8);
+        _thread_local_end = ABSOLUTE(.);
     } > dram_seg
 
     .dram0.rodata :
@@ -200,26 +201,114 @@ SECTIONS
         _dram_end = ABSOLUTE(.);
     } > dram_seg
 
-    .iram.text :
+    .dram0.data :
     {
-        _stext = .;
-        _text_start = ABSOLUTE(.);
-        *(.literal .text .literal.* .text.* .stub .gnu.warning .gnu.linkonce.literal.* .gnu.linkonce.t.*.literal .gnu.linkonce.t.*)
-        *(.iram .iram.*) /* catch stray IRAM_ATTR */
-        *(.fini.literal)
-        *(.fini)
-        *(.gnu.version)
+        _data_start = ABSOLUTE(.);
+        *(.data)
+        *(.data.*)
+        *(.gnu.linkonce.d.*)
+        *(.data1)
+        *(.sdata)
+        *(.sdata.*)
+        *(.gnu.linkonce.s.*)
+        *(.gnu.linkonce.s2.*)
+        *(.jcr)
+        _data_end = ABSOLUTE(.);
 
-        /** CPU will try to prefetch up to 16 bytes of
-        * of instructions. This means that any configuration (e.g. MMU, PMS) must allow
-        * safe access to up to 16 bytes after the last real instruction, add
-        * dummy bytes to ensure this
-        */
-        . += 16;
+        _invalid_pc_placeholder = ABSOLUTE(.);
+        /* heap start */
+        end = ABSOLUTE(.);
+    } > dram_seg
 
-        _text_end = ABSOLUTE(.);
-        _etext = .;
-    } > iram_seg
+    /**
+    * RTC fast memory holds RTC wake stub code,
+    * including from any source file named rtc_wake_stub*.c
+    */
+    .rtc.text :
+    {
+        _rtc_fast_start = ABSOLUTE(.);
+        _rtc_text_start = ABSOLUTE(.);
+        *(.rtc.entry.text)
+
+        mapping[rtc_text]
+
+        *rtc_wake_stub*.*(.literal .text .literal.* .text.*)
+        *(.rtc_text_end_test)
+
+        . = ALIGN(16);
+        _rtc_text_end = ABSOLUTE(.);
+    } > rtc_iram_seg
+
+    .rtc.force_fast :
+    {
+        _rtc_force_fast_start = ABSOLUTE(.);
+
+        mapping[rtc_force_fast]
+
+        *(.rtc.force_fast .rtc.force_fast.*)
+        . = ALIGN(4) ;
+        _rtc_force_fast_end = ABSOLUTE(.);
+    } > rtc_data_seg
+
+    /**
+    * RTC data section holds RTC wake stub
+    * data/rodata, including from any source file
+    * named rtc_wake_stub*.c and the data marked with
+    * RTC_DATA_ATTR, RTC_RODATA_ATTR attributes.
+    * The memory location of the data is dependent on
+    * CONFIG_ESP32S3_RTCDATA_IN_FAST_MEM option.
+    */
+    .rtc.data :
+    {
+        _rtc_data_start = ABSOLUTE(.);
+
+        mapping[rtc_data]
+
+        *rtc_wake_stub*.*(.data .rodata .data.* .rodata.* .bss .bss.*)
+        _rtc_data_end = ABSOLUTE(.);
+    } > rtc_data_location
+
+    /* RTC bss, from any source file named rtc_wake_stub*.c */
+    .rtc.bss (NOLOAD) :
+    {
+        _rtc_bss_start = ABSOLUTE(.);
+        *rtc_wake_stub*.*(.bss .bss.*)
+        *rtc_wake_stub*.*(COMMON)
+
+        mapping[rtc_bss]
+
+        _rtc_bss_end = ABSOLUTE(.);
+    } > rtc_data_location
+
+    /**
+    * This section holds data that should not be initialized at power up
+    * and will be retained during deep sleep.
+    * User data marked with RTC_NOINIT_ATTR will be placed
+    * into this section. See the file "esp_attr.h" for more information.
+        * The memory location of the data is dependent on CONFIG_ESP32S3_RTCDATA_IN_FAST_MEM option.
+    */
+    .rtc_noinit (NOLOAD):
+    {
+        . = ALIGN(4);
+        _rtc_noinit_start = ABSOLUTE(.);
+        *(.rtc_noinit .rtc_noinit.*)
+        . = ALIGN(4) ;
+        _rtc_noinit_end = ABSOLUTE(.);
+    } > rtc_data_location
+
+    /**
+    * This section located in RTC SLOW Memory area.
+    * It holds data marked with RTC_SLOW_ATTR attribute.
+    * See the file "esp_attr.h" for more information.
+    */
+    .rtc.force_slow :
+    {
+        . = ALIGN(4);
+        _rtc_force_slow_start = ABSOLUTE(.);
+        *(.rtc.force_slow .rtc.force_slow.*)
+        . = ALIGN(4) ;
+        _rtc_force_slow_end = ABSOLUTE(.);
+    } > rtc_slow_seg
 
     /** This section will be used by the debugger and disassembler to get more information
     * about raw data present in the code.

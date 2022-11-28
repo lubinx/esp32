@@ -1,5 +1,4 @@
 idf_component_register()
-
 idf_build_get_property(python PYTHON)
 
 # TODO: remove this if block when esp32h4 beta1 is no longer supported and we have h4 IDF_TARGET in esptool
@@ -12,6 +11,25 @@ if(IDF_TARGET STREQUAL "esp32h4")
 endif()
 
 set(ESPTOOLPY ${python} "${CMAKE_CURRENT_LIST_DIR}/esptool.py" --chip ${IDF_TARGET})
+
+if(CONFIG_SPI_FLASH_HPM_ENABLE)
+# When set flash frequency to 120M, must keep 1st bootloader work under ``DOUT`` mode
+# because on some flash chips, 120M will modify the status register,
+# which will make ROM won't work.
+# This change intends to be for esptool only and the bootloader should keep use
+# ``DOUT`` mode.
+    set(ESPFLASHMODE "dout")
+    message("Note: HPM is enabled for the flash, force the ROM bootloader into DOUT mode for stable boot on")
+else()
+    set(ESPFLASHMODE ${CONFIG_ESPTOOLPY_FLASHMODE})
+endif()
+
+set(esptool_elf2image_args
+    --flash_mode ${ESPFLASHMODE}
+    --flash_freq ${CONFIG_ESPTOOLPY_FLASHFREQ}
+    --flash_size ${CONFIG_ESPTOOLPY_FLASHSIZE}
+    # --dont-append-digest        # detect flash size?
+)
 
 # We still set "--min-rev" to keep the app compatible with older booloaders where this field is controlled.
 if(CONFIG_IDF_TARGET_ESP32)
@@ -29,10 +47,9 @@ endif()
 list(APPEND esptool_elf2image_args --min-rev-full ${CONFIG_ESP_REV_MIN_FULL})
 list(APPEND esptool_elf2image_args --max-rev-full ${CONFIG_ESP_REV_MAX_FULL})
 
-
 idf_build_get_property(elf EXECUTABLE GENERATOR_EXPRESSION)
 
-add_custom_command(OUTPUT "dummy_output"
+add_custom_command(OUTPUT "elf2image"
     COMMAND ${ESPTOOLPY} elf2image ${esptool_elf2image_args}
         -o "${CMAKE_BINARY_DIR}/${PROJECT_NAME}.bin" "${CMAKE_BINARY_DIR}/${elf}"
     DEPENDS ${elf}
@@ -40,4 +57,6 @@ add_custom_command(OUTPUT "dummy_output"
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     COMMENT "Generating binary image from built executable"
     )
-add_custom_target("generate_binary" ALL DEPENDS "dummy_output")
+add_custom_target("generate_binary" ALL DEPENDS "elf2image")
+
+# xtensa-esp32s3-elf-size
