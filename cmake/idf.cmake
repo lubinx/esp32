@@ -316,12 +316,19 @@ __idf_build_init()
 #############################################################################
 # idf_component_add() / idf_component_register()
 #############################################################################
-function(idf_component_add component_dir) # optional: prefix
+function(idf_component_add name_or_dir) # optional: prefix
     # prefix
     list(POP_FRONT ARGN prefix)
 
-    get_filename_component(COMPONENT_NAME ${component_dir} NAME)
-    get_filename_component(__parent_dir ${component_dir} DIRECTORY)
+    if (IS_DIRECTORY ${name_or_dir})
+        get_filename_component(component_dir ${name_or_dir} ABSOLUTE BASE_DIR ${CMAKE_CURRENT_LIST_DIR})
+        get_filename_component(__parent_dir ${component_dir} DIRECTORY)
+        get_filename_component(COMPONENT_NAME ${component_dir} NAME)
+    else()
+        set(component_dir "${IDF_PATH}/${name_or_dir}")
+        set(__parent_dir ${IDF_PATH})
+        set(COMPONENT_NAME ${name_or_dir})
+    endif()
 
     if (${__parent_dir} STREQUAL "${IDF_PATH}/components")
         if (NOT prefix)
@@ -335,10 +342,8 @@ function(idf_component_add component_dir) # optional: prefix
 
     __component_get_target(component_target ${COMPONENT_NAME})
     set(component_lib ${prefix}_${COMPONENT_NAME})
-    # ${IDF_PATH}/CMakeLists.txt
-    #   keep COMPONENT_NAME & COMPONENT_DIR & COMPONENT_ALIAS UPPERCASE
-    set(COMPONENT_DIR ${component_dir})
-    set(COMPONENT_ALIAS ${prefix}::${COMPONENT_NAME})
+
+    set(COMPONENT_DIR ${name_or_dir})
 
     idf_build_get_property(component_targets __COMPONENT_TARGETS)
     if(NOT component_target IN_LIST component_targets)
@@ -365,7 +370,6 @@ function(idf_component_add component_dir) # optional: prefix
     __component_set_property(${component_target} __PREFIX ${prefix})
     __component_set_property(${component_target} COMPONENT_LIB ${component_lib})
     __component_set_property(${component_target} COMPONENT_NAME ${COMPONENT_NAME})
-    __component_set_property(${component_target} COMPONENT_ALIAS ${COMPONENT_ALIAS})
     __component_set_property(${component_target} COMPONENT_DIR ${COMPONENT_DIR})
     # build dir
     __component_set_property(${component_target} COMPONENT_BUILD_DIR "${CMAKE_BINARY_DIR}/${prefix}/${COMPONENT_NAME}")
@@ -418,7 +422,7 @@ macro(idf_component_register)
         __component_set_property(${component_target} KCONFIG "${__KCONFIG}" APPEND)
         __component_set_property(${component_target} KCONFIG_PROJBUILD "${__KCONFIG_PROJBUILD}" APPEND)
 
-        message(STATUS "Add Component: ${COMPONENT_ALIAS}")
+        message(STATUS "Add Component: ${prefix}::${COMPONENT_NAME}")
         message("\tcomponent dir: ${component_dir}")
         if (__REQUIRES OR __PRIV_REQUIRES)
             if (__REQUIRES)
@@ -472,11 +476,11 @@ function(__inherited_idf_component_register)
     if(__SRC_DIRS)
         foreach(dir ${__SRC_DIRS})
             get_filename_component(dir ${dir} ABSOLUTE BASE_DIR ${CMAKE_CURRENT_LIST_DIR})
-            if(NOT IS_DIRECTORY ${abs_dir})
+            if(NOT IS_DIRECTORY ${dir})
                 continue()
             endif()
 
-            file(GLOB dir_sources "${abs_dir}/*.c" "${abs_dir}/*.cpp" "${abs_dir}/*.S")
+            file(GLOB dir_sources "${dir}/*.c" "${dir}/*.cpp" "${dir}/*.S")
             if(dir_sources)
                 list(APPEND sources ${dir_sources})
             else()
@@ -657,7 +661,6 @@ function(idf_build)
         __component_get_property(prefix ${component_target} __PREFIX)
         __component_get_property(COMPONENT_DIR ${component_target} COMPONENT_DIR)
         __component_get_property(COMPONENT_NAME ${component_target} COMPONENT_NAME)
-        __component_get_property(COMPONENT_ALIAS ${component_target} COMPONENT_ALIAS)
 
         add_subdirectory(${COMPONENT_DIR} ${build_dir}/${prefix}/${COMPONENT_NAME})
     endforeach()
