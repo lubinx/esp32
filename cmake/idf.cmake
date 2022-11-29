@@ -260,11 +260,6 @@ function(__idf_build_init)
     idf_build_set_property(C_COMPILE_OPTIONS "${C_COMPILE_OPTIONS}")
     idf_build_set_property(CXX_COMPILE_OPTIONS "${CXX_COMPILE_OPTIONS}")
 
-    if(BOOTLOADER_BUILD)
-        idf_build_set_property(BOOTLOADER_BUILD "${BOOTLOADER_BUILD}")
-        idf_build_set_property(COMPILE_DEFINITIONS "BOOTLOADER_BUILD=1" APPEND)
-    endif()
-
     # python
     idf_build_set_property(__CHECK_PYTHON 0)        # do not check python
     idf_build_set_property(PYTHON "${PYTHON_ENV}")
@@ -300,9 +295,8 @@ function(__idf_build_init)
     endif()
 
     list(APPEND common_requires
-        "freertos" "esp_system"
-        "heap"
-        "esp_hw_support" "esp_rom"
+        "esp_system" "esp_rom"  "esp_hw_support"
+        "freertos" "cxx" "soc" "hal" "newlib" "heap" "partition_table"
         "esptool_py"
     )
     idf_build_set_property(__COMPONENT_REQUIRES_COMMON "${common_requires}" APPEND)
@@ -643,7 +637,7 @@ function(idf_build)
         endif()
     endforeach()
 
-    message("\n💡 Link dependencies")
+    message("💡 Link dependencies")
 
     # import esp-idf misc compiler options
     #   but...prevent __BUILD_COMPONENT_TARGETS auto add_subdirectory()

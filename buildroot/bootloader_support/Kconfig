@@ -1,0 +1,5 @@
+# bootloader offset depends by arch
+config BOOTLOADER_OFFSET_IN_FLASH
+    hex
+    default 0x1000 if IDF_TARGET_ESP32 || IDF_TARGET_ESP32S2
+    default 0x0

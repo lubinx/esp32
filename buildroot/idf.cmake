@@ -1,1 +1,0 @@
-../cmake/idf.cmake

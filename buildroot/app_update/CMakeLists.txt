@@ -1,0 +1,16 @@
+set(component_path "${IDF_PATH}/components/app_update")
+
+idf_component_register(
+    INCLUDE_DIRS
+        "${IDF_PATH}/components/app_update/include"
+        "${IDF_PATH}/components/esp_app_format/include"
+    SRCS
+        "${IDF_PATH}/components/app_update/esp_ota_ops.c"
+        "${IDF_PATH}/components/app_update/esp_ota_app_desc.c"
+    REQUIRES
+        "bootloader_support"
+        "esp_partition"
+    PRIV_REQUIRES
+        "efuse"
+        "spi_flash"
+)
