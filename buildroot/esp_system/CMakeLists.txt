@@ -121,7 +121,6 @@ set_source_files_properties(
     -fno-stack-protector
 )
 
-# include(${IDF_PATH}/components/esp_system/ld/ld.cmake)
 idf_build_get_property(sdkconfig_header SDKCONFIG_HEADER)
 idf_build_get_property(config_dir CONFIG_DIR)
 set(ld_input "${CMAKE_CURRENT_LIST_DIR}/ld/${IDF_TARGET}_memap.ld.in")
@@ -134,7 +133,8 @@ add_custom_command(
     MAIN_DEPENDENCY ${ld_input}
     DEPENDS ${sdkconfig_header}
     COMMENT "Generating memory.ld linker script..."
-    VERBATIM)
+    VERBATIM
+)
 
 add_custom_target(memory_ld DEPENDS ${ld_output})
 add_dependencies(${COMPONENT_LIB} memory_ld)

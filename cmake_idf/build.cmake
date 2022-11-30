@@ -465,8 +465,6 @@ macro(idf_build_process target)
     set(multi_value COMPONENTS SDKCONFIG_DEFAULTS)
     cmake_parse_arguments(_ "${options}" "${single_value}" "${multi_value}" ${ARGN})
 
-    idf_build_set_property(BOOTLOADER_BUILD "${BOOTLOADER_BUILD}")
-
     # Check build target is specified. Since this target corresponds to a component
     # name, the target component is automatically added to the list of common component
     # requirements.
