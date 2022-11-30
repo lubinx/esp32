@@ -28,8 +28,10 @@ extern "C" {
     };
     typedef enum esp_log_level_t esp_log_level_t;
 
-    #define ESP_LOG_LEVEL(level, tag, format, ...)
-    #define ESP_LOG_LEVEL_LOCAL(level, tag, format, ...)
+    #define ESP_LOG_LEVEL(level, tag, format, ...)  \
+        esp_log_write(level, tag, format)
+    #define ESP_LOG_LEVEL_LOCAL(level, tag, format, ...)    \
+        esp_log_write(level, tag, format)
 
     #define ESP_EARLY_LOGE(tag, format, ...)    esp_log_write(ESP_LOG_VERBOSE, tag, format, ##__VA_ARGS__)
     #define ESP_EARLY_LOGW(tag, format, ...)    esp_log_write(ESP_LOG_VERBOSE, tag, format, ##__VA_ARGS__)
@@ -67,6 +69,32 @@ extern "C" {
     #define ESP_DRAM_LOG_IMPL(tag, format, log_level, log_tag_letter, ...)
 */
 
+#if CONFIG_LOG_COLORS
+    #define LOG_COLOR_BLACK   "30"
+    #define LOG_COLOR_RED     "31"
+    #define LOG_COLOR_GREEN   "32"
+    #define LOG_COLOR_BROWN   "33"
+    #define LOG_COLOR_BLUE    "34"
+    #define LOG_COLOR_PURPLE  "35"
+    #define LOG_COLOR_CYAN    "36"
+    #define LOG_COLOR(COLOR)  "\033[0;" COLOR "m"
+    #define LOG_BOLD(COLOR)   "\033[1;" COLOR "m"
+    #define LOG_RESET_COLOR   "\033[0m"
+    #define LOG_COLOR_E       LOG_COLOR(LOG_COLOR_RED)
+    #define LOG_COLOR_W       LOG_COLOR(LOG_COLOR_BROWN)
+    #define LOG_COLOR_I       LOG_COLOR(LOG_COLOR_GREEN)
+    #define LOG_COLOR_D
+    #define LOG_COLOR_V
+#else
+    #define LOG_COLOR_E
+    #define LOG_COLOR_W
+    #define LOG_COLOR_I
+    #define LOG_COLOR_D
+    #define LOG_COLOR_V
+    #define LOG_RESET_COLOR
+#endif
+
+
     typedef int (*vprintf_like_t)(const char *, va_list);
 static inline
     vprintf_like_t esp_log_set_vprintf(vprintf_like_t func)
@@ -95,7 +123,7 @@ static inline
     }
 
 static inline
-    char *esp_log_system_timestamp(void)
+    char const *esp_log_system_timestamp(void)
     {
         return "";
     }
