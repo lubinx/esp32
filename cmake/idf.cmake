@@ -62,9 +62,9 @@ list(APPEND COMPILE_OPTIONS
 list(APPEND COMPONENT_COMPILE_OPTIONS
     "-Wno-enum-conversion"
     "-Wno-format"
-    "-Wno-sign-compare"
     "-Wno-unused-parameter"
-    # "-Wno-unused-variable"
+    "-Wno-unused-variable"
+    "-Wno-sign-compare"
 )
 
 # C_COMPILE_OPTIONS
@@ -93,6 +93,12 @@ list(APPEND LINK_OPTIONS
    ""
 )
 
+# OBSOLETED_COMPONENTS
+list(APPEND OBSOLETED_COMPONENTS
+    "esp_common"        # merge into esp_system
+    "esp_app_format"    # removed
+)
+
 # ESP_PLATFORM_COMPONENTS
 if (NOT IDF_TARGET_ARCH STREQUAL "")
     list(APPEND ESP_PLATFORM_COMPONENTS ${IDF_TARGET_ARCH})
@@ -100,14 +106,8 @@ endif()
 list(APPEND ESP_PLATFORM_COMPONENTS
     "esp_system" "esp_rom"  "esp_hw_support" "esp_psram" "esp_ringbuf"
     "freertos" "newlib" "heap"
-    "spi_flash" "cxx" "efuse" "soc" "hal" "partition_table"
+    "spi_flash" "cxx" "efuse" "soc" "hal" "partition_table" "mbedtls"
     "esptool_py"
-)
-
-# OBSOLETED_COMPONENTS
-list(APPEND OBSOLETED_COMPONENTS
-    "esp_common"        # merge into esp_system
-    "esp_app_format"    # removed
 )
 
 #############################################################################
@@ -504,7 +504,12 @@ function(__inherited_idf_component_register)
             if(NOT IS_DIRECTORY ${dir})
                 message(FATAL_ERROR "Include directory '${dir}' is not a directory.")
             endif()
-            target_include_directories(${lib} ${type} ${dir})
+
+            if (${type} STREQUAL "PUBLIC" AND component_name IN_LIST ESP_PLATFORM_COMPONENTS)
+                idf_build_set_property(INCLUDE_DIRECTORIES ${dir} APPEND)
+            else()
+                target_include_directories(${lib} ${type} ${dir})
+            endif()
         endforeach()
     endmacro()
 
@@ -618,6 +623,7 @@ function(idf_build)
         endif()
     endwhile()
 
+
     message("\n💡 Kconfig")
     # Generate sdkconfig.h/sdkconfig.cmake
     idf_build_get_property(sdkconfig SDKCONFIG)
@@ -654,6 +660,16 @@ function(idf_build)
         __component_get_property(COMPONENT_DIR ${component_target} COMPONENT_DIR)
 
         add_subdirectory(${COMPONENT_DIR} ${build_dir}/${prefix}/${component_name})
+
+        # fix: mbedtls private targets not append compile options
+        if (component_name STREQUAL "mbedtls")
+            list(APPEND mbedtls_targets "mbedtls" "mbedcrypto" "mbedx509")
+            foreach(mbedtls_target ${mbedtls_targets})
+                foreach(option ${COMPONENT_COMPILE_OPTIONS})
+                    target_compile_options(${mbedtls_target} PRIVATE ${option})
+                endforeach()
+            endforeach()
+        endif()
     endforeach()
     unset(__idf_component_context)
 
