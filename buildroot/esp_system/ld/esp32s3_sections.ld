@@ -37,7 +37,7 @@ PROVIDE(_invalid_pc_placeholder = ABSOLUTE(.));
         *(.UserEnter.literal);
         *(.UserEnter.text);
 
-        . = ALIGN (16);
+        . = ALIGN(16);
         *(.entry.text)
         *(.init.literal)
         *(.init)
@@ -98,7 +98,7 @@ PROVIDE(_noinit_end = ABSOLUTE(.));
     /* Shared RAM */
     .dram0.bss (NOLOAD) :
     {
-        . = ALIGN (8);
+        . = ALIGN(8);
 PROVIDE(_bss_start = ABSOLUTE(.));
 
         mapping[dram0_bss]
@@ -115,7 +115,7 @@ PROVIDE(_bss_start = ABSOLUTE(.));
         *(.share.mem)
         *(.gnu.linkonce.b.*)
 
-        . = ALIGN (8);
+        . = ALIGN(8);
 PROVIDE(_bss_end = ABSOLUTE(.));
     } > dram0_0_seg
 
@@ -141,8 +141,7 @@ PROVIDE(_text_start = ABSOLUTE(.));
          * safe access to up to 16 bytes after the last real instruction, add
          * dummy bytes to ensure this
         */
-        . += _esp_flash_mmap_prefetch_pad_size;
-
+        . += 16;
 PROVIDE(_text_end = ABSOLUTE(.));
 PROVIDE(_instruction_reserved_end = ABSOLUTE(.));   /* This is a symbol marking the flash.text end, this can be used for mmu driver to maintain virtual address */
 PROVIDE(_etext = .);
@@ -263,7 +262,7 @@ PROVIDE(_rodata_reserved_end = ABSOLUTE(.));  /* This is a symbol marking the fl
 
     .flash.rodata_noload (NOLOAD) :
     {
-        . = ALIGN (4);
+        . = ALIGN(4);
         mapping[rodata_noload]
     } > default_rodata_seg
 
@@ -274,7 +273,7 @@ PROVIDE(_rodata_reserved_end = ABSOLUTE(.));  /* This is a symbol marking the fl
     .ext_ram.dummy (NOLOAD):
     {
         . = ORIGIN(extern_ram_seg) + (_rodata_reserved_end - _flash_rodata_dummy_start);
-        . = ALIGN (0x10000);
+        . = ALIGN(0x10000);
     } > extern_ram_seg
 
     /* This section holds .ext_ram.bss data, and will be put in PSRAM */
@@ -292,9 +291,11 @@ PROVIDE(_ext_ram_bss_end = ABSOLUTE(.));
     {
         /* iram_end_test section exists for use by memprot unit tests only */
         *(.iram_end_test)
-        /* ESP32-S3 memprot requires 16B padding for possible CPU prefetch and 256B alignment for PMS split lines */
-        . += _esp_memprot_prefetch_pad_size;
-        . = ALIGN(_esp_memprot_align_size);
+
+        /* ESP32-S3 memprot requires 16B padding for possible CPU prefetch */
+        . += 16;
+        /* ESP32-S3 256B alignment for PMS split lines*/
+        . = ALIGN(256);
 PROVIDE(_iram_text_end = ABSOLUTE(.));
     } > iram0_0_seg
 
@@ -324,7 +325,7 @@ PROVIDE(_iram_end = ABSOLUTE(.));
     /* Marks the end of data, bss and possibly rodata  */
     .dram0.heap_start (NOLOAD) :
     {
-        . = ALIGN (8);
+        . = ALIGN(8);
 PROVIDE(_heap_start = ABSOLUTE(.));
     } > dram0_0_seg
 
@@ -344,8 +345,8 @@ PROVIDE(_rtc_text_start = ABSOLUTE(.));
         *rtc_wake_stub*.*(.literal .text .literal.* .text.*)
         *(.rtc_text_end_test)
 
-        /* 16B padding for possible CPU prefetch and 4B alignment for PMS split lines */
-        . += _esp_memprot_prefetch_pad_size;
+        /* 16B padding for possible CPU prefetch */
+        . += 16;
         . = ALIGN(4);
 PROVIDE(_rtc_text_end = ABSOLUTE(.));
     } > rtc_iram_seg

@@ -93,12 +93,21 @@ list(APPEND LINK_OPTIONS
    ""
 )
 
+# ESP_PLATFORM_COMPONENTS
+if (NOT IDF_TARGET_ARCH STREQUAL "")
+    list(APPEND ESP_PLATFORM_COMPONENTS ${IDF_TARGET_ARCH})
+endif()
+list(APPEND ESP_PLATFORM_COMPONENTS
+    "esp_system" "esp_rom"  "esp_hw_support" "esp_psram" "esp_ringbuf"
+    "freertos" "newlib" "heap"
+    "spi_flash" "cxx" "efuse" "soc" "hal" "partition_table"
+    "esptool_py"
+)
+
+# OBSOLETED_COMPONENTS
 list(APPEND OBSOLETED_COMPONENTS
-    # merge into esp_system
-    "esp_common"
-    # removed
-    "esp_app_format"
-    "partition_table"
+    "esp_common"        # merge into esp_system
+    "esp_app_format"    # removed
 )
 
 #############################################################################
@@ -290,16 +299,7 @@ function(__idf_build_init)
     endif()
 
     # esp-idf components common requires
-    if (NOT IDF_TARGET_ARCH STREQUAL "")
-        idf_build_set_property(__COMPONENT_REQUIRES_COMMON ${IDF_TARGET_ARCH} APPEND)
-    endif()
-
-    list(APPEND common_requires
-        "esp_system" "esp_rom"  "esp_hw_support"
-        "freertos" "cxx" "soc" "hal" "newlib" "heap" "partition_table"
-        "esptool_py"
-    )
-    idf_build_set_property(__COMPONENT_REQUIRES_COMMON "${common_requires}" APPEND)
+    idf_build_set_property(__COMPONENT_REQUIRES_COMMON "${ESP_PLATFORM_COMPONENTS}" APPEND)
 
     # TODO: common requires add here
 endfunction()

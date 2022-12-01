@@ -18,13 +18,13 @@ list(APPEND srcs
     "${component_path}/src/bootloader_random.c"
     "${component_path}/src/bootloader_random_${IDF_TARGET}.c"
     "${component_path}/src/bootloader_utility.c"
-    "${component_path}/src/esp_image_format.c"
+    "${component_path}/src/bootloader_efuse.c"
+    "${component_path}/src/esp_image_format.c"   # no load any image
     "${component_path}/src/flash_encrypt.c"
     "${component_path}/src/secure_boot.c"
     "${component_path}/src/flash_partitions.c"
     "${component_path}/bootloader_flash/src/flash_qio_mode.c"
     "${component_path}/bootloader_flash/src/bootloader_flash_config_${IDF_TARGET}.c"
-    "${component_path}/src/bootloader_efuse.c"
 )
 
 # BOOTLOADER_BUILD

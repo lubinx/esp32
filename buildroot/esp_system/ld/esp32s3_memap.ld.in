@@ -1,178 +1,182 @@
 /*
- * SPDX-FileCopyrightText: 2021 Espressif Systems (Shanghai) CO LTD
- *
- * SPDX-License-Identifier: Apache-2.0
- */
-/**
- *                    ESP32-S3 Linker Script Memory Layout
- * This file describes the memory layout (memory blocks) by virtual memory addresses.
- * This linker script is passed through the C preprocessor to include configuration options.
- * Please use preprocessor features sparingly!
- * Restrict to simple macros with numeric values, and/or #if/#endif blocks.
- */
+    SRAM mapping
+        ref: 4.3.2, table 4-1
 
-#include "sdkconfig.h"
+        +--------+-----------------...---------------+----------------+
+        | 32K    | 416K data/instruction shared      | 64K            |
+        +--------+-----------------...---------------+----------------+
+        ^        ^                                   ^
+        SRAM0    SRAM1                               SRAM2
+        cache/data ================>
+                                   <================ instruction/cache
 
-/* CPU instruction prefetch padding size for flash mmap scenario */
-_esp_flash_mmap_prefetch_pad_size =     16;
+    .SRAM0
+        0x40370000 => ICACHE, configuratable 16k/32K
 
-/* CPU instruction prefetch padding size for memory protection scenario */
-#ifdef CONFIG_SOC_MEMPROT_CPU_PREFETCH_PAD_SIZE
-    _esp_memprot_prefetch_pad_size =    CONFIG_SOC_MEMPROT_CPU_PREFETCH_PAD_SIZE;
-#else
-    _esp_memprot_prefetch_pad_size =    0;
-#endif
+    .SRAM1
+        ... 16/32K
+        416K 0x40378000 ~ 0x403E0000: instruction segment
+            OFFSET = 0x6F0000
+        416K 0x3FC88000 ~ 0x3FCF0000: data segment
+        ... 16K/32K/64K
 
-/* Memory alignment size for PMS */
-#ifdef CONFIG_SOC_MEMPROT_MEM_ALIGN_SIZE
-    _esp_memprot_align_size =           CONFIG_SOC_MEMPROT_MEM_ALIGN_SIZE;
-#else
-    _esp_memprot_align_size =           0;
-#endif
+    .SRAM2
+        0x3FCF0000  => DCACHE, configuratable 16k/32k/64k
 
-_esp_mmu_block_size =                   CONFIG_MMU_PAGE_SIZE;
-
-#ifdef CONFIG_BOOTLOADER_CUSTOM_RESERVE_RTC
-    #define ESP_BOOTLOADER_RESERVE_RTC (CONFIG_BOOTLOADER_RESERVE_RTC_SIZE + CONFIG_BOOTLOADER_CUSTOM_RESERVE_RTC_SIZE)
-#elif defined(CONFIG_BOOTLOADER_SKIP_VALIDATE_IN_DEEP_SLEEP)
-    #define ESP_BOOTLOADER_RESERVE_RTC (CONFIG_BOOTLOADER_RESERVE_RTC_SIZE)
-#else
-    #define ESP_BOOTLOADER_RESERVE_RTC 0
-#endif
-
+    ADDR mapping
+        0x40370000 => 32K ICACHE => 0x40378000 => 416K IRAM  => 0x403E0000
+                      0x3FC88000 => 416K DRAM  => 0x3FCF0000 => 64K DCACHE => 0x3FD00000
+*/
 /*
- * 40370000 <- IRAM/Icache -> 40378000 <- D/IRAM (I) -> 403E0000
- *                            3FC88000 <- D/IRAM (D) -> 3FCF0000 <- DRAM/DCache -> 3FD00000
- *
- * Startup code uses the IRAM from 0x403B9000 to 0x403E0000, which is not available for static
- * memory, but can only be used after app starts.
- *
- * D cache use the memory from high address, so when it's configured to 16K/32K, the region
- * 0x3FCF000 ~ (3FD00000 - DATA_CACHE_SIZE) should be available. This region is not used as
- * static memory, leaving to the heap.
- */
+    Memory Usage of ROM 1st bootloader
 
-#define SRAM_IRAM_START                 0x40370000
+        0x3fcd7e00 ------------------> _dram0_0_start
+                   |               |
+                   |               |
+                   |               |   1. Large buffers that are only used in certain boot modes, see shared_buffers.h
+                   |               |
+                   |               |
+        0x3fce9710 ------------------> __stack_sentry
+                   |               |
+                   |               |   2. Startup pro cpu stack (freed when IDF app is running)
+                   |               |
+        0x3fceb710 ------------------> __stack (pro cpu)
+                   |               |
+                   |               |      Startup app cpu stack
+                   |               |
+        0x3fced710 ------------------> __stack_app (app cpu)
+                   |               |
+                   |               |
+                   |               |   3. Shared memory only used in startup code or nonos/early boot*
+                   |               |      (can be freed when IDF runs)
+                   |               |
+                   |               |
+        0x3fceee34 ------------------> _dram0_rtos_reserved_start
+                   |               |
+                   |               |
+                   |               |   4. Shared memory used in startup code and when IDF runs
+                   |               |
+                   |               |
+        0x3fcef770 ------------------> _dram0_rtos_reserved_end
+                   |               |
+        0x3fcef81c ------------------> _data_start_interface
+                   |               |
+                   |               |   5. End of DRAM is the 'interface' data with constant addresses (ECO compatible)
+                   |               |
+        0x3fcf0000 ------------------> _data_end_interface
+*/
+#define SRAM_DRAM_START                 0x3FC88000
+
 #define SRAM_DIRAM_I_START              0x40378000
-#define SRAM_IRAM_END                   0x403E0000 /* 0x403CC700 */ /* Please refer to ESP32-S3 bootloader.ld for more information on this */
+#define SRAM_IRAM_END                   0x403CC700 /* Please refer to ESP32-S3 bootloader.ld for more information on this */
 #define I_D_SRAM_OFFSET                 (SRAM_DIRAM_I_START - SRAM_DRAM_START)
 
-#define SRAM_DRAM_START                 0x3FC88000
 #define SRAM_DRAM_END                   (SRAM_IRAM_END - I_D_SRAM_OFFSET)  /* 2nd stage bootloader iram_loader_seg start address */
 #define I_D_SRAM_SIZE                   (SRAM_DRAM_END - SRAM_DRAM_START)
 
 
-#define ICACHE_SIZE                     0x8000
-#define SRAM_IRAM_ORG                   (SRAM_IRAM_START + CONFIG_ESP32S3_INSTRUCTION_CACHE_SIZE)
 #define SRAM_IRAM_SIZE                  (I_D_SRAM_SIZE + ICACHE_SIZE - CONFIG_ESP32S3_INSTRUCTION_CACHE_SIZE)
 
-#define DCACHE_SIZE                     0x10000
-#define SRAM_DRAM_ORG                   SRAM_DRAM_START
+
+#include "sdkconfig.h"
+/*
+    CONFIG_SOC_MEMPROT_CPU_PREFETCH_PAD_SIZE
+        fixed = 16
+*/
+/*
+    CONFIG_SOC_MEMPROT_MEM_ALIGN_SIZE
+        fixed = 256
+*/
+;
+/****************************************************************************
+ * sdkconfig.h
+*****************************************************************************/
+#ifdef CONFIG_BOOTLOADER_CUSTOM_RESERVE_RTC
+    #define ESP_BOOTLOADER_RESERVE_RTC  (CONFIG_BOOTLOADER_RESERVE_RTC_SIZE + CONFIG_BOOTLOADER_CUSTOM_RESERVE_RTC_SIZE)
+#elif defined(CONFIG_BOOTLOADER_SKIP_VALIDATE_IN_DEEP_SLEEP)
+    #define ESP_BOOTLOADER_RESERVE_RTC  (CONFIG_BOOTLOADER_RESERVE_RTC_SIZE)
+#else
+    #define ESP_BOOTLOADER_RESERVE_RTC  0
+#endif
 
 #if CONFIG_ESP32S3_USE_FIXED_STATIC_RAM_SIZE
     ASSERT((CONFIG_ESP32S3_FIXED_STATIC_RAM_SIZE <= I_D_SRAM_SIZE), "Fixed static ram data does not fit.")
     #define DRAM0_0_SEG_LEN             CONFIG_ESP32S3_FIXED_STATIC_RAM_SIZE
 #else
     #define DRAM0_0_SEG_LEN             I_D_SRAM_SIZE
+#endif
+#if CONFIG_ESP32S3_USE_FIXED_STATIC_RAM_SIZE
+    ASSERT(0, "Kconfig: Use fixed static RAM size is pointless, set it to 0")
+#else
+    /* TODO: REMOVEd
+        _static_data_end = _bss_end;
+    */
+    ;
 #endif // CONFIG_ESP32S3_USE_FIXED_STATIC_RAM_SIZE
 
+    ICACHE_SIZE =                   CONFIG_ESP32S3_INSTRUCTION_CACHE_SIZE;
+    DCACHE_SIZE =                   CONFIG_ESP32S3_DATA_CACHE_SIZE;
+;
 MEMORY
 {
-    /**
-     *  All these values assume the flash cache is on, and have the blocks this uses subtracted from the length
-     *  of the various regions. The 'data access port' dram/drom regions map to the same iram/irom regions but
-     *  are connected to the data port of the CPU and eg allow byte-wise access.
-     */
+#define iram_dram_offset                    0x6f0000
+#define bootloader_usable_dram_end          0x3fce9700
+#define bootloader_stack_overhead           0x2000
+#define bootloader_dram_seg_len             0x4000
+#define bootloader_iram_loader_seg_len      0x7000
+#define bootloader_iram_seg_len             0x3000
+#define bootloader_dram_seg_end             bootloader_usable_dram_end - bootloader_stack_overhead
+#define bootloader_dram_seg_start           bootloader_dram_seg_end - bootloader_dram_seg_len
+#define bootloader_iram_loader_seg_start    bootloader_dram_seg_start - bootloader_iram_loader_seg_len + iram_dram_offset
+#define bootloader_iram_seg_start           bootloader_iram_loader_seg_start - bootloader_iram_seg_len
 
-    /* IRAM for PRO CPU. */
-    iram0_0_seg (RX) :              org = SRAM_IRAM_ORG, len = SRAM_IRAM_SIZE
+    iram_seg (RWX) :                org = bootloader_iram_seg_start, len = bootloader_iram_seg_len
+    iram_loader_seg (RWX) :         org = bootloader_iram_loader_seg_start, len = bootloader_iram_loader_seg_len
+    dram_seg (RW) :                 org = bootloader_dram_seg_start, len = bootloader_dram_seg_len
 
-#if CONFIG_APP_BUILD_USE_FLASH_SECTIONS
-    /* Flash mapped instruction data */
-    iram0_2_seg (RX) :              org = 0x42000020, len = 0x800000-0x20
+/*
 
-    /**
-     * (0x20 offset above is a convenience for the app binary image generation.
-     * Flash cache has 64KB pages. The .bin file which is flashed to the chip
-     * has a 0x18 byte file header, and each segment has a 0x08 byte segment
-     * header. Setting this offset makes it simple to meet the flash cache MMU's
-     * constraint that (paddr % 64KB == vaddr % 64KB).)
-     */
-#endif // CONFIG_APP_BUILD_USE_FLASH_SECTIONS
+*/
 
-    /**
-     * Shared data RAM, excluding memory reserved for ROM bss/data/stack.
-     * Enabling Bluetooth & Trace Memory features in menuconfig will decrease the amount of RAM available.
-     */
-    dram0_0_seg (RW) :              org = SRAM_DRAM_ORG, len = DRAM0_0_SEG_LEN
+/*
+*/
+    iram0_0_seg (X) :               org = 0x40370000 + ICACHE_SIZE, len = SRAM_IRAM_SIZE
+    iram0_2_seg (X) :               org = 0x42000020, len = 0x800000-0x20
 
-#if CONFIG_APP_BUILD_USE_FLASH_SECTIONS
-    /* Flash mapped constant data */
+    dram0_0_seg (RW) :              org = SRAM_DRAM_START, len = DRAM0_0_SEG_LEN
+
     drom0_0_seg (R) :               org = 0x3C000020, len = 0x2000000-0x20
 
-    /* (See iram0_2_seg for meaning of 0x20 offset in the above.) */
-#endif // CONFIG_APP_BUILD_USE_FLASH_SECTIONS
-
-    /**
-     * RTC fast memory (executable). Persists over deep sleep.
-     */
     rtc_iram_seg(RWX) :             org = 0x600fe000, len = 0x2000 - ESP_BOOTLOADER_RESERVE_RTC
-
-    /**
-     * RTC slow memory (data accessible). Persists over deep sleep.
-     * Start of RTC slow memory is reserved for ULP co-processor code + data, if enabled.
-     */
 #if CONFIG_ULP_COPROC_ENABLED
     rtc_slow_seg(RW)  :             org = 0x50000000 + CONFIG_ULP_COPROC_RESERVE_MEM, len = 0x2000 - CONFIG_ULP_COPROC_RESERVE_MEM
 #else
     rtc_slow_seg(RW)  :             org = 0x50000000 , len = 0x2000
-#endif // CONFIG_ULP_COPROC_ENABLED
+#endif
     /**
-     * `extern_ram_seg` and `drom0_0_seg` share the same bus and the address region.
-     * A dummy section is used to avoid overlap. See `.ext_ram.dummy` in `sections.ld.in`
-     */
-    extern_ram_seg(RWX) :           org = 0x3c000020 , len = 0x2000000-0x20
+    * `extern_ram_seg` and `drom0_0_seg` share the same bus and the address region.
+    * A dummy section is used to avoid overlap. See `.ext_ram.dummy` in `sections.ld.in`
+    */
+    extern_ram_seg(RWX) :              org = 0x3c000020 , len = 0x2000000-0x20
 }
-
-/* static data ends at defined address */
-#if CONFIG_ESP32S3_USE_FIXED_STATIC_RAM_SIZE
-_static_data_end = 0x3FCA0000 + DRAM0_0_SEG_LEN;
+/*
+    MEMORY segment aliases
+*/
+#if CONFIG_APP_BUILD_USE_FLASH_SECTIONS
+REGION_ALIAS("default_code_seg",    iram0_2_seg);
 #else
-_static_data_end = _bss_end;
-#endif // CONFIG_ESP32S3_USE_FIXED_STATIC_RAM_SIZE
+REGION_ALIAS("default_code_seg",    iram0_0_seg);
+#endif
 
-/* Heap ends at top of dram0_0_seg */
-_heap_end = 0x40000000;
+#if CONFIG_APP_BUILD_USE_FLASH_SECTIONS
+REGION_ALIAS("default_rodata_seg",  drom0_0_seg);
+#else
+REGION_ALIAS("default_rodata_seg",  dram0_0_seg);
+#endif
 
-_data_seg_org = ORIGIN(rtc_data_seg);
-
-
-/* RTC fast memory shares the same range for both data and instructions */
-REGION_ALIAS("rtc_data_seg", rtc_iram_seg);
-
+REGION_ALIAS("rtc_data_seg",        rtc_iram_seg);
 #if CONFIG_ESP32S3_RTCDATA_IN_FAST_MEM
-REGION_ALIAS("rtc_data_location", rtc_data_seg);
+REGION_ALIAS("rtc_data_location",   rtc_data_seg);
 #else
-REGION_ALIAS("rtc_data_location", rtc_slow_seg);
-#endif // CONFIG_ESP32S3_RTCDATA_IN_FAST_MEM
-
-#if CONFIG_APP_BUILD_USE_FLASH_SECTIONS
-REGION_ALIAS("default_code_seg", iram0_2_seg);
-#else
-REGION_ALIAS("default_code_seg", iram0_0_seg);
-#endif // CONFIG_APP_BUILD_USE_FLASH_SECTIONS
-
-#if CONFIG_APP_BUILD_USE_FLASH_SECTIONS
-REGION_ALIAS("default_rodata_seg", drom0_0_seg);
-#else
-REGION_ALIAS("default_rodata_seg", dram0_0_seg);
-#endif // CONFIG_APP_BUILD_USE_FLASH_SECTIONS
-
-/**
- *  If rodata default segment is placed in `drom0_0_seg`, then flash's first rodata section must
- *  also be first in the segment.
- */
-#if CONFIG_APP_BUILD_USE_FLASH_SECTIONS
-    ASSERT(_flash_rodata_dummy_start == ORIGIN(default_rodata_seg),
-        ".flash_rodata_dummy section must be placed at the beginning of the rodata segment.")
+REGION_ALIAS("rtc_data_location",   rtc_slow_seg);
 #endif
