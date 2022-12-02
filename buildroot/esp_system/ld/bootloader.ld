@@ -129,6 +129,8 @@ SECTIONS
         *libgcc.a:(.data* .rodata*)
         *libmicro-ecc.a:(.data* .rodata*)
         *libspi_flash.a:(.data* .rodata*)
+
+        . = ALIGN(4);
     } > startup_data_seg
 
     .data :

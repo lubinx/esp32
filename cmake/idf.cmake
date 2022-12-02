@@ -314,7 +314,7 @@ function(idf_component_add name_or_dir) # optional: prefix
     # prefix
     list(POP_FRONT ARGN prefix)
 
-    if (IS_DIRECTORY ${name_or_dir})
+    if (IS_DIRECTORY ${name_or_dir} OR IS_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/${name_or_dir}")
         get_filename_component(component_dir ${name_or_dir} ABSOLUTE BASE_DIR ${CMAKE_CURRENT_LIST_DIR})
         get_filename_component(__parent_dir ${component_dir} DIRECTORY)
         get_filename_component(component_name ${component_dir} NAME)

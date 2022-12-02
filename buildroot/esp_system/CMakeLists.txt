@@ -19,54 +19,55 @@ list(APPEND srcs
     # esp_common
     "${IDF_PATH}/components/esp_common/src/esp_err_to_name.c"
     # esp_system
-    "${IDF_PATH}/components/esp_system/crosscore_int.c"
-    "${IDF_PATH}/components/esp_system/esp_ipc.c"
-    "${IDF_PATH}/components/esp_system/esp_err.c"
-    "${IDF_PATH}/components/esp_system/freertos_hooks.c"
-    "${IDF_PATH}/components/esp_system/int_wdt.c"
-    "${IDF_PATH}/components/esp_system/panic.c"
-    "${IDF_PATH}/components/esp_system/esp_system.c"
-    "${IDF_PATH}/components/esp_system/startup.c"
-    "${IDF_PATH}/components/esp_system/system_time.c"
-    "${IDF_PATH}/components/esp_system/stack_check.c"
-    "${IDF_PATH}/components/esp_system/ubsan.c"
-    "${IDF_PATH}/components/esp_system/xt_wdt.c"
-    "${IDF_PATH}/components/esp_system/debug_stubs.c"
+    # "${IDF_PATH}/components/esp_system/crosscore_int.c"
+    # "${IDF_PATH}/components/esp_system/esp_ipc.c"
+    # "${IDF_PATH}/components/esp_system/esp_err.c"
+    # "${IDF_PATH}/components/esp_system/freertos_hooks.c"
+    # "${IDF_PATH}/components/esp_system/int_wdt.c"
+    # "${IDF_PATH}/components/esp_system/panic.c"
+    # "${IDF_PATH}/components/esp_system/esp_system.c"
+    # "${IDF_PATH}/components/esp_system/system_time.c"
+    # "${IDF_PATH}/components/esp_system/stack_check.c"
+    # "${IDF_PATH}/components/esp_system/ubsan.c"
+    # "${IDF_PATH}/components/esp_system/xt_wdt.c"
+    # "${IDF_PATH}/components/esp_system/debug_stubs.c"
+    # removed this
+    # "${IDF_PATH}/components/esp_system/startup.c"
 )
 
-if(CONFIG_IDF_ENV_FPGA)
-    list(APPEND srcs
-        "fpga_overrides.c"
-    )
-endif()
+# if(CONFIG_IDF_ENV_FPGA)
+#     list(APPEND srcs
+#         "fpga_overrides.c"
+#     )
+# endif()
 
-if(CONFIG_ESP_TASK_WDT_EN)
-    list(APPEND srcs
-        "${IDF_PATH}/components/esp_system/task_wdt/task_wdt.c"
-    )
+# if(CONFIG_ESP_TASK_WDT_EN)
+#     list(APPEND srcs
+#         "${IDF_PATH}/components/esp_system/task_wdt/task_wdt.c"
+#     )
 
-    if(CONFIG_ESP_TASK_WDT_USE_ESP_TIMER)
-        list(APPEND srcs
-            "${IDF_PATH}/components/esp_system/task_wdt/task_wdt_impl_esp_timer.c"
-        )
-    else()
-        list(APPEND srcs
-            "${IDF_PATH}/components/esp_system/task_wdt/task_wdt_impl_timergroup.c"
-        )
-    endif()
-endif()
+#     if(CONFIG_ESP_TASK_WDT_USE_ESP_TIMER)
+#         list(APPEND srcs
+#             "${IDF_PATH}/components/esp_system/task_wdt/task_wdt_impl_esp_timer.c"
+#         )
+#     else()
+#         list(APPEND srcs
+#             "${IDF_PATH}/components/esp_system/task_wdt/task_wdt_impl_timergroup.c"
+#         )
+#     endif()
+# endif()
 
-if(CONFIG_ESP_SYSTEM_USE_EH_FRAME)
-    list(APPEND srcs
-        "${IDF_PATH}/components/esp_system/eh_frame_parser.c"
-    )
-endif()
+# if(CONFIG_ESP_SYSTEM_USE_EH_FRAME)
+#     list(APPEND srcs
+#         "${IDF_PATH}/components/esp_system/eh_frame_parser.c"
+#     )
+# endif()
 
-if(CONFIG_SOC_SYSTIMER_SUPPORT_ETM)
-    list(APPEND srcs
-        "${IDF_PATH}/components/esp_system/systick_etm.c"
-    )
-endif()
+# if(CONFIG_SOC_SYSTIMER_SUPPORT_ETM)
+#     list(APPEND srcs
+#         "${IDF_PATH}/components/esp_system/systick_etm.c"
+#     )
+# endif()
 
 idf_component_register(
     INCLUDE_DIRS
@@ -79,20 +80,13 @@ idf_component_register(
     SRCS
         "${srcs}"
     PRIV_REQUIRES
-        "spi_flash"
-        "esp_timer"
-        # [refactor-todo] requirements due to init code,
-        # should be removable once using component init functions
-        # link-time registration is used.
-        # [refactor-todo] requires "driver" for headers:
-        # - spi_common_internal.h
-        # [refactor-todo] esp_partition required for virtual efuse
-        # init code. Move to esp_efuse component.
-        "pthread"
         "bootloader_support"
         "efuse"
-        "driver"
-        "esp_partition"
+        "spi_flash"
+        # "esp_timer"
+        # "pthread"
+        # "driver"
+        # "esp_partition"
     LDFRAGMENTS
         # esp_common
         "${IDF_PATH}/components/esp_common/common.lf"
@@ -101,8 +95,7 @@ idf_component_register(
         "${IDF_PATH}/components/esp_system/linker.lf"
         "${IDF_PATH}/components/esp_system/app.lf"
 )
-# add_subdirectory(port)
-add_subdirectory("${IDF_PATH}/components/esp_system/port" "${build_dir}/${prefix}/${component_name}/port")
+# add_subdirectory("${IDF_PATH}/components/esp_system/port" "${build_dir}/${prefix}/${component_name}/port")
 
 # After system initialization, `start_app` (and its other cores variant) is called.
 # This is provided by the user or from another component. Since we can't establish
@@ -115,11 +108,11 @@ if(NOT CONFIG_ESP_SYSTEM_SINGLE_CORE_MODE)
 endif()
 
 # Disable stack protection in files which are involved in initialization of that feature
-set_source_files_properties(
-    "${IDF_PATH}/components/esp_system/startup.c" "${IDF_PATH}/components/esp_system/stack_check.c"
-    PROPERTIES COMPILE_FLAGS
-    -fno-stack-protector
-)
+# set_source_files_properties(
+#     "${IDF_PATH}/components/esp_system/startup.c" "${IDF_PATH}/components/esp_system/stack_check.c"
+#     PROPERTIES COMPILE_FLAGS
+#     -fno-stack-protector
+# )
 
 idf_build_get_property(sdkconfig_header SDKCONFIG_HEADER)
 idf_build_get_property(config_dir CONFIG_DIR)

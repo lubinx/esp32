@@ -6,6 +6,7 @@ list(APPEND include_dirs
     "${idf_path}/private_include"
 )
 list(APPEND priv_include_dirs
+    "${IDF_PATH}/components/esp_app_format/include" # merge component "esp_app_format" here
     # "${idf_path}/private_include"
 )
 
@@ -46,13 +47,13 @@ list(APPEND srcs
 
 list(APPEND requires
     "soc"
-)
-list(APPEND priv_requires
     "hal"
     "efuse"
-    "heap"
+)
+list(APPEND priv_requires
     "spi_flash"
-    "app_update" # <== "esp_app_format"
+    "partition_table"
+    # "app_update" # <== "esp_app_format"
     # "micro-ecc"
     # "mbedtls"
 )
@@ -115,9 +116,10 @@ idf_component_register(
     REQUIRES "${requires}"
     PRIV_REQUIRES "${priv_requires}"
 )
-if(BOOTLOADER_BUILD)
-    target_link_libraries(${COMPONENT_LIB} INTERFACE "-u abort")
-endif()
+
+# if(BOOTLOADER_BUILD)
+#     target_link_libraries(${COMPONENT_LIB} INTERFACE "-u abort")
+# endif()
 
 # if(NOT BOOTLOADER_BUILD)
 #     if(CONFIG_SECURE_SIGNED_ON_UPDATE)

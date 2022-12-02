@@ -1,12 +1,12 @@
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-
 #include "esp_attr.h"
 #include "esp_rom_sys.h"
 
 #include "bootloader_init.h"
 #include "bootloader_utility.h"
-#include "esp_flash.h"
+
+// #include "freertos/FreeRTOS.h"
+// #include "freertos/task.h"
+// #include "esp_flash.h"
 
 
 static const char *TAG = "boot";
@@ -52,22 +52,22 @@ void IRAM_ATTR bootloader_startup(void)
     esp_rom_printf("\n\n\n2. hello call_start_cpu0: after bootloader_init()\n\n\n");
     while (1) {}
 
-    call_start_cpu0();
+    // call_start_cpu0();
 }
 
 __attribute__((weak))
 void app_main(void)
 {
-    esp_rom_printf("infinite loop...\n");
+    // esp_rom_printf("infinite loop...\n");
 
-    // printf("infinite loop...\n");
+    // // printf("infinite loop...\n");
 
-    for (int i = 10; i >= 0; i--) {
-        printf("Restarting in %d seconds...\n", i);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-    }
-    printf("Restarting now.\n");
-    fflush(stdout);
+    // for (int i = 10; i >= 0; i--) {
+    //     printf("Restarting in %d seconds...\n", i);
+    //     vTaskDelay(1000 / portTICK_PERIOD_MS);
+    // }
+    // printf("Restarting now.\n");
+    // fflush(stdout);
 
-    esp_restart();
+    // esp_restart();
 }

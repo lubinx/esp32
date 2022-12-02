@@ -1,0 +1,1 @@
+include ("${IDF_PATH}/components/bootloader/subproject/components/micro-ecc/CMakeLists.txt")
