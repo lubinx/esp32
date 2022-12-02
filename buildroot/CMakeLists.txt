@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.5)
 set(BOOTLOADER_BUILD 1)
 include(../cmake/idf.cmake)
 
-project(buildroot)
+project(kernel)
 
 # macro(IDF_buildroot)
 #     idf_component_add("esp_system")
