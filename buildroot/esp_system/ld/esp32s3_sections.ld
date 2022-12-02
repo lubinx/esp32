@@ -6,9 +6,9 @@ _diram_i_start = 0x40378000;
 
 SECTIONS
 {
-    .iram0.vectors :
+    .intr.vectors :
     {
-PROVIDE(_iram_start = ABSOLUTE(.));
+        _iram_start = ABSOLUTE(.);
 PROVIDE(_vector_table = ABSOLUTE(.));
         . = 0x0;
         KEEP(*(.WindowVectors.text));
@@ -34,6 +34,73 @@ PROVIDE(_vector_table = ABSOLUTE(.));
 PROVIDE(_invalid_pc_placeholder = ABSOLUTE(.));
         *(.*Vector.literal)
 
+        PROVIDE(_init_end = ABSOLUTE(.));
+    } > iram0_0_seg
+
+    .startup.text :
+    {
+        *fpga_overrides.*(.literal.bootloader_fill_random .text.bootloader_fill_random)
+        *libbootloader_support.a:bootloader_clock_loader.*(.literal* .text*)
+        *libbootloader_support.a:bootloader_common_loader.*(.literal* .text*)
+        *libbootloader_support.a:bootloader_flash.*(.literal* .text*)
+        *libbootloader_support.a:bootloader_random.*(.literal* .text*)
+        *libbootloader_support.a:bootloader_random*.*(.literal.bootloader_random_disable .text.bootloader_random_disable)
+        *libbootloader_support.a:bootloader_efuse.*(.literal* .text*)
+        *libbootloader_support.a:bootloader_utility.*(.literal* .text*)
+        *libbootloader_support.a:bootloader_sha.*(.literal* .text*)
+        *libbootloader_support.a:bootloader_console_loader.*(.literal* .text*)
+        *libbootloader_support.a:bootloader_panic.*(.literal* .text*)
+        *libbootloader_support.a:bootloader_soc.*(.literal* .text*)
+        *libbootloader_support.a:esp_image_format.*(.literal* .text*)
+        *libbootloader_support.a:flash_encrypt.*(.literal* .text*)
+        *libbootloader_support.a:flash_encryption_secure_features.*(.literal* .text*)
+        *libbootloader_support.a:flash_partitions.*(.literal* .text*)
+        *libbootloader_support.a:secure_boot.*(.literal* .text*)
+        *libbootloader_support.a:secure_boot_secure_features.*(.literal* .text*)
+        *libbootloader_support.a:secure_boot_signatures_bootloader.*(.literal* .text*)
+
+        *libefuse.a:*.*(.literal* .text*)
+        *libesp_hw_support.a:rtc_clk.*(.literal* .text*)
+        *libesp_hw_support.a:rtc_time.*(.literal* .text*)
+        *libesp_hw_support.a:regi2c_ctrl.*(.literal* .text*)
+
+        *libhal.a:wdt_hal_iram.*(.literal* .text*)
+        *libhal.a:mmu_hal.*(.literal* .text*)
+        *libhal.a:cache_hal.*(.literal* .text*)
+        *libhal.a:efuse_hal.*(.literal* .text*)
+
+        *libgcc.a:(.literal* .text*)
+        *libmicro-ecc.a:*.*(.literal* .text*)
+        *libspi_flash.a:*.*(.literal* .text*)
+    } > iram0_0_seg
+
+    .__overlapped.iram_text (NOLOAD):
+    {
+        . = ORIGIN(dram0_0_seg) + MAX(_iram_end - _diram_i_start, 0);
+    } > dram0_0_seg
+
+    /**
+     *  before entry.bootloader_startup()
+     *      all segment except internal SRAM is inaccessable
+     */
+    .startup.data :
+    {
+        *bootloader_start.*(.data* .rodata*)
+        *libesp_hw_support.a:(.data* .rodata*)
+        *libbootloader_support.a:(.data* .rodata*)
+        *libhal.a:(.data* .rodata*)
+
+        *libefuse.a:(.data* .rodata*)
+        *liblog.a:(.data* .rodata*)
+        *libgcc.a:(.data* .rodata*)
+        *libmicro-ecc.a:(.data* .rodata*)
+        *libspi_flash.a:(.data* .rodata*)
+    } > dram0_0_seg
+
+    .iram0.text :
+    {
+        /* Code marked as running out of IRAM */
+PROVIDE(_iram_text_start = ABSOLUTE(.));
         *(.UserEnter.literal);
         *(.UserEnter.text);
 
@@ -41,25 +108,9 @@ PROVIDE(_invalid_pc_placeholder = ABSOLUTE(.));
         *(.entry.text)
         *(.init.literal)
         *(.init)
-PROVIDE(_init_end = ABSOLUTE(.));
-    } > iram0_0_seg
-
-    .iram0.text :
-    {
-        /* Code marked as running out of IRAM */
-PROVIDE(_iram_text_start = ABSOLUTE(.));
 
         mapping[iram0_text]
     } > iram0_0_seg
-
-    /**
-     * This section is required to skip .iram0.text area because iram0_0_seg and
-     * dram0_0_seg reflect the same address space on different buses.
-    */
-    .dram0.dummy (NOLOAD):
-    {
-        . = ORIGIN(dram0_0_seg) + MAX(_iram_end - _diram_i_start, 0);
-    } > dram0_0_seg
 
     .dram0.data :
     {
@@ -74,30 +125,16 @@ PROVIDE(_data_start = ABSOLUTE(.));
 
         mapping[dram0_data]
 
+        . = ALIGN(4);
 PROVIDE(_data_end = ABSOLUTE(.));
-        . = ALIGN(4);
     } > dram0_0_seg
 
-    /**
-     * This section holds data that should not be initialized at power up.
-     * The section located in Internal SRAM memory region. The macro _NOINIT
-     * can be used as attribute to place data into this section.
-     * See the "esp_attr.h" file for more information.
-    */
-    .noinit (NOLOAD):
-    {
-        . = ALIGN(4);
-PROVIDE(_noinit_start = ABSOLUTE(.));
-
-        *(.noinit .noinit.*)
-        . = ALIGN(4);
-
-PROVIDE(_noinit_end = ABSOLUTE(.));
-    } > dram0_0_seg
-
-    /* Shared RAM */
     .dram0.bss (NOLOAD) :
     {
+        _noinit_start = ABSOLUTE(.);
+        *(.noinit .noinit.*)
+        _noinit_end = ABSOLUTE(.);
+
         . = ALIGN(8);
 PROVIDE(_bss_start = ABSOLUTE(.));
 
@@ -119,14 +156,10 @@ PROVIDE(_bss_start = ABSOLUTE(.));
 PROVIDE(_bss_end = ABSOLUTE(.));
     } > dram0_0_seg
 
-    ASSERT(((_bss_end - ORIGIN(dram0_0_seg)) <= LENGTH(dram0_0_seg)), "DRAM segment data does not fit.")
-
     .flash.text :
     {
-PROVIDE(_stext = .);
-
+PROVIDE(_stext = ABSOLUTE(.));
 PROVIDE(_instruction_reserved_start = ABSOLUTE(.)); /* This is a symbol marking the flash.text start, this can be used for mmu driver to maintain virtual address */
-PROVIDE(_text_start = ABSOLUTE(.));
 
         mapping[flash_text]
 
@@ -141,38 +174,24 @@ PROVIDE(_text_start = ABSOLUTE(.));
          * safe access to up to 16 bytes after the last real instruction, add
          * dummy bytes to ensure this
         */
-        . += 16;
-PROVIDE(_text_end = ABSOLUTE(.));
-PROVIDE(_instruction_reserved_end = ABSOLUTE(.));   /* This is a symbol marking the flash.text end, this can be used for mmu driver to maintain virtual address */
-PROVIDE(_etext = .);
-
-        /**
-         * Similar to _iram_start, this symbol goes here so it is
-         * resolved by addr2line in preference to the first symbol in
-        * the flash.text segment.
-        */
-        _flash_cache_start = ABSOLUTE(0);
+        . += 15;
+        . = ALIGN(16);
+/* This is a symbol marking the flash.text end, this can be used for mmu driver to maintain virtual address */
+PROVIDE(_instruction_reserved_end = ABSOLUTE(.));
+PROVIDE(_etext = ABSOLUTE(.));
     } > default_code_seg
 
-    /**
-     * This dummy section represents the .flash.text section but in default_rodata_seg.
-     * Thus, it must have its alignment and (at least) its size.
-    */
     .flash_rodata_dummy (NOLOAD):
     {
-PROVIDE(_flash_rodata_dummy_start = ABSOLUTE(.));
-        /* Start at the same alignment constraint than .flash.text */
-        . = ALIGN(ALIGNOF(.flash.text));
+        _flash_rodata_dummy_start = ABSOLUTE(.);
         /* Create an empty gap as big as .flash.text section */
-        . = . + SIZEOF(.flash.text);
-
-        /* Prepare the alignment of the section above. Few bytes (0x20) must be
-        * added for the mapping header. */
-        . = ALIGN(0x10000) + 0x20;
-PROVIDE(_rodata_reserved_start = .);  /* This is a symbol marking the flash.rodata start, this can be used for mmu driver to maintain virtual address */
+        . = ABSOLUTE(.) + SIZEOF(.flash.text);
+        . = ALIGN(256);
+/* This is a symbol marking the flash.rodata start, this can be used for mmu driver to maintain virtual address */
+PROVIDE(_rodata_reserved_start = ABSOLUTE(.));
     } > default_rodata_seg
 
-    .flash.appdesc : ALIGN(0x10)
+    .flash.rodata : ALIGN(0x10)
     {
 PROVIDE(_rodata_start = ABSOLUTE(.));
 
@@ -184,30 +203,24 @@ PROVIDE(_rodata_start = ABSOLUTE(.));
          * will be merged when creating the final bin image.
         */
         . = ALIGN(ALIGNOF(.flash.rodata));
-    } > default_rodata_seg
-
-    .flash.rodata : ALIGN(0x10)
-    {
 PROVIDE(_flash_rodata_start = ABSOLUTE(.));
-
+        mapping[rodata_noload]
         mapping[flash_rodata]
 
         *(.irom1.text) /* catch stray ICACHE_RODATA_ATTR */
-
         *(.gnu.linkonce.r.*)
         *(.rodata1)
 
-PROVIDE(__XT_EXCEPTION_TABLE_ = ABSOLUTE(.));
+        /* __XT_EXCEPTION_TABLE_ = ABSOLUTE(.); */
         *(.xt_except_table)
         *(.gcc_except_table .gcc_except_table.*)
         *(.gnu.linkonce.e.*)
         *(.gnu.version_r)
 
-        . = (. + 3) & ~ 3;
+        . = ALIGN(4);   /* WTF? . = (. + 3) & ~ 3; */
         __eh_frame = ABSOLUTE(.);
         KEEP(*(.eh_frame))
-
-        . = (. + 7) & ~ 3;
+        . = ALIGN(8);   /* . = (. + 7) & ~ 3; */
 
         /* C++ constructor and destructor tables */
         /* Don't include anything from crtbegin.o or crtend.o, as IDF doesn't use toolchain crt */
@@ -220,10 +233,10 @@ PROVIDE(__XT_EXCEPTION_TABLE_ = ABSOLUTE(.));
         KEEP (*(.dtors))
 
         /* C++ exception handlers table: */
-        __XT_EXCEPTION_DESCS_ = ABSOLUTE(.);
+        /* __XT_EXCEPTION_DESCS_ = ABSOLUTE(.); */
         *(.xt_except_desc)
         *(.gnu.linkonce.h.*)
-        __XT_EXCEPTION_DESCS_END__ = ABSOLUTE(.);
+        /* __XT_EXCEPTION_DESCS_END__ = ABSOLUTE(.); */
         *(.xt_except_desc_end)
         *(.dynamic)
         *(.gnu.version_d)
@@ -237,7 +250,7 @@ PROVIDE(__XT_EXCEPTION_TABLE_ = ABSOLUTE(.));
         _esp_system_init_fn_array_start = ABSOLUTE(.);
         KEEP (*(SORT_BY_INIT_PRIORITY(.esp_system_init_fn.*)))
         _esp_system_init_fn_array_end = ABSOLUTE(.);
-        _rodata_end = ABSOLUTE(.);
+PROVIDE(_rodata_end = ABSOLUTE(.));
 
         /* Literals are also RO data. */
         _lit4_start = ABSOLUTE(.);
@@ -255,16 +268,11 @@ PROVIDE(_thread_local_start = ABSOLUTE(.));
 
         . = ALIGN(4);
 PROVIDE(_thread_local_end = ABSOLUTE(.));
-PROVIDE(_rodata_reserved_end = ABSOLUTE(.));  /* This is a symbol marking the flash.rodata end, this can be used for mmu driver to maintain virtual address */
+/* This is a symbol marking the flash.rodata end, this can be used for mmu driver to maintain virtual address */
+PROVIDE(_rodata_reserved_end = ABSOLUTE(.));
     } > default_rodata_seg
 
-    _flash_rodata_align = ALIGNOF(.flash.rodata);
-
-    .flash.rodata_noload (NOLOAD) :
-    {
-        . = ALIGN(4);
-        mapping[rodata_noload]
-    } > default_rodata_seg
+PROVIDE(_flash_rodata_align = ALIGNOF(.flash.rodata));
 
     /**
      * This section is required to skip flash rodata sections, because `extern_ram_seg`
@@ -279,11 +287,11 @@ PROVIDE(_rodata_reserved_end = ABSOLUTE(.));  /* This is a symbol marking the fl
     /* This section holds .ext_ram.bss data, and will be put in PSRAM */
     .ext_ram.bss (NOLOAD) :
     {
-PROVIDE(_ext_ram_bss_start = ABSOLUTE(.));
+        _ext_ram_bss_start = ABSOLUTE(.);
         mapping[extern_ram]
 
         . = ALIGN(4);
-PROVIDE(_ext_ram_bss_end = ABSOLUTE(.));
+        _ext_ram_bss_end = ABSOLUTE(.);
     } > extern_ram_seg
 
     /* Marks the end of IRAM code segment */
@@ -296,141 +304,94 @@ PROVIDE(_ext_ram_bss_end = ABSOLUTE(.));
         . += 16;
         /* ESP32-S3 256B alignment for PMS split lines*/
         . = ALIGN(256);
-PROVIDE(_iram_text_end = ABSOLUTE(.));
+        _iram_text_end = ABSOLUTE(.);
     } > iram0_0_seg
 
     .iram0.data :
     {
-        . = ALIGN(4);
-PROVIDE(_iram_data_start = ABSOLUTE(.));
-
+        _iram_data_start = ABSOLUTE(.);
         mapping[iram0_data]
-
-PROVIDE(_iram_data_end = ABSOLUTE(.));
+        . = ALIGN(4);
+        _iram_data_end = ABSOLUTE(.);
     } > iram0_0_seg
 
     .iram0.bss (NOLOAD) :
     {
-        . = ALIGN(4);
-PROVIDE(_iram_bss_start = ABSOLUTE(.));
-
+        _iram_bss_start = ABSOLUTE(.);
         mapping[iram0_bss]
 
-PROVIDE(_iram_bss_end = ABSOLUTE(.));
-
         . = ALIGN(4);
-PROVIDE(_iram_end = ABSOLUTE(.));
+        _iram_bss_end = ABSOLUTE(.);
+        _iram_end = ABSOLUTE(.);
     } > iram0_0_seg
 
     /* Marks the end of data, bss and possibly rodata  */
     .dram0.heap_start (NOLOAD) :
     {
         . = ALIGN(8);
-PROVIDE(_heap_start = ABSOLUTE(.));
-    } > dram0_0_seg
 
-    /**
-     * RTC fast memory holds RTC wake stub code,
-     * including from any source file named rtc_wake_stub*.c
-    */
+PROVIDE(_heap_start = ABSOLUTE(.));
+PROVIDE(end = ABSOLUTE(.));         /* newlib TAG"end": heap starts here */
+    } > dram0_0_seg
+/* Heap ends at top of dram0_0_seg */
+PROVIDE(_heap_end = ORIGIN(dram0_0_seg) + LENGTH(dram0_0_seg));
+
     .rtc.text :
     {
-        . = ALIGN(4);
-PROVIDE(_rtc_fast_start = ABSOLUTE(.));
-PROVIDE(_rtc_text_start = ABSOLUTE(.));
+        _rtc_text_start = ABSOLUTE(.);
         *(.rtc.entry.text)
-
         mapping[rtc_text]
-
         *rtc_wake_stub*.*(.literal .text .literal.* .text.*)
         *(.rtc_text_end_test)
 
         /* 16B padding for possible CPU prefetch */
-        . += 16;
+        . += 15;
         . = ALIGN(4);
-PROVIDE(_rtc_text_end = ABSOLUTE(.));
+        _rtc_text_end = ABSOLUTE(.);
     } > rtc_iram_seg
 
-    /**
-     * This section located in RTC FAST Memory area.
-     * It holds data marked with RTC_FAST_ATTR attribute.
-     * See the file "esp_attr.h" for more information.
-    */
-    .rtc.force_fast :
-    {
-        . = ALIGN(4);
-PROVIDE(_rtc_force_fast_start = ABSOLUTE(.));
-
-        mapping[rtc_force_fast]
-
-        *(.rtc.force_fast .rtc.force_fast.*)
-
-        . = ALIGN(4);
-PROVIDE(_rtc_force_fast_end = ABSOLUTE(.));
-    } > rtc_data_seg
-
-    /**
-     * RTC data section holds RTC wake stub
-     * data/rodata, including from any source file
-     * named rtc_wake_stub*.c and the data marked with
-     * RTC_DATA_ATTR, RTC_RODATA_ATTR attributes.
-     * The memory location of the data is dependent on
-     * CONFIG_ESP32S3_RTCDATA_IN_FAST_MEM option.
-    */
     .rtc.data :
     {
-PROVIDE(_rtc_data_start = ABSOLUTE(.));
-
+        _rtc_data_start = ABSOLUTE(.);
         mapping[rtc_data]
-
         *rtc_wake_stub*.*(.data .rodata .data.* .rodata.* .bss .bss.*)
-
-PROVIDE(_rtc_data_end = ABSOLUTE(.));
+        . = ALIGN(4);
+        _rtc_data_end = ABSOLUTE(.);
     } > rtc_data_location
 
     /* RTC bss, from any source file named rtc_wake_stub*.c */
     .rtc.bss (NOLOAD) :
     {
-PROVIDE(_rtc_bss_start = ABSOLUTE(.));
+        _rtc_noinit_start = ABSOLUTE(.);
+        *(.rtc_noinit .rtc_noinit.*)
+        . = ALIGN(4);
+        _rtc_noinit_end = ABSOLUTE(.);
+
+        _rtc_bss_start = ABSOLUTE(.);
         *rtc_wake_stub*.*(.bss .bss.*)
         *rtc_wake_stub*.*(COMMON)
-
         mapping[rtc_bss]
-
-PROVIDE(_rtc_bss_end = ABSOLUTE(.));
+        . = ALIGN(4);
+        _rtc_bss_end = ABSOLUTE(.);
     } > rtc_data_location
 
-    /**
-     * This section holds data that should not be initialized at power up
-     * and will be retained during deep sleep.
-     * User data marked with RTC_NOINIT_ATTR will be placed
-     * into this section. See the file "esp_attr.h" for more information.
-     * The memory location of the data is dependent on CONFIG_ESP32S3_RTCDATA_IN_FAST_MEM option.
-    */
-    .rtc_noinit (NOLOAD):
+    .rtc.force_fast :
     {
-        . = ALIGN(4);
-PROVIDE(_rtc_noinit_start = ABSOLUTE(.));
-        *(.rtc_noinit .rtc_noinit.*)
+        _rtc_force_fast_start = ABSOLUTE(.);
+            mapping[rtc_force_fast]
+            *(.rtc.force_fast .rtc.force_fast.*)
 
         . = ALIGN(4);
-PROVIDE(_rtc_noinit_end = ABSOLUTE(.));
-    } > rtc_data_location
+        _rtc_force_fast_end = ABSOLUTE(.);
+    } > rtc_fast_seg
 
-    /**
-     * This section located in RTC SLOW Memory area.
-     * It holds data marked with RTC_SLOW_ATTR attribute.
-     * See the file "esp_attr.h" for more information.
-    */
     .rtc.force_slow :
     {
         . = ALIGN(4);
-PROVIDE(_rtc_force_slow_start = ABSOLUTE(.));
-
-        *(.rtc.force_slow .rtc.force_slow.*)
-
+        _rtc_force_slow_start = ABSOLUTE(.);
+            *(.rtc.force_slow .rtc.force_slow.*)
         . = ALIGN(4);
-PROVIDE(_rtc_force_slow_end = ABSOLUTE(.));
+        _rtc_force_slow_end = ABSOLUTE(.);
     } > rtc_slow_seg
 
     /** This section will be used by the debugger and disassembler to get more information
@@ -455,11 +416,3 @@ PROVIDE(_rtc_force_slow_end = ABSOLUTE(.));
 
 ASSERT(((_iram_end - ORIGIN(iram0_0_seg)) <= LENGTH(iram0_0_seg)), "IRAM0 segment data does not fit.")
 ASSERT(((_heap_start - ORIGIN(dram0_0_seg)) <= LENGTH(dram0_0_seg)), "DRAM segment data does not fit.")
-
-_rtc_slow_length = (ORIGIN(rtc_slow_seg) == ORIGIN(rtc_data_location)) ?
-    (_rtc_force_slow_end - _rtc_data_start) : (_rtc_force_slow_end - _rtc_force_slow_start);
-ASSERT((_rtc_slow_length <= LENGTH(rtc_slow_seg)), "RTC_SLOW segment data does not fit.")
-
-_rtc_fast_length = (ORIGIN(rtc_slow_seg) == ORIGIN(rtc_data_location)) ?
-    (_rtc_force_fast_end - _rtc_fast_start) : (_rtc_noinit_end - _rtc_fast_start);
-ASSERT((_rtc_fast_length <= LENGTH(rtc_data_seg)), "RTC_FAST segment data does not fit.")

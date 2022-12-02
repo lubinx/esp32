@@ -728,6 +728,16 @@ function(idf_build)
     # Add dependency of the build target to the executable
     add_dependencies(${project_elf} __idf_build_target)
 
+
+    if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+        # Add cross-reference table to the map file
+        target_link_options(${project_elf} PRIVATE "-Wl,--cref")
+        # Add this symbol as a hint for idf_size.py to guess the target name
+        target_link_options(${project_elf} PRIVATE "-Wl,--defsym=IDF_TARGET_${IDF_TARGET}=0")
+        # Enable map file output
+        target_link_options(${project_elf} PRIVATE "-Wl,--Map=${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}.map")
+        unset(idf_target)
+    endif()
     # done
     message("")
 endfunction()
