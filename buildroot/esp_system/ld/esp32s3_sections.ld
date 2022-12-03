@@ -44,10 +44,11 @@ PROVIDE(_vector_table = ABSOLUTE(.));
 
         *libesp_hw_support.a:cpu*(.literal* .text*)
         *libesp_hw_support.a:rtc_clk_init*(.literal* .text*)
+        *libspi_flash.a:(.literal* .text*)
+
 /*
         *libefuse.a:(.literal* .text*)
         *libgcc.a:(.literal* .text*)
-        *libspi_flash.a:(.literal* .text*)
 */
 
         *libesp_system.a:log*(.literal* .text*)
@@ -63,7 +64,7 @@ PROVIDE(_vector_table = ABSOLUTE(.));
         . = ALIGN(4);
     } > SRAM_text_seg
 
-    .__SRSM_overrapped_dummy (NOLOAD):
+    .__SRAM_overlapped_dummy (NOLOAD):
     {
         . = ORIGIN(SRAM_data_seg) + _iram_end > SRAM_TEXT_OVERLAPPED_START ? _iram_end - SRAM_TEXT_OVERLAPPED_START : 0;
     } > SRAM_data_seg
@@ -107,8 +108,6 @@ PROVIDE(_vector_table = ABSOLUTE(.));
 
         . = ALIGN(8);
         PROVIDE(_bss_start = ABSOLUTE(.));
-            /* dummy _bss_start & _bss_end */
-        PROVIDE(_bss_end = ABSOLUTE(.));
 
         mapping[dram0_bss]
 
@@ -125,8 +124,48 @@ PROVIDE(_vector_table = ABSOLUTE(.));
         *(.gnu.linkonce.b.*)
 
         . = ALIGN(8);
+        PROVIDE(_bss_end = ABSOLUTE(.));
     } > SRAM_data_seg
 
+    .text :
+    {
+        PROVIDE(_iram_text_start = ABSOLUTE(.));
+        *(.UserEnter.literal);
+        *(.UserEnter.text);
+
+        . = ALIGN(16);
+        *(.entry.text)
+        *(.init.literal)
+        *(.init)
+
+        mapping[iram0_text]
+
+        /* catch stray IRAM_ATTR */
+        *(.iram*)
+        /* iram_end_test section exists for use by memprot unit tests only */
+        /* *(.iram_end_test) */
+
+        /* ESP32-S3 memprot requires 16B padding for possible CPU prefetch  & alignment for PMS*/
+        . += 16;
+        . = ALIGN(256);
+        PROVIDE(_iram_text_end = ABSOLUTE(.));
+
+        /* REVIEW: SRAM_text_seg.data ? */
+        PROVIDE(_iram_data_start = ABSOLUTE(.));
+        mapping[iram0_data]
+        . = ALIGN(4);
+        PROVIDE(_iram_data_end = ABSOLUTE(.));
+
+        /* REVIEW: SRAM_text_seg.bss ? */
+        PROVIDE(_iram_bss_start = ABSOLUTE(.));
+        mapping[iram0_bss]
+
+        . = ALIGN(4);
+        PROVIDE(_iram_bss_end = ABSOLUTE(.));
+PROVIDE(_iram_end = ABSOLUTE(.));
+    } > SRAM_text_seg
+
+    PROVIDE(_flash_rodata_align = ALIGNOF(.data.ro));
     .data.ro (NOLOAD) : ALIGN(0x10)
     {
         PROVIDE(_rodata_start = ABSOLUTE(.));
@@ -215,56 +254,19 @@ PROVIDE(_rodata_reserved_end = ABSOLUTE(.));
         _ext_ram_bss_end = ABSOLUTE(.);
     } > FLASH_data_seg
 
-    .text :
-    {
-        PROVIDE(_iram_text_start = ABSOLUTE(.));
-        *(.UserEnter.literal);
-        *(.UserEnter.text);
 
-        . = ALIGN(16);
-        *(.entry.text)
-        *(.init.literal)
-        *(.init)
-
-        mapping[iram0_text]
-
-        /* catch stray IRAM_ATTR */
-        *(.iram*)
-        /* iram_end_test section exists for use by memprot unit tests only */
-        /* *(.iram_end_test) */
-
-        /* ESP32-S3 memprot requires 16B padding for possible CPU prefetch  & alignment for PMS*/
-        . += 16;
-        . = ALIGN(256);
-        PROVIDE(_iram_text_end = ABSOLUTE(.));
-
-        /* REVIEW: SRAM_text_seg.data ? */
-        PROVIDE(_iram_data_start = ABSOLUTE(.));
-        mapping[iram0_data]
-        . = ALIGN(4);
-        PROVIDE(_iram_data_end = ABSOLUTE(.));
-
-        /* REVIEW: SRAM_text_seg.bss ? */
-        PROVIDE(_iram_bss_start = ABSOLUTE(.));
-        mapping[iram0_bss]
-
-        . = ALIGN(4);
-        PROVIDE(_iram_bss_end = ABSOLUTE(.));
-PROVIDE(_iram_end = ABSOLUTE(.));
-    } > SRAM_text_seg
-
-    .__FLASH_overrapped_dummy (NOLOAD):
+    .__FLASH_overlapped_dummy (NOLOAD):
     {
         _flash_rodata_dummy_start = ABSOLUTE(.);
         . += SIZEOF(.data.ro);
 
         /* align to FLASH_text */
-        . = ALIGN(256);
+        . = ALIGN(MMU_PAGE_SIZE);
     } > FLASH_text_seg
 
     .flash.text (NOLOAD) :
     {
-PROVIDE(_stext = ABSOLUTE(.));
+        PROVIDE(_stext = ABSOLUTE(.));
         /* This is a symbol marking the flash.text start, this can be used for mmu driver to maintain virtual address */
         PROVIDE(_instruction_reserved_start = ABSOLUTE(.));
 
@@ -275,14 +277,16 @@ PROVIDE(_stext = ABSOLUTE(.));
         *(.irom0.text)      /* catch stray ICACHE_RODATA_ATTR */
         /* ESP32-S3 memprot requires 16B padding for possible CPU prefetch  & alignment for PMS*/
         . += 16;
-        . = ALIGN(MMU_PAGE_SIZE);
-
-PROVIDE(_etext = ABSOLUTE(.));
-        /* This is a symbol marking the flash.text end, this can be used for mmu driver to maintain virtual address */
-PROVIDE(_instruction_reserved_end = ABSOLUTE(.));
+        PROVIDE(_etext = ABSOLUTE(.));
     } > FLASH_text_seg
 
-PROVIDE(_flash_rodata_align = ALIGNOF(.data.ro));
+    .__FLASH_mmu_padding_dummy (NOLOAD):
+    {
+        /* align to FLASH_text */
+        . = ALIGN(MMU_PAGE_SIZE);
+        /* This is a symbol marking the flash.text end, this can be used for mmu driver to maintain virtual address */
+        PROVIDE(_instruction_reserved_end = ABSOLUTE(.));
+    } > FLASH_text_seg
 
     .rtc.text :
     {
@@ -346,16 +350,19 @@ PROVIDE(_flash_rodata_align = ALIGNOF(.data.ro));
 PROVIDE(_heap_start = ABSOLUTE(.));
 /* libc TAG */ PROVIDE(end = ABSOLUTE(.));
 
-        . = ORIGIN(SRAM_data_seg) + LENGTH(SRAM_data_seg);
+        . = ABSOLUTE(0x3fcdd120);
+        /* . = ORIGIN(SRAM_data_seg) + LENGTH(SRAM_data_seg); */
 /* libc TAG */ PROVIDE(__heap_limit__ = ABSOLUTE(.));
 PROVIDE(_heap_end = ABSOLUTE(.));
     } > SRAM_data_seg
 
+/*
     .stack (NOLOAD) :
     {
         . = ORIGIN(SRAM_data_seg) + LENGTH(SRAM_data_seg);
-/* libc TAG */ PROVIDE(__stack = .);
+ PROVIDE(__stack = .);
     } > SRAM_data_seg
+    */
 
     .xt.prop 0 :
     {

@@ -1,5 +1,3 @@
-set(idf_path "${IDF_PATH}/components/app_update")
-
 idf_component_register(
     INCLUDE_DIRS
         "${IDF_PATH}/components/app_update/include"

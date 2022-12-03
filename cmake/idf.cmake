@@ -6,8 +6,6 @@ if (NOT IDF_TARGET)
     message("❓ variable IDF_TARGET is not set, default set to esp32s3")
 endif()
 set_property(CACHE IDF_TARGET PROPERTY STRINGS esp32 esp32s2 esp32s3 esp32c3 esp32h2 esp32c2 esp32c6)
-# some project_include.cmake direct reference this value
-set(target ${IDF_TARGET})
 
 if("${IDF_TARGET}" STREQUAL "linux")
     set(IDF_TARGET_ARCH "")
@@ -40,7 +38,6 @@ if (NOT IDF_ENV_PATH)
 endif()
 
 set(IDF_CMAKE_PATH ${IDF_PATH}/tools/cmake)
-# set(IDF_CMAKE_PATH ${CMAKE_CURRENT_LIST_DIR}/../cmake_idf)
 
 #############################################################################
 # 💡 compiler toolchain variables
@@ -49,65 +46,57 @@ set(CMAKE_TOOLCHAIN_FILE ${IDF_PATH}/tools/cmake/toolchain-${IDF_TARGET}.cmake)
 
 # COMPILE_OPTIONS
 list(APPEND COMPILE_OPTIONS
+    "$<$<COMPILE_LANGUAGE:C>:-std=gnu17>"
+    "$<$<COMPILE_LANGUAGE:CXX>:-std=gnu++20>"
     "-ffunction-sections"
     "-fdata-sections"
     "-Wall"
     "-Werror=all"
-    "-Wno-error=unused-function"
-    "-Wno-error=deprecated-declarations"
     "-Wextra"
 )
 
+# LINK_OPTIONS
+list(APPEND LINK_OPTIONS
+    "-Wl,--gc-sections"
+    "-Wl,--warn-common"
+)
+
+# IDF_KERNEL_COMPONENTS
+#   TODO: components listed in here will generate solo sdkconfig.idf
+if (NOT IDF_TARGET_ARCH STREQUAL "")
+    list(APPEND IDF_KERNEL_COMPONENTS ${IDF_TARGET_ARCH})
+endif()
+list(APPEND IDF_KERNEL_COMPONENTS
+    "freertos" "newlib" "heap" "driver" "cxx" "pthread"
+    "esp_system" "esp_rom" "esp_hw_support" "bootloader_support"
+    "efuse" "hal" "soc"
+    # "mbedtls"
+    # "esp_psram"
+    "esptool_py"
+)
+
 # extra COMPILE_OPTIONS for build esp-idf components only
-list(APPEND COMPONENT_COMPILE_OPTIONS
+list(APPEND IDF_COMPILE_OPTIONS
+    "-O3"                       # ignore Kconfig force using O3 for new
+    "-Wno-array-bounds"         # freertos
     "-Wno-enum-conversion"
     "-Wno-format"
     "-Wno-unused-parameter"
     "-Wno-unused-variable"
     "-Wno-sign-compare"
+    "-fstrict-volatile-bitfields"
+    "$<$<COMPILE_LANGUAGE:C>:-Wno-old-style-declaration>"
 )
-
-# C_COMPILE_OPTIONS
-list(APPEND C_COMPILE_OPTIONS
-    "-std=gnu17"
-)
-
-# CXX_COMPILE_OPTIONS
-list(APPEND CXX_COMPILE_OPTIONS
-    "-std=gnu++20"
-)
-
-# ASM_COMPILE_OPTIONS
-list(APPEND ASM_COMPILE_OPTIONS
-    ""
-)
-
-# COMPILE_DEFINITIONS
-list(APPEND COMPILE_DEFINITIONS
-    "_GNU_SOURCE"
+# COMPILE_DEFINITIONS for build esp-idf components only
+list(APPEND IDF_COMPILE_DEFINITIONS
     "ESP_PLATFORM"          # 3party components porting
-)
-
-# LINK_OPTIONS
-list(APPEND LINK_OPTIONS
-   ""
+    "_GNU_SOURCE"
 )
 
 # OBSOLETED_COMPONENTS
 list(APPEND OBSOLETED_COMPONENTS
-    "esp_common"        # merge into esp_system
-    "esp_app_format"    # removed
-)
-
-# ESP_PLATFORM_COMPONENTS
-if (NOT IDF_TARGET_ARCH STREQUAL "")
-    list(APPEND ESP_PLATFORM_COMPONENTS ${IDF_TARGET_ARCH})
-endif()
-list(APPEND ESP_PLATFORM_COMPONENTS
-    "esp_system" "esp_rom"  "esp_hw_support" "esp_psram" "esp_ringbuf"
-    "freertos" "newlib" "heap"
-    "spi_flash" "cxx" "efuse" "soc" "hal" "partition_table" "mbedtls"
-    "esptool_py"
+    "esp_common"            # merged into esp_system
+    "spi_flash"             # merged into esp_system
 )
 
 #############################################################################
@@ -122,7 +111,7 @@ if (IDF_BUILD_VERSION AND NOT ($ENV{IDF_VERSION} STREQUAL "${IDF_BUILD_VERSION}"
 else()
     set(IDF_BUILD_VERSION $ENV{IDF_VERSION} CACHE STRING "esp-idf version")
 endif()
-list(APPEND COMPILE_DEFINITIONS
+list(APPEND IDF_COMPILE_DEFINITIONS
     "IDF_VER=\"$ENV{IDF_VERSION}\""
 )
 
@@ -260,14 +249,7 @@ function(__idf_build_init)
 
     # esp-idf compiler options
     # __build_get_idf_git_revision()
-    list(REMOVE_DUPLICATES COMPILE_DEFINITIONS)
-    list(REMOVE_DUPLICATES COMPILE_OPTIONS)
-    list(REMOVE_DUPLICATES C_COMPILE_OPTIONS)
-    list(REMOVE_DUPLICATES CXX_COMPILE_OPTIONS)
-    idf_build_set_property(COMPILE_DEFINITIONS "${COMPILE_DEFINITIONS}")
-    idf_build_set_property(COMPILE_OPTIONS "${COMPILE_OPTIONS}")
-    idf_build_set_property(C_COMPILE_OPTIONS "${C_COMPILE_OPTIONS}")
-    idf_build_set_property(CXX_COMPILE_OPTIONS "${CXX_COMPILE_OPTIONS}")
+    add_compile_options(${COMPILE_OPTIONS})
 
     # python
     idf_build_set_property(__CHECK_PYTHON 0)        # do not check python
@@ -299,7 +281,7 @@ function(__idf_build_init)
     endif()
 
     # esp-idf components common requires
-    idf_build_set_property(__COMPONENT_REQUIRES_COMMON "${ESP_PLATFORM_COMPONENTS}" APPEND)
+    idf_build_set_property(__COMPONENT_REQUIRES_COMMON "${IDF_KERNEL_COMPONENTS}" APPEND)
 
     # TODO: common requires add here
 endfunction()
@@ -442,28 +424,6 @@ function(__inherited_idf_component_register)
     # Add component manifest to the list of dependencies
     set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${component_dir}/idf_component.yml")
 
-    idf_build_get_property(include_directories INCLUDE_DIRECTORIES GENERATOR_EXPRESSION)
-        include_directories("${include_directories}")
-    idf_build_get_property(compile_options COMPILE_OPTIONS GENERATOR_EXPRESSION)
-        add_compile_options("${compile_options}")
-    idf_build_get_property(compile_definitions COMPILE_DEFINITIONS GENERATOR_EXPRESSION)
-        add_compile_definitions("${compile_definitions}")
-    idf_build_get_property(c_compile_options C_COMPILE_OPTIONS GENERATOR_EXPRESSION)
-
-    foreach(option ${c_compile_options})
-        add_compile_options($<$<COMPILE_LANGUAGE:C>:${option}>)
-    endforeach()
-
-    idf_build_get_property(cxx_compile_options CXX_COMPILE_OPTIONS GENERATOR_EXPRESSION)
-    foreach(option ${cxx_compile_options})
-        add_compile_options($<$<COMPILE_LANGUAGE:CXX>:${option}>)
-    endforeach()
-
-    idf_build_get_property(asm_compile_options ASM_COMPILE_OPTIONS GENERATOR_EXPRESSION)
-    foreach(option ${asm_compile_options})
-        add_compile_options($<$<COMPILE_LANGUAGE:ASM>:${option}>)
-    endforeach()
-
     # Glob sources
     if(__SRC_DIRS)
         foreach(dir ${__SRC_DIRS})
@@ -505,7 +465,7 @@ function(__inherited_idf_component_register)
                 message(FATAL_ERROR "Include directory '${dir}' is not a directory.")
             endif()
 
-            if (${type} STREQUAL "PUBLIC" AND component_name IN_LIST ESP_PLATFORM_COMPONENTS)
+            if (${type} STREQUAL "PUBLIC" AND component_name IN_LIST IDF_KERNEL_COMPONENTS)
                 idf_build_set_property(INCLUDE_DIRECTORIES ${dir} APPEND)
             else()
                 target_include_directories(${lib} ${type} ${dir})
@@ -524,8 +484,20 @@ function(__inherited_idf_component_register)
         add_library(${component_lib} STATIC ${sources})
         set_target_properties(${component_lib} PROPERTIES OUTPUT_NAME ${component_name} LINKER_LANGUAGE C)
 
-        list(REMOVE_DUPLICATES COMPONENT_COMPILE_OPTIONS)
-        foreach(option ${COMPONENT_COMPILE_OPTIONS})
+        idf_build_get_property(include_directories INCLUDE_DIRECTORIES GENERATOR_EXPRESSION)
+        target_include_directories(${component_lib} PUBLIC "${include_directories}")
+
+        idf_build_get_property(compile_definitions COMPILE_DEFINITIONS GENERATOR_EXPRESSION)
+            list(APPEND compile_definitions ${IDF_COMPILE_DEFINITIONS})
+            list(REMOVE_DUPLICATES compile_definitions)
+        foreach(def ${compile_definitions})
+            target_compile_definitions(${component_lib} PRIVATE ${def})
+        endforeach()
+
+        idf_build_get_property(compile_options COMPILE_OPTIONS GENERATOR_EXPRESSION)
+            list(APPEND compile_options ${IDF_COMPILE_OPTIONS})
+            list(REMOVE_DUPLICATES compile_options)
+        foreach(option ${compile_options})
             target_compile_options(${component_lib} PRIVATE ${option})
         endforeach()
 
@@ -590,10 +562,21 @@ endfunction()
 # idf_build()
 #############################################################################
 function(idf_build)
-    message("\n💡 Resolve dependencies")
-
     # Generate compile_commands.json
     set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+    # do not remove: some esp-idf'component direct using this value
+    set(target ${IDF_TARGET})
+
+    include(CheckTypeSize)
+    check_type_size("time_t" TIME_T_SIZE)
+    if(TIME_T_SIZE)
+        idf_build_set_property(TIME_T_SIZE ${TIME_T_SIZE})
+    else()
+        message(FATAL_ERROR "Failed to determine sizeof(time_t)")
+    endif()
+
+    message("\n💡 Resolve dependencies")
 
     # add esp-idf common required components
     idf_build_get_property(common_requires __COMPONENT_REQUIRES_COMMON)
@@ -614,7 +597,6 @@ function(idf_build)
         if (iter)
             idf_build_get_property(component_targets __COMPONENT_TARGETS)
             __component_get_target(req_target ${iter})
-
             if (NOT req_target IN_LIST component_targets)
                 idf_component_add(${iter})
             endif()
@@ -623,8 +605,8 @@ function(idf_build)
         endif()
     endwhile()
 
-
     message("\n💡 Kconfig")
+
     # Generate sdkconfig.h/sdkconfig.cmake
     idf_build_get_property(sdkconfig SDKCONFIG)
     idf_build_get_property(sdkconfig_defaults SDKCONFIG_DEFAULTS)
@@ -636,17 +618,17 @@ function(idf_build)
     idf_build_get_property(component_targets __COMPONENT_TARGETS)
     # project_include.cmake
     foreach(component_target ${component_targets})
-        __component_get_property(component_dir ${component_target} COMPONENT_DIR)
+        __component_get_property(COMPONENT_DIR ${component_target} COMPONENT_DIR)
 
-        if(EXISTS ${component_dir}/project_include.cmake)
-            include(${component_dir}/project_include.cmake)
+        if(EXISTS ${COMPONENT_DIR}/project_include.cmake)
+            include(${COMPONENT_DIR}/project_include.cmake)
         endif()
     endforeach()
 
     message("💡 Link dependencies")
 
     # import esp-idf misc compiler options
-    #   but...prevent __BUILD_COMPONENT_TARGETS auto add_subdirectory()
+    #   but...unset __BUILD_COMPONENT_TARGETS to prevent add any components, will do below
     idf_build_set_property(__BUILD_COMPONENT_TARGETS "")
     add_subdirectory(${IDF_PATH} ${CMAKE_BINARY_DIR}/esp-idf)
 
@@ -665,7 +647,7 @@ function(idf_build)
         if (component_name STREQUAL "mbedtls")
             list(APPEND mbedtls_targets "mbedtls" "mbedcrypto" "mbedx509")
             foreach(mbedtls_target ${mbedtls_targets})
-                foreach(option ${COMPONENT_COMPILE_OPTIONS})
+                foreach(option ${IDF_COMPILE_OPTIONS})
                     target_compile_options(${mbedtls_target} PRIVATE ${option})
                 endforeach()
             endforeach()
@@ -709,7 +691,7 @@ function(idf_build)
     # Set additional link flags for the executable
     idf_build_get_property(link_options LINK_OPTIONS)
     # append global link options
-    list(APPEND link_options "${LINK_OPTIONS}")
+    list(APPEND link_options ${LINK_OPTIONS})
     set_property(TARGET ${project_elf} APPEND PROPERTY LINK_OPTIONS "${link_options}")
 
     # Propagate link dependencies from component library targets to the executable

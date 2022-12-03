@@ -1,48 +1,48 @@
-set(idf_path "${IDF_PATH}/components/bootloader_support")
+set(component_path "${IDF_PATH}/components/bootloader_support")
 
 list(APPEND include_dirs
-    "${idf_path}/include"
-    "${idf_path}/bootloader_flash/include"
-    "${idf_path}/private_include"
+    "${component_path}/include"
+    "${component_path}/bootloader_flash/include"
+    "${component_path}/private_include"
 )
 list(APPEND priv_include_dirs
     "${IDF_PATH}/components/esp_app_format/include" # only need "esp_app_format" headers to compile, no link anything
-    # "${idf_path}/private_include"
+    # "${component_path}/private_include"
 )
 
 list(APPEND srcs
-    "${idf_path}/src/bootloader_common.c"
-    "${idf_path}/src/bootloader_common_loader.c"
-    "${idf_path}/src/bootloader_clock_init.c"
-    "${idf_path}/bootloader_flash/src/bootloader_flash.c"
-    "${idf_path}/src/bootloader_mem.c"
-    "${idf_path}/src/bootloader_random.c"
-    "${idf_path}/src/bootloader_random_${IDF_TARGET}.c"
-    "${idf_path}/src/bootloader_utility.c"
-    "${idf_path}/src/bootloader_efuse.c"
-    # "${idf_path}/src/esp_image_format.c"   # no load any image
-    # "${idf_path}/src/flash_encrypt.c"
-    # "${idf_path}/src/secure_boot.c"
-    # "${idf_path}/src/flash_partitions.c"
-    "${idf_path}/bootloader_flash/src/flash_qio_mode.c"
-    "${idf_path}/bootloader_flash/src/bootloader_flash_config_${IDF_TARGET}.c"
+    "${component_path}/src/bootloader_common.c"
+    "${component_path}/src/bootloader_common_loader.c"
+    "${component_path}/src/bootloader_clock_init.c"
+    "${component_path}/bootloader_flash/src/bootloader_flash.c"
+    "${component_path}/src/bootloader_mem.c"
+    "${component_path}/src/bootloader_random.c"
+    "${component_path}/src/bootloader_random_${IDF_TARGET}.c"
+    "${component_path}/src/bootloader_utility.c"
+    "${component_path}/src/bootloader_efuse.c"
+    # "${component_path}/src/esp_image_format.c"   # no load any image
+    "${component_path}/src/flash_encrypt.c"
+    # "${component_path}/src/secure_boot.c"
+    # "${component_path}/src/flash_partitions.c"
+    "${component_path}/bootloader_flash/src/flash_qio_mode.c"
+    "${component_path}/bootloader_flash/src/bootloader_flash_config_${IDF_TARGET}.c"
 )
 
 # BOOTLOADER_BUILD
     list(APPEND srcs
-        "${idf_path}/src/bootloader_init.c"
-        "${idf_path}/src/bootloader_clock_loader.c"
-        "${idf_path}/src/bootloader_console.c"
-        "${idf_path}/src/bootloader_console_loader.c"
-        # "${idf_path}/src/bootloader_panic.c"
-        # "${idf_path}/src/${IDF_TARGET}/bootloader_sha.c"
-        "${idf_path}/src/${IDF_TARGET}/bootloader_soc.c"
-        "${idf_path}/src/${IDF_TARGET}/bootloader_${IDF_TARGET}.c"
+        "${component_path}/src/bootloader_init.c"
+        "${component_path}/src/bootloader_clock_loader.c"
+        "${component_path}/src/bootloader_console.c"
+        "${component_path}/src/bootloader_console_loader.c"
+        # "${component_path}/src/bootloader_panic.c"
+        # "${component_path}/src/${IDF_TARGET}/bootloader_sha.c"
+        "${component_path}/src/${IDF_TARGET}/bootloader_soc.c"
+        "${component_path}/src/${IDF_TARGET}/bootloader_${IDF_TARGET}.c"
     )
 # else
     # this somehow use mbedtls
     # list(APPEND srcs
-    #     "${idf_path}/src/idf/bootloader_sha.c"
+    #     "${component_path}/src/idf/bootloader_sha.c"
     # )
 
 list(APPEND requires
@@ -60,29 +60,29 @@ list(APPEND priv_requires
 # if(BOOTLOADER_BUILD)
 #     if(CONFIG_SECURE_FLASH_ENC_ENABLED)
 #         list(APPEND srcs
-#             "${idf_path}/src/flash_encryption/flash_encrypt.c"
-#             "${idf_path}/src/${IDF_TARGET}/flash_encryption_secure_features.c"
+#             "${component_path}/src/flash_encryption/flash_encrypt.c"
+#             "${component_path}/src/${IDF_TARGET}/flash_encryption_secure_features.c"
 #         )
 #     endif()
 
 #     if(CONFIG_SECURE_SIGNED_ON_BOOT)
 #         if(CONFIG_SECURE_SIGNED_APPS_ECDSA_SCHEME)
 #             list(APPEND srcs
-#                 "${idf_path}/src/secure_boot_v1/secure_boot_signatures_bootloader.c"
+#                 "${component_path}/src/secure_boot_v1/secure_boot_signatures_bootloader.c"
 #             )
 #         endif()
 #         if(CONFIG_SECURE_BOOT_V1_ENABLED)
 #             list(APPEND srcs
-#                 "${idf_path}/src/secure_boot_v1/secure_boot.c"
-#                 "${idf_path}/src/${IDF_TARGET}/secure_boot_secure_features.c"
+#                 "${component_path}/src/secure_boot_v1/secure_boot.c"
+#                 "${component_path}/src/${IDF_TARGET}/secure_boot_secure_features.c"
 #             )
 #         endif()
 
 #         if(CONFIG_SECURE_BOOT_V2_ENABLED)
 #             list(APPEND srcs
-#                 "${idf_path}/src/secure_boot_v2/secure_boot_signatures_bootloader.c"
-#                 "${idf_path}/src/secure_boot_v2/secure_boot.c"
-#                 "${idf_path}/src/${IDF_TARGET}/secure_boot_secure_features.c"
+#                 "${component_path}/src/secure_boot_v2/secure_boot_signatures_bootloader.c"
+#                 "${component_path}/src/secure_boot_v2/secure_boot.c"
+#                 "${component_path}/src/${IDF_TARGET}/secure_boot_secure_features.c"
 #             )
 #         endif()
 #     endif()
@@ -90,20 +90,20 @@ list(APPEND priv_requires
 #     if(CONFIG_SECURE_SIGNED_ON_UPDATE)
 #         if(CONFIG_SECURE_SIGNED_APPS_ECDSA_SCHEME)
 #             list(APPEND srcs
-#                 "${idf_path}/src/secure_boot_v1/secure_boot_signatures_app.c"
+#                 "${component_path}/src/secure_boot_v1/secure_boot_signatures_app.c"
 #             )
 #         endif()
 
 #         if(CONFIG_SECURE_SIGNED_APPS_RSA_SCHEME)
 #             list(APPEND srcs
-#                 "${idf_path}/src/secure_boot_v2/secure_boot_signatures_app.c"
-#                 "${idf_path}/src/secure_boot_v2/secure_boot_rsa_signature.c"
+#                 "${component_path}/src/secure_boot_v2/secure_boot_signatures_app.c"
+#                 "${component_path}/src/secure_boot_v2/secure_boot_rsa_signature.c"
 #             )
 #         endif()
 #         if(CONFIG_SECURE_SIGNED_APPS_ECDSA_V2_SCHEME)
 #             list(APPEND srcs
-#                 "${idf_path}/src/secure_boot_v2/secure_boot_signatures_app.c"
-#                 "${idf_path}/src/secure_boot_v2/secure_boot_ecdsa_signature.c"
+#                 "${component_path}/src/secure_boot_v2/secure_boot_signatures_app.c"
+#                 "${component_path}/src/secure_boot_v2/secure_boot_ecdsa_signature.c"
 #             )
 #         endif()
 #     endif()
@@ -115,6 +115,7 @@ idf_component_register(
     REQUIRES "${requires}"
     PRIV_REQUIRES "${priv_requires}"
 )
+target_compile_definitions(${COMPONENT_LIB} PRIVATE "BOOTLOADER_BUILD=1")
 
 # if(BOOTLOADER_BUILD)
 #     target_link_libraries(${COMPONENT_LIB} INTERFACE "-u abort")

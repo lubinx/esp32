@@ -1,4 +1,12 @@
-idf_component_register()
+function(partition_table_add_check_size_target target_name)
+    add_custom_target(${target_name})
+endfunction()
 
-# NOTE: default to 0x8000
-idf_build_set_property(COMPILE_OPTIONS "-DCONFIG_PARTITION_TABLE_OFFSET=0x8000" APPEND)
+function(partition_table_add_check_bootloader_size_target target_name)
+    add_custom_target(${target_name})
+endfunction()
+
+function(partition_table_get_partition_info result get_part_info_args part_info)
+endfunction()
+
+idf_component_register()

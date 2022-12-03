@@ -1,4 +1,5 @@
 list(APPEND srcs
+    "flash_code_test.c"
     # merge bootloader here
     "bootloader_start.c"
     # log
@@ -62,6 +63,8 @@ idf_component_register(
         "include"
         "include/esp32"
         "include/posix"
+        # merge spi_flash
+        "${IDF_PATH}/components/spi_flash/include"
         # esp_system
         "${IDF_PATH}/components/esp_system/include"
     SRCS
