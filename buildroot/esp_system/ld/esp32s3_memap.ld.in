@@ -16,6 +16,9 @@
 
     CONFIG_SOC_MEMPROT_MEM_ALIGN_SIZE
         fixed = 256
+
+    CONFIG_APP_BUILD_USE_FLASH_SECTIONS
+        use static ld segments instead of configure this
 */
 /****************************************************************************
  * sdkconfig.h
@@ -39,8 +42,8 @@
         #define DRAM0_0_SEG_LEN             I_D_SRAM_SIZE
     #endif
 #endif
-
-    SRAM_text_overlapped_start =    0x40378000;
+    SRAM_TEXT_OVERLAPPED_START =    0x40378000;
+    MMU_PAGE_SIZE =                 CONFIG_MMU_PAGE_SIZE;
     ICACHE_SIZE =                   CONFIG_ESP32S3_INSTRUCTION_CACHE_SIZE;
     DCACHE_SIZE =                   CONFIG_ESP32S3_DATA_CACHE_SIZE;
 
@@ -49,6 +52,7 @@
 #else
     ULP_RESERVED_RTC_SLOW_SIZE =    0;
 #endif
+
 /****************************************************************************
 */
 
@@ -93,8 +97,8 @@ MEMORY
     /*
         external FLASH
     */
-    FLASH_data_seg (R) :            org = 0x3C000020,   len = 16M - 0x20
-    FLASH_text_seg (RX) :           org = 0x42000020,   len = 16M - 0x20
+    FLASH_data_seg (R) :            org = 0x3C000000,   len = 16M
+    FLASH_text_seg (RX) :           org = 0x42000000,   len = 16M
 
     /*
         PSRAM
@@ -158,24 +162,4 @@ MEMORY
                     |               |
         0x3fcf0000 ------------------> _data_end_interface
 
-/****************************************************************************
- * MEMORY segment aliases
-*****************************************************************************
-*/
-#if false
-    # TODO: remove CONFIG_APP_BUILD_USE_FLASH_SECTIONS
-#endif
-REGION_ALIAS("default_code_seg",    FLASH_text_seg);
-
-#if CONFIG_APP_BUILD_USE_FLASH_SECTIONS
-REGION_ALIAS("default_rodata_seg",  FLASH_data_seg);
-#else
-REGION_ALIAS("default_rodata_seg",  SRAM_data_seg);
-#endif
-
-REGION_ALIAS("rtc_iram_seg",        RTC_fast_seg);
-#if CONFIG_ESP32S3_RTCDATA_IN_FAST_MEM
-REGION_ALIAS("rtc_data_location",   RTC_fast_seg);
-#else
-REGION_ALIAS("rtc_data_location",   RTC_slow_seg);
-#endif
+****************************************************************************/

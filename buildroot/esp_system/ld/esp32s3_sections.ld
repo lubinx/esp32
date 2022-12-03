@@ -29,65 +29,43 @@ PROVIDE(_vector_table = ABSOLUTE(.));
         . = 0x400;
         *(.*Vector.literal)
 
-PROVIDE(_invalid_pc_placeholder = ABSOLUTE(.));
+        PROVIDE(_invalid_pc_placeholder = ABSOLUTE(.));
     } > SRAM_text_seg
 
     .startup.text :
     {
-        *(.literal* .text* .stub .gnu.warning .gnu.linkonce.literal* .gnu.linkonce.t.*)
+        *bootloader_start.*(.literal* .text*)
 
-        *fpga_overrides.*(.literal.bootloader_fill_random .text.bootloader_fill_random)
-        *libbootloader_support.a:bootloader_clock_loader.*(.literal* .text*)
-        *libbootloader_support.a:bootloader_common_loader.*(.literal* .text*)
-        *libbootloader_support.a:bootloader_flash.*(.literal* .text*)
-        *libbootloader_support.a:bootloader_random.*(.literal* .text*)
-        *libbootloader_support.a:bootloader_random*.*(.literal.bootloader_random_disable .text.bootloader_random_disable)
-        *libbootloader_support.a:bootloader_efuse.*(.literal* .text*)
-        *libbootloader_support.a:bootloader_utility.*(.literal* .text*)
-        *libbootloader_support.a:bootloader_sha.*(.literal* .text*)
-        *libbootloader_support.a:bootloader_console_loader.*(.literal* .text*)
-        *libbootloader_support.a:bootloader_panic.*(.literal* .text*)
-        *libbootloader_support.a:bootloader_soc.*(.literal* .text*)
-        *libbootloader_support.a:esp_image_format.*(.literal* .text*)
-        *libbootloader_support.a:flash_encrypt.*(.literal* .text*)
-        *libbootloader_support.a:flash_encryption_secure_features.*(.literal* .text*)
-        *libbootloader_support.a:flash_partitions.*(.literal* .text*)
-        *libbootloader_support.a:secure_boot.*(.literal* .text*)
-        *libbootloader_support.a:secure_boot_secure_features.*(.literal* .text*)
-        *libbootloader_support.a:secure_boot_signatures_bootloader.*(.literal* .text*)
+        *fpga_overrides.*(.literal* .text*)
+        *libbootloader_support.a:bootloader*(.literal* .text*)
 
-        *libefuse.a:*.*(.literal* .text*)
-        *libesp_hw_support.a:rtc_clk.*(.literal* .text*)
-        *libesp_hw_support.a:rtc_time.*(.literal* .text*)
-        *libesp_hw_support.a:regi2c_ctrl.*(.literal* .text*)
+        *libhal.a:cache*(.literal* .text*)
+        *libhal.a:mpu*(.literal* .text*)
 
-        *libhal.a:wdt_hal_iram.*(.literal* .text*)
-        *libhal.a:mmu_hal.*(.literal* .text*)
-        *libhal.a:cache_hal.*(.literal* .text*)
-        *libhal.a:efuse_hal.*(.literal* .text*)
-
+        *libesp_hw_support.a:cpu*(.literal* .text*)
+        *libesp_hw_support.a:rtc_clk_init*(.literal* .text*)
+/*
+        *libefuse.a:(.literal* .text*)
         *libgcc.a:(.literal* .text*)
-        *libmicro-ecc.a:*.*(.literal* .text*)
-        *libspi_flash.a:*.*(.literal* .text*)
+        *libspi_flash.a:(.literal* .text*)
+*/
 
-        *(.iram1 .iram1.*)      /* catch stray IRAM_ATTR */
+        *libesp_system.a:log*(.literal* .text*)
+
         *(.fini.literal)
         *(.fini)
         *(.gnu.version)
 
-        . = ALIGN (16);
         *(.entry.text)
         *(.init.literal)
         *(.init)
 
-        *(.fini.literal)
-        *(.fini)
-        *(.gnu.version)
+        . = ALIGN(4);
     } > SRAM_text_seg
 
     .__SRSM_overrapped_dummy (NOLOAD):
     {
-        . = ORIGIN(SRAM_data_seg) + _iram_end > SRAM_text_overlapped_start ? _iram_end - SRAM_text_overlapped_start : 0;
+        . = ORIGIN(SRAM_data_seg) + _iram_end > SRAM_TEXT_OVERLAPPED_START ? _iram_end - SRAM_TEXT_OVERLAPPED_START : 0;
     } > SRAM_data_seg
 
     .startup.data :
@@ -98,9 +76,7 @@ PROVIDE(_invalid_pc_placeholder = ABSOLUTE(.));
         *libhal.a:(.data* .rodata*)
 
         *libefuse.a:(.data* .rodata*)
-        *liblog.a:(.data* .rodata*)
         *libgcc.a:(.data* .rodata*)
-        *libmicro-ecc.a:(.data* .rodata*)
         *libspi_flash.a:(.data* .rodata*)
 
         . = ALIGN(4);
@@ -108,7 +84,7 @@ PROVIDE(_invalid_pc_placeholder = ABSOLUTE(.));
 
     .data.rw :
     {
-PROVIDE(_data_start = ABSOLUTE(.));
+        PROVIDE(_data_start = ABSOLUTE(.));
         *(.gnu.linkonce.d.*)
         *(.data1)
         *(.sdata)
@@ -120,7 +96,7 @@ PROVIDE(_data_start = ABSOLUTE(.));
         mapping[dram0_data]
 
         . = ALIGN(4);
-PROVIDE(_data_end = ABSOLUTE(.));
+        PROVIDE(_data_end = ABSOLUTE(.));
     } > SRAM_data_seg
 
     .data.zi (NOLOAD) :
@@ -130,7 +106,9 @@ PROVIDE(_data_end = ABSOLUTE(.));
         _noinit_end = ABSOLUTE(.);
 
         . = ALIGN(8);
-PROVIDE(_bss_start = ABSOLUTE(.));
+        PROVIDE(_bss_start = ABSOLUTE(.));
+            /* dummy _bss_start & _bss_end */
+        PROVIDE(_bss_end = ABSOLUTE(.));
 
         mapping[dram0_bss]
 
@@ -147,7 +125,6 @@ PROVIDE(_bss_start = ABSOLUTE(.));
         *(.gnu.linkonce.b.*)
 
         . = ALIGN(8);
-PROVIDE(_bss_end = ABSOLUTE(.));
     } > SRAM_data_seg
 
     .data.ro (NOLOAD) : ALIGN(0x10)
@@ -156,7 +133,7 @@ PROVIDE(_bss_end = ABSOLUTE(.));
         /* This is a symbol marking the data.ro start, this can be used for mmu driver to maintain virtual address */
         PROVIDE(_rodata_reserved_start = ABSOLUTE(.));
 
-        /* REVIEW: app_desc ? */
+        /* REVIEW: keep app_desc ? */
         *(.rodata_desc .rodata_desc.*)
         *(.rodata_custom_desc .rodata_custom_desc.*)
 
@@ -252,9 +229,9 @@ PROVIDE(_rodata_reserved_end = ABSOLUTE(.));
         mapping[iram0_text]
 
         /* catch stray IRAM_ATTR */
-        *(.iram .iram.*)
+        *(.iram*)
         /* iram_end_test section exists for use by memprot unit tests only */
-        *(.iram_end_test)
+        /* *(.iram_end_test) */
 
         /* ESP32-S3 memprot requires 16B padding for possible CPU prefetch  & alignment for PMS*/
         . += 16;
@@ -281,6 +258,8 @@ PROVIDE(_iram_end = ABSOLUTE(.));
         _flash_rodata_dummy_start = ABSOLUTE(.);
         . += SIZEOF(.data.ro);
 
+        /* align to FLASH_text */
+        . = ALIGN(256);
     } > FLASH_text_seg
 
     .flash.text (NOLOAD) :
@@ -289,30 +268,21 @@ PROVIDE(_stext = ABSOLUTE(.));
         /* This is a symbol marking the flash.text start, this can be used for mmu driver to maintain virtual address */
         PROVIDE(_instruction_reserved_start = ABSOLUTE(.));
 
+        *(.literal* .text* .stub .gnu.warning .gnu.linkonce.literal* .gnu.linkonce.t.*)
+
         mapping[flash_text]
 
         *(.irom0.text)      /* catch stray ICACHE_RODATA_ATTR */
         /* ESP32-S3 memprot requires 16B padding for possible CPU prefetch  & alignment for PMS*/
         . += 16;
-        . = ALIGN(256);
+        . = ALIGN(MMU_PAGE_SIZE);
 
 PROVIDE(_etext = ABSOLUTE(.));
         /* This is a symbol marking the flash.text end, this can be used for mmu driver to maintain virtual address */
-        PROVIDE(_instruction_reserved_end = ABSOLUTE(.));
+PROVIDE(_instruction_reserved_end = ABSOLUTE(.));
     } > FLASH_text_seg
 
 PROVIDE(_flash_rodata_align = ALIGNOF(.data.ro));
-
-    .heap (NOLOAD) :
-    {
-        . = ALIGN(8);
-
-PROVIDE(_heap_start = ABSOLUTE(.));
-PROVIDE(end = ABSOLUTE(.));         /* newlib TAG"end": heap starts here */
-
-        . = ORIGIN(SRAM_data_seg) + LENGTH(SRAM_data_seg);
-PROVIDE(_heap_end = ABSOLUTE(.));
-    } > SRAM_data_seg
 
     .rtc.text :
     {
@@ -365,6 +335,27 @@ PROVIDE(_heap_end = ABSOLUTE(.));
         . = ALIGN(4);
         _rtc_bss_end = ABSOLUTE(.);
     } > RTC_slow_seg
+
+/*
+    all available SRAM to heap & stack
+*/
+    .heap (NOLOAD) :
+    {
+        . = ALIGN(8);
+
+PROVIDE(_heap_start = ABSOLUTE(.));
+/* libc TAG */ PROVIDE(end = ABSOLUTE(.));
+
+        . = ORIGIN(SRAM_data_seg) + LENGTH(SRAM_data_seg);
+/* libc TAG */ PROVIDE(__heap_limit__ = ABSOLUTE(.));
+PROVIDE(_heap_end = ABSOLUTE(.));
+    } > SRAM_data_seg
+
+    .stack (NOLOAD) :
+    {
+        . = ORIGIN(SRAM_data_seg) + LENGTH(SRAM_data_seg);
+/* libc TAG */ PROVIDE(__stack = .);
+    } > SRAM_data_seg
 
     .xt.prop 0 :
     {

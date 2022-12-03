@@ -6,7 +6,7 @@ list(APPEND include_dirs
     "${idf_path}/private_include"
 )
 list(APPEND priv_include_dirs
-    "${IDF_PATH}/components/esp_app_format/include" # merge component "esp_app_format" here
+    "${IDF_PATH}/components/esp_app_format/include" # only need "esp_app_format" headers to compile, no link anything
     # "${idf_path}/private_include"
 )
 
@@ -20,10 +20,10 @@ list(APPEND srcs
     "${idf_path}/src/bootloader_random_${IDF_TARGET}.c"
     "${idf_path}/src/bootloader_utility.c"
     "${idf_path}/src/bootloader_efuse.c"
-    "${idf_path}/src/esp_image_format.c"   # no load any image
-    "${idf_path}/src/flash_encrypt.c"
-    "${idf_path}/src/secure_boot.c"
-    "${idf_path}/src/flash_partitions.c"
+    # "${idf_path}/src/esp_image_format.c"   # no load any image
+    # "${idf_path}/src/flash_encrypt.c"
+    # "${idf_path}/src/secure_boot.c"
+    # "${idf_path}/src/flash_partitions.c"
     "${idf_path}/bootloader_flash/src/flash_qio_mode.c"
     "${idf_path}/bootloader_flash/src/bootloader_flash_config_${IDF_TARGET}.c"
 )
@@ -34,8 +34,8 @@ list(APPEND srcs
         "${idf_path}/src/bootloader_clock_loader.c"
         "${idf_path}/src/bootloader_console.c"
         "${idf_path}/src/bootloader_console_loader.c"
-        "${idf_path}/src/bootloader_panic.c"
-        "${idf_path}/src/${IDF_TARGET}/bootloader_sha.c"
+        # "${idf_path}/src/bootloader_panic.c"
+        # "${idf_path}/src/${IDF_TARGET}/bootloader_sha.c"
         "${idf_path}/src/${IDF_TARGET}/bootloader_soc.c"
         "${idf_path}/src/${IDF_TARGET}/bootloader_${IDF_TARGET}.c"
     )
@@ -47,13 +47,12 @@ list(APPEND srcs
 
 list(APPEND requires
     "soc"
-    "hal"
-    "efuse"
 )
 list(APPEND priv_requires
     "spi_flash"
-    "partition_table"
-    # "app_update" # <== "esp_app_format"
+    # "hal"
+    # "efuse"
+    # "partition_table"
     # "micro-ecc"
     # "mbedtls"
 )

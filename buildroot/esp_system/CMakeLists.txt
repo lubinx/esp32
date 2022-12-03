@@ -1,16 +1,3 @@
-# On Linux, we only support a few features, hence this simple component registration
-if(${IDF_TARGET} STREQUAL "linux")
-    idf_component_register(
-        INCLUDE_DIRS "include"
-        SRCS
-            "esp_system.c"
-            "port/soc/linux/reset_reason.c"
-            "port/soc/linux/system_internal.c"
-            "port/esp_system_linux.c"
-    )
-    return()
-endif()
-
 list(APPEND srcs
     # merge bootloader here
     "bootloader_start.c"
@@ -19,55 +6,55 @@ list(APPEND srcs
     # esp_common
     "${IDF_PATH}/components/esp_common/src/esp_err_to_name.c"
     # esp_system
-    # "${IDF_PATH}/components/esp_system/crosscore_int.c"
-    # "${IDF_PATH}/components/esp_system/esp_ipc.c"
-    # "${IDF_PATH}/components/esp_system/esp_err.c"
-    # "${IDF_PATH}/components/esp_system/freertos_hooks.c"
-    # "${IDF_PATH}/components/esp_system/int_wdt.c"
-    # "${IDF_PATH}/components/esp_system/panic.c"
-    # "${IDF_PATH}/components/esp_system/esp_system.c"
-    # "${IDF_PATH}/components/esp_system/system_time.c"
-    # "${IDF_PATH}/components/esp_system/stack_check.c"
-    # "${IDF_PATH}/components/esp_system/ubsan.c"
-    # "${IDF_PATH}/components/esp_system/xt_wdt.c"
-    # "${IDF_PATH}/components/esp_system/debug_stubs.c"
+    "${IDF_PATH}/components/esp_system/crosscore_int.c"
+    "${IDF_PATH}/components/esp_system/esp_ipc.c"
+    "${IDF_PATH}/components/esp_system/esp_err.c"
+    "${IDF_PATH}/components/esp_system/freertos_hooks.c"
+    "${IDF_PATH}/components/esp_system/int_wdt.c"
+    "${IDF_PATH}/components/esp_system/panic.c"
+    "${IDF_PATH}/components/esp_system/esp_system.c"
+    "${IDF_PATH}/components/esp_system/system_time.c"
+    "${IDF_PATH}/components/esp_system/stack_check.c"
+    "${IDF_PATH}/components/esp_system/ubsan.c"
+    "${IDF_PATH}/components/esp_system/xt_wdt.c"
+    "${IDF_PATH}/components/esp_system/debug_stubs.c"
     # removed this
     # "${IDF_PATH}/components/esp_system/startup.c"
 )
 
-# if(CONFIG_IDF_ENV_FPGA)
-#     list(APPEND srcs
-#         "fpga_overrides.c"
-#     )
-# endif()
+if(CONFIG_IDF_ENV_FPGA)
+    list(APPEND srcs
+        "fpga_overrides.c"
+    )
+endif()
 
-# if(CONFIG_ESP_TASK_WDT_EN)
-#     list(APPEND srcs
-#         "${IDF_PATH}/components/esp_system/task_wdt/task_wdt.c"
-#     )
+if(CONFIG_ESP_TASK_WDT_EN)
+    list(APPEND srcs
+        "${IDF_PATH}/components/esp_system/task_wdt/task_wdt.c"
+    )
 
-#     if(CONFIG_ESP_TASK_WDT_USE_ESP_TIMER)
-#         list(APPEND srcs
-#             "${IDF_PATH}/components/esp_system/task_wdt/task_wdt_impl_esp_timer.c"
-#         )
-#     else()
-#         list(APPEND srcs
-#             "${IDF_PATH}/components/esp_system/task_wdt/task_wdt_impl_timergroup.c"
-#         )
-#     endif()
-# endif()
+    if(CONFIG_ESP_TASK_WDT_USE_ESP_TIMER)
+        list(APPEND srcs
+            "${IDF_PATH}/components/esp_system/task_wdt/task_wdt_impl_esp_timer.c"
+        )
+    else()
+        list(APPEND srcs
+            "${IDF_PATH}/components/esp_system/task_wdt/task_wdt_impl_timergroup.c"
+        )
+    endif()
+endif()
 
-# if(CONFIG_ESP_SYSTEM_USE_EH_FRAME)
-#     list(APPEND srcs
-#         "${IDF_PATH}/components/esp_system/eh_frame_parser.c"
-#     )
-# endif()
+if(CONFIG_ESP_SYSTEM_USE_EH_FRAME)
+    list(APPEND srcs
+        "${IDF_PATH}/components/esp_system/eh_frame_parser.c"
+    )
+endif()
 
-# if(CONFIG_SOC_SYSTIMER_SUPPORT_ETM)
-#     list(APPEND srcs
-#         "${IDF_PATH}/components/esp_system/systick_etm.c"
-#     )
-# endif()
+if(CONFIG_SOC_SYSTIMER_SUPPORT_ETM)
+    list(APPEND srcs
+        "${IDF_PATH}/components/esp_system/systick_etm.c"
+    )
+endif()
 
 idf_component_register(
     INCLUDE_DIRS
@@ -82,6 +69,7 @@ idf_component_register(
     PRIV_REQUIRES
         "bootloader_support"
         "efuse"
+        "hal"
         "spi_flash"
         # "esp_timer"
         # "pthread"
@@ -95,7 +83,7 @@ idf_component_register(
         "${IDF_PATH}/components/esp_system/linker.lf"
         "${IDF_PATH}/components/esp_system/app.lf"
 )
-# add_subdirectory("${IDF_PATH}/components/esp_system/port" "${build_dir}/${prefix}/${component_name}/port")
+add_subdirectory("${IDF_PATH}/components/esp_system/port" "${build_dir}/${prefix}/${component_name}/port")
 
 # After system initialization, `start_app` (and its other cores variant) is called.
 # This is provided by the user or from another component. Since we can't establish

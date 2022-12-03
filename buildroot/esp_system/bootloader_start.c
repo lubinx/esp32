@@ -8,6 +8,9 @@
 // #include "freertos/task.h"
 // #include "esp_flash.h"
 
+#include "hal/mmu_hal.h"
+#include "hal/cache_hal.h"
+
 
 static const char *TAG = "boot";
 static int n1 = 10;
@@ -50,6 +53,10 @@ void IRAM_ATTR bootloader_startup(void)
         bootloader_reset();
 
     esp_rom_printf("\n\n\n2. hello call_start_cpu0: after bootloader_init()\n\n\n");
+
+    // extern void foobar(void);
+    // foobar();
+
     while (1) {}
 
     // call_start_cpu0();
