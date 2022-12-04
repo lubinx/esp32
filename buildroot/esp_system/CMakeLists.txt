@@ -15,7 +15,7 @@ list(APPEND srcs
     "${IDF_PATH}/components/esp_system/panic.c"
     "${IDF_PATH}/components/esp_system/esp_system.c"
     "${IDF_PATH}/components/esp_system/system_time.c"
-    "${IDF_PATH}/components/esp_system/stack_check.c"
+    # "${IDF_PATH}/components/esp_system/stack_check.c"
     "${IDF_PATH}/components/esp_system/ubsan.c"
     "${IDF_PATH}/components/esp_system/xt_wdt.c"
     "${IDF_PATH}/components/esp_system/debug_stubs.c"
@@ -73,7 +73,6 @@ idf_component_register(
         "bootloader_support"
         "efuse"
         "hal"
-        "spi_flash"
         # "esp_timer"
         # "pthread"
         # "driver"
@@ -88,23 +87,28 @@ idf_component_register(
 )
 add_subdirectory("${IDF_PATH}/components/esp_system/port" "${build_dir}/${prefix}/${component_name}/port")
 
+
+if(CONFIG_IDF_ENV_FPGA)
+    # Forces the linker to include fpga stubs from this component
+    target_link_libraries(${COMPONENT_LIB} INTERFACE "-u esp_common_include_fpga_overrides")
+endif()
+
 # After system initialization, `start_app` (and its other cores variant) is called.
 # This is provided by the user or from another component. Since we can't establish
 # dependency on what we don't know, force linker to not drop the symbol regardless
 # of link line order.
 target_link_libraries(${COMPONENT_LIB} INTERFACE "-u start_app")
 
+# Force linking UBSAN hooks. If UBSAN is not enabled, the hooks will ultimately be removed
+# due to -ffunction-sections -Wl,--gc-sections options.
+target_link_libraries(${COMPONENT_LIB} INTERFACE "-u __ubsan_include")
+
 if(NOT CONFIG_ESP_SYSTEM_SINGLE_CORE_MODE)
     target_link_libraries(${COMPONENT_LIB} INTERFACE "-u start_app_other_cores")
 endif()
 
-# Disable stack protection in files which are involved in initialization of that feature
-# set_source_files_properties(
-#     "${IDF_PATH}/components/esp_system/startup.c" "${IDF_PATH}/components/esp_system/stack_check.c"
-#     PROPERTIES COMPILE_FLAGS
-#     -fno-stack-protector
-# )
 
+# generate link scripts
 idf_build_get_property(sdkconfig_header SDKCONFIG_HEADER)
 idf_build_get_property(config_dir CONFIG_DIR)
 set(ld_input "${CMAKE_CURRENT_LIST_DIR}/ld/${IDF_TARGET}_memap.ld.in")
@@ -130,14 +134,12 @@ target_linker_script(${COMPONENT_LIB} INTERFACE "ld/${IDF_TARGET}_sections.ld"
     PROCESS "${config_dir}/${IDF_TARGET}_sections.ld"
 )
 
-if(CONFIG_IDF_ENV_FPGA)
-    # Forces the linker to include fpga stubs from this component
-    target_link_libraries(${COMPONENT_LIB} INTERFACE "-u esp_common_include_fpga_overrides")
-endif()
-
-# Force linking UBSAN hooks. If UBSAN is not enabled, the hooks will ultimately be removed
-# due to -ffunction-sections -Wl,--gc-sections options.
-target_link_libraries(${COMPONENT_LIB} INTERFACE "-u __ubsan_include")
+# Disable stack protection in files which are involved in initialization of that feature
+# set_source_files_properties(
+#     "${IDF_PATH}/components/esp_system/startup.c" "${IDF_PATH}/components/esp_system/stack_check.c"
+#     PROPERTIES COMPILE_FLAGS
+#     -fno-stack-protector
+# )
 
 
 # [refactor-todo] requirements due to init code, should be removable
@@ -153,8 +155,6 @@ endif()
 # [refactor-todo] requirement from the panic handler,
 # need to introduce panic "event" concept to remove this dependency (IDF-2194)
 idf_component_optional_requires(PRIVATE "esp_gdbstub")
-
-# idf_component_optional_requires(PRIVATE "esp_app_format")
 
 if(CONFIG_PM_ENABLE)
     idf_component_optional_requires(PRIVATE "pm")

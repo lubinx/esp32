@@ -44,7 +44,7 @@ set(IDF_CMAKE_PATH ${IDF_PATH}/tools/cmake)
 #############################################################################
 set(CMAKE_TOOLCHAIN_FILE ${IDF_PATH}/tools/cmake/toolchain-${IDF_TARGET}.cmake)
 
-# COMPILE_OPTIONS
+# common compile options for project source & esp-idf'components
 list(APPEND COMPILE_OPTIONS
     "$<$<COMPILE_LANGUAGE:C>:-std=gnu17>"
     "$<$<COMPILE_LANGUAGE:CXX>:-std=gnu++20>"
@@ -53,6 +53,10 @@ list(APPEND COMPILE_OPTIONS
     "-Wall"
     "-Werror=all"
     "-Wextra"
+)
+
+# COMPILE_OPTIONS
+list(APPEND COMPILE_DEFINITIONS
 )
 
 # LINK_OPTIONS
@@ -68,35 +72,35 @@ if (NOT IDF_TARGET_ARCH STREQUAL "")
 endif()
 list(APPEND IDF_KERNEL_COMPONENTS
     "freertos" "newlib" "heap" "driver" "cxx" "pthread"
-    "esp_system" "esp_rom" "esp_hw_support" "bootloader_support"
+    "bootloader_support" "esp_hw_support" "esp_rom" "esp_system"
     "efuse" "hal" "soc"
-    # "mbedtls"
-    # "esp_psram"
     "esptool_py"
 )
 
-# extra COMPILE_OPTIONS for build esp-idf components only
+# OBSOLETED_COMPONENTS: autoremove from REQUIRES & PRIV_REQUIRES
+list(APPEND OBSOLETED_COMPONENTS
+    # merged into esp_system
+    "esp_common"
+    "spi_flash"
+    ""
+)
+
+# compile options for esp-idf'components only
 list(APPEND IDF_COMPILE_OPTIONS
-    "-O3"                       # ignore Kconfig force using O3 for new
+    "-O3"                       # ignore Kconfig force using O3 for now
     "-Wno-array-bounds"         # freertos
     "-Wno-enum-conversion"
     "-Wno-format"
     "-Wno-unused-parameter"
     "-Wno-unused-variable"
     "-Wno-sign-compare"
-    "-fstrict-volatile-bitfields"
+    "$<$<COMPILE_LANGUAGE:C>:-fstrict-volatile-bitfields>"
     "$<$<COMPILE_LANGUAGE:C>:-Wno-old-style-declaration>"
 )
-# COMPILE_DEFINITIONS for build esp-idf components only
+# compile definitions for esp-idf'components only
 list(APPEND IDF_COMPILE_DEFINITIONS
     "ESP_PLATFORM"          # 3party components porting
     "_GNU_SOURCE"
-)
-
-# OBSOLETED_COMPONENTS
-list(APPEND OBSOLETED_COMPONENTS
-    "esp_common"            # merged into esp_system
-    "spi_flash"             # merged into esp_system
 )
 
 #############################################################################
@@ -246,10 +250,6 @@ function(__idf_build_init)
     idf_build_set_property(IDF_PATH ${IDF_PATH})
     idf_build_set_property(IDF_TARGET ${IDF_TARGET})
     idf_build_set_property(IDF_TARGET_ARCH ${IDF_TARGET_ARCH})
-
-    # esp-idf compiler options
-    # __build_get_idf_git_revision()
-    add_compile_options(${COMPILE_OPTIONS})
 
     # python
     idf_build_set_property(__CHECK_PYTHON 0)        # do not check python
@@ -488,15 +488,11 @@ function(__inherited_idf_component_register)
         target_include_directories(${component_lib} PUBLIC "${include_directories}")
 
         idf_build_get_property(compile_definitions COMPILE_DEFINITIONS GENERATOR_EXPRESSION)
-            list(APPEND compile_definitions ${IDF_COMPILE_DEFINITIONS})
-            list(REMOVE_DUPLICATES compile_definitions)
         foreach(def ${compile_definitions})
             target_compile_definitions(${component_lib} PRIVATE ${def})
         endforeach()
 
         idf_build_get_property(compile_options COMPILE_OPTIONS GENERATOR_EXPRESSION)
-            list(APPEND compile_options ${IDF_COMPILE_OPTIONS})
-            list(REMOVE_DUPLICATES compile_options)
         foreach(option ${compile_options})
             target_compile_options(${component_lib} PRIVATE ${option})
         endforeach()
@@ -562,8 +558,21 @@ endfunction()
 # idf_build()
 #############################################################################
 function(idf_build)
+    # project compile options
+    add_compile_options(${COMPILE_OPTIONS})
+    add_compile_definitions(${COMPILE_DEFINITIONS})
+
+    # attach esp-idf'components compile options
+    foreach(option ${COMPILE_OPTIONS} ${IDF_COMPILE_OPTIONS})
+        idf_build_set_property(COMPILE_OPTIONS ${option} APPEND)
+    endforeach()
+    foreach(def ${IDF_COMPILE_DEFINITIONS})
+        idf_build_set_property(COMPILE_DEFINITIONS ${def} APPEND)
+    endforeach()
+
     # Generate compile_commands.json
     set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 
     # do not remove: some esp-idf'component direct using this value
     set(target ${IDF_TARGET})

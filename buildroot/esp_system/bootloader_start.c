@@ -34,6 +34,7 @@ extern __attribute__((noreturn))
 *****************************************************************************/
 void IRAM_ATTR bootloader_startup(void)
 {
+
     esp_rom_printf("\n\n\n1. hello call_start_cpu0 \
         \ttag: %s\n\
         \tn1: %d\n\
@@ -47,6 +48,9 @@ void IRAM_ATTR bootloader_startup(void)
         \tn9: %d\n",
         TAG, n1, n2, n3, n4, n5, n6, n7, n8, n9
     );
+
+    extern char const *foobar_text;
+    esp_rom_printf("rom test addr: 0x%x\n", foobar_text);
 
     // 1. Hardware initialization
     if (ESP_OK != bootloader_init())

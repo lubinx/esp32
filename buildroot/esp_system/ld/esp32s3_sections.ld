@@ -4,7 +4,6 @@ SECTIONS
 {
     .intr.vectors :
     {
-        _iram_start = ABSOLUTE(.);
 PROVIDE(_vector_table = ABSOLUTE(.));
         . = 0x0;
         KEEP(*(.WindowVectors.text));
@@ -29,12 +28,13 @@ PROVIDE(_vector_table = ABSOLUTE(.));
         . = 0x400;
         *(.*Vector.literal)
 
-        PROVIDE(_invalid_pc_placeholder = ABSOLUTE(.));
+PROVIDE(_invalid_pc_placeholder = ABSOLUTE(.));
     } > SRAM_text_seg
 
-    .startup.text :
+    .text.startup :
     {
         *bootloader_start.*(.literal* .text*)
+        *libesp_system.a:log.*(.literal* .text*)
 
         *fpga_overrides.*(.literal* .text*)
         *libbootloader_support.a:bootloader*(.literal* .text*)
@@ -44,14 +44,9 @@ PROVIDE(_vector_table = ABSOLUTE(.));
 
         *libesp_hw_support.a:cpu*(.literal* .text*)
         *libesp_hw_support.a:rtc_clk_init*(.literal* .text*)
-        *libspi_flash.a:(.literal* .text*)
 
-/*
         *libefuse.a:(.literal* .text*)
         *libgcc.a:(.literal* .text*)
-*/
-
-        *libesp_system.a:log*(.literal* .text*)
 
         *(.fini.literal)
         *(.fini)
@@ -69,16 +64,17 @@ PROVIDE(_vector_table = ABSOLUTE(.));
         . = ORIGIN(SRAM_data_seg) + _iram_end > SRAM_TEXT_OVERLAPPED_START ? _iram_end - SRAM_TEXT_OVERLAPPED_START : 0;
     } > SRAM_data_seg
 
-    .startup.data :
+    .data.startup :
     {
         *bootloader_start.*(.data* .rodata*)
+        *libesp_system.a:log.*(.data* .rodata*)
+
         *libesp_hw_support.a:(.data* .rodata*)
         *libbootloader_support.a:(.data* .rodata*)
         *libhal.a:(.data* .rodata*)
 
         *libefuse.a:(.data* .rodata*)
         *libgcc.a:(.data* .rodata*)
-        *libspi_flash.a:(.data* .rodata*)
 
         . = ALIGN(4);
     } > SRAM_data_seg
@@ -100,14 +96,17 @@ PROVIDE(_vector_table = ABSOLUTE(.));
         PROVIDE(_data_end = ABSOLUTE(.));
     } > SRAM_data_seg
 
-    .data.zi (NOLOAD) :
+    .data.noinit (NOLOAD) :
     {
         _noinit_start = ABSOLUTE(.);
         *(.noinit .noinit.*)
         _noinit_end = ABSOLUTE(.);
+    }
 
+    .data.zi (NOLOAD) :
+    {
         . = ALIGN(8);
-        PROVIDE(_bss_start = ABSOLUTE(.));
+PROVIDE(_bss_start = ABSOLUTE(.));
 
         mapping[dram0_bss]
 
@@ -124,46 +123,8 @@ PROVIDE(_vector_table = ABSOLUTE(.));
         *(.gnu.linkonce.b.*)
 
         . = ALIGN(8);
-        PROVIDE(_bss_end = ABSOLUTE(.));
+PROVIDE(_bss_end = ABSOLUTE(.));
     } > SRAM_data_seg
-
-    .text :
-    {
-        PROVIDE(_iram_text_start = ABSOLUTE(.));
-        *(.UserEnter.literal);
-        *(.UserEnter.text);
-
-        . = ALIGN(16);
-        *(.entry.text)
-        *(.init.literal)
-        *(.init)
-
-        mapping[iram0_text]
-
-        /* catch stray IRAM_ATTR */
-        *(.iram*)
-        /* iram_end_test section exists for use by memprot unit tests only */
-        /* *(.iram_end_test) */
-
-        /* ESP32-S3 memprot requires 16B padding for possible CPU prefetch  & alignment for PMS*/
-        . += 16;
-        . = ALIGN(256);
-        PROVIDE(_iram_text_end = ABSOLUTE(.));
-
-        /* REVIEW: SRAM_text_seg.data ? */
-        PROVIDE(_iram_data_start = ABSOLUTE(.));
-        mapping[iram0_data]
-        . = ALIGN(4);
-        PROVIDE(_iram_data_end = ABSOLUTE(.));
-
-        /* REVIEW: SRAM_text_seg.bss ? */
-        PROVIDE(_iram_bss_start = ABSOLUTE(.));
-        mapping[iram0_bss]
-
-        . = ALIGN(4);
-        PROVIDE(_iram_bss_end = ABSOLUTE(.));
-PROVIDE(_iram_end = ABSOLUTE(.));
-    } > SRAM_text_seg
 
     PROVIDE(_flash_rodata_align = ALIGNOF(.data.ro));
     .data.ro (NOLOAD) : ALIGN(0x10)
@@ -173,8 +134,8 @@ PROVIDE(_iram_end = ABSOLUTE(.));
         PROVIDE(_rodata_reserved_start = ABSOLUTE(.));
 
         /* REVIEW: keep app_desc ? */
-        *(.rodata_desc .rodata_desc.*)
-        *(.rodata_custom_desc .rodata_custom_desc.*)
+        /* *(.rodata_desc .rodata_desc.*)
+        *(.rodata_custom_desc .rodata_custom_desc.*) */
 
         . = ALIGN(ALIGNOF(.data.ro));
 
@@ -182,7 +143,7 @@ PROVIDE(_iram_end = ABSOLUTE(.));
         mapping[rodata_noload]
         mapping[flash_rodata]
 
-        *(.irom1.text) /* catch stray ICACHE_RODATA_ATTR */
+        *(.irom1.text)                  /* catch stray ICACHE_RODATA_ATTR */
         *(.gnu.linkonce.r.*)
         *(.rodata1)
 
@@ -254,17 +215,47 @@ PROVIDE(_rodata_reserved_end = ABSOLUTE(.));
         _ext_ram_bss_end = ABSOLUTE(.);
     } > FLASH_data_seg
 
-
     .__FLASH_overlapped_dummy (NOLOAD):
     {
         _flash_rodata_dummy_start = ABSOLUTE(.);
         . += SIZEOF(.data.ro);
-
-        /* align to FLASH_text */
         . = ALIGN(MMU_PAGE_SIZE);
     } > FLASH_text_seg
 
-    .flash.text (NOLOAD) :
+    .text.iram_attr :
+    {
+        PROVIDE(_iram_text_start = ABSOLUTE(.));
+        *(.UserEnter.literal);
+        *(.UserEnter.text);
+
+        mapping[iram0_text]
+
+        /* catch stray IRAM_ATTR */
+        *(.iram*)
+        /* iram_end_test section exists for use by memprot unit tests only */
+        /* *(.iram_end_test) */
+
+        /* ESP32-S3 memprot requires 16B padding for possible CPU prefetch  & alignment for PMS*/
+        . += 16;
+        . = ALIGN(256);
+        PROVIDE(_iram_text_end = ABSOLUTE(.));
+
+        /* REVIEW: SRAM_text_seg.data ? */
+        PROVIDE(_iram_data_start = ABSOLUTE(.));
+        mapping[iram0_data]
+        . = ALIGN(4);
+        PROVIDE(_iram_data_end = ABSOLUTE(.));
+
+        /* REVIEW: SRAM_text_seg.bss ? */
+        PROVIDE(_iram_bss_start = ABSOLUTE(.));
+        mapping[iram0_bss]
+
+        . = ALIGN(4);
+        PROVIDE(_iram_bss_end = ABSOLUTE(.));
+PROVIDE(_iram_end = ABSOLUTE(.));
+    } > SRAM_text_seg
+
+    .text.flash (NOLOAD) :
     {
         PROVIDE(_stext = ABSOLUTE(.));
         /* This is a symbol marking the flash.text start, this can be used for mmu driver to maintain virtual address */
@@ -274,95 +265,104 @@ PROVIDE(_rodata_reserved_end = ABSOLUTE(.));
 
         mapping[flash_text]
 
-        *(.irom0.text)      /* catch stray ICACHE_RODATA_ATTR */
+        *(.irom0.text)                  /* catch stray ICACHE_RODATA_ATTR */
         /* ESP32-S3 memprot requires 16B padding for possible CPU prefetch  & alignment for PMS*/
         . += 16;
         PROVIDE(_etext = ABSOLUTE(.));
-    } > FLASH_text_seg
-
-    .__FLASH_mmu_padding_dummy (NOLOAD):
-    {
-        /* align to FLASH_text */
-        . = ALIGN(MMU_PAGE_SIZE);
         /* This is a symbol marking the flash.text end, this can be used for mmu driver to maintain virtual address */
         PROVIDE(_instruction_reserved_end = ABSOLUTE(.));
     } > FLASH_text_seg
 
-    .rtc.text :
-    {
-        _rtc_text_start = ABSOLUTE(.);
-        *(.rtc.entry.text)
-        mapping[rtc_text]
-        *rtc_wake_stub*.*(.literal .text .literal.* .text.*)
-        *(.rtc_text_end_test)
-
-        /* 16B padding for possible CPU prefetch */
-        . += 15;
-        . = ALIGN(4);
-        _rtc_text_end = ABSOLUTE(.);
-
-        _rtc_force_fast_start = ABSOLUTE(.);
-        mapping[rtc_force_fast]
-        *(.rtc.force_fast .rtc.force_fast.*)
-
-        . = ALIGN(4);
-        _rtc_force_fast_end = ABSOLUTE(.);
-    } > RTC_fast_seg
-
-    .rtc.data :
-    {
-        _rtc_data_start = ABSOLUTE(.);
-        mapping[rtc_data]
-        *rtc_wake_stub*.*(.data .rodata .data.* .rodata.* .bss .bss.*)
-        . = ALIGN(4);
-        _rtc_data_end = ABSOLUTE(.);
-
-        _rtc_force_slow_start = ABSOLUTE(.);
-        *(.rtc.force_slow .rtc.force_slow.*)
-
-        . = ALIGN(4);
-        _rtc_force_slow_end = ABSOLUTE(.);
-    } > RTC_slow_seg
-
-    .rtc.data.zi (NOLOAD) :
-    {
-        _rtc_noinit_start = ABSOLUTE(.);
-        *(.rtc_noinit .rtc_noinit.*)
-        . = ALIGN(4);
-        _rtc_noinit_end = ABSOLUTE(.);
-
-        _rtc_bss_start = ABSOLUTE(.);
-        *rtc_wake_stub*.*(.bss .bss.*)
-        *rtc_wake_stub*.*(COMMON)
-        mapping[rtc_bss]
-
-        . = ALIGN(4);
-        _rtc_bss_end = ABSOLUTE(.);
-    } > RTC_slow_seg
-
-/*
-    all available SRAM to heap & stack
-*/
-    .heap (NOLOAD) :
+    .__heap_stack_dummy (NOLOAD) :
     {
         . = ALIGN(8);
 
-PROVIDE(_heap_start = ABSOLUTE(.));
-/* libc TAG */ PROVIDE(end = ABSOLUTE(.));
+        PROVIDE(_heap_start = ABSOLUTE(.));
+        PROVIDE(end = ABSOLUTE(.));
 
-        . = ABSOLUTE(0x3fcdd120);
-        /* . = ORIGIN(SRAM_data_seg) + LENGTH(SRAM_data_seg); */
-/* libc TAG */ PROVIDE(__heap_limit__ = ABSOLUTE(.));
-PROVIDE(_heap_end = ABSOLUTE(.));
+        . = ABSOLUTE(SRAM_ESP_SYSTEM_START);
+
+        PROVIDE(__heap_limit__ = ABSOLUTE(.));
+        PROVIDE(_heap_end = ABSOLUTE(.));
+        /* PROVIDE(__stack = .); */
     } > SRAM_data_seg
 
-/*
-    .stack (NOLOAD) :
+    .__ESP_SYSTEM_reserved (NOLOAD) :
     {
         . = ORIGIN(SRAM_data_seg) + LENGTH(SRAM_data_seg);
- PROVIDE(__stack = .);
     } > SRAM_data_seg
-    */
+
+    .rtc.text :
+    {
+        . = ALIGN(4);
+        _rtc_fast_start = ABSOLUTE(.);
+        _rtc_text_start = ABSOLUTE(.);
+        *(.rtc.entry.text)
+
+        mapping[rtc_text]
+
+        *rtc_wake_stub*.*(.literal .text .literal.* .text.*)
+        *(.rtc_text_end_test)
+
+        /* 16B padding for possible CPU prefetch and 4B alignment for PMS split lines */
+        . += 16;
+        . = ALIGN(4);
+
+        _rtc_text_end = ABSOLUTE(.);
+    } > RTC_fast_seg
+
+    .rtc.force_fast :
+    {
+        . = ALIGN(4);
+        _rtc_force_fast_start = ABSOLUTE(.);
+
+        mapping[rtc_force_fast]
+
+        *(.rtc.force_fast .rtc.force_fast.*)
+        . = ALIGN(4) ;
+        _rtc_force_fast_end = ABSOLUTE(.);
+    } > RTC_fast_seg
+
+    /* CONFIG_ESP32S3_RTCDATA_IN_FAST_MEM option. */
+    .rtc.data :
+    {
+        _rtc_data_start = ABSOLUTE(.);
+
+        mapping[rtc_data]
+
+        *rtc_wake_stub*.*(.data .rodata .data.* .rodata.* .bss .bss.*)
+        _rtc_data_end = ABSOLUTE(.);
+    } > RTC_fast_seg
+
+    /* RTC bss, from any source file named rtc_wake_stub*.c */
+    .rtc.bss (NOLOAD) :
+    {
+        _rtc_bss_start = ABSOLUTE(.);
+        *rtc_wake_stub*.*(.bss .bss.*)
+        *rtc_wake_stub*.*(COMMON)
+
+        mapping[rtc_bss]
+
+        _rtc_bss_end = ABSOLUTE(.);
+    } > RTC_fast_seg
+
+    .rtc_noinit (NOLOAD):
+    {
+        . = ALIGN(4);
+        _rtc_noinit_start = ABSOLUTE(.);
+        *(.rtc_noinit .rtc_noinit.*)
+        . = ALIGN(4) ;
+        _rtc_noinit_end = ABSOLUTE(.);
+    } > RTC_fast_seg
+
+    .rtc.force_slow :
+    {
+        . = ALIGN(4);
+        _rtc_force_slow_start = ABSOLUTE(.);
+        *(.rtc.force_slow .rtc.force_slow.*)
+        . = ALIGN(4) ;
+        _rtc_force_slow_end = ABSOLUTE(.);
+    } > RTC_slow_seg
 
     .xt.prop 0 :
     {
