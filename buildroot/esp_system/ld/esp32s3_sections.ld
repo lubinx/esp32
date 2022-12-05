@@ -129,17 +129,8 @@ PROVIDE(_bss_end = ABSOLUTE(.));
     PROVIDE(_flash_rodata_align = ALIGNOF(.data.ro));
     .data.ro (NOLOAD) : ALIGN(0x10)
     {
-        PROVIDE(_rodata_start = ABSOLUTE(.));
-        /* This is a symbol marking the data.ro start, this can be used for mmu driver to maintain virtual address */
-        PROVIDE(_rodata_reserved_start = ABSOLUTE(.));
+PROVIDE(_flash_rodata_start = ABSOLUTE(.));
 
-        /* REVIEW: keep app_desc ? */
-        /* *(.rodata_desc .rodata_desc.*)
-        *(.rodata_custom_desc .rodata_custom_desc.*) */
-
-        . = ALIGN(ALIGNOF(.data.ro));
-
-        PROVIDE(_flash_rodata_start = ABSOLUTE(.));
         mapping[rodata_noload]
         mapping[flash_rodata]
 
@@ -204,29 +195,23 @@ PROVIDE(_thread_local_start = ABSOLUTE(.));
 
         . = ALIGN(4);
 PROVIDE(_thread_local_end = ABSOLUTE(.));
+
 /* This is a symbol marking the data.ro end, this can be used for mmu driver to maintain virtual address */
-PROVIDE(_rodata_reserved_end = ABSOLUTE(.));
+PROVIDE(_flash_rodata_end = ABSOLUTE(.));
 
         /* REVIEW: This section holds .ext_ram.bss data, and will be put in PSRAM */
+        /*
         _ext_ram_bss_start = ABSOLUTE(.);
         mapping[extern_ram]
 
         . = ALIGN(4);
         _ext_ram_bss_end = ABSOLUTE(.);
+        */
     } > FLASH_data_seg
-
-    .__FLASH_overlapped_dummy (NOLOAD):
-    {
-        _flash_rodata_dummy_start = ABSOLUTE(.);
-        . += SIZEOF(.data.ro);
-        . = ALIGN(MMU_PAGE_SIZE);
-    } > FLASH_text_seg
 
     .text.iram_attr :
     {
         PROVIDE(_iram_text_start = ABSOLUTE(.));
-        *(.UserEnter.literal);
-        *(.UserEnter.text);
 
         mapping[iram0_text]
 
@@ -255,12 +240,21 @@ PROVIDE(_rodata_reserved_end = ABSOLUTE(.));
 PROVIDE(_iram_end = ABSOLUTE(.));
     } > SRAM_text_seg
 
-    .text.flash (NOLOAD) :
+    .__FLASH_overlapped_dummy (NOLOAD):
     {
-        PROVIDE(_stext = ABSOLUTE(.));
+        _flash_rodata_dummy_start = ABSOLUTE(.);
+        . += SIZEOF(.data.ro);
+        . = ALIGN(MMU_PAGE_SIZE);
+    } > FLASH_text_seg
+
+    .text.flash :
+    {
+PROVIDE(_flash_text_start = ABSOLUTE(.));
         /* This is a symbol marking the flash.text start, this can be used for mmu driver to maintain virtual address */
         PROVIDE(_instruction_reserved_start = ABSOLUTE(.));
 
+        *(.UserEnter.literal);
+        *(.UserEnter.text);
         *(.literal* .text* .stub .gnu.warning .gnu.linkonce.literal* .gnu.linkonce.t.*)
 
         mapping[flash_text]
@@ -268,9 +262,10 @@ PROVIDE(_iram_end = ABSOLUTE(.));
         *(.irom0.text)                  /* catch stray ICACHE_RODATA_ATTR */
         /* ESP32-S3 memprot requires 16B padding for possible CPU prefetch  & alignment for PMS*/
         . += 16;
-        PROVIDE(_etext = ABSOLUTE(.));
+PROVIDE(_flash_text_end = ABSOLUTE(.));
         /* This is a symbol marking the flash.text end, this can be used for mmu driver to maintain virtual address */
         PROVIDE(_instruction_reserved_end = ABSOLUTE(.));
+
     } > FLASH_text_seg
 
     .__heap_stack_dummy (NOLOAD) :
