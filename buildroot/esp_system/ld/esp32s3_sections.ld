@@ -5,6 +5,7 @@ SECTIONS
     .intr.vectors :
     {
 PROVIDE(_vector_table = ABSOLUTE(.));
+PROVIDE(_iram_start = ABSOLUTE(.));
         . = 0x0;
         KEEP(*(.WindowVectors.text));
         . = 0x180;
@@ -127,7 +128,7 @@ PROVIDE(_bss_end = ABSOLUTE(.));
     } > SRAM_data_seg
 
     PROVIDE(_flash_rodata_align = ALIGNOF(.data.ro));
-    .data.ro (NOLOAD) : ALIGN(0x10)
+    .data.ro (NOLOAD) :
     {
 PROVIDE(_flash_rodata_start = ABSOLUTE(.));
 
@@ -247,7 +248,7 @@ PROVIDE(_iram_end = ABSOLUTE(.));
         . = ALIGN(MMU_PAGE_SIZE);
     } > FLASH_text_seg
 
-    .text.flash :
+    .text.flash (NOLOAD) :
     {
 PROVIDE(_flash_text_start = ABSOLUTE(.));
         /* This is a symbol marking the flash.text start, this can be used for mmu driver to maintain virtual address */

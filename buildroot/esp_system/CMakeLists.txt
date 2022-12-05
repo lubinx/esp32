@@ -87,7 +87,6 @@ idf_component_register(
 )
 add_subdirectory("${IDF_PATH}/components/esp_system/port" "${build_dir}/${prefix}/${component_name}/port")
 
-
 if(CONFIG_IDF_ENV_FPGA)
     # Forces the linker to include fpga stubs from this component
     target_link_libraries(${COMPONENT_LIB} INTERFACE "-u esp_common_include_fpga_overrides")

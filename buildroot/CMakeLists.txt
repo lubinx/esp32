@@ -1,6 +1,4 @@
-# The following lines of boilerplate have to be in your project's
-# CMakeLists in this exact order for cmake to work correctly
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.16)
 
 # set(BOOTLOADER_BUILD 1)
 include(../cmake/idf.cmake)
@@ -27,6 +25,3 @@ idf_build(
     SRCS
         "main.c"
 )
-
-# # TODO: -fPIC code?
-# idf_build_set_property(C_COMPILE_OPTIONS "-fPIC" APPEND)
