@@ -79,17 +79,20 @@ if (NOT IDF_TARGET_ARCH STREQUAL "")
     list(APPEND IDF_KERNEL_COMPONENTS ${IDF_TARGET_ARCH})
 endif()
 list(APPEND IDF_KERNEL_COMPONENTS
-    "freertos" "newlib" "heap" "driver" "cxx" "pthread"
-    "bootloader_support" "esp_hw_support" "esp_rom" "esp_system"
-    "efuse" "hal" "soc"
+    "freertos" "newlib" "heap"  "cxx" "pthread"
+    "esp_hw_support" "esp_rom" "esp_system"
+    "efuse" "hal" "soc" "driver"
+    "bootloader_support" "spi_flash"
     "esptool_py"
 )
 
 # OBSOLETED_COMPONENTS: autoremove from REQUIRES & PRIV_REQUIRES
 list(APPEND OBSOLETED_COMPONENTS
+    # merged into bootloader_support
+    "app_update"
+    "esp_app_format"
     # merged into esp_system
     "esp_common"
-    "spi_flash"
 )
 
 # compile options for esp-idf'components only

@@ -1,6 +1,4 @@
 cmake_minimum_required(VERSION 3.16)
-
-# set(BOOTLOADER_BUILD 1)
 include(../cmake/idf.cmake)
 
 project(kernel)

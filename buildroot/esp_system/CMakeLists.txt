@@ -1,7 +1,18 @@
+list(APPEND includes
+    # esp_common & log
+    "include"
+    "include/esp32"
+    "include/posix"
+    # merge spi_flash
+    "${IDF_PATH}/components/spi_flash/include"
+    # esp_system
+    "${IDF_PATH}/components/esp_system/include"
+    # eap_app_format & app_update
+    "${IDF_PATH}/components/app_update/include"
+    "${IDF_PATH}/components/esp_app_format/include"
+)
+
 list(APPEND srcs
-    "flash_code_test.c"
-    # merge bootloader here
-    "bootloader_start.c"
     # log
     "log.c"
     # esp_common
@@ -15,13 +26,26 @@ list(APPEND srcs
     "${IDF_PATH}/components/esp_system/panic.c"
     "${IDF_PATH}/components/esp_system/esp_system.c"
     "${IDF_PATH}/components/esp_system/system_time.c"
-    # "${IDF_PATH}/components/esp_system/stack_check.c"
+    "${IDF_PATH}/components/esp_system/stack_check.c"
     "${IDF_PATH}/components/esp_system/ubsan.c"
     "${IDF_PATH}/components/esp_system/xt_wdt.c"
     "${IDF_PATH}/components/esp_system/debug_stubs.c"
-    # removed this
-    # "${IDF_PATH}/components/esp_system/startup.c"
+    "${IDF_PATH}/components/esp_system/startup.c"
+    # esp_system overrides
+    "ESP_system_startup.c"
+    "flash_code_test.c"
 )
+
+# esp_app_format & app_update
+list(APPEND app_srcs
+    "${IDF_PATH}/components/app_update/esp_ota_ops.c"
+    "${IDF_PATH}/components/app_update/esp_ota_app_desc.c"
+    "${IDF_PATH}/components/esp_app_format/esp_app_desc.c"
+)
+list(APPEND srcs ${app_srcs})
+
+set_source_files_properties(${app_srcs} PROPERTIES COMPILE_OPTIONS
+    "-DPROJECT_VER=\"${PROJECT_VERSION}\";-DPROJECT_NAME=\"${PROJECT_NAME}\"")
 
 if(CONFIG_IDF_ENV_FPGA)
     list(APPEND srcs
@@ -59,24 +83,17 @@ endif()
 
 idf_component_register(
     INCLUDE_DIRS
-        # esp_common & log
-        "include"
-        "include/esp32"
-        "include/posix"
-        # merge spi_flash
-        "${IDF_PATH}/components/spi_flash/include"
-        # esp_system
-        "${IDF_PATH}/components/esp_system/include"
+        ${includes}
     SRCS
-        "${srcs}"
+        ${srcs}
     PRIV_REQUIRES
-        "bootloader_support"
         "efuse"
         "hal"
-        # "esp_timer"
+        "esp_partition"
+        "esp_timer"
+        "spi_flash"
         # "pthread"
         # "driver"
-        # "esp_partition"
     LDFRAGMENTS
         # esp_common
         "${IDF_PATH}/components/esp_common/common.lf"

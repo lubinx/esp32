@@ -6,7 +6,7 @@ idf_component_register(
         "${component_path}/bootloader_flash/include"
         "${component_path}/private_include"
     PRIV_INCLUDE_DIRS
-        "${IDF_PATH}/components/esp_app_format/include" # only need "esp_app_format" headers to compile, no link anything
+        "${IDF_PATH}/components/esp_partition/include"
     SRCS
         "${component_path}/src/bootloader_common.c"
         "${component_path}/src/bootloader_common_loader.c"
@@ -18,20 +18,20 @@ idf_component_register(
         "${component_path}/src/bootloader_utility.c"
         "${component_path}/src/bootloader_efuse.c"
         # "${component_path}/src/esp_image_format.c"   # no load any image
-        # "${component_path}/src/flash_encrypt.c"
+        "${component_path}/src/flash_encrypt.c"
         # "${component_path}/src/secure_boot.c"
         # "${component_path}/src/flash_partitions.c"
         "${component_path}/bootloader_flash/src/flash_qio_mode.c"
         "${component_path}/bootloader_flash/src/bootloader_flash_config_${IDF_TARGET}.c"
     # BOOTLOADER_BUILD
-        "${component_path}/src/bootloader_init.c"
-        "${component_path}/src/bootloader_clock_loader.c"
-        "${component_path}/src/bootloader_console.c"
-        "${component_path}/src/bootloader_console_loader.c"
+        # "${component_path}/src/bootloader_init.c"
+        # "${component_path}/src/bootloader_clock_loader.c"
+        # "${component_path}/src/bootloader_console.c"
+        # "${component_path}/src/bootloader_console_loader.c"
         # "${component_path}/src/bootloader_panic.c"
         # "${component_path}/src/${IDF_TARGET}/bootloader_sha.c"
-        "${component_path}/src/${IDF_TARGET}/bootloader_soc.c"
-        "${component_path}/src/${IDF_TARGET}/bootloader_${IDF_TARGET}.c"
+        # "${component_path}/src/${IDF_TARGET}/bootloader_soc.c"
+        # "${component_path}/src/${IDF_TARGET}/bootloader_${IDF_TARGET}.c"
     REQUIRES
         "soc"
     PRIV_REQUIRES
@@ -39,10 +39,4 @@ idf_component_register(
         "efuse"
 )
 
-# BOOTLOADER_BUILD for this target
-target_compile_definitions(${COMPONENT_LIB} PRIVATE "BOOTLOADER_BUILD=1")
-
-# if(BOOTLOADER_BUILD)
-    target_link_libraries(${COMPONENT_LIB} INTERFACE "-u abort")
-# endif()
 
