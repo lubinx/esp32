@@ -70,7 +70,6 @@ list(APPEND COMPILE_DEFINITIONS
 list(APPEND LINK_OPTIONS
     "-Wl,--gc-sections"
     "-Wl,--warn-common"
-    "-fno-lto"
 )
 
 # IDF_KERNEL_COMPONENTS
@@ -573,27 +572,8 @@ endfunction()
 # idf_build()
 #############################################################################
 function(idf_build)
-    # project compile options
-    add_compile_options(${COMPILE_OPTIONS})
-    add_compile_definitions(${COMPILE_DEFINITIONS})
     # Generate compile_commands.json
     set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-    # attach esp-idf'components compile options
-    foreach(option ${COMPILE_OPTIONS} ${IDF_COMPILE_OPTIONS})
-        idf_build_set_property(COMPILE_OPTIONS ${option} APPEND)
-    endforeach()
-    foreach(def ${IDF_COMPILE_DEFINITIONS})
-        idf_build_set_property(COMPILE_DEFINITIONS ${def} APPEND)
-    endforeach()
-
-    include(CheckTypeSize)
-    check_type_size("time_t" TIME_T_SIZE)
-    if(TIME_T_SIZE)
-        idf_build_set_property(TIME_T_SIZE ${TIME_T_SIZE})
-    else()
-        message(FATAL_ERROR "Failed to determine sizeof(time_t)")
-    endif()
 
     message("\n💡 Resolve dependencies")
 
@@ -639,6 +619,25 @@ function(idf_build)
     # do not remove: some esp-idf'component direct using this value
     set(target ${IDF_TARGET})
 
+    include(CheckTypeSize)
+    check_type_size("time_t" TIME_T_SIZE)
+    if(TIME_T_SIZE)
+        idf_build_set_property(TIME_T_SIZE ${TIME_T_SIZE})
+    else()
+        message(FATAL_ERROR "Failed to determine sizeof(time_t)")
+    endif()
+
+    # attach esp-idf'components compile options
+    foreach(iter ${COMPILE_OPTIONS} ${IDF_COMPILE_OPTIONS})
+        idf_build_set_property(COMPILE_OPTIONS ${iter} APPEND)
+    endforeach()
+    foreach(iter ${IDF_COMPILE_DEFINITIONS})
+        idf_build_set_property(COMPILE_DEFINITIONS ${iter} APPEND)
+    endforeach()
+    foreach(iter ${LINK_OPTIONS})
+        idf_build_get_property(LINK_OPTIONS ${iter} APPEND)
+    endforeach()
+
     idf_build_get_property(component_targets __COMPONENT_TARGETS)
     # project_include.cmake
     foreach(component_target ${component_targets})
@@ -676,20 +675,31 @@ function(idf_build)
         endif()
     endforeach()
 
-    set(project_elf ${CMAKE_PROJECT_NAME}.elf)
+    set(PROJECT_ELF ${CMAKE_PROJECT_NAME}.elf)
 
-    # Create a dummy file to work around CMake requirement of having a source file while adding an
-    # executable. This is also used by idf_size.py to detect the target
-    set(project_elf_src ${CMAKE_BINARY_DIR}/project_elf_src_${IDF_TARGET}.c)
-    add_custom_command(OUTPUT ${project_elf_src}
-        COMMAND ${CMAKE_COMMAND} -E touch ${project_elf_src}
-        VERBATIM)
-    add_custom_target(_project_elf_src DEPENDS "${project_elf_src}")
-    add_executable(${project_elf} "${project_elf_src}")
-    add_dependencies(${project_elf} _project_elf_src)
+    add_executable(${PROJECT_ELF} "dummy.c")
+    # set_target_properties(${PROJECT_ELF} PROPERTIES OUTPUT_NAME "${CMAKE_PROJECT_NAME}.elf")
+
+    # Propagate link dependencies from component library targets to the executable
+    idf_build_get_property(link_depends __LINK_DEPENDS)
+    set_target_properties(${PROJECT_ELF} PROPERTIES LINK_DEPENDS "${link_depends}")
+
+    # Set additional link flags for the executable
+    idf_build_get_property(link_options LINK_OPTIONS)
+    target_link_options(${PROJECT_ELF} PRIVATE "${link_options}")
+
+    if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+        # Add cross-reference table to the map file
+        target_link_options(${PROJECT_ELF} PRIVATE "-Wl,--cref")
+        # Add this symbol as a hint for idf_size.py to guess the target name
+        target_link_options(${PROJECT_ELF} PRIVATE "-Wl,--defsym=IDF_TARGET_${IDF_TARGET}=0")
+        # Enable map file output
+        target_link_options(${PROJECT_ELF} PRIVATE "-Wl,--Map=${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}.map")
+        unset(idf_target)
+    endif()
 
     if(__PROJECT_GROUP_LINK_COMPONENTS)
-        target_link_libraries(${project_elf} PRIVATE "-Wl,--start-group")
+        target_link_libraries(${PROJECT_ELF} PRIVATE "-Wl,--start-group")
     endif()
 
     foreach(component_target ${component_targets})
@@ -698,53 +708,25 @@ function(idf_build)
 
         if(whole_archive)
             message(STATUS "Component ${build_component} will be linked with -Wl,--whole-archive")
-            target_link_libraries(${project_elf} PRIVATE
+            target_link_libraries(${PROJECT_ELF} PRIVATE
                 "-Wl,--whole-archive"
                 ${build_component}
                 "-Wl,--no-whole-archive")
         else()
             message(STATUS "🔗 Add link library: ${build_component}")
-            target_link_libraries(${project_elf} PRIVATE ${build_component})
+            target_link_libraries(${PROJECT_ELF} PRIVATE ${build_component})
         endif()
     endforeach()
 
-# idf_build_executable(${project_elf}) ===============================================================
-    # Set additional link flags for the executable
-    idf_build_get_property(link_options LINK_OPTIONS)
-    # append global link options
-    list(APPEND link_options ${LINK_OPTIONS})
-    set_property(TARGET ${project_elf} APPEND PROPERTY LINK_OPTIONS "${link_options}")
-
-    # Propagate link dependencies from component library targets to the executable
-    idf_build_get_property(link_depends __LINK_DEPENDS)
-    set_property(TARGET ${project_elf} APPEND PROPERTY LINK_DEPENDS "${link_depends}")
-
-    # Set the EXECUTABLE_NAME and EXECUTABLE properties since there are generator expression
-    # from components that depend on it
-    get_filename_component(elf_name ${project_elf} NAME_WE)
-    get_target_property(elf_dir ${project_elf} BINARY_DIR)
-
-    idf_build_set_property(EXECUTABLE_NAME ${elf_name})
-    idf_build_set_property(EXECUTABLE ${project_elf})
-    idf_build_set_property(EXECUTABLE_DIR "${elf_dir}")
-
-    # Add dependency of the build target to the executable
-    add_dependencies(${project_elf} __idf_build_target)
-
-    if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
-        # Add cross-reference table to the map file
-        target_link_options(${project_elf} PRIVATE "-Wl,--cref")
-        # Add this symbol as a hint for idf_size.py to guess the target name
-        target_link_options(${project_elf} PRIVATE "-Wl,--defsym=IDF_TARGET_${IDF_TARGET}=0")
-        # Enable map file output
-        target_link_options(${project_elf} PRIVATE "-Wl,--Map=${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}.map")
-        unset(idf_target)
-    endif()
+# idf_build_executable(${PROJECT_ELF}) ===============================================================
+    idf_build_set_property(EXECUTABLE_NAME ${CMAKE_PROJECT_NAME})
+    idf_build_set_property(EXECUTABLE ${CMAKE_PROJECT_NAME}.elf)
+    idf_build_set_property(EXECUTABLE_DIR ${CMAKE_BINARY_DIR})
 
     message("\n💡 Add sub-project: bootloader")
     # message("\tbootloader.bin has to flashing \t @ 0x0     offset")
     # message("\t${PROJECT_NAME}.bin folows bootloader \t @ 0x10000 offset")
-
     add_subdirectory("bootloader")
+
     message("")
 endfunction()
