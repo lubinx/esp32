@@ -8,10 +8,9 @@
             "defines": [],
             "compilerPath": "~/.espressif/tools/xtensa-esp32s3-elf/esp-2022r1-11.2.0/xtensa-esp32s3-elf/bin/xtensa-esp32s3-elf-gcc",
             "cStandard": "gnu17",
-            "cppStandard": "gnu++14",
-            "intelliSenseMode": "linux-clang-arm",
-            "configurationProvider": "ms-vscode.cmake-tools",
-            "compileCommands": "build/compile_commands.json"
+            "cppStandard": "gnu++20",
+            "intelliSenseMode": "gcc-x64",
+            "compileCommands": "/mnt/d/~/firmware/esp32/buildroot/build/compile_commands.json"
         }
     ],
     "version": 4

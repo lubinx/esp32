@@ -1,4 +1,4 @@
-menu "Serial flasher config"
+menu "esptool flash config"
 
     config ESPTOOLPY_NO_STUB
         bool "Disable download stub"

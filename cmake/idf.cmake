@@ -499,7 +499,7 @@ function(__inherited_component_register component_target)
         set_target_properties(${component_lib} PROPERTIES OUTPUT_NAME ${component_name} LINKER_LANGUAGE C)
 
         idf_build_get_property(include_directories INCLUDE_DIRECTORIES GENERATOR_EXPRESSION)
-        target_include_directories(${component_lib} PUBLIC "${include_directories}")
+        target_include_directories(${component_lib} INTERFACE "${include_directories}")
 
         idf_build_get_property(compile_definitions COMPILE_DEFINITIONS GENERATOR_EXPRESSION)
         foreach(def ${compile_definitions})
@@ -675,31 +675,29 @@ function(idf_build)
         endif()
     endforeach()
 
-    set(PROJECT_ELF ${CMAKE_PROJECT_NAME}.elf)
-
-    add_executable(${PROJECT_ELF} "dummy.c")
-    # set_target_properties(${PROJECT_ELF} PROPERTIES OUTPUT_NAME "${CMAKE_PROJECT_NAME}.elf")
+    add_executable(${CMAKE_PROJECT_NAME} "dummy.c")
+    set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME "${CMAKE_PROJECT_NAME}.elf")
 
     # Propagate link dependencies from component library targets to the executable
     idf_build_get_property(link_depends __LINK_DEPENDS)
-    set_target_properties(${PROJECT_ELF} PROPERTIES LINK_DEPENDS "${link_depends}")
+    set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES LINK_DEPENDS "${link_depends}")
 
     # Set additional link flags for the executable
     idf_build_get_property(link_options LINK_OPTIONS)
-    target_link_options(${PROJECT_ELF} PRIVATE "${link_options}")
+    target_link_options(${CMAKE_PROJECT_NAME} PRIVATE "${link_options}")
 
     if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
         # Add cross-reference table to the map file
-        target_link_options(${PROJECT_ELF} PRIVATE "-Wl,--cref")
+        target_link_options(${CMAKE_PROJECT_NAME} PRIVATE "-Wl,--cref")
         # Add this symbol as a hint for idf_size.py to guess the target name
-        target_link_options(${PROJECT_ELF} PRIVATE "-Wl,--defsym=IDF_TARGET_${IDF_TARGET}=0")
+        target_link_options(${CMAKE_PROJECT_NAME} PRIVATE "-Wl,--defsym=IDF_TARGET_${IDF_TARGET}=0")
         # Enable map file output
-        target_link_options(${PROJECT_ELF} PRIVATE "-Wl,--Map=${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}.map")
+        target_link_options(${CMAKE_PROJECT_NAME} PRIVATE "-Wl,--Map=${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}.map")
         unset(idf_target)
     endif()
 
     if(__PROJECT_GROUP_LINK_COMPONENTS)
-        target_link_libraries(${PROJECT_ELF} PRIVATE "-Wl,--start-group")
+        target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE "-Wl,--start-group")
     endif()
 
     foreach(component_target ${component_targets})
@@ -708,20 +706,15 @@ function(idf_build)
 
         if(whole_archive)
             message(STATUS "Component ${build_component} will be linked with -Wl,--whole-archive")
-            target_link_libraries(${PROJECT_ELF} PRIVATE
+            target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
                 "-Wl,--whole-archive"
                 ${build_component}
                 "-Wl,--no-whole-archive")
         else()
             message(STATUS "🔗 Add link library: ${build_component}")
-            target_link_libraries(${PROJECT_ELF} PRIVATE ${build_component})
+            target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${build_component})
         endif()
     endforeach()
-
-# idf_build_executable(${PROJECT_ELF}) ===============================================================
-    idf_build_set_property(EXECUTABLE_NAME ${CMAKE_PROJECT_NAME})
-    idf_build_set_property(EXECUTABLE ${CMAKE_PROJECT_NAME}.elf)
-    idf_build_set_property(EXECUTABLE_DIR ${CMAKE_BINARY_DIR})
 
     message("\n💡 Add sub-project: bootloader")
     # message("\tbootloader.bin has to flashing \t @ 0x0     offset")

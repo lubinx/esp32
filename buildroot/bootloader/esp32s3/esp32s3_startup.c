@@ -42,10 +42,6 @@ extern __attribute__((noreturn))
 
 extern intptr_t _bss_start;
 extern intptr_t _bss_end;
-extern intptr_t _flash_rodata_start;
-extern intptr_t _flash_rodata_end;
-extern intptr_t _flash_text_start;
-extern intptr_t _flash_text_end;
 
 /****************************************************************************
  *  local
@@ -74,16 +70,11 @@ void IRAM_ATTR bootloader_startup(void)
 
     extern char const *foobar_text;
 
-    esp_rom_printf("rom test addr: 0x%8x\n\
-        \t_flash_rodata_start: 0x%08x\n\
-        \t_flash_rodata_end: 0x%08x\n\
-        \t_flash_text_start: 0x%08x\n\
-        \t_flash_text_end: 0x%08x\n",
-        foobar_text,
-        &_flash_rodata_start, &_flash_rodata_end,
-        &_flash_text_start, &_flash_text_end
-    );
-
+    esp_rom_printf("rom test addr: 0x%8x", foobar_text);
+    esp_rom_printf("_flash_rodata_start: 0x%08x" &_flash_rodata_start);
+    esp_rom_printf("_flash_rodata_end: 0x%08x" &_flash_rodata_end);
+    esp_rom_printf("_flash_text_start: 0x%08x" &_flash_text_start);
+    esp_rom_printf("_flash_text_end: 0x%08x" &_flash_text_end);
 
     int ret = ESP_OK;
 

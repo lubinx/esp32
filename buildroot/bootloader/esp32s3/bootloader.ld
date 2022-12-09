@@ -40,8 +40,8 @@ ENTRY(bootloader_startup);
  */
 MEMORY
 {
-    BOOT_text_seg (RWX) :       org = 0x403C7E00 + 32K, len = 32K
-    BOOT_data_seg (RW) :        org = 0x3FCD7E00, len = 32K
+    BOOT_text_seg (RWX) :       org = 0x403C7E00, len = 32K
+    BOOT_data_seg (RW) :        org = 0x3FCD7E00 + 32K, len = 32K
 }
 
 SECTIONS
@@ -119,6 +119,12 @@ _bss_start = ABSOLUTE(.);
         . = ALIGN (8);
 _bss_end = ABSOLUTE(.);
 _dram_end = ABSOLUTE(.);
+    } > BOOT_data_seg
+
+    .heap (NOLOAD) :
+    {
+PROVIDE(end = ABSOLUTE(.));
+        . = ORIGIN(BOOT_data_seg) + LENGTH(BOOT_data_seg);
     } > BOOT_data_seg
 
     .text :

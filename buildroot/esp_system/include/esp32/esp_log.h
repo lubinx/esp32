@@ -11,11 +11,13 @@
 #include <stdarg.h>
 #include <inttypes.h>
 
-#pragma GCC diagnostic ignored "-Wformat"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+    // avoid to #include "esp_rom_sys.h"
+extern
+    void esp_rom_delay_us(uint32_t us);
 
     enum esp_log_level_t
     {
@@ -139,10 +141,6 @@ extern __attribute__((nothrow))
 
 extern  __attribute__ ((nothrow, format (printf, 3, 4)))
     void esp_log_write(esp_log_level_t level, char const *tag, char const *format, ...);
-
-    // avoid to #include "esp_rom_sys.h"
-extern
-    void esp_rom_delay_us(uint32_t us);
 
 #ifdef __cplusplus
 }

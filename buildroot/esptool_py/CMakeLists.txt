@@ -47,16 +47,26 @@ endif()
 list(APPEND esptool_elf2image_args --min-rev-full ${CONFIG_ESP_REV_MIN_FULL})
 list(APPEND esptool_elf2image_args --max-rev-full ${CONFIG_ESP_REV_MAX_FULL})
 
-idf_build_get_property(elf EXECUTABLE GENERATOR_EXPRESSION)
-
-add_custom_command(OUTPUT "elf2image"
+add_custom_command(OUTPUT "project_elf2bin"
     COMMAND ${ESPTOOLPY} elf2image ${esptool_elf2image_args}
-        -o "${CMAKE_BINARY_DIR}/${PROJECT_NAME}.bin" "${CMAKE_BINARY_DIR}/${elf}"
-    DEPENDS ${elf}
+        -o "${CMAKE_BINARY_DIR}/${PROJECT_NAME}.bin" "${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}.elf"
+    DEPENDS
+        "${CMAKE_PROJECT_NAME}"
     VERBATIM
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     COMMENT "Generating binary image from built executable"
-    )
-add_custom_target("generate_binary" ALL DEPENDS "elf2image")
+)
+add_custom_command(OUTPUT "booltloader_elf2bin"
+    COMMAND ${ESPTOOLPY} elf2image ${esptool_elf2image_args}
+        -o "${CMAKE_BINARY_DIR}/bootloader.bin" "${CMAKE_BINARY_DIR}/bootloader/bootloader.elf"
+    DEPENDS
+        "bootloader"
+    VERBATIM
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMENT "Generating binary image from built executable"
+)
+
+add_custom_target("generate_binary" ALL DEPENDS
+    "project_elf2bin" "booltloader_elf2bin")
 
 # xtensa-esp32s3-elf-size

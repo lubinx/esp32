@@ -4,9 +4,9 @@ idf_component_register(
     INCLUDE_DIRS
         "${component_path}/include"
         "${component_path}/bootloader_flash/include"
-        "${component_path}/private_include"
     PRIV_INCLUDE_DIRS
         "${IDF_PATH}/components/esp_partition/include"
+        "${component_path}/private_include"
     SRCS
         "${component_path}/src/bootloader_common.c"
         "${component_path}/src/bootloader_common_loader.c"

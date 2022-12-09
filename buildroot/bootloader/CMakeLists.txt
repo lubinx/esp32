@@ -6,10 +6,12 @@ endif()
 
 
 project (bootloader LANGUAGES C)
-set(component_path "${IDF_PATH}/components")
 
 add_executable(${PROJECT_NAME} "${IDF_TARGET}/entry.c")
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${PROJECT_NAME}.elf")
+
+idf_build_get_property(include_directories INCLUDE_DIRECTORIES GENERATOR_EXPRESSION)
+target_include_directories(${PROJECT_NAME} PRIVATE "${include_directories}")
 
 idf_build_get_property(compile_definitions COMPILE_DEFINITIONS GENERATOR_EXPRESSION)
 target_compile_definitions(${PROJECT_NAME} PRIVATE ${compile_definitions})
@@ -21,24 +23,33 @@ idf_build_get_property(link_options LINK_OPTIONS)
 target_link_options(${PROJECT_NAME} PRIVATE ${link_options})
 
 # ld
-target_link_options(${PROJECT_NAME} PRIVATE "SHELL:-T ${CMAKE_CURRENT_LIST_DIR}/${IDF_TARGET}/bootloader.ld")
-target_link_options(${PROJECT_NAME} PRIVATE "SHELL:-T ${component_path}/soc/esp32s3/ld/esp32s3.peripherals.ld")
-target_link_options(${PROJECT_NAME} PRIVATE "SHELL:-T ${component_path}/soc/esp32s3/ld/esp32s3.peripherals.ld")
-target_link_options(${PROJECT_NAME} PRIVATE "SHELL:-T ${component_path}/esp_rom/esp32s3/ld/esp32s3.rom.ld")
-target_link_options(${PROJECT_NAME} PRIVATE "SHELL:-T ${component_path}/esp_rom/esp32s3/ld/esp32s3.rom.api.ld")
-target_link_options(${PROJECT_NAME} PRIVATE "SHELL:-T ${component_path}/esp_rom/esp32s3/ld/esp32s3.rom.libgcc.ld")
-# target_link_options(${PROJECT_NAME} PRIVATE "SHELL:-T ${component_path}/esp_rom/esp32s3/ld/esp32s3.rom.newlib.ld")
-# target_link_options(${PROJECT_NAME} PRIVATE "SHELL:-T ${component_path}/esp_rom/esp32s3/ld/esp32s3.rom.version.ld")
+list(APPEND link_scripts
+    "${CMAKE_CURRENT_LIST_DIR}/${IDF_TARGET}/bootloader.ld"
+    "${IDF_PATH}/components/soc/esp32s3/ld/esp32s3.peripherals.ld"
+    "${IDF_PATH}/components/esp_rom/esp32s3/ld/esp32s3.rom.ld"
+    "${IDF_PATH}/components/esp_rom/esp32s3/ld/esp32s3.rom.api.ld"
+    "${IDF_PATH}/components/esp_rom/esp32s3/ld/esp32s3.rom.libgcc.ld"
+    "${IDF_PATH}/components/esp_rom/esp32s3/ld/esp32s3.rom.newlib.ld"
+    # "${IDF_PATH}/components/esp_rom/esp32s3/ld/esp32s3.rom.version.ld"
+)
+target_linker_script(${PROJECT_NAME} PRIVATE "${link_scripts}")
 
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     "include"
-    "${component_path}/bootloader_support/include"
-    "${component_path}/bootloader_support/private_include"
-    "${component_path}/bootloader_support/bootloader_flash/include"
-    ""
+    # "${IDF_PATH}/components/bootloader_support/include"
+    "${IDF_PATH}/components/bootloader_support/private_include"
+    # "${IDF_PATH}/components/bootloader_support/bootloader_flash/include"
+    "${IDF_PATH}/components/esp_hw_support/port/include"
 )
 
 target_sources(${PROJECT_NAME} PRIVATE
-    ""
+    "${IDF_PATH}/components/bootloader_support/src/${IDF_TARGET}/bootloader_soc.c"
+    # "${IDF_PATH}/components/bootloader_support/src/${IDF_TARGET}/bootloader_${IDF_TARGET}.c"
+    "${IDF_PATH}/components/esp_hw_support/cpu.c"
+    "${IDF_PATH}/components/esp_hw_support/port/${IDF_TARGET}/rtc_clk.c"
+    "${IDF_PATH}/components/hal/cache_hal.c"
+    "${IDF_PATH}/components/hal/mmu_hal.c"
+    "${IDF_PATH}/components/hal/mpu_hal.c"
+    "${IDF_PATH}/components/newlib/syscalls.c"
 )

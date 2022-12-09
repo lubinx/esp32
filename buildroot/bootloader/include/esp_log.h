@@ -140,10 +140,6 @@ extern __attribute__((nothrow))
 extern  __attribute__ ((nothrow, format (printf, 3, 4)))
     void esp_log_write(esp_log_level_t level, char const *tag, char const *format, ...);
 
-    // avoid to #include "esp_rom_sys.h"
-extern
-    void esp_rom_delay_us(uint32_t us);
-
 #ifdef __cplusplus
 }
 #endif
