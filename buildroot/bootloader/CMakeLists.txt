@@ -4,7 +4,6 @@ if (NOT IDF_TARGET)
     message(FATAL_ERROR "this is bootloader for esp-idf project.")
 endif()
 
-
 project (bootloader LANGUAGES C)
 
 add_executable(${PROJECT_NAME} "${IDF_TARGET}/entry.c")
@@ -14,7 +13,7 @@ idf_build_get_property(include_directories INCLUDE_DIRECTORIES GENERATOR_EXPRESS
 target_include_directories(${PROJECT_NAME} PRIVATE "${include_directories}")
 
 idf_build_get_property(compile_definitions COMPILE_DEFINITIONS GENERATOR_EXPRESSION)
-target_compile_definitions(${PROJECT_NAME} PRIVATE ${compile_definitions})
+target_compile_definitions(${PROJECT_NAME} PRIVATE ${compile_definitions} "BOOTLOADER_BUILD=1")
 
 idf_build_get_property(compile_options COMPILE_OPTIONS GENERATOR_EXPRESSION)
 target_compile_options(${PROJECT_NAME} PRIVATE ${compile_options})

@@ -35,7 +35,7 @@ extern intptr_t _bss_end;
  *  local
 *****************************************************************************/
 static void bootloader_config_wdt(void);
-static void bootloader_load_kernel(void);
+static void bootloader_kernel(void);
 
 /****************************************************************************
  *  exports
@@ -84,7 +84,7 @@ void bootloader_startup(void)
     mmu_hal_init();
 
     bootloader_config_wdt();
-    bootloader_load_kernel();
+    bootloader_kernel();
 
     while(1) {}
 
@@ -98,7 +98,9 @@ void bootloader_startup(void)
 */
 }
 
-// libc dummy
+/****************************************************************************
+ *  libc / posix polyfill
+*****************************************************************************/
 struct _reent *__getreent(void)
 {
     return _GLOBAL_REENT;
@@ -151,10 +153,9 @@ static void bootloader_config_wdt(void)
     wdt_hal_write_protect_enable(&mwdt_ctx);
 }
 
-static void bootloader_load_kernel(void)
+static void bootloader_kernel(void)
 {
     cache_hal_disable(CACHE_TYPE_ALL);
-
 
     /*
         drom_addr: 10020, drom_load_addr: 3c020020, drom_size: 37104
