@@ -47,21 +47,6 @@ _init_end = ABSOLUTE(.);
         . = ORIGIN(SRAM_data_seg) + (_iram_end > SRAM_TEXT_OVERLAPPED_START ? _iram_end - SRAM_TEXT_OVERLAPPED_START : 0);
     } > SRAM_data_seg
 
-    .data.startup :
-    {
-        *bootloader_start.*(.data* .rodata*)
-        *libesp_system.a:log.*(.data* .rodata*)
-
-        *libesp_hw_support.a:(.data* .rodata*)
-        *libbootloader_support.a:(.data* .rodata*)
-        *libhal.a:(.data* .rodata*)
-
-        *libefuse.a:(.data* .rodata*)
-        *libgcc.a:(.data* .rodata*)
-
-        . = ALIGN(4);
-    } > SRAM_data_seg
-
     .data.rw :
     {
 PROVIDE(_data_start = ABSOLUTE(.));
@@ -108,8 +93,7 @@ PROVIDE(_bss_start = ABSOLUTE(.));
 PROVIDE(_bss_end = ABSOLUTE(.));
     } > SRAM_data_seg
 
-
-    .flash.rodata : ALIGN(0x10)
+    .data.ro : ALIGN(0x10)
     {
         *(.rodata_desc .rodata_desc.*)               /* Should be the first.  App version info.        DO NOT PUT ANYTHING BEFORE IT! */
         *(.rodata_custom_desc .rodata_custom_desc.*) /* Should be the second. Custom app version info. DO NOT PUT ANYTHING BEFORE IT! */
@@ -191,10 +175,9 @@ PROVIDE(_rodata_reserved_end = ABSOLUTE(.));
         _ext_ram_bss_end = ABSOLUTE(.);
         */
     } > FLASH_data_seg
+PROVIDE(_flash_rodata_align = ALIGNOF(.data.ro));
 
-_flash_rodata_align = ALIGNOF(.flash.rodata);
-
-    .flash.rodata_noload (NOLOAD) :
+    .data.ro_noload (NOLOAD) :
     {
         mapping[rodata_noload]
     } > FLASH_data_seg
@@ -202,14 +185,35 @@ _flash_rodata_align = ALIGNOF(.flash.rodata);
     .__FLASH_overlapped_dummy (NOLOAD):
     {
         _flash_rodata_dummy_start = ABSOLUTE(.);
-        . = . + SIZEOF(.flash.rodata) + SIZEOF(.flash.rodata_noload);
+        . = . + SIZEOF(.data.ro) + SIZEOF(.data.ro_noload);
         . = ALIGN(MMU_PAGE_SIZE) + 0x20;
     } > FLASH_text_seg
 
-
-    .iram_attr.text :
+/* REVIEW: these section is impossiable to exists?
+    .data.iram0 :
     {
-PROVIDE(_iram_text_start = ABSOLUTE(.));
+        _iram_data_start = ABSOLUTE(.);
+
+        mapping[iram0_data]
+
+        . = ALIGN(4);
+        _iram_data_end = ABSOLUTE(.);
+    } > SRAM_text_seg
+
+    .bss.iram (NOLOAD) :
+    {
+        _iram_bss_start = ABSOLUTE(.);
+
+        mapping[iram0_bss]
+
+        _iram_bss_end = ABSOLUTE(.);
+        . = ALIGN(4);
+    } > SRAM_text_seg
+*/
+
+    .text.iram_attr :
+    {
+        PROVIDE(_iram_text_start = ABSOLUTE(.));
         mapping[iram0_text]
 
         /* catch stray IRAM_ATTR */
@@ -221,26 +225,13 @@ PROVIDE(_iram_text_start = ABSOLUTE(.));
         . += 16;
         . = ALIGN(256);
         PROVIDE(_iram_text_end = ABSOLUTE(.));
-
-        /* REVIEW: SRAM_text_seg.data ? */
-        PROVIDE(_iram_data_start = ABSOLUTE(.));
-        mapping[iram0_data]
-
-        . = ALIGN(4);
-        PROVIDE(_iram_data_end = ABSOLUTE(.));
-
-        /* REVIEW: SRAM_text_seg.bss ? */
-        PROVIDE(_iram_bss_start = ABSOLUTE(.));
-        mapping[iram0_bss]
-
-        . = ALIGN(4);
-        PROVIDE(_iram_bss_end = ABSOLUTE(.));
-PROVIDE(_iram_end = ABSOLUTE(.));
+        PROVIDE(_iram_end = ABSOLUTE(.));
     } > SRAM_text_seg
 
-    .flash.text :
+    .text :
     {
-PROVIDE(_flash_text_start = ABSOLUTE(.));
+PROVIDE(_stext = ABSOLUTE(.));
+/* PROVIDE(_flash_text_start = ABSOLUTE(.)); */
         /* This is a symbol marking the flash.text start, this can be used for mmu driver to maintain virtual address */
         PROVIDE(_instruction_reserved_start = ABSOLUTE(.));
 
@@ -256,7 +247,8 @@ PROVIDE(_flash_text_start = ABSOLUTE(.));
         /* ESP32-S3 memprot requires 16B padding for possible CPU prefetch  & alignment for PMS*/
         . += 16;
 
-PROVIDE(_flash_text_end = ABSOLUTE(.));
+PROVIDE(_etext = ABSOLUTE(.));
+/* PROVIDE(_flash_text_end = ABSOLUTE(.)); */
         /* This is a symbol marking the flash.text end, this can be used for mmu driver to maintain virtual address */
 /* PROVIDE(_instruction_reserved_end = ABSOLUTE(.)); */
     } > FLASH_text_seg
