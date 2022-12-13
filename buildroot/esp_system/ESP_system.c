@@ -31,24 +31,10 @@ extern __attribute__((noreturn))
 /****************************************************************************
  *  exports
 *****************************************************************************/
-void IRAM_ATTR ESP_system_startup(void)
+void IRAM_ATTR SystemInit(void)
 {
     esp_rom_printf("ESP_system_startup\n\n\n\n");
     esp_rom_delay_us(1000000);
-
-    esp_rom_printf("\n\n\n1. hello call_start_cpu0 \
-        \ttag: %s\n\
-        \tn1: %d\n\
-        \tn2: %d\n\
-        \tn3: %d\n\
-        \tn4: %d\n\
-        \tn5: %d\n\
-        \tn6: %d\n\
-        \tn7: %d\n\
-        \tn8: %d\n\
-        \tn9: %d\n",
-        TAG, n1, n2, n3, n4, n5, n6, n7, n8, n9
-    );
 
     call_start_cpu0();
 }

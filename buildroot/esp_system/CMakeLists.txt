@@ -32,7 +32,7 @@ list(APPEND srcs
     "${IDF_PATH}/components/esp_system/debug_stubs.c"
     "${IDF_PATH}/components/esp_system/startup.c"
     # esp_system overrides
-    "ESP_system_startup.c"
+    "ESP_system.c"
     "flash_code_test.c"
 )
 

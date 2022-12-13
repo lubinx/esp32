@@ -6,7 +6,7 @@ endif()
 
 project (bootloader LANGUAGES C)
 
-add_executable(${PROJECT_NAME} "${IDF_TARGET}/entry.c")
+add_executable(${PROJECT_NAME} "${IDF_TARGET}/startup.c")
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${PROJECT_NAME}.elf")
 
 idf_build_get_property(include_directories INCLUDE_DIRECTORIES GENERATOR_EXPRESSION)

@@ -1,4 +1,4 @@
-ENTRY(bootloader_startup);
+ENTRY(Reset_Handler);
 
 /**
  *  Appendix: Memory Usage of ROM bootloader

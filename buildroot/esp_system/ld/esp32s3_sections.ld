@@ -1,4 +1,4 @@
-ENTRY(ESP_system_startup);
+ENTRY(SystemInit);
 
 SECTIONS
 {
