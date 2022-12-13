@@ -5,28 +5,22 @@
 
 #include "esp_attr.h"
 #include "esp_cpu.h"
-#include "esp_err.h"
 #include "esp_rom_sys.h"
 
-#include "soc/soc.h"
+#include "hal/cache_ll.h"
 #include "hal/mmu_ll.h"
+
 #include "hal/cache_hal.h"
+#include "hal/rtc_hal.h"
+#include "hal/mmu_hal.h"
 #include "hal/wdt_hal.h"
 
-// #include "hal/mpu_types.h"
-#include "soc/soc_caps.h"
-#include "soc/rtc.h"
-#include "soc/rtc_cntl_reg.h"
-#include "soc/ext_mem_defs.h"
-
-#if CONFIG_IDF_TARGET_ESP32C6
-    #include "soc/hp_apm_reg.h"
-    #include "soc/lp_apm_reg.h"
-    #include "soc/lp_apm0_reg.h"
-#endif
-
 #include "bootloader_soc.h"
-#include "esp_app_format.h"
+
+#include "esp_image_format.h"
+#include "bootloader_flash.h"
+#include "bootloader_flash_priv.h"
+#include "esp_log.h"
 
 
 /****************************************************************************
@@ -41,13 +35,25 @@ extern intptr_t _bss_end;
 static __attribute__((noreturn)) void KERNEL_load(uintptr_t flash_location);
 static void WDT_config(void);
 
-#define MMU_FLASH_ENTRY_ID(VADDR)       ((VADDR & MMU_VADDR_MASK) >> 16)
-#define MMU_FLASH_PADDR(ADDR)           (ADDR >> 16)
+#define MMU_FLASH_ENTRY_ID(VADDR)       (((VADDR) & MMU_VADDR_MASK) >> 16)
+#define MMU_FLASH_PADDR(LOCATION)       ((LOCATION) >> 16)
 
 #define MMU_FLASH_READ_VADDR            (SOC_DROM_HIGH - CONFIG_MMU_PAGE_SIZE)
 #define MMU_FLASH_READ_ENTRY_ID         MMU_FLASH_ENTRY_ID(MMU_FLASH_READ_VADDR)
 
 static ssize_t FLASH_read(uintptr_t flash_location, void *buf, size_t bufsize);
+static void FLASH_mmap(uintptr_t flash_location, uintptr_t vaddr, size_t size);
+
+
+/* Return true if load_addr is an address the bootloader should load into */
+static bool should_load(uint32_t load_addr);
+/* Return true if load_addr is an address the bootloader should map via flash cache */
+static bool should_map(uint32_t load_addr);
+
+static esp_err_t process_image_header(esp_image_metadata_t *data, uint32_t part_offset);
+static esp_err_t process_segments(esp_image_metadata_t *data);
+static esp_err_t process_segment_data(intptr_t load_addr, uint32_t data_addr, uint32_t data_len);
+
 
 /****************************************************************************
  *  exports
@@ -59,10 +65,10 @@ void Reset_Handler(void)
     WSR(MEMCTL, memctl);
 #endif // XCHAL_ERRATUM_572
 
-    // Enable WDT, BOR, and GLITCH reset
+    // Enable WDT, BOR
     bootloader_ana_super_wdt_reset_config(true);
     bootloader_ana_bod_reset_config(true);
-    bootloader_ana_clock_glitch_reset_config(true);
+    bootloader_ana_clock_glitch_reset_config(false);
 
     // bootloader_super_wdt_auto_feed
     REG_WRITE(RTC_CNTL_SWD_WPROTECT_REG, RTC_CNTL_SWD_WKEY_VALUE);
@@ -91,23 +97,75 @@ void Reset_Handler(void)
     #endif
 
     cache_hal_init();
-
-    mmu_ll_unmap_all(0);
-    #if !CONFIG_FREERTOS_UNICORE
-        mmu_ll_unmap_all(1);
-    #endif
+    mmu_hal_init();
 
     WDT_config();
-    KERNEL_load(0x10000);
 
-/*
-    if (ESP_OK != ret)
+
+    esp_image_metadata_t meta = {0};
+
+    process_image_header(&meta, 0x10000);
+    process_segments(&meta);
+
+    cache_hal_disable(CACHE_TYPE_ALL);
+    mmu_ll_unmap_all(0);
+
+    uint32_t drom_addr = 0;
+    uint32_t drom_load_addr = 0;
+    uint32_t drom_size = 0;
+    uint32_t irom_addr = 0;
+    uint32_t irom_load_addr = 0;
+    uint32_t irom_size = 0;
+
+    // Find DROM & IROM addresses, to configure MMU mappings
+    for (int i = 0; i < meta.image.segment_count; i++)
     {
-// startup_failure:
-        esp_rom_delay_us(2000000);
-        esp_rom_software_reset_system();
+        const esp_image_segment_header_t *header = &meta.segments[i];
+        if (SOC_DROM_HIGH > header->load_addr && SOC_DROM_LOW <= header->load_addr)
+        {
+            drom_addr = meta.segment_data[i];
+            drom_load_addr = header->load_addr;
+
+            uint32_t drom_load_addr_aligned = drom_load_addr & MMU_FLASH_MASK;
+            uint32_t drom_addr_aligned = drom_addr & MMU_FLASH_MASK;
+            drom_size = (drom_load_addr - drom_load_addr_aligned) + header->data_len;
+
+            uint32_t actual_mapped_len = 0;
+            mmu_hal_map_region(0, MMU_TARGET_FLASH0, drom_load_addr_aligned, drom_addr_aligned, drom_size, &actual_mapped_len);
+
+            cache_ll_l1_enable_bus(0, CACHE_BUS_DBUS0);
+            #if ! CONFIG_FREERTOS_UNICORE
+                cache_ll_l1_enable_bus(1, CACHE_BUS_DBUS0);
+            #endif
+        }
+        if (SOC_IROM_HIGH > header->load_addr && SOC_IROM_LOW <= header->load_addr)
+        {
+            irom_addr = meta.segment_data[i];
+            irom_load_addr = header->load_addr;
+
+            uint32_t irom_load_addr_aligned = irom_load_addr & MMU_FLASH_MASK;
+            uint32_t irom_addr_aligned = irom_addr & MMU_FLASH_MASK;
+            irom_size = irom_load_addr - irom_load_addr_aligned + header->data_len;
+
+            uint32_t actual_mapped_len = 0;
+            mmu_hal_map_region(0, MMU_TARGET_FLASH0, irom_load_addr_aligned, irom_addr_aligned, irom_size, &actual_mapped_len);
+
+            cache_ll_l1_enable_bus(0, CACHE_BUS_IBUS0);
+            #if ! CONFIG_FREERTOS_UNICORE
+                cache_ll_l1_enable_bus(1, CACHE_BUS_IBUS0);
+            #endif
+        }
     }
-*/
+    cache_hal_enable(CACHE_TYPE_ALL);
+
+    typedef void (*entry_t)(void) __attribute__((noreturn));
+    entry_t entry = ((entry_t)meta.image.entry_addr);
+
+    // TODO: we have used quite a bit of stack at this point.
+    // use "movsp" instruction to reset stack back to where ROM stack starts.
+    (*entry)();
+
+    KERNEL_load(0x10000);
 }
 
 /****************************************************************************
@@ -123,19 +181,24 @@ int pthread_setcancelstate(int state, int *oldstate)
     return 0;
 }
 
+void esp_log_write(esp_log_level_t level, char const *tag, char const *format, ...)
+{
+}
+
 /****************************************************************************
  *  local
 *****************************************************************************/
 static void KERNEL_load(uintptr_t flash_location)
 {
-    static esp_image_header_t hdr;
     struct FLASH_segment
     {
         uintptr_t location;
         esp_image_segment_header_t hdr;
     };
-    static struct FLASH_segment ro;
-    static struct FLASH_segment text;
+
+    static esp_image_header_t hdr;
+    static struct FLASH_segment ro_seg;
+    static struct FLASH_segment text_seg;
 
     FLASH_read(flash_location, &hdr, sizeof(hdr));
     flash_location += sizeof(hdr);
@@ -182,28 +245,54 @@ static void KERNEL_load(uintptr_t flash_location)
         }
         else if (SOC_DROM_HIGH >= seg.load_addr && SOC_DROM_LOW <= seg.load_addr)
         {
-            ro.location = flash_location;
-            ro.hdr = seg;
+            ro_seg.location = flash_location;
+            ro_seg.hdr = seg;
         }
         else if (SOC_IROM_HIGH >= seg.load_addr && SOC_IROM_LOW <= seg.load_addr)
         {
-            text.location = flash_location;
-            text.hdr = seg;
+            text_seg.location = flash_location;
+            text_seg.hdr = seg;
         }
 
         esp_rom_printf("\n");
-        flash_location +=  seg.data_len;
+        flash_location += seg.data_len;
     }
+    cache_hal_disable(CACHE_TYPE_ALL);
+    mmu_ll_unmap_all(0);
 
-    if (ro.location)
+    if (ro_seg.location)
     {
+        esp_rom_printf("map rodata: %p => %p: %d\n", ro_seg.location, ro_seg.hdr.load_addr, ro_seg.hdr.data_len);
+        // CACHE_BUS_DBUS0
+        // map rodata: 0x00010020 => 0x3c020020: 37104
 
+        /*
+        int pages = (ro_seg.hdr.data_len + CONFIG_MMU_PAGE_SIZE - 1) / CONFIG_MMU_PAGE_SIZE;
+
+        uint32_t entry_id = MMU_FLASH_ENTRY_ID(ro_seg.hdr.load_addr);
+        uint32_t paddr = MMU_FLASH_PADDR(ro_seg.location);
+
+        for (int i = 0; i < pages; i ++)
+        {
+            mmu_ll_write_entry(0, entry_id, paddr, MMU_TARGET_FLASH0);
+
+            entry_id ++;
+            paddr ++;
+        }
+        */
+        FLASH_mmap(ro_seg.location, ro_seg.hdr.load_addr, ro_seg.hdr.data_len);
+        cache_ll_l1_enable_bus(0, CACHE_BUS_DBUS0);
     }
 
-    if (text.location)
+    if (text_seg.location)
     {
+        // CACHE_BUS_IBUS0
+        esp_rom_printf("map text: %p => %p: %d\n", text_seg.location, text_seg.hdr.load_addr, text_seg.hdr.data_len);
 
+        FLASH_mmap(text_seg.location, text_seg.hdr.load_addr, text_seg.hdr.data_len);
+        cache_ll_l1_enable_bus(0, CACHE_BUS_IBUS0);
     }
+    cache_hal_enable(CACHE_TYPE_ALL);
 
     /*
         drom_addr: 10020, drom_load_addr: 3c020020, drom_size: 37104
@@ -225,14 +314,55 @@ static void KERNEL_load(uintptr_t flash_location)
     //     esp_rom_printf("mapped: %u\n", length);
     // }
 
-    if (true)
+    if (false)
     {
 kernel_load_error:
+        esp_rom_delay_us(1000000);
         while(1) {}
     }
 
     typedef void __attribute__((noreturn)) (*entry_t)(void);
-    ((entry_t)hdr.entry_addr)();
+    (*(entry_t)hdr.entry_addr)();
+}
+
+static ssize_t FLASH_read(uintptr_t flash_location, void *buf, size_t bufsize)
+{
+    static uintptr_t current_paddr = (uintptr_t)-1;
+    uint32_t paddr = MMU_FLASH_PADDR(flash_location);
+
+    if (current_paddr != paddr)
+    {
+        current_paddr = paddr;
+        cache_hal_disable(CACHE_TYPE_ALL);
+
+        mmu_ll_write_entry(0, MMU_FLASH_READ_ENTRY_ID, paddr, MMU_TARGET_FLASH0);
+        cache_hal_enable(CACHE_TYPE_ALL);
+    }
+
+    off_t offset = flash_location & (CONFIG_MMU_PAGE_SIZE - 1);
+    void *src = (void *)(MMU_FLASH_READ_VADDR + offset);
+
+    int bytes_remain = CONFIG_MMU_PAGE_SIZE - offset;
+    bufsize = bufsize < bytes_remain ? bufsize : bytes_remain;
+
+    esp_rom_printf("dst: %p, src: %p, size: %u\n", buf, src, bufsize);
+    memcpy(buf, src, bufsize);
+    return bufsize;
+}
+
+static void FLASH_mmap(uintptr_t flash_location, uintptr_t vaddr, size_t size)
+{
+    uint32_t entry_id = MMU_FLASH_ENTRY_ID(vaddr);
+    uint32_t paddr = MMU_FLASH_PADDR(flash_location);
+    int pages = ((size + (flash_location & (CONFIG_MMU_PAGE_SIZE - 1))) + CONFIG_MMU_PAGE_SIZE - 1) / CONFIG_MMU_PAGE_SIZE;
+
+    for (int i = 0; i < pages; i ++)
+    {
+        mmu_ll_write_entry(0, entry_id, paddr, MMU_TARGET_FLASH0);
+
+        entry_id ++;
+        paddr ++;
+    }
 }
 
 static void WDT_config(void)
@@ -267,34 +397,100 @@ static void WDT_config(void)
     wdt_hal_write_protect_enable(&rwdt_ctx);
 #endif
 
-    // Disable MWDT0 flashboot protection. But only after we've enabled the RWDT first so that there's not gap in WDT protection.
+    // disable MWDT0 flashboot protection. But only after we've enabled the RWDT first so that there's not gap in WDT protection.
     wdt_hal_context_t mwdt_ctx = {.inst = WDT_MWDT0, .mwdt_dev = &TIMERG0};
     wdt_hal_write_protect_disable(&mwdt_ctx);
     wdt_hal_set_flashboot_en(&mwdt_ctx, false);
     wdt_hal_write_protect_enable(&mwdt_ctx);
 }
 
-static ssize_t FLASH_read(uintptr_t flash_location, void *buf, size_t bufsize)
+
+esp_err_t process_image_header(esp_image_metadata_t *data, uint32_t part_offset)
 {
-    static uintptr_t mmu_mapped_paddr = (uintptr_t)-1;
-    // uintptr_t paddr = flash_location & ~(CONFIG_MMU_PAGE_SIZE - 1);
-    uint32_t paddr = MMU_FLASH_PADDR(flash_location);
+    bzero(data, sizeof(esp_image_metadata_t));
+    data->start_addr = part_offset;
+    FLASH_read(data->start_addr, &data->image, sizeof(esp_image_header_t));
 
-    if (mmu_mapped_paddr != paddr)
+    data->image_len = sizeof(esp_image_header_t);
+    return ESP_OK;
+}
+
+esp_err_t process_segments(esp_image_metadata_t *data)
+{
+    esp_err_t err = ESP_OK;
+    uint32_t start_segments = data->start_addr + data->image_len;
+    uint32_t next_addr = start_segments;
+
+    for (int i = 0; i < data->image.segment_count; i++)
     {
-        mmu_mapped_paddr = paddr;
-        // cache_hal_disable(CACHE_TYPE_DATA);
+        esp_image_segment_header_t *header = &data->segments[i];
+        FLASH_read(next_addr, header, sizeof(esp_image_segment_header_t));
 
-        mmu_ll_write_entry(0, MMU_FLASH_READ_ENTRY_ID, paddr, MMU_TARGET_FLASH0);
-        // cache_hal_enable(CACHE_TYPE_DATA);
+        next_addr += sizeof(esp_image_segment_header_t);
+        data->segment_data[i] = next_addr;
+        next_addr += header->data_len;
+    }
+    // Segments all loaded, verify length
+    uint32_t end_addr = next_addr;
+
+    data->image_len += end_addr - start_segments;
+
+    for (int i = 0; i < data->image.segment_count; i++)
+    {
+        intptr_t load_addr = data->segments[i].load_addr;
+        if (should_load(load_addr))
+        {
+            uint32_t data_len = data->segments[i].data_len;
+            uint32_t data_addr = data->segment_data[i];
+
+            process_segment_data(load_addr, data_addr, data_len);
+        }
+    }
+    return err;
+}
+
+static esp_err_t process_segment_data(intptr_t load_addr, uint32_t data_addr, uint32_t data_len)
+{
+    const uint32_t *data = (const uint32_t *)bootloader_mmap(data_addr, data_len);
+    esp_rom_printf("dest: %p, src: %p, size: %u\n", load_addr, data, data_len);
+
+    memcpy((void *)load_addr, data, data_len);
+    bootloader_munmap(data);
+    return ESP_OK;
+}
+
+static bool should_map(uint32_t load_addr)
+{
+    return (load_addr >= SOC_IROM_LOW && load_addr < SOC_IROM_HIGH)
+           || (load_addr >= SOC_DROM_LOW && load_addr < SOC_DROM_HIGH);
+}
+
+static bool should_load(uint32_t load_addr)
+{
+    /* Reload the RTC memory segments whenever a non-deepsleep reset
+       is occurring */
+    bool load_rtc_memory = esp_rom_get_reset_reason(0) != RESET_REASON_CORE_DEEP_SLEEP;
+
+    if (should_map(load_addr)) {
+        return false;
     }
 
-    off_t offset = flash_location & (CONFIG_MMU_PAGE_SIZE - 1);
-    void *src = (void *)(MMU_FLASH_READ_VADDR + offset);
+    if (!load_rtc_memory) {
+#if SOC_RTC_FAST_MEM_SUPPORTED
+        if (load_addr >= SOC_RTC_IRAM_LOW && load_addr < SOC_RTC_IRAM_HIGH) {
+            return false;
+        }
+        if (load_addr >= SOC_RTC_DRAM_LOW && load_addr < SOC_RTC_DRAM_HIGH) {
+            return false;
+        }
+#endif
 
-    int bytes_remain = CONFIG_MMU_PAGE_SIZE - offset;
-    bufsize = bufsize < bytes_remain ? bufsize : bytes_remain;
+#if SOC_RTC_SLOW_MEM_SUPPORTED
+        if (load_addr >= SOC_RTC_DATA_LOW && load_addr < SOC_RTC_DATA_HIGH) {
+            return false;
+        }
+#endif
+    }
 
-    memcpy(buf, src, bufsize);
-    return bufsize;
+    return true;
 }

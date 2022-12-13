@@ -44,7 +44,10 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 
 target_sources(${PROJECT_NAME} PRIVATE
     "${IDF_PATH}/components/bootloader_support/src/${IDF_TARGET}/bootloader_soc.c"
-    # "${IDF_PATH}/components/bootloader_support/src/${IDF_TARGET}/bootloader_${IDF_TARGET}.c"
+
+    "${IDF_PATH}/components/bootloader_support/src/bootloader_utility.c"
+    "${IDF_PATH}/components/bootloader_support/bootloader_flash/src/bootloader_flash.c"
+
     "${IDF_PATH}/components/esp_hw_support/cpu.c"
     "${IDF_PATH}/components/esp_hw_support/port/${IDF_TARGET}/rtc_clk.c"
     "${IDF_PATH}/components/hal/cache_hal.c"

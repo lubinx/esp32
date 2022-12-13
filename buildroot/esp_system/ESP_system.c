@@ -33,7 +33,19 @@ extern __attribute__((noreturn))
 *****************************************************************************/
 void IRAM_ATTR SystemInit(void)
 {
-    esp_rom_printf("ESP_system_startup\n\n\n\n");
+    esp_rom_printf("SystemInit()\n");
+    esp_rom_printf("TAG: %p\n", TAG);
+
+    esp_rom_printf("n1 ptr: %p\n", &n1);
+    esp_rom_printf("n2 ptr: %p\n", &n2);
+    esp_rom_printf("n3 ptr: %p\n", &n3);
+    esp_rom_printf("n4 ptr: %p\n", &n4);
+    esp_rom_printf("n5 ptr: %p\n", &n5);
+    esp_rom_printf("n6 ptr: %p\n", &n6);
+    esp_rom_printf("n7 ptr: %p\n", &n7);
+    esp_rom_printf("n8 ptr: %p\n", &n8);
+    esp_rom_printf("n9 ptr: %p\n", &n9);
+    esp_rom_printf("\n\n\n");
     esp_rom_delay_us(1000000);
 
     call_start_cpu0();
