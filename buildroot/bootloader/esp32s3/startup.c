@@ -16,6 +16,7 @@
 #include "hal/wdt_hal.h"
 
 #include "bootloader_soc.h"
+#include "bootloader_clock.h"
 
 #include "esp_image_format.h"
 #include "bootloader_flash.h"
@@ -100,6 +101,7 @@ void Reset_Handler(void)
     mmu_hal_init();
 
     WDT_config();
+    bootloader_clock_configure();
 
 
     esp_image_metadata_t meta = {0};

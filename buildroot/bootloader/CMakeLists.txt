@@ -39,17 +39,21 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     # "${IDF_PATH}/components/bootloader_support/include"
     "${IDF_PATH}/components/bootloader_support/private_include"
     # "${IDF_PATH}/components/bootloader_support/bootloader_flash/include"
+    "${IDF_PATH}/components/esp_hw_support/include/esp_private"
     "${IDF_PATH}/components/esp_hw_support/port/include"
 )
 
 target_sources(${PROJECT_NAME} PRIVATE
     "${IDF_PATH}/components/bootloader_support/src/${IDF_TARGET}/bootloader_soc.c"
+    "${IDF_PATH}/components/bootloader_support/src/bootloader_clock_init.c"
 
     "${IDF_PATH}/components/bootloader_support/src/bootloader_utility.c"
     "${IDF_PATH}/components/bootloader_support/bootloader_flash/src/bootloader_flash.c"
 
     "${IDF_PATH}/components/esp_hw_support/cpu.c"
     "${IDF_PATH}/components/esp_hw_support/port/${IDF_TARGET}/rtc_clk.c"
+    "${IDF_PATH}/components/esp_hw_support/port/${IDF_TARGET}/rtc_clk_init.c"
+    "${IDF_PATH}/components/esp_hw_support/port/${IDF_TARGET}/rtc_init.c"
     "${IDF_PATH}/components/hal/cache_hal.c"
     "${IDF_PATH}/components/hal/mmu_hal.c"
     "${IDF_PATH}/components/hal/mpu_hal.c"
