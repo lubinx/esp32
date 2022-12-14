@@ -19,7 +19,7 @@
 #include "bootloader_clock.h"
 #include "bootloader_mem.h"
 
-#include "esp_image_format.h"
+#include "esp_app_format.h"
 
 /****************************************************************************
  *  imports

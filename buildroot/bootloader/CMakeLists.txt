@@ -52,8 +52,8 @@ target_sources(${PROJECT_NAME} PRIVATE
     "${IDF_PATH}/components/esp_hw_support/port/${IDF_TARGET}/rtc_clk.c"
     "${IDF_PATH}/components/esp_hw_support/port/${IDF_TARGET}/rtc_clk_init.c"
     "${IDF_PATH}/components/esp_hw_support/port/${IDF_TARGET}/rtc_init.c"
+
     "${IDF_PATH}/components/hal/cache_hal.c"
-    # "${IDF_PATH}/components/hal/mmu_hal.c"
     "${IDF_PATH}/components/hal/mpu_hal.c"
 
     "${IDF_PATH}/components/newlib/syscalls.c"
