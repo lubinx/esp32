@@ -7,17 +7,12 @@
 #ifndef __ESP_LOG_H__
 #define __ESP_LOG_H__
 
-#include <stdint.h>
-#include <stdarg.h>
+#include <features.h>
+
 #include <inttypes.h>
+#include <stdarg.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-    // avoid to #include "esp_rom_sys.h"
-extern
-    void esp_rom_delay_us(uint32_t us);
+__BEGIN_DECLS
 
     enum esp_log_level_t
     {
@@ -35,23 +30,23 @@ extern
     #define ESP_LOG_LEVEL_LOCAL(level, tag, format, ...)    \
         esp_log_write(level, tag, format)
 
-    #define ESP_EARLY_LOGE(tag, format, ...)    esp_log_write(ESP_LOG_VERBOSE, tag, format, ##__VA_ARGS__)
-    #define ESP_EARLY_LOGW(tag, format, ...)    esp_log_write(ESP_LOG_VERBOSE, tag, format, ##__VA_ARGS__)
-    #define ESP_EARLY_LOGI(tag, format, ...)    esp_log_write(ESP_LOG_VERBOSE, tag, format, ##__VA_ARGS__)
-    #define ESP_EARLY_LOGD(tag, format, ...)    esp_log_write(ESP_LOG_VERBOSE, tag, format, ##__VA_ARGS__)
-    #define ESP_EARLY_LOGV(tag, format, ...)    esp_log_write(ESP_LOG_VERBOSE, tag, format, ##__VA_ARGS__)
+    #define ESP_EARLY_LOGE(tag, format, ...)    esp_log_write(ESP_LOG_ERROR,    tag, format, ##__VA_ARGS__)
+    #define ESP_EARLY_LOGW(tag, format, ...)    esp_log_write(ESP_LOG_WARN,     tag, format, ##__VA_ARGS__)
+    #define ESP_EARLY_LOGI(tag, format, ...)    esp_log_write(ESP_LOG_INFO,     tag, format, ##__VA_ARGS__)
+    #define ESP_EARLY_LOGD(tag, format, ...)    esp_log_write(ESP_LOG_DEBUG,    tag, format, ##__VA_ARGS__)
+    #define ESP_EARLY_LOGV(tag, format, ...)    esp_log_write(ESP_LOG_VERBOSE,  tag, format, ##__VA_ARGS__)
 
-    #define ESP_LOGE(tag, format, ...)          esp_log_write(ESP_LOG_VERBOSE, tag, format, ##__VA_ARGS__)
-    #define ESP_LOGW(tag, format, ...)          esp_log_write(ESP_LOG_VERBOSE, tag, format, ##__VA_ARGS__)
-    #define ESP_LOGI(tag, format, ...)          esp_log_write(ESP_LOG_VERBOSE, tag, format, ##__VA_ARGS__)
-    #define ESP_LOGD(tag, format, ...)          esp_log_write(ESP_LOG_VERBOSE, tag, format, ##__VA_ARGS__)
-    #define ESP_LOGV(tag, format, ...)          esp_log_write(ESP_LOG_VERBOSE, tag, format, ##__VA_ARGS__)
+    #define ESP_LOGE(tag, format, ...)          esp_log_write(ESP_LOG_ERROR,    tag, format, ##__VA_ARGS__)
+    #define ESP_LOGW(tag, format, ...)          esp_log_write(ESP_LOG_WARN,     tag, format, ##__VA_ARGS__)
+    #define ESP_LOGI(tag, format, ...)          esp_log_write(ESP_LOG_INFO,     tag, format, ##__VA_ARGS__)
+    #define ESP_LOGD(tag, format, ...)          esp_log_write(ESP_LOG_DEBUG,    tag, format, ##__VA_ARGS__)
+    #define ESP_LOGV(tag, format, ...)          esp_log_write(ESP_LOG_VERBOSE,  tag, format, ##__VA_ARGS__)
 
-    #define ESP_DRAM_LOGE(tag, format, ...)     esp_log_write(ESP_LOG_VERBOSE, tag, format, ##__VA_ARGS__)
-    #define ESP_DRAM_LOGW(tag, format, ...)     esp_log_write(ESP_LOG_VERBOSE, tag, format, ##__VA_ARGS__)
-    #define ESP_DRAM_LOGI(tag, format, ...)     esp_log_write(ESP_LOG_VERBOSE, tag, format, ##__VA_ARGS__)
-    #define ESP_DRAM_LOGD(tag, format, ...)     esp_log_write(ESP_LOG_VERBOSE, tag, format, ##__VA_ARGS__)
-    #define ESP_DRAM_LOGV(tag, format, ...)     esp_log_write(ESP_LOG_VERBOSE, tag, format, ##__VA_ARGS__)
+    #define ESP_DRAM_LOGE(tag, format, ...)     esp_log_write(ESP_LOG_ERROR,    tag, format, ##__VA_ARGS__)
+    #define ESP_DRAM_LOGW(tag, format, ...)     esp_log_write(ESP_LOG_WARN,     tag, format, ##__VA_ARGS__)
+    #define ESP_DRAM_LOGI(tag, format, ...)     esp_log_write(ESP_LOG_INFO,     tag, format, ##__VA_ARGS__)
+    #define ESP_DRAM_LOGD(tag, format, ...)     esp_log_write(ESP_LOG_DEBUG,    tag, format, ##__VA_ARGS__)
+    #define ESP_DRAM_LOGV(tag, format, ...)     esp_log_write(ESP_LOG_VERBOSE,  tag, format, ##__VA_ARGS__)
 
     #define ESP_LOG_BUFFER_HEX_LEVEL(tag, buffer, buff_len, level)
     #define ESP_LOG_BUFFER_CHAR_LEVEL(tag, buffer, buff_len, level)
@@ -96,45 +91,27 @@ extern
     #define LOG_RESET_COLOR
 #endif
 
-
     typedef int (*vprintf_like_t)(const char *, va_list);
-static inline
+static inline __attribute__((deprecated))
     vprintf_like_t esp_log_set_vprintf(vprintf_like_t func)
     {
         return func;
     }
 
-static inline
-    void esp_log_level_set(char const *tag, esp_log_level_t level)
-    {
-        (void)tag;
-        (void)level;
-    }
+extern __attribute__((nothrow))
+    void esp_log_level_set(char const *tag, esp_log_level_t level);
 
-static inline
-    esp_log_level_t esp_log_level_get(char const *tag)
-    {
-        (void)tag;
-        return ESP_LOG_NONE;
-    }
+extern __attribute__((nothrow))
+    esp_log_level_t esp_log_level_get(char const *tag);
 
-static inline
-    uint32_t esp_log_timestamp(void)
-    {
-        return 0;
-    }
+extern __attribute__((nothrow))
+    uint32_t esp_log_timestamp(void);
 
-static inline
-    char const *esp_log_system_timestamp(void)
-    {
-        return "";
-    }
+extern __attribute__((nothrow))
+    char const *esp_log_system_timestamp(void);
 
-static inline
-    uint32_t esp_log_early_timestamp(void)
-    {
-        return 0;
-    }
+extern __attribute__((nothrow))
+    uint32_t esp_log_early_timestamp(void);
 
 extern __attribute__((nothrow))
     void esp_log_writev(esp_log_level_t level, char const *tag, char const *format, va_list args);
@@ -142,8 +119,10 @@ extern __attribute__((nothrow))
 extern  __attribute__ ((nothrow, format (printf, 3, 4)))
     void esp_log_write(esp_log_level_t level, char const *tag, char const *format, ...);
 
-#ifdef __cplusplus
-}
-#endif
+// avoid to #include "esp_rom_sys.h" in some esp-idf components
+//  "esp_rom_sys.h" introduced in "esp_rom", but here we really don't know where is
+extern
+    void esp_rom_delay_us(uint32_t us);
 
-#endif /* __ESP_LOG_H__ */
+__END_DECLS
+#endif

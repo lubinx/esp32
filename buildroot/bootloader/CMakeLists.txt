@@ -6,7 +6,10 @@ endif()
 
 project (bootloader LANGUAGES C)
 
-add_executable(${PROJECT_NAME} "${IDF_TARGET}/startup.c")
+add_executable(${PROJECT_NAME}
+    "${IDF_TARGET}/startup.c"
+    "bootloader_log.c"
+)
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${PROJECT_NAME}.elf")
 
 idf_build_get_property(include_directories INCLUDE_DIRECTORIES GENERATOR_EXPRESSION)
@@ -33,12 +36,9 @@ list(APPEND link_scripts
 )
 target_linker_script(${PROJECT_NAME} PRIVATE "${link_scripts}")
 
-
 target_include_directories(${PROJECT_NAME} PRIVATE
-    "include"
-    # "${IDF_PATH}/components/bootloader_support/include"
+    # "include"
     "${IDF_PATH}/components/bootloader_support/private_include"
-    # "${IDF_PATH}/components/bootloader_support/bootloader_flash/include"
     "${IDF_PATH}/components/esp_hw_support/include/esp_private"
     "${IDF_PATH}/components/esp_hw_support/port/include"
 )
@@ -46,16 +46,15 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 target_sources(${PROJECT_NAME} PRIVATE
     "${IDF_PATH}/components/bootloader_support/src/${IDF_TARGET}/bootloader_soc.c"
     "${IDF_PATH}/components/bootloader_support/src/bootloader_clock_init.c"
-
-    "${IDF_PATH}/components/bootloader_support/src/bootloader_utility.c"
-    "${IDF_PATH}/components/bootloader_support/bootloader_flash/src/bootloader_flash.c"
+    "${IDF_PATH}/components/bootloader_support/src/bootloader_mem.c"
 
     "${IDF_PATH}/components/esp_hw_support/cpu.c"
     "${IDF_PATH}/components/esp_hw_support/port/${IDF_TARGET}/rtc_clk.c"
     "${IDF_PATH}/components/esp_hw_support/port/${IDF_TARGET}/rtc_clk_init.c"
     "${IDF_PATH}/components/esp_hw_support/port/${IDF_TARGET}/rtc_init.c"
     "${IDF_PATH}/components/hal/cache_hal.c"
-    "${IDF_PATH}/components/hal/mmu_hal.c"
+    # "${IDF_PATH}/components/hal/mmu_hal.c"
     "${IDF_PATH}/components/hal/mpu_hal.c"
+
     "${IDF_PATH}/components/newlib/syscalls.c"
 )
