@@ -13,10 +13,10 @@ add_executable(${PROJECT_NAME}
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${PROJECT_NAME}.elf")
 
 idf_build_get_property(include_directories INCLUDE_DIRECTORIES GENERATOR_EXPRESSION)
-target_include_directories(${PROJECT_NAME} PRIVATE "${include_directories}")
+target_include_directories(${PROJECT_NAME} PRIVATE ${include_directories})
 
 idf_build_get_property(compile_definitions COMPILE_DEFINITIONS GENERATOR_EXPRESSION)
-target_compile_definitions(${PROJECT_NAME} PRIVATE ${compile_definitions} "BOOTLOADER_BUILD=1")
+target_compile_definitions(${PROJECT_NAME} PRIVATE "BOOTLOADER_BUILD=1" ${compile_definitions})
 
 idf_build_get_property(compile_options COMPILE_OPTIONS GENERATOR_EXPRESSION)
 target_compile_options(${PROJECT_NAME} PRIVATE ${compile_options})
@@ -30,14 +30,12 @@ list(APPEND link_scripts
     "${IDF_PATH}/components/soc/esp32s3/ld/esp32s3.peripherals.ld"
     "${IDF_PATH}/components/esp_rom/esp32s3/ld/esp32s3.rom.ld"
     "${IDF_PATH}/components/esp_rom/esp32s3/ld/esp32s3.rom.api.ld"
-    "${IDF_PATH}/components/esp_rom/esp32s3/ld/esp32s3.rom.libgcc.ld"
-    "${IDF_PATH}/components/esp_rom/esp32s3/ld/esp32s3.rom.newlib.ld"
-    # "${IDF_PATH}/components/esp_rom/esp32s3/ld/esp32s3.rom.version.ld"
+    "${IDF_PATH}/components/esp_rom/esp32s3/ld/esp32s3.rom.version.ld"
 )
 target_linker_script(${PROJECT_NAME} PRIVATE "${link_scripts}")
 
 target_include_directories(${PROJECT_NAME} PRIVATE
-    # "include"
+    "${IDF_PATH}/components/xtensa/include"
     "${IDF_PATH}/components/bootloader_support/private_include"
     "${IDF_PATH}/components/esp_hw_support/include/esp_private"
     "${IDF_PATH}/components/esp_hw_support/port/include"
@@ -47,14 +45,11 @@ target_sources(${PROJECT_NAME} PRIVATE
     "${IDF_PATH}/components/bootloader_support/src/${IDF_TARGET}/bootloader_soc.c"
     "${IDF_PATH}/components/bootloader_support/src/bootloader_clock_init.c"
     "${IDF_PATH}/components/bootloader_support/src/bootloader_mem.c"
-
     "${IDF_PATH}/components/esp_hw_support/cpu.c"
     "${IDF_PATH}/components/esp_hw_support/port/${IDF_TARGET}/rtc_clk.c"
     "${IDF_PATH}/components/esp_hw_support/port/${IDF_TARGET}/rtc_clk_init.c"
     "${IDF_PATH}/components/esp_hw_support/port/${IDF_TARGET}/rtc_init.c"
-
     "${IDF_PATH}/components/hal/cache_hal.c"
     "${IDF_PATH}/components/hal/mpu_hal.c"
-
     "${IDF_PATH}/components/newlib/syscalls.c"
 )

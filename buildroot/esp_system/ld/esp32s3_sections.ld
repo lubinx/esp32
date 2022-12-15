@@ -1,11 +1,22 @@
-ENTRY(SystemInit);
+/*
+ * SPDX-FileCopyrightText: 2021 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/* Default entry point */
+ENTRY(call_start_cpu0);
+
+_diram_i_start = 0x40378000;
 
 SECTIONS
 {
-    .intr.vectors :
+    /* Send .iram0 code to iram */
+    .iram0.vectors :
     {
-PROVIDE(_iram_start = ABSOLUTE(.));
-PROVIDE(_vector_table = ABSOLUTE(.));
+        _iram_start = ABSOLUTE(.);
+        /* Vectors go to IRAM */
+        _vector_table = ABSOLUTE(.);
         . = 0x0;
         KEEP(*(.WindowVectors.text));
         . = 0x180;
@@ -27,97 +38,175 @@ PROVIDE(_vector_table = ABSOLUTE(.));
         . = 0x3C0;
         KEEP(*(.DoubleExceptionVector.text));
         . = 0x400;
-PROVIDE(_invalid_pc_placeholder = ABSOLUTE(.));
+        _invalid_pc_placeholder = ABSOLUTE(.);
         *(.*Vector.literal)
 
         *(.UserEnter.literal);
         *(.UserEnter.text);
-
         . = ALIGN (16);
         *(.entry.text)
         *(.init.literal)
         *(.init)
-
-        . = ALIGN(4);
-_init_end = ABSOLUTE(.);
+        _init_end = ABSOLUTE(.);
     } > SRAM_text_seg
 
-    .__SRAM_overlapped_dummy (NOLOAD):
+    .iram0.text :
     {
-        . = ORIGIN(SRAM_data_seg) + (_iram_end > SRAM_TEXT_OVERLAPPED_START ? _iram_end - SRAM_TEXT_OVERLAPPED_START : 0);
+        /* Code marked as running out of IRAM */
+        _iram_text_start = ABSOLUTE(.);
+
+        mapping[iram0_text]
+
+    } > SRAM_text_seg
+
+    /**
+    * This section is required to skip .iram0.text area because SRAM_text_seg and
+    * SRAM_data_seg reflect the same address space on different buses.
+    */
+    .dram0.dummy (NOLOAD):
+    {
+        . = ORIGIN(SRAM_data_seg) + MAX(_iram_end - _diram_i_start, 0);
     } > SRAM_data_seg
 
-    .data.rw :
+    .dram0.data :
     {
-PROVIDE(_data_start = ABSOLUTE(.));
+        _data_start = ABSOLUTE(.);
         *(.gnu.linkonce.d.*)
         *(.data1)
-        *(.sdata*)
+        *(.sdata)
+        *(.sdata.*)
         *(.gnu.linkonce.s.*)
         *(.gnu.linkonce.s2.*)
         *(.jcr)
 
         mapping[dram0_data]
 
+        _data_end = ABSOLUTE(.);
         . = ALIGN(4);
-PROVIDE(_data_end = ABSOLUTE(.));
     } > SRAM_data_seg
 
-    .data.noinit (NOLOAD) :
+    /**
+    * This section holds data that should not be initialized at power up.
+    * The section located in Internal SRAM memory region. The macro _NOINIT
+    * can be used as attribute to place data into this section.
+    * See the "esp_attr.h" file for more information.
+    */
+    .noinit (NOLOAD):
     {
+        . = ALIGN(4);
         _noinit_start = ABSOLUTE(.);
         *(.noinit .noinit.*)
-
-        . = ALIGN(4);
+        . = ALIGN(4) ;
         _noinit_end = ABSOLUTE(.);
-    }
+    } > SRAM_data_seg
 
-    .data.zi (NOLOAD) :
+    /* Shared RAM */
+    .dram0.bss (NOLOAD) :
     {
-        . = ALIGN(8);
-PROVIDE(_bss_start = ABSOLUTE(.));
+        . = ALIGN (8);
+        _bss_start = ABSOLUTE(.);
 
         mapping[dram0_bss]
 
-        *(.sbss*)
+        *(.dynsbss)
+        *(.sbss)
+        *(.sbss.*)
         *(.gnu.linkonce.sb.*)
         *(.scommon)
-        *(.sbss2*)
+        *(.sbss2)
+        *(.sbss2.*)
         *(.gnu.linkonce.sb2.*)
-        *(.dynsbss)
         *(.dynbss)
         *(.share.mem)
         *(.gnu.linkonce.b.*)
 
-        . = ALIGN(8);
-PROVIDE(_bss_end = ABSOLUTE(.));
+        . = ALIGN (8);
+        _bss_end = ABSOLUTE(.);
     } > SRAM_data_seg
 
-    .data.ro : ALIGN(0x10)
+    ASSERT(((_bss_end - ORIGIN(SRAM_data_seg)) <= LENGTH(SRAM_data_seg)), "DRAM segment data does not fit.")
+
+    .flash.text :
     {
+        _stext = .;
+        _instruction_reserved_start = ABSOLUTE(.);  /* This is a symbol marking the flash.text start, this can be used for mmu driver to maintain virtual address */
+        _text_start = ABSOLUTE(.);
+
+        mapping[flash_text]
+
+        *(.stub .gnu.warning .gnu.linkonce.literal.* .gnu.linkonce.t.*.literal .gnu.linkonce.t.*)
+        *(.irom0.text) /* catch stray ICACHE_RODATA_ATTR */
+        *(.fini.literal)
+        *(.fini)
+        *(.gnu.version)
+
+        /** CPU will try to prefetch up to 16 bytes of
+        * of instructions. This means that any configuration (e.g. MMU, PMS) must allow
+        * safe access to up to 16 bytes after the last real instruction, add
+        * dummy bytes to ensure this
+        */
+        . += 16;
+
+        _text_end = ABSOLUTE(.);
+        _instruction_reserved_end = ABSOLUTE(.);  /* This is a symbol marking the flash.text end, this can be used for mmu driver to maintain virtual address */
+        _etext = .;
+
+        /**
+        * Similar to _iram_start, this symbol goes here so it is
+        * resolved by addr2line in preference to the first symbol in
+        * the flash.text segment.
+        */
+        _flash_cache_start = ABSOLUTE(0);
+    } > FLASH_text_seg
+
+    /**
+    * This dummy section represents the .flash.text section but in FLASH_data_seg.
+    * Thus, it must have its alignment and (at least) its size.
+    */
+    .flash_rodata_dummy (NOLOAD):
+    {
+        _flash_rodata_dummy_start = ABSOLUTE(.);
+        /* Start at the same alignment constraint than .flash.text */
+        . = ALIGN(ALIGNOF(.flash.text));
+        /* Create an empty gap as big as .flash.text section */
+        . = . + SIZEOF(.flash.text);
+        /* Prepare the alignment of the section above. Few bytes (0x20) must be
+        * added for the mapping header. */
+        . = ALIGN(0x10000) + 0x20;
+        _rodata_reserved_start = .;  /* This is a symbol marking the flash.rodata start, this can be used for mmu driver to maintain virtual address */
+    } > FLASH_data_seg
+
+    .flash.appdesc : ALIGN(0x10)
+    {
+        _rodata_start = ABSOLUTE(.);
+
         *(.rodata_desc .rodata_desc.*)               /* Should be the first.  App version info.        DO NOT PUT ANYTHING BEFORE IT! */
         *(.rodata_custom_desc .rodata_custom_desc.*) /* Should be the second. Custom app version info. DO NOT PUT ANYTHING BEFORE IT! */
 
-PROVIDE(_rodata_reserved_start = ABSOLUTE(.));
-PROVIDE(_flash_rodata_start = ABSOLUTE(.));
+        /* Create an empty gap within this section. Thanks to this, the end of this
+        * section will match .flah.rodata's begin address. Thus, both sections
+        * will be merged when creating the final bin image. */
+        . = ALIGN(ALIGNOF(.flash.rodata));
+    } >FLASH_data_seg
+
+    .flash.rodata : ALIGN(0x10)
+    {
+        _flash_rodata_start = ABSOLUTE(.);
 
         mapping[flash_rodata]
 
-        *(.irom1.text)                  /* catch stray ICACHE_RODATA_ATTR */
+        *(.irom1.text) /* catch stray ICACHE_RODATA_ATTR */
         *(.gnu.linkonce.r.*)
         *(.rodata1)
-
-        /* __XT_EXCEPTION_TABLE_ = ABSOLUTE(.); */
+        __XT_EXCEPTION_TABLE_ = ABSOLUTE(.);
         *(.xt_except_table)
         *(.gcc_except_table .gcc_except_table.*)
         *(.gnu.linkonce.e.*)
         *(.gnu.version_r)
-
-        . = ALIGN(4);   /* WTF? . = (. + 3) & ~ 3; */
+        . = (. + 3) & ~ 3;
         __eh_frame = ABSOLUTE(.);
         KEEP(*(.eh_frame))
-        . = ALIGN(8);   /* . = (. + 7) & ~ 3; */
-
+        . = (. + 7) & ~ 3;
         /* C++ constructor and destructor tables */
         /* Don't include anything from crtbegin.o or crtend.o, as IDF doesn't use toolchain crt */
         __init_array_start = ABSOLUTE(.);
@@ -127,149 +216,102 @@ PROVIDE(_flash_rodata_start = ABSOLUTE(.));
         KEEP (*(EXCLUDE_FILE (*crtend.*) .dtors))
         KEEP (*(SORT(.dtors.*)))
         KEEP (*(.dtors))
-
         /* C++ exception handlers table: */
-        /* __XT_EXCEPTION_DESCS_ = ABSOLUTE(.); */
+        __XT_EXCEPTION_DESCS_ = ABSOLUTE(.);
         *(.xt_except_desc)
         *(.gnu.linkonce.h.*)
-        /* __XT_EXCEPTION_DESCS_END__ = ABSOLUTE(.); */
+        __XT_EXCEPTION_DESCS_END__ = ABSOLUTE(.);
         *(.xt_except_desc_end)
         *(.dynamic)
         *(.gnu.version_d)
-
         /* Addresses of memory regions reserved via SOC_RESERVE_MEMORY_REGION() */
         soc_reserved_memory_region_start = ABSOLUTE(.);
         KEEP (*(.reserved_memory_address))
         soc_reserved_memory_region_end = ABSOLUTE(.);
-
         /* System init functions registered via ESP_SYSTEM_INIT_FN */
         _esp_system_init_fn_array_start = ABSOLUTE(.);
         KEEP (*(SORT_BY_INIT_PRIORITY(.esp_system_init_fn.*)))
         _esp_system_init_fn_array_end = ABSOLUTE(.);
-        PROVIDE(_rodata_end = ABSOLUTE(.));
-
+        _rodata_end = ABSOLUTE(.);
         /* Literals are also RO data. */
         _lit4_start = ABSOLUTE(.);
         *(*.lit4)
         *(.lit4.*)
         *(.gnu.linkonce.lit4.*)
         _lit4_end = ABSOLUTE(.);
-
         . = ALIGN(4);
-PROVIDE(_thread_local_start = ABSOLUTE(.));
+        _thread_local_start = ABSOLUTE(.);
         *(.tdata)
         *(.tdata.*)
         *(.tbss)
         *(.tbss.*)
-
+        _thread_local_end = ABSOLUTE(.);
+        _rodata_reserved_end = ABSOLUTE(.);  /* This is a symbol marking the flash.rodata end, this can be used for mmu driver to maintain virtual address */
         . = ALIGN(4);
-PROVIDE(_thread_local_end = ABSOLUTE(.));
-
-PROVIDE(_rodata_reserved_end = ABSOLUTE(.));
-        /* REVIEW: This section holds .ext_ram.bss data, and will be put in PSRAM */
-        /*
-        _ext_ram_bss_start = ABSOLUTE(.);
-        mapping[extern_ram]
-
-        . = ALIGN(4);
-        _ext_ram_bss_end = ABSOLUTE(.);
-        */
     } > FLASH_data_seg
-PROVIDE(_flash_rodata_align = ALIGNOF(.data.ro));
 
-    .data.ro_noload (NOLOAD) :
+    _flash_rodata_align = ALIGNOF(.flash.rodata);
+
+    .flash.rodata_noload (NOLOAD) :
     {
+        . = ALIGN (4);
         mapping[rodata_noload]
     } > FLASH_data_seg
 
-    .__FLASH_overlapped_dummy (NOLOAD):
+/*
+    .ext_ram.dummy (NOLOAD):
     {
-        _flash_rodata_dummy_start = ABSOLUTE(.);
-        . = . + SIZEOF(.data.ro) + SIZEOF(.data.ro_noload);
-        . = ALIGN(MMU_PAGE_SIZE) + 0x20;
-    } > FLASH_text_seg
+        . = ORIGIN(extern_ram_seg) + (_rodata_reserved_end - _flash_rodata_dummy_start);
+        . = ALIGN (0x10000);
+    } > extern_ram_seg
 
-/* REVIEW: these section is impossiable to exists?
-    .data.iram0 :
+    .ext_ram.bss (NOLOAD) :
     {
+        _ext_ram_bss_start = ABSOLUTE(.);
+        mapping[extern_ram]
+        . = ALIGN(4);
+        _ext_ram_bss_end = ABSOLUTE(.);
+    } > extern_ram_seg
+*/
+
+    /* Marks the end of IRAM code segment */
+    .iram0.text_end (NOLOAD) :
+    {
+        /* iram_end_test section exists for use by memprot unit tests only */
+        *(.iram_end_test)
+        /* ESP32-S3 memprot requires 16B padding for possible CPU prefetch and 256B alignment for PMS split lines */
+        . += 16;
+        . = ALIGN(256);
+        _iram_text_end = ABSOLUTE(.);
+    } > SRAM_text_seg
+
+    .iram0.data :
+    {
+        . = ALIGN(4);
         _iram_data_start = ABSOLUTE(.);
 
         mapping[iram0_data]
 
-        . = ALIGN(4);
         _iram_data_end = ABSOLUTE(.);
     } > SRAM_text_seg
 
-    .bss.iram (NOLOAD) :
+    .iram0.bss (NOLOAD) :
     {
+        . = ALIGN(4);
         _iram_bss_start = ABSOLUTE(.);
 
         mapping[iram0_bss]
 
         _iram_bss_end = ABSOLUTE(.);
         . = ALIGN(4);
-    } > SRAM_text_seg
-*/
-
-    .text.iram_attr :
-    {
-        PROVIDE(_iram_text_start = ABSOLUTE(.));
-        mapping[iram0_text]
-
-        /* catch stray IRAM_ATTR */
-        *(.iram*)
-        /* iram_end_test section exists for use by memprot unit tests only */
-        /* *(.iram_end_test) */
-
-        /* ESP32-S3 memprot requires 16B padding for possible CPU prefetch  & alignment for PMS*/
-        . += 16;
-        . = ALIGN(256);
-        PROVIDE(_iram_text_end = ABSOLUTE(.));
-        PROVIDE(_iram_end = ABSOLUTE(.));
+        _iram_end = ABSOLUTE(.);
     } > SRAM_text_seg
 
-    .text :
+    /* Marks the end of data, bss and possibly rodata  */
+    .dram0.heap_start (NOLOAD) :
     {
-PROVIDE(_stext = ABSOLUTE(.));
-/* PROVIDE(_flash_text_start = ABSOLUTE(.)); */
-        /* This is a symbol marking the flash.text start, this can be used for mmu driver to maintain virtual address */
-        PROVIDE(_instruction_reserved_start = ABSOLUTE(.));
-
-        *(.fini.literal)
-        *(.fini)
-        *(.gnu.version)
-
-        *(.literal* .text* .stub .gnu.warning .gnu.linkonce.literal* .gnu.linkonce.t.*)
-
-        mapping[flash_text]
-
-        *(.irom0.text)                  /* catch stray ICACHE_RODATA_ATTR */
-        /* ESP32-S3 memprot requires 16B padding for possible CPU prefetch  & alignment for PMS*/
-        . += 16;
-
-PROVIDE(_etext = ABSOLUTE(.));
-/* PROVIDE(_flash_text_end = ABSOLUTE(.)); */
-        /* This is a symbol marking the flash.text end, this can be used for mmu driver to maintain virtual address */
-/* PROVIDE(_instruction_reserved_end = ABSOLUTE(.)); */
-    } > FLASH_text_seg
-
-    .__heap_stack_dummy (NOLOAD) :
-    {
-        . = ALIGN(8);
-
-        PROVIDE(_heap_start = ABSOLUTE(.));
-        PROVIDE(end = ABSOLUTE(.));
-
-        . = ABSOLUTE(SRAM_ESP_SYSTEM_START);
-
-        PROVIDE(__heap_limit__ = ABSOLUTE(.));
-        PROVIDE(_heap_end = ABSOLUTE(.));
-        /* PROVIDE(__stack = .); */
-    } > SRAM_data_seg
-
-    .__ESP_SYSTEM_reserved (NOLOAD) :
-    {
-        . = ORIGIN(SRAM_data_seg) + LENGTH(SRAM_data_seg);
+        . = ALIGN (8);
+        _heap_start = ABSOLUTE(.);
     } > SRAM_data_seg
 
     .rtc.text :

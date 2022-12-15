@@ -92,6 +92,8 @@ list(APPEND OBSOLETED_COMPONENTS
     "esp_app_format"
     # merged into esp_system
     "esp_common"
+    # removed
+    "partition_table"
 )
 
 # compile options for esp-idf'components only

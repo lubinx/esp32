@@ -3,6 +3,8 @@
 #include <errno.h>
 #include <assert.h>
 
+#include "xt_utils.h"
+
 #include "esp_attr.h"
 #include "esp_cpu.h"
 #include "esp_rom_sys.h"
@@ -32,13 +34,15 @@ extern intptr_t _bss_end;
 *****************************************************************************/
 #define FLASH_READ_MMU_VADDR            (SOC_DROM_HIGH - CONFIG_MMU_PAGE_SIZE)
 
+typedef void __attribute__((noreturn)) (*kernel_entry_t)(void);
+
 /****************************************************************************
  *  local
 *****************************************************************************/
 static void bootloader_super_wdt_auto_feed(void);
 static void bootloader_config_wdt(void);
 
-static __attribute__((noreturn)) void KERNEL_load(uintptr_t flash_location);
+static kernel_entry_t KERNEL_load(uintptr_t flash_location);
 
 static ssize_t FLASH_read(uintptr_t flash_location, void *buf, size_t bufsize);
 static void FLASH_map_region(uintptr_t flash_location, uintptr_t vaddr, size_t size);
@@ -46,7 +50,7 @@ static void FLASH_map_region(uintptr_t flash_location, uintptr_t vaddr, size_t s
 /****************************************************************************
  *  exports
 *****************************************************************************/
-void Reset_Handler(void)
+void __attribute__((noreturn)) Reset_Handler(void)
 {
     #if XCHAL_ERRATUM_572
         uint32_t memctl = XCHAL_CACHE_MEMCTL_DEFAULT;
@@ -58,8 +62,8 @@ void Reset_Handler(void)
     bootloader_ana_bod_reset_config(true);
     bootloader_ana_clock_glitch_reset_config(false);
 
-    bootloader_super_wdt_auto_feed();
     bootloader_init_mem();
+    bootloader_clock_configure();
 
     memset(&_bss_start, 0, (&_bss_end - &_bss_start) * sizeof(_bss_start));
 
@@ -77,10 +81,13 @@ void Reset_Handler(void)
         mmu_ll_unmap_all(1);
     #endif
 
-    bootloader_config_wdt();
-    bootloader_clock_configure();
+    kernel_entry_t entry = KERNEL_load(0x10000);
 
-    KERNEL_load(0x10000);
+    bootloader_super_wdt_auto_feed();
+    bootloader_config_wdt();
+
+    esp_rom_printf("### sp: %p\n", xt_utils_get_sp());
+    entry();
 }
 
 /****************************************************************************
@@ -146,7 +153,7 @@ static void bootloader_config_wdt(void)
 }
 
 
-static void KERNEL_load(uintptr_t flash_location)
+static kernel_entry_t KERNEL_load(uintptr_t flash_location)
 {
     struct FLASH_segment
     {
@@ -154,9 +161,9 @@ static void KERNEL_load(uintptr_t flash_location)
         esp_image_segment_header_t hdr;
     };
 
-    static esp_image_header_t hdr;
-    static struct FLASH_segment ro_seg;
-    static struct FLASH_segment text_seg;
+    esp_image_header_t hdr;
+    struct FLASH_segment ro_seg;
+    struct FLASH_segment text_seg;
 
     FLASH_read(flash_location, &hdr, sizeof(hdr));
     flash_location += sizeof(hdr);
@@ -219,9 +226,7 @@ static void KERNEL_load(uintptr_t flash_location)
     }
     cache_hal_enable(CACHE_TYPE_ALL);
 
-    typedef void __attribute__((noreturn)) (*entry_t)(void);
-    (*(entry_t)hdr.entry_addr)();
-
+    return (kernel_entry_t)hdr.entry_addr;
 kernel_load_error:
     while(1) {}
 }
@@ -253,11 +258,8 @@ static ssize_t FLASH_read(uintptr_t flash_location, void *buf, size_t bufsize)
 
 static void FLASH_map_region(uintptr_t flash_location, uintptr_t vaddr, size_t size)
 {
-    uint32_t const mmu_page_size = mmu_ll_get_page_size(0);
-    uint32_t const mmu_page_mask = mmu_page_size - 1;
-
-    off_t offset = flash_location & mmu_page_mask;
-    int pages = (size + offset + mmu_page_mask) / mmu_page_size;
+    off_t offset = flash_location & (CONFIG_MMU_PAGE_SIZE - 1);
+    int pages = (size + offset + CONFIG_MMU_PAGE_SIZE - 1) / CONFIG_MMU_PAGE_SIZE;
 
     uint32_t entry_id = mmu_ll_get_entry_id(0, vaddr);
     uint32_t paddr = mmu_ll_format_paddr(0, flash_location);

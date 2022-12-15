@@ -91,14 +91,13 @@ MEMORY
     /*
         external FLASH
     */
-    FLASH_data_seg (R) :            org = 0x3C000000 + 0x20,   len = 16M    /* TODO remove this : +0x20 */
+    FLASH_data_seg (R) :            org = 0x3C000000 + 0x20,   len = 16M    /* TODO: remove this +0x20 */
     FLASH_text_seg (RX) :           org = 0x42000000 + 0x20,   len = 16M
 
     /*
         PSRAM
     */
-    PSRAM_data_seg (RW) :           org = 0x3D000000,   len = 16M
-    PSRAM_text_seg (RWX) :          org = 0x3D000000,   len = 16M   /* exists PSRAM text? */
+    PSRAM_data_seg (RWX) :          org = 0x3D000000,   len = 16M           /* REVIEW fix map PSRAM at 0x3C000000 + 16M?
 }
 MEMORY
 {

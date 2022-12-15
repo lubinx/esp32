@@ -47,6 +47,7 @@ void IRAM_ATTR SystemInit(void)
     esp_rom_printf("n9 ptr: %p\n", &n9);
     esp_rom_printf("\n\n\n");
     esp_rom_delay_us(1000000);
+    while (1) {}
 
     call_start_cpu0();
 }

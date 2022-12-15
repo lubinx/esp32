@@ -127,8 +127,8 @@ endif()
 # generate link scripts
 idf_build_get_property(sdkconfig_header SDKCONFIG_HEADER)
 idf_build_get_property(config_dir CONFIG_DIR)
-set(ld_input "${CMAKE_CURRENT_LIST_DIR}/ld/${IDF_TARGET}_memap.ld.in")
-set(ld_output "${config_dir}/${IDF_TARGET}_memap.ld")
+set(ld_input "${CMAKE_CURRENT_LIST_DIR}/ld/${IDF_TARGET}_memory.ld.in")
+set(ld_output "${config_dir}/${IDF_TARGET}_memory.ld")
 
 add_custom_command(
     OUTPUT ${ld_output}
