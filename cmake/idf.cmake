@@ -51,10 +51,6 @@ set(IDF_CMAKE_PATH ${IDF_PATH}/tools/cmake)
 #############################################################################
 set(CMAKE_TOOLCHAIN_FILE ${IDF_PATH}/tools/cmake/toolchain-${IDF_TARGET}.cmake)
 
-# COMPILE_OPTIONS
-list(APPEND COMPILE_DEFINITIONS
-)
-
 # compile options for project source & esp-idf'components
 list(APPEND COMPILE_OPTIONS
     "$<$<COMPILE_LANGUAGE:C>:-std=gnu17>"
@@ -88,28 +84,27 @@ list(APPEND IDF_COMPILE_OPTIONS
     "$<$<COMPILE_LANGUAGE:C>:-Wno-old-style-declaration>"
 )
 
+# LINK_OPTIONS
+list(APPEND LINK_OPTIONS
+    "-Wl,--gc-sections"
+    "-Wl,--warn-common"
+)
+
 # compile definitions for esp-idf'components only
 list(APPEND IDF_COMPILE_DEFINITIONS
     "ESP_PLATFORM"          # 3party components porting
     "_GNU_SOURCE"
 )
 
-# LINK_OPTIONS
-list(APPEND LINK_OPTIONS
-    "-Wl,--gc-sections"
-    "-Wl,--warn-common"
-    "-fno-lto"
-)
-
 # IDF_KERNEL_COMPONENTS
-#   TODO: components listed in here will generate solo sdkconfig.idf
+#   TODO: components listed in here will generate solo sdkconfig
 if (NOT IDF_TARGET_ARCH STREQUAL "")
     list(APPEND IDF_KERNEL_COMPONENTS ${IDF_TARGET_ARCH})
 endif()
 list(APPEND IDF_KERNEL_COMPONENTS
     "freertos" "newlib" "heap"  "cxx" "pthread"
     "esp_hw_support" "esp_rom" "esp_system"
-    "efuse" "hal" "soc" "driver"
+    "soc" "hal" "efuse" "driver"
     "bootloader_support" "spi_flash"
     "esptool_py"
 )
@@ -129,6 +124,9 @@ list(APPEND OBSOLETED_COMPONENTS
 # 💡 include
 #############################################################################
 include(${IDF_CMAKE_PATH}/version.cmake)
+include(${IDF_CMAKE_PATH}/utilities.cmake)
+include(${IDF_CMAKE_PATH}/kconfig.cmake)
+include(${IDF_CMAKE_PATH}/ldgen.cmake)
 
 # cmake last build idf version
 if (IDF_BUILD_VERSION AND NOT ($ENV{IDF_VERSION} STREQUAL "${IDF_BUILD_VERSION}"))
@@ -137,9 +135,7 @@ if (IDF_BUILD_VERSION AND NOT ($ENV{IDF_VERSION} STREQUAL "${IDF_BUILD_VERSION}"
 else()
     set(IDF_BUILD_VERSION $ENV{IDF_VERSION} CACHE STRING "esp-idf version")
 endif()
-list(APPEND IDF_COMPILE_DEFINITIONS
-    "IDF_VER=\"$ENV{IDF_VERSION}\""
-)
+list(APPEND IDF_COMPILE_DEFINITIONS "IDF_VER=\"$ENV{IDF_VERSION}\"")
 
 # cmake caching python fullpath
 if (NOT PYTHON_ENV)
@@ -148,10 +144,6 @@ if (NOT PYTHON_ENV)
     set(PYTHON_ENV "${PYTHON_ENV}/bin/python" CACHE STRING "esp-idf python path")
 endif()
 
-include(${IDF_CMAKE_PATH}/utilities.cmake)
-include(${IDF_CMAKE_PATH}/kconfig.cmake)
-include(${IDF_CMAKE_PATH}/ldgen.cmake)
-
 # tool_version_check.cmake
 function(check_expected_tool_version tool_name tool_path)
 endfunction()
@@ -159,20 +151,17 @@ endfunction()
 #############################################################################
 # esp-idf git submodules
 #############################################################################
-function (__git_submodule_check_once)
+function (__idf_git_submodule_check_once)
     # get git submodules from ${IDF_PATH} if submodules was not initialized
     if (NOT GIT_SUBMODULES_CHECKED)
     set(GIT_SUBMODULES_CHECKED true CACHE BOOL "esp-idf git submodule checked")
-        message("💡 Checking ESP-IDF components submodules, this will only execute once")
-
+        message("💡 Checking ESP-IDF components submodules")
         include(${IDF_CMAKE_PATH}/git_submodules.cmake)
         git_submodule_check(${IDF_PATH})
-
         message("")
     endif()
 endfunction()
-
-__git_submodule_check_once()
+__idf_git_submodule_check_once()
 
 #############################################################################
 # esp-idf global properties
@@ -265,7 +254,6 @@ function(__build_init)
         message("\tComponents path: ${IDF_PATH}")
         message("\tTools path: ${IDF_ENV_PATH}")
         message("\tBuilding target: ${IDF_TARGET}")
-        message("")
 
     # setup for idf_build_set_property() / idf_build_get_property()
     add_library(__idf_build_target STATIC IMPORTED GLOBAL)
@@ -593,7 +581,7 @@ function(idf_build)
     idf_build_set_property(COMPILE_OPTIONS "${IDF_COMPILE_OPTIONS}" APPEND)
     idf_build_set_property(LINK_OPTIONS "${LINK_OPTIONS}" APPEND)
 
-    message("\n💡 Resolve dependencies")
+    message("💡 Resolve dependencies")
     function(__resove_deps)
         # add esp-idf common required components
         idf_build_get_property(common_requires __COMPONENT_REQUIRES_COMMON)
@@ -624,7 +612,7 @@ function(idf_build)
     endfunction()
     __resove_deps()
 
-    message("\n💡 Kconfig")
+    message("💡 Kconfig")
     macro(__kconfig)
         # Generate sdkconfig.h/sdkconfig.cmake
         idf_build_get_property(sdkconfig SDKCONFIG)
@@ -774,6 +762,6 @@ function(idf_build)
     # message("\tbootloader.bin has to flashing \t @ 0x0     offset")
     # message("\t${PROJECT_NAME}.bin folows bootloader \t @ 0x10000 offset")
     add_subdirectory("bootloader")
-
     message("")
+
 endfunction()

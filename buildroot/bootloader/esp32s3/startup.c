@@ -1,7 +1,5 @@
 #include <stdbool.h>
 #include <string.h>
-#include <errno.h>
-#include <assert.h>
 
 #include "xt_utils.h"
 
@@ -22,6 +20,9 @@
 #include "bootloader_mem.h"
 
 #include "esp_app_format.h"
+
+// FLASH_read() => memcpy() overread
+#pragma GCC diagnostic ignored "-Wstringop-overread"
 
 /****************************************************************************
  *  imports
@@ -67,19 +68,18 @@ void __attribute__((noreturn)) Reset_Handler(void)
 
     memset(&__bss_start__, 0, (&__bss_end__ - &__bss_start__) * sizeof(__bss_start__));
 
+    /*
     #ifdef CONFIG_EFUSE_VIRTUAL
         ESP_LOGW(TAG, "eFuse virtual mode is enabled. If Secure boot or Flash encryption is enabled then it does not provide any security. FOR TESTING ONLY!");
         #ifndef CONFIG_EFUSE_VIRTUAL_KEEP_IN_FLASH
             esp_efuse_init_virtual_mode_in_ram();
         #endif
     #endif
+    */
 
     cache_hal_init();
-
+    // esp32s3 mmu_id is ignored
     mmu_ll_unmap_all(0);
-    #if ! CONFIG_FREERTOS_UNICORE
-        mmu_ll_unmap_all(1);
-    #endif
 
     bootloader_super_wdt_auto_feed();
     bootloader_config_wdt();
@@ -120,7 +120,6 @@ static void bootloader_config_wdt(void)
      * needed anymore. If configured to do so, we also initialize the RWDT to
      * protect the remainder of the bootloader process.
      */
-
     // disable RWDT flashboot protection.
     wdt_hal_context_t rwdt_ctx =
         #if CONFIG_IDF_TARGET_ESP32C6 // TODO: IDF-5653
@@ -169,8 +168,7 @@ static kernel_entry_t KERNEL_load(uintptr_t flash_location)
 
     if (ESP_IMAGE_HEADER_MAGIC != hdr.magic)
     {
-        esp_rom_printf("error loading kernel: invalid image at 64K(0x10000) offset\n");
-        esp_rom_printf("\timage hdr TAG should be 0x%X, but 0x%X\n", ESP_IMAGE_HEADER_MAGIC, hdr.magic);
+        esp_rom_printf("error loading kernel: image hdr'TAG should be 0x%x, but 0x%x\n", ESP_IMAGE_HEADER_MAGIC, hdr.magic);
         goto kernel_load_error;
     }
 
@@ -227,6 +225,7 @@ static kernel_entry_t KERNEL_load(uintptr_t flash_location)
     cache_hal_enable(CACHE_TYPE_ALL);
 
     return (kernel_entry_t)hdr.entry_addr;
+
 kernel_load_error:
     while(1) {}
 }
