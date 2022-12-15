@@ -51,7 +51,11 @@ set(IDF_CMAKE_PATH ${IDF_PATH}/tools/cmake)
 #############################################################################
 set(CMAKE_TOOLCHAIN_FILE ${IDF_PATH}/tools/cmake/toolchain-${IDF_TARGET}.cmake)
 
-# common compile options for project source & esp-idf'components
+# COMPILE_OPTIONS
+list(APPEND COMPILE_DEFINITIONS
+)
+
+# compile options for project source & esp-idf'components
 list(APPEND COMPILE_OPTIONS
     "$<$<COMPILE_LANGUAGE:C>:-std=gnu17>"
     "$<$<COMPILE_LANGUAGE:CXX>:-std=gnu++20>"
@@ -60,16 +64,41 @@ list(APPEND COMPILE_OPTIONS
     "-Wall"
     "-Werror=all"
     "-Wextra"
+    "-Wconversion"
+    "-Wformat"
+    "-Wundef"
+    "-Wshadow"
 )
 
-# COMPILE_OPTIONS
-list(APPEND COMPILE_DEFINITIONS
+# extra / override compile options for esp-idf'components only
+list(APPEND IDF_COMPILE_OPTIONS
+    "-O3"                       # ignore Kconfig force using O3 for now
+    "-Wno-array-bounds"         # freertos
+    "-Wno-conversion"
+    "-Wno-enum-conversion"
+    "-Wno-format"
+    "-Wno-shadow"
+    "-Wno-sign-compare"
+    "-Wno-undef"
+    "-Wno-unused-parameter"
+    "-Wno-unused-variable"
+    "-fno-jump-tables"
+    "-fno-tree-switch-conversion"
+    "$<$<COMPILE_LANGUAGE:C>:-fstrict-volatile-bitfields>"
+    "$<$<COMPILE_LANGUAGE:C>:-Wno-old-style-declaration>"
+)
+
+# compile definitions for esp-idf'components only
+list(APPEND IDF_COMPILE_DEFINITIONS
+    "ESP_PLATFORM"          # 3party components porting
+    "_GNU_SOURCE"
 )
 
 # LINK_OPTIONS
 list(APPEND LINK_OPTIONS
     "-Wl,--gc-sections"
     "-Wl,--warn-common"
+    "-fno-lto"
 )
 
 # IDF_KERNEL_COMPONENTS
@@ -94,24 +123,6 @@ list(APPEND OBSOLETED_COMPONENTS
     "esp_common"
     # removed
     "partition_table"
-)
-
-# compile options for esp-idf'components only
-list(APPEND IDF_COMPILE_OPTIONS
-    "-O3"                       # ignore Kconfig force using O3 for now
-    "-Wno-array-bounds"         # freertos
-    "-Wno-enum-conversion"
-    "-Wno-format"
-    "-Wno-unused-parameter"
-    "-Wno-unused-variable"
-    "-Wno-sign-compare"
-    "$<$<COMPILE_LANGUAGE:C>:-fstrict-volatile-bitfields>"
-    "$<$<COMPILE_LANGUAGE:C>:-Wno-old-style-declaration>"
-)
-# compile definitions for esp-idf'components only
-list(APPEND IDF_COMPILE_DEFINITIONS
-    "ESP_PLATFORM"          # 3party components porting
-    "_GNU_SOURCE"
 )
 
 #############################################################################
@@ -265,7 +276,7 @@ function(__build_init)
     idf_build_set_property(IDF_TARGET_ARCH ${IDF_TARGET_ARCH})
 
     # python
-    idf_build_set_property(__CHECK_PYTHON 0)        # do not check python
+    # idf_build_set_property(__CHECK_PYTHON 0)        # do not check python
     idf_build_set_property(PYTHON "${PYTHON_ENV}")
 
     idf_build_set_property(PROJECT_DIR ${CMAKE_SOURCE_DIR})
@@ -448,14 +459,8 @@ macro(idf_component_register)
 endmacro()
 
 function(__inherited_component_register component_target)
-    # Create the final target for the component. This target is the target that is
-    # visible outside the build system.
     __component_get_property(component_lib ${component_target} COMPONENT_LIB)
 
-    # Add component manifest to the list of dependencies
-    # set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${component_dir}/idf_component.yml")
-
-    # Glob sources
     if(__SRC_DIRS)
         foreach(dir ${__SRC_DIRS})
             get_filename_component(dir ${dir} ABSOLUTE BASE_DIR ${CMAKE_CURRENT_LIST_DIR})
@@ -504,9 +509,7 @@ function(__inherited_component_register component_target)
         target_include_directories(${component_lib} INTERFACE "${include_directories}")
 
         idf_build_get_property(compile_definitions COMPILE_DEFINITIONS GENERATOR_EXPRESSION)
-        foreach(def ${compile_definitions})
-            target_compile_definitions(${component_lib} PRIVATE ${def})
-        endforeach()
+        target_compile_definitions(${component_lib} PRIVATE "${compile_definitions}")
 
         idf_build_get_property(compile_options COMPILE_OPTIONS GENERATOR_EXPRESSION)
         foreach(option ${compile_options})
@@ -574,52 +577,7 @@ endfunction()
 # idf_build()
 #############################################################################
 function(idf_build)
-    # Generate compile_commands.json
     set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-    message("\n💡 Resolve dependencies")
-
-    # add esp-idf common required components
-    idf_build_get_property(common_requires __COMPONENT_REQUIRES_COMMON)
-    foreach(iter ${common_requires})
-        idf_build_get_property(component_targets __COMPONENT_TARGETS)
-        idf_get_component_target(req_target ${iter})
-
-        if (NOT req_target IN_LIST component_targets)
-            idf_component_add(${iter})
-        endif()
-    endforeach()
-    # find & add all depended components
-    while(1)
-        get_property(deps GLOBAL PROPERTY DEPENDED_COMPONENTS)
-        list(POP_FRONT deps iter)
-        set_property(GLOBAL PROPERTY DEPENDED_COMPONENTS ${deps})
-
-        if (iter)
-            idf_build_get_property(component_targets __COMPONENT_TARGETS)
-            idf_get_component_target(req_target ${iter})
-            if (NOT req_target IN_LIST component_targets)
-                idf_component_add(${iter})
-            endif()
-        else()
-            break()
-        endif()
-    endwhile()
-
-    message("\n💡 Kconfig")
-
-    # Generate sdkconfig.h/sdkconfig.cmake
-    idf_build_get_property(sdkconfig SDKCONFIG)
-    idf_build_get_property(sdkconfig_defaults SDKCONFIG_DEFAULTS)
-    __kconfig_generate_config("${sdkconfig}" "${sdkconfig_defaults}")
-    # Include the sdkconfig cmake file
-    idf_build_get_property(sdkconfig_cmake SDKCONFIG_CMAKE)
-    include(${sdkconfig_cmake})
-
-    message("\n💡 Link dependencies")
-
-    # do not remove: some esp-idf'component direct using this value
-    set(target ${IDF_TARGET})
 
     include(CheckTypeSize)
     check_type_size("time_t" TIME_T_SIZE)
@@ -630,52 +588,146 @@ function(idf_build)
     endif()
 
     # attach esp-idf'components compile options
-    foreach(iter ${COMPILE_OPTIONS} ${IDF_COMPILE_OPTIONS})
-        idf_build_set_property(COMPILE_OPTIONS ${iter} APPEND)
-    endforeach()
-    foreach(iter ${IDF_COMPILE_DEFINITIONS})
-        idf_build_set_property(COMPILE_DEFINITIONS ${iter} APPEND)
-    endforeach()
-    foreach(iter ${LINK_OPTIONS})
-        idf_build_get_property(LINK_OPTIONS ${iter} APPEND)
-    endforeach()
+    idf_build_set_property(COMPILE_DEFINITIONS "${IDF_COMPILE_DEFINITIONS}" APPEND)
+    idf_build_set_property(COMPILE_OPTIONS "${COMPILE_OPTIONS}" APPEND)
+    idf_build_set_property(COMPILE_OPTIONS "${IDF_COMPILE_OPTIONS}" APPEND)
+    idf_build_set_property(LINK_OPTIONS "${LINK_OPTIONS}" APPEND)
 
+    message("\n💡 Resolve dependencies")
+    function(__resove_deps)
+        # add esp-idf common required components
+        idf_build_get_property(common_requires __COMPONENT_REQUIRES_COMMON)
+        foreach(iter ${common_requires})
+            idf_build_get_property(component_targets __COMPONENT_TARGETS)
+            idf_get_component_target(req_target ${iter})
+
+            if (NOT req_target IN_LIST component_targets)
+                idf_component_add(${iter})
+            endif()
+        endforeach()
+        # find & add all depended components
+        while(1)
+            get_property(deps GLOBAL PROPERTY DEPENDED_COMPONENTS)
+            list(POP_FRONT deps iter)
+            set_property(GLOBAL PROPERTY DEPENDED_COMPONENTS ${deps})
+
+            if (iter)
+                idf_build_get_property(component_targets __COMPONENT_TARGETS)
+                idf_get_component_target(req_target ${iter})
+                if (NOT req_target IN_LIST component_targets)
+                    idf_component_add(${iter})
+                endif()
+            else()
+                break()
+            endif()
+        endwhile()
+    endfunction()
+    __resove_deps()
+
+    message("\n💡 Kconfig")
+    macro(__kconfig)
+        # Generate sdkconfig.h/sdkconfig.cmake
+        idf_build_get_property(sdkconfig SDKCONFIG)
+        idf_build_get_property(sdkconfig_defaults SDKCONFIG_DEFAULTS)
+        __kconfig_generate_config("${sdkconfig}" "${sdkconfig_defaults}")
+
+        # Include the sdkconfig cmake file
+        idf_build_get_property(sdkconfig_cmake SDKCONFIG_CMAKE)
+        include(${sdkconfig_cmake})
+
+        if(CONFIG_COMPILER_OPTIMIZATION_ASSERTIONS_DISABLE)
+            add_compile_definitions("NDEBUG")
+        endif()
+
+        if(CONFIG_COMPILER_CXX_EXCEPTIONS)
+            add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-fexceptions>")
+        else()
+            add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>")
+        endif()
+
+        if(CONFIG_COMPILER_CXX_RTTI)
+            add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-frtti>")
+        else()
+            add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>")
+        endif()
+
+        if(CONFIG_COMPILER_WARN_WRITE_STRINGS)
+            add_compile_options("-Wwrite-strings")
+        endif()
+
+        if(CONFIG_COMPILER_STACK_CHECK_MODE_NORM)
+            add_compile_options("-fstack-protector")
+        elseif(CONFIG_COMPILER_STACK_CHECK_MODE_STRONG)
+            add_compile_options("-fstack-protector-strong")
+        elseif(CONFIG_COMPILER_STACK_CHECK_MODE_ALL)
+            add_compile_options("-fstack-protector-all")
+        endif()
+
+        if(CONFIG_COMPILER_DUMP_RTL_FILES)
+            add_compile_options("-fdump-rtl-expand")
+        endif()
+
+        if(CONFIG_COMPILER_HIDE_PATHS_MACROS)
+            message("\t❓ CONFIG_COMPILER_HIDE_PATHS_MACROS")
+        endif()
+        if(CONFIG_APP_REPRODUCIBLE_BUILD)
+            message("\t❓ CONFIG_APP_REPRODUCIBLE_BUILD")
+        endif()
+
+        if(CONFIG_ESP_SYSTEM_USE_EH_FRAME)
+            add_compile_options("-fasynchronous-unwind-tables")
+            idf_build_set_property(LINK_OPTIONS "-Wl,--eh-frame-hdr" APPEND)
+        endif()
+
+        # SMP FreeRTOS user provided minimal idle hook. This allows the user to provide their own copy of vApplicationMinimalIdleHook()
+        if(CONFIG_FREERTOS_USE_MINIMAL_IDLE_HOOK)
+            idf_build_set_property(LINK_OPTIONS "-Wl,--wrap=vApplicationMinimalIdleHook" APPEND)
+        endif()
+
+        if(CONFIG_COMPILER_SAVE_RESTORE_LIBCALLS)
+            idf_build_set_property(COMPILE_OPTIONS "-msave-restore" APPEND)
+        endif()
+    endmacro()
+    __kconfig()
+
+    message("\n💡 Link dependencies")
     idf_build_get_property(component_targets __COMPONENT_TARGETS)
-    # project_include.cmake
-    foreach(component_target ${component_targets})
-        __component_get_property(COMPONENT_DIR ${component_target} COMPONENT_DIR)
 
-        if(EXISTS ${COMPONENT_DIR}/project_include.cmake)
-            include(${COMPONENT_DIR}/project_include.cmake)
-        endif()
-    endforeach()
+    macro(__import_components)
+        # do not remove: some esp-idf'component direct using this value
+        set(target ${IDF_TARGET})
+        # project_include.cmake
+        foreach(component_target ${component_targets})
+            __component_get_property(COMPONENT_DIR ${component_target} COMPONENT_DIR)
 
-    # import esp-idf misc compiler options
-    #   but...unset __BUILD_COMPONENT_TARGETS to prevent add any components, will do below
-    idf_build_set_property(__BUILD_COMPONENT_TARGETS "")
-    add_subdirectory(${IDF_PATH} ${CMAKE_BINARY_DIR}/esp-idf)
+            if(EXISTS ${COMPONENT_DIR}/project_include.cmake)
+                include(${COMPONENT_DIR}/project_include.cmake)
+            endif()
+        endforeach()
 
-    set(__idf_component_context 1)
-    enable_language(C CXX ASM)
+        set(__idf_component_context 1)
+        enable_language(C CXX ASM)
 
-    idf_build_get_property(build_dir BUILD_DIR)
-    foreach(component_target ${component_targets})
-        __component_get_property(prefix ${component_target} __PREFIX)
-        __component_get_property(component_name ${component_target} COMPONENT_NAME)
-        __component_get_property(COMPONENT_DIR ${component_target} COMPONENT_DIR)
+        idf_build_get_property(build_dir BUILD_DIR)
+        foreach(component_target ${component_targets})
+            __component_get_property(prefix ${component_target} __PREFIX)
+            __component_get_property(component_name ${component_target} COMPONENT_NAME)
+            __component_get_property(COMPONENT_DIR ${component_target} COMPONENT_DIR)
 
-        add_subdirectory(${COMPONENT_DIR} ${build_dir}/${prefix}/${component_name})
+            add_subdirectory(${COMPONENT_DIR} ${build_dir}/${prefix}/${component_name})
 
-        # fix: mbedtls private targets not append compile options
-        if (component_name STREQUAL "mbedtls")
-            list(APPEND mbedtls_targets "mbedtls" "mbedcrypto" "mbedx509")
-            foreach(mbedtls_target ${mbedtls_targets})
-                foreach(option ${IDF_COMPILE_OPTIONS})
-                    target_compile_options(${mbedtls_target} PRIVATE ${option})
+            # fix: mbedtls private targets not append compile options
+            if (component_name STREQUAL "mbedtls")
+                list(APPEND mbedtls_targets "mbedtls" "mbedcrypto" "mbedx509")
+                foreach(mbedtls_target ${mbedtls_targets})
+                    foreach(option ${IDF_COMPILE_OPTIONS})
+                        target_compile_options(${mbedtls_target} PRIVATE ${option})
+                    endforeach()
                 endforeach()
-            endforeach()
-        endif()
-    endforeach()
+            endif()
+        endforeach()
+    endmacro()
+    __import_components()
 
     add_executable(${CMAKE_PROJECT_NAME} "dummy.c")
     set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME "${CMAKE_PROJECT_NAME}.elf")

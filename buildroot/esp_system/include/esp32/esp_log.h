@@ -25,10 +25,8 @@ __BEGIN_DECLS
     };
     typedef enum esp_log_level_t esp_log_level_t;
 
-    #define ESP_LOG_LEVEL(level, tag, format, ...)  \
-        esp_log_write(level, tag, format)
-    #define ESP_LOG_LEVEL_LOCAL(level, tag, format, ...)    \
-        esp_log_write(level, tag, format)
+    #define ESP_LOG_LEVEL(level, tag, format, ...)          esp_log_write(level, tag, format, ##__VA_ARGS__)
+    #define ESP_LOG_LEVEL_LOCAL(level, tag, format, ...)    esp_log_write(level, tag, format, ##__VA_ARGS__)
 
     #define ESP_EARLY_LOGE(tag, format, ...)    esp_log_write(ESP_LOG_ERROR,    tag, format, ##__VA_ARGS__)
     #define ESP_EARLY_LOGW(tag, format, ...)    esp_log_write(ESP_LOG_WARN,     tag, format, ##__VA_ARGS__)
@@ -48,23 +46,20 @@ __BEGIN_DECLS
     #define ESP_DRAM_LOGD(tag, format, ...)     esp_log_write(ESP_LOG_DEBUG,    tag, format, ##__VA_ARGS__)
     #define ESP_DRAM_LOGV(tag, format, ...)     esp_log_write(ESP_LOG_VERBOSE,  tag, format, ##__VA_ARGS__)
 
+    #define LOG_FORMAT(letter, format)  LOG_COLOR_ ## letter #letter " (%" PRIu32 ") %s: " format LOG_RESET_COLOR "\n"
+    #define LOG_SYSTEM_TIME_FORMAT(letter, format)  LOG_COLOR_ ## letter #letter " (%s) %s: " format LOG_RESET_COLOR "\n"
+
+// to be back compatible
+    /*
     #define ESP_LOG_BUFFER_HEX_LEVEL(tag, buffer, buff_len, level)
     #define ESP_LOG_BUFFER_CHAR_LEVEL(tag, buffer, buff_len, level)
     #define ESP_LOG_BUFFER_HEXDUMP(tag, buffer, buff_len, level)
     #define ESP_LOG_BUFFER_HEX(tag, buffer, buff_len)
     #define ESP_LOG_BUFFER_CHAR(tag, buffer, buff_len)
-
-    #define LOG_FORMAT(letter, format)  LOG_COLOR_ ## letter #letter " (%" PRIu32 ") %s: " format LOG_RESET_COLOR "\n"
-    #define LOG_SYSTEM_TIME_FORMAT(letter, format)  LOG_COLOR_ ## letter #letter " (%s) %s: " format LOG_RESET_COLOR "\n"
-
-// to be back compatible
-    #define LOG_LOCAL_LEVEL  ESP_LOG_NONE
-    #define esp_log_buffer_hex                  ESP_LOG_BUFFER_HEX
-    #define esp_log_buffer_char                 ESP_LOG_BUFFER_CHAR
-/*
-    #define _ESP_LOG_DRAM_LOG_FORMAT(letter, format)
-    #define ESP_DRAM_LOG_IMPL(tag, format, log_level, log_tag_letter, ...)
-*/
+    */
+    #define LOG_LOCAL_LEVEL                     ESP_LOG_NONE
+    #define esp_log_buffer_hex(tag, buffer, buff_len)
+    // #define esp_log_buffer_char                 ESP_LOG_BUFFER_CHAR
 
 #if CONFIG_LOG_COLORS
     #define LOG_COLOR_BLACK   "30"
@@ -112,9 +107,6 @@ extern __attribute__((nothrow))
 
 extern __attribute__((nothrow))
     uint32_t esp_log_early_timestamp(void);
-
-extern __attribute__((nothrow))
-    void esp_log_writev(esp_log_level_t level, char const *tag, char const *format, va_list args);
 
 extern  __attribute__ ((nothrow, format (printf, 3, 4)))
     void esp_log_write(esp_log_level_t level, char const *tag, char const *format, ...);

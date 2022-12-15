@@ -26,8 +26,8 @@
 /****************************************************************************
  *  imports
 *****************************************************************************/
-extern intptr_t _bss_start;
-extern intptr_t _bss_end;
+extern intptr_t __bss_start__;
+extern intptr_t __bss_end__;
 
 /****************************************************************************
  *  consts
@@ -65,7 +65,7 @@ void __attribute__((noreturn)) Reset_Handler(void)
     bootloader_init_mem();
     bootloader_clock_configure();
 
-    memset(&_bss_start, 0, (&_bss_end - &_bss_start) * sizeof(_bss_start));
+    memset(&__bss_start__, 0, (&__bss_end__ - &__bss_start__) * sizeof(__bss_start__));
 
     #ifdef CONFIG_EFUSE_VIRTUAL
         ESP_LOGW(TAG, "eFuse virtual mode is enabled. If Secure boot or Flash encryption is enabled then it does not provide any security. FOR TESTING ONLY!");
@@ -81,11 +81,10 @@ void __attribute__((noreturn)) Reset_Handler(void)
         mmu_ll_unmap_all(1);
     #endif
 
-    kernel_entry_t entry = KERNEL_load(0x10000);
-
     bootloader_super_wdt_auto_feed();
     bootloader_config_wdt();
 
+    kernel_entry_t entry = KERNEL_load(0x10000);
     esp_rom_printf("### sp: %p\n", xt_utils_get_sp());
     entry();
 }
@@ -162,15 +161,16 @@ static kernel_entry_t KERNEL_load(uintptr_t flash_location)
     };
 
     esp_image_header_t hdr;
-    struct FLASH_segment ro_seg;
-    struct FLASH_segment text_seg;
+    struct FLASH_segment ro_seg = {0};
+    struct FLASH_segment text_seg = {0};
 
     FLASH_read(flash_location, &hdr, sizeof(hdr));
     flash_location += sizeof(hdr);
 
     if (ESP_IMAGE_HEADER_MAGIC != hdr.magic)
     {
-        esp_rom_printf("error loading kernel: invalid image tag(magic) %x\n", hdr.magic);
+        esp_rom_printf("error loading kernel: invalid image at 64K(0x10000) offset\n");
+        esp_rom_printf("\timage hdr TAG should be 0x%X, but 0x%X\n", ESP_IMAGE_HEADER_MAGIC, hdr.magic);
         goto kernel_load_error;
     }
 
