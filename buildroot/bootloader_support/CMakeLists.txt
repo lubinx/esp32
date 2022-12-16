@@ -38,5 +38,3 @@ idf_component_register(
         "hal"
         "efuse"
 )
-
-

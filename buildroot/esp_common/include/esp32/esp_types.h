@@ -8,8 +8,9 @@
 #define __ESP_TYPES_H__
 
 #ifdef __GNUC__
-#include <sys/cdefs.h>
+    #include <sys/cdefs.h>
 #endif /*__GNUC__*/
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>

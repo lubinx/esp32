@@ -13,5 +13,4 @@ config APP_RETRIEVE_LEN_ELF_SHA
     int
     default 16
 
-# rsource "$IDF_PATH/components/esp_common/Kconfig"
 rsource "$IDF_PATH/components/esp_system/Kconfig"

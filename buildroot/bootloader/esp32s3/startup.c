@@ -20,6 +20,9 @@
 #include "bootloader_mem.h"
 
 #include "esp_app_format.h"
+#include "esp_log.h"
+
+static char const *TAG = "bootloader";
 
 // FLASH_read() => memcpy() overread
 #pragma GCC diagnostic ignored "-Wstringop-overread"
@@ -53,6 +56,12 @@ static void FLASH_map_region(uintptr_t flash_location, uintptr_t vaddr, size_t s
 *****************************************************************************/
 void __attribute__((noreturn)) Reset_Handler(void)
 {
+    ESP_LOGE(TAG, "hello world!");
+    ESP_LOGW(TAG, "hello world!");
+    ESP_LOGI(TAG, "hello world!");
+    ESP_LOGD(TAG, "hello world!");
+    ESP_LOGV(TAG, "hello world!");
+
     #if XCHAL_ERRATUM_572
         uint32_t memctl = XCHAL_CACHE_MEMCTL_DEFAULT;
         WSR(MEMCTL, memctl);
@@ -85,7 +94,8 @@ void __attribute__((noreturn)) Reset_Handler(void)
     bootloader_config_wdt();
 
     kernel_entry_t entry = KERNEL_load(0x10000);
-    esp_rom_printf("### sp: %p\n", xt_utils_get_sp());
+    ESP_LOGD(TAG, "sp: %p\n", xt_utils_get_sp());
+
     entry();
 }
 
@@ -131,17 +141,17 @@ static void bootloader_config_wdt(void)
     wdt_hal_set_flashboot_en(&rwdt_ctx, false);
     wdt_hal_write_protect_enable(&rwdt_ctx);
 
-#ifdef CONFIG_BOOTLOADER_WDT_ENABLE
-    wdt_hal_init(&rwdt_ctx, WDT_RWDT, 0, false);
-    wdt_hal_write_protect_disable(&rwdt_ctx);
+    #if CONFIG_BOOTLOADER_WDT_ENABLE
+        wdt_hal_init(&rwdt_ctx, WDT_RWDT, 0, false);
+        wdt_hal_write_protect_disable(&rwdt_ctx);
 
-    wdt_hal_config_stage(&rwdt_ctx, WDT_STAGE0,
-        (uint32_t)((uint64_t)CONFIG_BOOTLOADER_WDT_TIME_MS * rtc_clk_slow_freq_get_hz() / 1000),
-        WDT_STAGE_ACTION_RESET_RTC
-    );
-    wdt_hal_enable(&rwdt_ctx);
-    wdt_hal_write_protect_enable(&rwdt_ctx);
-#endif
+        wdt_hal_config_stage(&rwdt_ctx, WDT_STAGE0,
+            (uint32_t)((uint64_t)CONFIG_BOOTLOADER_WDT_TIME_MS * rtc_clk_slow_freq_get_hz() / 1000),
+            WDT_STAGE_ACTION_RESET_RTC
+        );
+        wdt_hal_enable(&rwdt_ctx);
+        wdt_hal_write_protect_enable(&rwdt_ctx);
+    #endif
 
     // disable MWDT0 flashboot protection. But only after we've enabled the RWDT first so that there's not gap in WDT protection.
     wdt_hal_context_t mwdt_ctx = {.inst = WDT_MWDT0, .mwdt_dev = &TIMERG0};
@@ -149,7 +159,6 @@ static void bootloader_config_wdt(void)
     wdt_hal_set_flashboot_en(&mwdt_ctx, false);
     wdt_hal_write_protect_enable(&mwdt_ctx);
 }
-
 
 static kernel_entry_t KERNEL_load(uintptr_t flash_location)
 {

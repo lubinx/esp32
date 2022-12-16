@@ -1,22 +1,11 @@
 list(APPEND includes
-    # esp_common & log
-    "include"
-    "include/esp32"
-    "include/posix"
     # merge spi_flash
     "${IDF_PATH}/components/spi_flash/include"
     # esp_system
     "${IDF_PATH}/components/esp_system/include"
-    # eap_app_format & app_update
-    "${IDF_PATH}/components/app_update/include"
-    "${IDF_PATH}/components/esp_app_format/include"
 )
 
 list(APPEND srcs
-    # log
-    "log.c"
-    # esp_common
-    "${IDF_PATH}/components/esp_common/src/esp_err_to_name.c"
     # esp_system
     "${IDF_PATH}/components/esp_system/crosscore_int.c"
     "${IDF_PATH}/components/esp_system/esp_ipc.c"
@@ -35,17 +24,6 @@ list(APPEND srcs
     "ESP_system.c"
     "flash_code_test.c"
 )
-
-# esp_app_format & app_update
-list(APPEND app_srcs
-    "${IDF_PATH}/components/app_update/esp_ota_ops.c"
-    "${IDF_PATH}/components/app_update/esp_ota_app_desc.c"
-    "${IDF_PATH}/components/esp_app_format/esp_app_desc.c"
-)
-list(APPEND srcs ${app_srcs})
-
-set_source_files_properties(${app_srcs} PROPERTIES COMPILE_OPTIONS
-    "-DPROJECT_VER=\"${PROJECT_VERSION}\";-DPROJECT_NAME=\"${PROJECT_NAME}\"")
 
 if(CONFIG_IDF_ENV_FPGA)
     list(APPEND srcs
@@ -89,15 +67,13 @@ idf_component_register(
     PRIV_REQUIRES
         "efuse"
         "hal"
+        "esp_common"
         "esp_partition"
         "esp_timer"
         "spi_flash"
         # "pthread"
         # "driver"
     LDFRAGMENTS
-        # esp_common
-        "${IDF_PATH}/components/esp_common/common.lf"
-        "${IDF_PATH}/components/esp_common/soc.lf"
         # esp_system
         "${IDF_PATH}/components/esp_system/linker.lf"
         "${IDF_PATH}/components/esp_system/app.lf"
@@ -156,7 +132,6 @@ target_linker_script(${COMPONENT_LIB} INTERFACE "ld/${IDF_TARGET}_sections.ld"
 #     PROPERTIES COMPILE_FLAGS
 #     -fno-stack-protector
 # )
-
 
 # [refactor-todo] requirements due to init code, should be removable
 # once link-time registration of component init functions is used.
