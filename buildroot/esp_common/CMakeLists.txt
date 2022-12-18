@@ -7,8 +7,8 @@ list(APPEND srcs
 
 # TODO: remove these!!! esp_app_format & app_update
 list(APPEND app_srcs
-    "${IDF_PATH}/components/app_update/esp_ota_ops.c"
-    "${IDF_PATH}/components/app_update/esp_ota_app_desc.c"
+    # "${IDF_PATH}/components/app_update/esp_ota_ops.c"
+    # "${IDF_PATH}/components/app_update/esp_ota_app_desc.c"
     "${IDF_PATH}/components/esp_app_format/esp_app_desc.c"
 )
 list(APPEND srcs ${app_srcs})
