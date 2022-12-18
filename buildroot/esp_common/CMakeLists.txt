@@ -24,6 +24,8 @@ idf_component_register(
         "${IDF_PATH}/components/soc/${IDF_TARGET}/include" #  fix: soc => ${IDF_TARGET} subdir using relative paths
         "${IDF_PATH}/components/esp_app_format/include"
         "${IDF_PATH}/components/app_update/include"
+        "${IDF_PATH}/components/bootloader_support/include"
+        "${IDF_PATH}/components/bootloader_support/bootloader_flash/include"
     PRIV_INCLUDE_DIRS
         "${IDF_PATH}/components/esp_partition/include"
     SRCS

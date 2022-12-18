@@ -105,7 +105,7 @@ list(APPEND IDF_KERNEL_COMPONENTS
     "freertos" "newlib" "heap"  "cxx" "pthread"
     "esp_common" "esp_hw_support" "esp_rom" "esp_system"
     "soc" "hal" "efuse" "driver"
-    "bootloader_support" "spi_flash"
+    "spi_flash"
     "esptool_py"
 )
 
@@ -114,6 +114,8 @@ list(APPEND OBSOLETED_COMPONENTS
     # merged into esp_common
     "app_update"
     "esp_app_format"
+    # merge into esp_system & direct ref by bootloader
+    "bootloader_support"
     # removed
     "partition_table"
 )

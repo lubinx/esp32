@@ -37,6 +37,7 @@ target_linker_script(${PROJECT_NAME} PRIVATE "${link_scripts}")
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     "${IDF_PATH}/components/xtensa/include"
+    "${IDF_PATH}/components/bootloader_support/include"
     "${IDF_PATH}/components/bootloader_support/private_include"
     "${IDF_PATH}/components/esp_hw_support/include/esp_private"
     "${IDF_PATH}/components/esp_hw_support/port/include"

@@ -21,6 +21,7 @@ list(APPEND srcs
     "${IDF_PATH}/components/esp_system/port/esp_system_chip.c"
     "${IDF_PATH}/components/esp_system/port/panic_handler.c"
     "${IDF_PATH}/components/esp_system/port/cpu_start.c"
+    "${IDF_PATH}/components/bootloader_support/bootloader_flash/src/bootloader_flash.c"
 )
 
 if(CONFIG_ESP_TASK_WDT_EN)
@@ -65,11 +66,10 @@ idf_component_register(
         "esp_common"
         "esp_partition"
         "esp_timer"
-        "spi_flash"
+        # "spi_flash"
         # "pthread"
         # "driver"
     LDFRAGMENTS
-        # esp_system
         "${IDF_PATH}/components/esp_system/linker.lf"
         "${IDF_PATH}/components/esp_system/app.lf"
 )
