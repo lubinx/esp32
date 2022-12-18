@@ -1,35 +1,27 @@
 list(APPEND includes
-    # merge spi_flash
-    "${IDF_PATH}/components/spi_flash/include"
-    # esp_system
-    "${IDF_PATH}/components/esp_system/include"
 )
 
 list(APPEND srcs
+    "${IDF_TARGET}/init.c"
     # esp_system
     "${IDF_PATH}/components/esp_system/crosscore_int.c"
     "${IDF_PATH}/components/esp_system/esp_ipc.c"
     "${IDF_PATH}/components/esp_system/esp_err.c"
     "${IDF_PATH}/components/esp_system/freertos_hooks.c"
     "${IDF_PATH}/components/esp_system/int_wdt.c"
-    "${IDF_PATH}/components/esp_system/panic.c"
     "${IDF_PATH}/components/esp_system/esp_system.c"
-    "${IDF_PATH}/components/esp_system/system_time.c"
-    "${IDF_PATH}/components/esp_system/stack_check.c"
+    "${IDF_PATH}/components/esp_system/panic.c"
+    # "${IDF_PATH}/components/esp_system/system_time.c"
+    # "${IDF_PATH}/components/esp_system/stack_check.c"
     "${IDF_PATH}/components/esp_system/ubsan.c"
     "${IDF_PATH}/components/esp_system/xt_wdt.c"
     "${IDF_PATH}/components/esp_system/debug_stubs.c"
     "${IDF_PATH}/components/esp_system/startup.c"
-    # esp_system overrides
-    "ESP_system.c"
-    "flash_code_test.c"
+    "${IDF_PATH}/components/esp_system/port/brownout.c"
+    "${IDF_PATH}/components/esp_system/port/esp_system_chip.c"
+    "${IDF_PATH}/components/esp_system/port/panic_handler.c"
+    "${IDF_PATH}/components/esp_system/port/cpu_start.c"
 )
-
-if(CONFIG_IDF_ENV_FPGA)
-    list(APPEND srcs
-        "fpga_overrides.c"
-    )
-endif()
 
 if(CONFIG_ESP_TASK_WDT_EN)
     list(APPEND srcs
@@ -61,7 +53,10 @@ endif()
 
 idf_component_register(
     INCLUDE_DIRS
-        ${includes}
+        "${IDF_PATH}/components/esp_system/include"
+        "${IDF_PATH}/components/esp_system/port/include/private"
+    PRIV_INCLUDE_DIRS
+        "${IDF_PATH}/components/esp_system/port/include"
     SRCS
         ${srcs}
     PRIV_REQUIRES
@@ -78,7 +73,8 @@ idf_component_register(
         "${IDF_PATH}/components/esp_system/linker.lf"
         "${IDF_PATH}/components/esp_system/app.lf"
 )
-add_subdirectory("${IDF_PATH}/components/esp_system/port" "${build_dir}/${prefix}/${component_name}/port")
+add_subdirectory("${IDF_PATH}/components/esp_system/port/soc/${IDF_TARGET}"
+    "${build_dir}/${prefix}/${component_name}/soc")
 
 if(CONFIG_IDF_ENV_FPGA)
     # Forces the linker to include fpga stubs from this component
@@ -103,7 +99,7 @@ endif()
 # generate link scripts
 idf_build_get_property(sdkconfig_header SDKCONFIG_HEADER)
 idf_build_get_property(config_dir CONFIG_DIR)
-set(ld_input "${CMAKE_CURRENT_LIST_DIR}/ld/${IDF_TARGET}_memory.ld.in")
+set(ld_input "${CMAKE_CURRENT_LIST_DIR}/${IDF_TARGET}/memory.ld.in")
 set(ld_output "${config_dir}/${IDF_TARGET}_memory.ld")
 
 add_custom_command(
@@ -122,7 +118,7 @@ add_dependencies(${COMPONENT_LIB} memory_ld)
 target_linker_script(${COMPONENT_LIB} INTERFACE "${ld_output}")
 # Process the template file through the linker script generation mechanism, and use the output for linking the
 # final binary
-target_linker_script(${COMPONENT_LIB} INTERFACE "ld/${IDF_TARGET}_sections.ld"
+target_linker_script(${COMPONENT_LIB} INTERFACE "${IDF_TARGET}/sections.ld"
     PROCESS "${config_dir}/${IDF_TARGET}_sections.ld"
 )
 

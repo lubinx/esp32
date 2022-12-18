@@ -21,6 +21,7 @@ idf_component_register(
     INCLUDE_DIRS
         "include/posix"
         "include/esp32"
+        "${IDF_PATH}/components/soc/${IDF_TARGET}/include" #  fix: soc => ${IDF_TARGET} subdir using relative paths
         "${IDF_PATH}/components/esp_app_format/include"
         "${IDF_PATH}/components/app_update/include"
     PRIV_INCLUDE_DIRS

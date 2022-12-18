@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
 
@@ -6,13 +7,18 @@
 #include "esp_attr.h"
 #include "esp_cpu.h"
 #include "esp_rom_sys.h"
+#include "esp_rom_uart.h"
 
-#include "hal/cache_ll.h"
+#include "soc/soc.h"
+
 #include "hal/mmu_ll.h"
+#include "hal/mmu_hal.h"
 
 #include "hal/cache_hal.h"
+#include "hal/cache_ll.h"
+#include "esp32s3/rom/cache.h"
+
 #include "hal/rtc_hal.h"
-#include "hal/mmu_hal.h"
 #include "hal/wdt_hal.h"
 
 #include "bootloader_soc.h"
@@ -33,12 +39,35 @@ static char const *TAG = "bootloader";
 extern intptr_t __bss_start__;
 extern intptr_t __bss_end__;
 
+/**
+ *  these functions defined in esp32s3.rom.ld, but defines nowhere
+ *      guess its modifies register EXTMEM, see soc/extmem_struct.h
+ */
+extern void rom_config_instruction_cache_mode(uint32_t cfg_cache_size, uint8_t cfg_cache_ways, uint8_t cfg_cache_line_size);
+extern void rom_config_data_cache_mode(uint32_t cfg_cache_size, uint8_t cfg_cache_ways, uint8_t cfg_cache_line_size);
+
 /****************************************************************************
  *  consts
 *****************************************************************************/
 #define FLASH_READ_MMU_VADDR            (SOC_DROM_HIGH - CONFIG_MMU_PAGE_SIZE)
 
+#define MEMORY_REGION_TAG(ADDR)         (\
+    (SOC_IRAM_HIGH >= ADDR && SOC_IRAM_LOW <= ADDR) ? "IRAM" :  \
+    (SOC_DRAM_HIGH >= ADDR && SOC_DRAM_LOW <= ADDR) ? "DRAM" :  \
+    (SOC_RTC_IRAM_HIGH >= ADDR && SOC_RTC_IRAM_LOW <= ADDR) ? "fRTC" :  \
+    (SOC_RTC_DATA_HIGH >= ADDR && SOC_RTC_DATA_LOW <= ADDR) ? "sRTC" : "    "    \
+)
+
 typedef void __attribute__((noreturn)) (*kernel_entry_t)(void);
+
+struct flash_segment_t
+{
+    uintptr_t location;
+    esp_image_segment_header_t hdr;
+
+    uintptr_t aligned_vaddr;
+    size_t aligned_size;
+};
 
 /****************************************************************************
  *  local
@@ -49,18 +78,17 @@ static void bootloader_config_wdt(void);
 static kernel_entry_t KERNEL_load(uintptr_t flash_location);
 
 static ssize_t FLASH_read(uintptr_t flash_location, void *buf, size_t bufsize);
-static void FLASH_map_region(uintptr_t flash_location, uintptr_t vaddr, size_t size);
+static void MAP_flash_segment(struct flash_segment_t *seg);
 
 /****************************************************************************
  *  exports
 *****************************************************************************/
 void __attribute__((noreturn)) Reset_Handler(void)
 {
-    ESP_LOGE(TAG, "hello world!");
-    ESP_LOGW(TAG, "hello world!");
-    ESP_LOGI(TAG, "hello world!");
-    ESP_LOGD(TAG, "hello world!");
-    ESP_LOGV(TAG, "hello world!");
+    #if CONFIG_BOOTLOADER_LOG_LEVEL
+        esp_rom_install_uart_printf();
+        esp_rom_uart_set_as_console(CONFIG_ESP_CONSOLE_UART_NUM);
+    #endif
 
     #if XCHAL_ERRATUM_572
         uint32_t memctl = XCHAL_CACHE_MEMCTL_DEFAULT;
@@ -86,15 +114,32 @@ void __attribute__((noreturn)) Reset_Handler(void)
     #endif
     */
 
+    mmu_hal_init();
     cache_hal_init();
-    // esp32s3 mmu_id is ignored
-    mmu_ll_unmap_all(0);
+
+    #if CONFIG_ESP32S2_INSTRUCTION_CACHE_WRAP || CONFIG_ESP32S2_DATA_CACHE_WRAP || \
+        CONFIG_ESP32S3_INSTRUCTION_CACHE_WRAP || CONFIG_ESP32S3_DATA_CACHE_WRAP
+        uint32_t icache_wrap_enable =
+            #if CONFIG_ESP32S2_INSTRUCTION_CACHE_WRAP || CONFIG_ESP32S3_INSTRUCTION_CACHE_WRAP
+                1;
+            #else
+                0;
+            #endif
+        uint32_t dcache_wrap_enable =
+            #if CONFIG_ESP32S2_DATA_CACHE_WRAP || CONFIG_ESP32S3_DATA_CACHE_WRAP
+                1;
+            #else
+                0;
+            #endif
+        extern void esp_enable_cache_wrap(uint32_t icache_wrap_enable, uint32_t dcache_wrap_enable);
+        esp_enable_cache_wrap(icache_wrap_enable, dcache_wrap_enable);
+    #endif
 
     bootloader_super_wdt_auto_feed();
     bootloader_config_wdt();
 
     kernel_entry_t entry = KERNEL_load(0x10000);
-    ESP_LOGD(TAG, "sp: %p\n", xt_utils_get_sp());
+    ESP_LOGD(TAG, "entry => %p, sp: %p\n", entry, xt_utils_get_sp());
 
     entry();
 }
@@ -162,22 +207,17 @@ static void bootloader_config_wdt(void)
 
 static kernel_entry_t KERNEL_load(uintptr_t flash_location)
 {
-    struct FLASH_segment
-    {
-        uintptr_t location;
-        esp_image_segment_header_t hdr;
-    };
-
     esp_image_header_t hdr;
-    struct FLASH_segment ro_seg = {0};
-    struct FLASH_segment text_seg = {0};
+    struct flash_segment_t ro_seg = {0};
+    struct flash_segment_t text_seg = {0};
 
+    ESP_LOGD(TAG, "reading image at %p", flash_location);
     FLASH_read(flash_location, &hdr, sizeof(hdr));
     flash_location += sizeof(hdr);
 
     if (ESP_IMAGE_HEADER_MAGIC != hdr.magic)
     {
-        esp_rom_printf("error loading kernel: image hdr'TAG should be 0x%x, but 0x%x\n", ESP_IMAGE_HEADER_MAGIC, hdr.magic);
+        ESP_LOGE(TAG, "error loading kernel: image hdr'TAG should be 0x%x, but 0x%x\n", ESP_IMAGE_HEADER_MAGIC, hdr.magic);
         goto kernel_load_error;
     }
 
@@ -190,21 +230,30 @@ static kernel_entry_t KERNEL_load(uintptr_t flash_location)
 
         if (SOC_DROM_HIGH >= seg.load_addr && SOC_DROM_LOW <= seg.load_addr)
         {
+            ESP_LOGD(TAG, "segment %d at %p map => %p DROM size=%d", i, flash_location, seg.load_addr, seg.data_len);
+
             ro_seg.location = flash_location;
             ro_seg.hdr = seg;
         }
         else if (SOC_IROM_HIGH >= seg.load_addr && SOC_IROM_LOW <= seg.load_addr)
         {
+            ESP_LOGD(TAG, "segment %d at %p map => %p IROM size=%d", i, flash_location, seg.load_addr, seg.data_len);
+
             text_seg.location = flash_location;
             text_seg.hdr = seg;
         }
         else
         {
-            uint8_t *dest = (uint8_t *)seg.load_addr;
-            size_t readed = 0;
+            ESP_LOGD(TAG, "segment %d at %p load=> %p %s size=%d", i, flash_location, seg.load_addr, MEMORY_REGION_TAG(seg.load_addr), seg.data_len);
 
-            while (readed < seg.data_len)
-                readed += FLASH_read(flash_location + readed, dest + readed, seg.data_len - readed);
+            if (seg.load_addr)
+            {
+                uint8_t *dest = (uint8_t *)seg.load_addr;
+                size_t readed = 0;
+
+                while (readed < seg.data_len)
+                    readed += FLASH_read(flash_location + readed, dest + readed, seg.data_len - readed);
+            }
         }
 
         flash_location += seg.data_len;
@@ -214,7 +263,7 @@ static kernel_entry_t KERNEL_load(uintptr_t flash_location)
 
     if (ro_seg.location)
     {
-        FLASH_map_region(ro_seg.location, ro_seg.hdr.load_addr, ro_seg.hdr.data_len);
+        MAP_flash_segment(&ro_seg);
 
         cache_ll_l1_enable_bus(0, CACHE_BUS_DBUS0);
         #if ! CONFIG_FREERTOS_UNICORE
@@ -224,15 +273,64 @@ static kernel_entry_t KERNEL_load(uintptr_t flash_location)
 
     if (text_seg.location)
     {
-        FLASH_map_region(text_seg.location, text_seg.hdr.load_addr, text_seg.hdr.data_len);
+        MAP_flash_segment(&text_seg);
 
         cache_ll_l1_enable_bus(0, CACHE_BUS_IBUS0);
         #if ! CONFIG_FREERTOS_UNICORE
             cache_ll_l1_enable_bus(1, CACHE_BUS_IBUS0);
         #endif
     }
-    cache_hal_enable(CACHE_TYPE_ALL);
 
+    rom_config_instruction_cache_mode(CONFIG_ESP32S3_INSTRUCTION_CACHE_SIZE,
+        CONFIG_ESP32S3_ICACHE_ASSOCIATED_WAYS,
+        CONFIG_ESP32S3_INSTRUCTION_CACHE_LINE_SIZE
+    );
+    rom_config_data_cache_mode(CONFIG_ESP32S3_DATA_CACHE_SIZE,
+        CONFIG_ESP32S3_DCACHE_ASSOCIATED_WAYS,
+        CONFIG_ESP32S3_DATA_CACHE_LINE_SIZE
+    );
+
+    // REVIEW: unknown purpuse
+    /*
+    extern uint32_t Cache_Set_IDROM_MMU_Size(uint32_t irom_size, uint32_t drom_size);
+    {
+        uint32_t cache_mmu_irom_size = text_seg.aligned_size / CONFIG_MMU_PAGE_SIZE * sizeof(uint32_t);
+        Cache_Set_IDROM_MMU_Size(cache_mmu_irom_size, CACHE_DROM_MMU_MAX_END - cache_mmu_irom_size);
+    }
+
+    extern void Cache_Set_IDROM_MMU_Info(uint32_t instr_page_num, uint32_t rodata_page_num,
+        uint32_t rodata_start, uint32_t rodata_end, int i_off, int ro_off);
+    {
+        int s_instr_flash2spiram_off = 0;
+        int s_rodata_flash2spiram_off = 0;
+        #if CONFIG_SPIRAM_FETCH_INSTRUCTIONS
+            extern int instruction_flash2spiram_offset(void);
+            s_instr_flash2spiram_off = instruction_flash2spiram_offset();
+        #endif
+        #if CONFIG_SPIRAM_RODATA
+            extern int rodata_flash2spiram_offset(void);
+            s_rodata_flash2spiram_off = rodata_flash2spiram_offset();
+        #endif
+
+        Cache_Set_IDROM_MMU_Info(
+            text_seg.aligned_size / CONFIG_MMU_PAGE_SIZE,
+            ro_seg.aligned_size / CONFIG_MMU_PAGE_SIZE,
+            ro_seg.hdr.load_addr, ro_seg.hdr.load_addr + ro_seg.hdr.data_len,
+            s_instr_flash2spiram_off,
+            s_rodata_flash2spiram_off
+        );
+    }
+    */
+
+    // REVIEW: unknown purpuse
+    /*
+    #if CONFIG_ESP32S3_DATA_CACHE_16KB
+        Cache_Invalidate_DCache_All();
+        Cache_Occupy_Addr(SOC_DROM_LOW, CONFIG_ESP32S3_DATA_CACHE_SIZE);
+    #endif
+    */
+
+    cache_hal_enable(CACHE_TYPE_ALL);
     return (kernel_entry_t)hdr.entry_addr;
 
 kernel_load_error:
@@ -264,13 +362,17 @@ static ssize_t FLASH_read(uintptr_t flash_location, void *buf, size_t bufsize)
     return bufsize;
 }
 
-static void FLASH_map_region(uintptr_t flash_location, uintptr_t vaddr, size_t size)
+static void MAP_flash_segment(struct flash_segment_t *seg)
 {
-    off_t offset = flash_location & (CONFIG_MMU_PAGE_SIZE - 1);
-    int pages = (size + offset + CONFIG_MMU_PAGE_SIZE - 1) / CONFIG_MMU_PAGE_SIZE;
+    off_t offset = seg->location & (CONFIG_MMU_PAGE_SIZE - 1);
 
-    uint32_t entry_id = mmu_ll_get_entry_id(0, vaddr);
-    uint32_t paddr = mmu_ll_format_paddr(0, flash_location);
+    seg->aligned_vaddr = seg->hdr.load_addr & ~(CONFIG_MMU_PAGE_SIZE - 1);
+    seg->aligned_size = (seg->hdr.data_len + offset + CONFIG_MMU_PAGE_SIZE - 1) & ~(CONFIG_MMU_PAGE_SIZE - 1);
+
+    int pages = seg->aligned_size / CONFIG_MMU_PAGE_SIZE;
+
+    uint32_t entry_id = mmu_ll_get_entry_id(0, seg->aligned_vaddr);
+    uint32_t paddr = mmu_ll_format_paddr(0, seg->location);
 
     while (pages)
     {

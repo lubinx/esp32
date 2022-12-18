@@ -1,15 +1,6 @@
 idf_component_register()
 idf_build_get_property(python PYTHON)
 
-# TODO: remove this if block when esp32h4 beta1 is no longer supported and we have h4 IDF_TARGET in esptool
-if(IDF_TARGET STREQUAL "esp32h4")
-    if(CONFIG_IDF_TARGET_ESP32H4_BETA_VERSION_1)
-        set(IDF_TARGET esp32h2beta1)
-    elseif(CONFIG_IDF_TARGET_ESP32H4_BETA_VERSION_2)
-        set(IDF_TARGET esp32h2beta2)
-    endif()
-endif()
-
 set(ESPTOOLPY ${python} "${CMAKE_CURRENT_LIST_DIR}/esptool.py" --chip ${IDF_TARGET})
 
 if(CONFIG_SPI_FLASH_HPM_ENABLE)

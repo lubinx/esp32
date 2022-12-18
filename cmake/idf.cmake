@@ -66,6 +66,18 @@ list(APPEND COMPILE_OPTIONS
     "-Wshadow"
 )
 
+# link options
+list(APPEND LINK_OPTIONS
+    "-Wl,--gc-sections"
+    "-Wl,--warn-common"
+)
+
+# compile definitions for esp-idf'components only
+list(APPEND IDF_COMPILE_DEFINITIONS
+    "ESP_PLATFORM"          # 3party components porting
+    "_GNU_SOURCE"
+)
+
 # extra / override compile options for esp-idf'components only
 list(APPEND IDF_COMPILE_OPTIONS
     "-O3"                       # ignore Kconfig force using O3 for now
@@ -82,18 +94,6 @@ list(APPEND IDF_COMPILE_OPTIONS
     "-fno-tree-switch-conversion"
     "$<$<COMPILE_LANGUAGE:C>:-fstrict-volatile-bitfields>"
     "$<$<COMPILE_LANGUAGE:C>:-Wno-old-style-declaration>"
-)
-
-# LINK_OPTIONS
-list(APPEND LINK_OPTIONS
-    "-Wl,--gc-sections"
-    "-Wl,--warn-common"
-)
-
-# compile definitions for esp-idf'components only
-list(APPEND IDF_COMPILE_DEFINITIONS
-    "ESP_PLATFORM"          # 3party components porting
-    "_GNU_SOURCE"
 )
 
 # IDF_KERNEL_COMPONENTS
@@ -292,8 +292,6 @@ function(__build_init)
 
     # esp-idf components common requires
     idf_build_set_property(__COMPONENT_REQUIRES_COMMON "${IDF_KERNEL_COMPONENTS}" APPEND)
-
-    # TODO: common requires add here
 endfunction()
 
 # 💡 build initialization
@@ -363,9 +361,7 @@ function(idf_component_add name_or_dir) # optional: prefix
         return()
     endif()
 
-    # TODO: sub components
-    # if (EXISTS "${component_dir}/components")
-    # endif()
+    # TODO: sub components ?
     add_library(${component_target} STATIC IMPORTED)
 
     # Set the basic properties of the component
@@ -423,6 +419,7 @@ macro(idf_component_register)
         __component_set_property(${component_target} PRIV_REQUIRES "${__PRIV_REQUIRES}")
         __component_set_property(${component_target} KCONFIG "${__KCONFIG}" APPEND)
         __component_set_property(${component_target} KCONFIG_PROJBUILD "${__KCONFIG_PROJBUILD}" APPEND)
+        __component_set_property(${component_target} WHOLE_ARCHIVE ${__WHOLE_ARCHIVE})
 
         message(STATUS "Add Component: ${prefix}::${component_name}")
         message("\tcomponent dir: ${component_dir}")
@@ -550,9 +547,7 @@ function(__inherited_component_register component_target)
     __component_set_property(${component_target} EMBED_TXTFILES "${__EMBED_TXTFILES}")
     __component_set_property(${component_target} REQUIRED_IDF_TARGETS "${__REQUIRED_IDF_TARGETS}")
 
-    __component_set_property(${component_target} WHOLE_ARCHIVE ${__WHOLE_ARCHIVE})
-
-    # COMPONENT_TARGET is deprecated but is made available with same function
+    __component_set_property(${component_target} WHOLE_ARCHIVE ${__WHOLE_ARCHIVE})    # COMPONENT_TARGET is deprecated but is made available with same function
     # as COMPONENT_LIB for compatibility.
     set(COMPONENT_TARGET ${component_lib} PARENT_SCOPE)
     # Make the COMPONENT_LIB variable available in the component CMakeLists.txt
@@ -563,15 +558,19 @@ endfunction()
 # idf_build()
 #############################################################################
 function(idf_build)
-    set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-    include(CheckTypeSize)
-    check_type_size("time_t" TIME_T_SIZE)
+    if (NOT TIME_T_SIZE)
+        include(CheckTypeSize)
+        check_type_size("time_t" TIME_T_SIZE)
+        message("")
+    endif()
     if(TIME_T_SIZE)
         idf_build_set_property(TIME_T_SIZE ${TIME_T_SIZE})
     else()
         message(FATAL_ERROR "Failed to determine sizeof(time_t)")
     endif()
+
+    # build_command.json
+    set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
     # attach esp-idf'components compile options
     idf_build_set_property(COMPILE_DEFINITIONS "${IDF_COMPILE_DEFINITIONS}" APPEND)
@@ -703,14 +702,14 @@ function(idf_build)
             add_subdirectory(${COMPONENT_DIR} ${build_dir}/${prefix}/${component_name})
 
             # fix: mbedtls private targets not append compile options
-            if (component_name STREQUAL "mbedtls")
-                list(APPEND mbedtls_targets "mbedtls" "mbedcrypto" "mbedx509")
-                foreach(mbedtls_target ${mbedtls_targets})
-                    foreach(option ${IDF_COMPILE_OPTIONS})
-                        target_compile_options(${mbedtls_target} PRIVATE ${option})
-                    endforeach()
-                endforeach()
-            endif()
+            # if (component_name STREQUAL "mbedtls")
+            #     list(APPEND mbedtls_targets "mbedtls" "mbedcrypto" "mbedx509")
+            #     foreach(mbedtls_target ${mbedtls_targets})
+            #         foreach(option ${IDF_COMPILE_OPTIONS})
+            #             target_compile_options(${mbedtls_target} PRIVATE ${option})
+            #         endforeach()
+            #     endforeach()
+            # endif()
         endforeach()
     endmacro()
     __import_components()
@@ -743,6 +742,7 @@ function(idf_build)
     foreach(component_target ${component_targets})
         __component_get_property(whole_archive ${component_target} WHOLE_ARCHIVE)
         __component_get_property(build_component ${component_target} COMPONENT_LIB)
+        __component_get_property(component_name ${component_target} COMPONENT_NAME)
 
         if(whole_archive)
             message(STATUS "Component ${build_component} will be linked with -Wl,--whole-archive")
@@ -751,15 +751,13 @@ function(idf_build)
                 ${build_component}
                 "-Wl,--no-whole-archive")
         else()
-            message(STATUS "🔗 Add link library: ${build_component}")
+            message(STATUS "🔗 Add link library: ${component_name}")
             target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${build_component})
         endif()
     endforeach()
 
     message("\n💡 Add sub-project: bootloader")
-    # message("\tbootloader.bin has to flashing \t @ 0x0     offset")
-    # message("\t${PROJECT_NAME}.bin folows bootloader \t @ 0x10000 offset")
     add_subdirectory("bootloader")
-    message("")
 
+    message("")
 endfunction()

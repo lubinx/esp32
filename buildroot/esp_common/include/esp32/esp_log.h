@@ -63,18 +63,17 @@ __BEGIN_DECLS
 
 #if BOOTLOADER_BUILD
     #define ESP_LOG_LEVEL(level, tag, format, ...)  (\
-        CONFIG_BOOTLOADER_LOG_LEVEL < level ? esp_log_write_none(level, tag, format, ##__VA_ARGS__) :   \
+        CONFIG_BOOTLOADER_LOG_LEVEL < level ? ((void)level, (void)tag, (void)format) :  \
             esp_rom_printf(LOG_FORMAT(level, format), esp_log_timestamp(), tag, ##__VA_ARGS__)  \
     )
 #else
     #define ESP_LOG_LEVEL(level, tag, format, ...)  (\
-        CONFIG_BOOTLOADER_LOG_LEVEL < level ? esp_log_write_none(level, tag, format, ##__VA_ARGS__) :   \
-            esp_rom_printf(LOG_FORMAT(level, format), esp_log_timestamp(), tag, ##__VA_ARGS__)  \
+        esp_rom_printf(LOG_FORMAT(level, format), esp_log_timestamp(), tag, ##__VA_ARGS__)  \
     )
 #endif
 
     #define LOG_FORMAT(level, format)  \
-        level##_COLOR level##_LETTER " (%"PRIu32") %s: " format LOG_END"\n"
+        level##_COLOR"%-6"PRIu32 level##_LETTER" %s: " format LOG_END"\n"
 
     #define LOG_COLOR_BLACK             "30"
     #define LOG_COLOR_RED               "31"
@@ -137,9 +136,6 @@ static inline
 
 extern  __attribute__ ((nothrow, format (printf, 3, 4)))
     void esp_log_write(esp_log_level_t level, char const *tag, char const *format, ...);
-
-static inline __attribute__ ((format (printf, 3, 4)))
-    void esp_log_write_none(esp_log_level_t level, char const *tag, char const *format, ...) {(void)level; (void)tag; (void)format;}
 
 // avoid to #include "esp_rom_sys.h" in some esp-idf components
 //  "esp_rom_sys.h" introduced in "esp_rom", but here we really don't know where is
