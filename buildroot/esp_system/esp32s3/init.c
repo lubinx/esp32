@@ -90,10 +90,6 @@ void __attribute__((weak)) app_main(void)
     }
 }
 
-void startup_resume_other_cores(void)
-{
-}
-
 void SystemInit(void)
 {
     // Move exception vectors to IRAM

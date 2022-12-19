@@ -3,6 +3,7 @@ list(APPEND includes
 
 list(APPEND srcs
     "${IDF_TARGET}/init.c"
+    "startup.c"
     # esp_system
     "${IDF_PATH}/components/esp_system/crosscore_int.c"
     "${IDF_PATH}/components/esp_system/esp_ipc.c"
@@ -16,7 +17,7 @@ list(APPEND srcs
     "${IDF_PATH}/components/esp_system/ubsan.c"
     "${IDF_PATH}/components/esp_system/xt_wdt.c"
     "${IDF_PATH}/components/esp_system/debug_stubs.c"
-    "${IDF_PATH}/components/esp_system/startup.c"
+    # "${IDF_PATH}/components/esp_system/startup.c"
     "${IDF_PATH}/components/esp_system/port/brownout.c"
     "${IDF_PATH}/components/esp_system/port/esp_system_chip.c"
     "${IDF_PATH}/components/esp_system/port/panic_handler.c"
@@ -81,12 +82,6 @@ if(CONFIG_IDF_ENV_FPGA)
     target_link_libraries(${COMPONENT_LIB} INTERFACE "-u esp_common_include_fpga_overrides")
 endif()
 
-# After system initialization, `start_app` (and its other cores variant) is called.
-# This is provided by the user or from another component. Since we can't establish
-# dependency on what we don't know, force linker to not drop the symbol regardless
-# of link line order.
-target_link_libraries(${COMPONENT_LIB} INTERFACE "-u start_app")
-
 # Force linking UBSAN hooks. If UBSAN is not enabled, the hooks will ultimately be removed
 # due to -ffunction-sections -Wl,--gc-sections options.
 target_link_libraries(${COMPONENT_LIB} INTERFACE "-u __ubsan_include")
@@ -94,7 +89,6 @@ target_link_libraries(${COMPONENT_LIB} INTERFACE "-u __ubsan_include")
 if(NOT CONFIG_ESP_SYSTEM_SINGLE_CORE_MODE)
     target_link_libraries(${COMPONENT_LIB} INTERFACE "-u start_app_other_cores")
 endif()
-
 
 # generate link scripts
 idf_build_get_property(sdkconfig_header SDKCONFIG_HEADER)
@@ -124,39 +118,37 @@ target_linker_script(${COMPONENT_LIB} INTERFACE "${IDF_TARGET}/sections.ld"
 
 # Disable stack protection in files which are involved in initialization of that feature
 # set_source_files_properties(
-#     "${IDF_PATH}/components/esp_system/startup.c" "${IDF_PATH}/components/esp_system/stack_check.c"
+#     "${IDF_PATH}/components/esp_system/stack_check.c"
 #     PROPERTIES COMPILE_FLAGS
 #     -fno-stack-protector
 # )
-
-# [refactor-todo] requirements due to init code, should be removable
-# once link-time registration of component init functions is used.
-if(CONFIG_APPTRACE_ENABLE)
-    idf_component_optional_requires(PRIVATE "app_trace")
-endif()
-
-if(CONFIG_ESP_COREDUMP_ENABLE)
-    idf_component_optional_requires(PRIVATE "espcoredump")
-endif()
 
 # [refactor-todo] requirement from the panic handler,
 # need to introduce panic "event" concept to remove this dependency (IDF-2194)
 idf_component_optional_requires(PRIVATE "esp_gdbstub")
 
-if(CONFIG_PM_ENABLE)
-    idf_component_optional_requires(PRIVATE "pm")
-endif()
+# if(CONFIG_APPTRACE_ENABLE)
+#     idf_component_optional_requires(PRIVATE "app_trace")
+# endif()
 
-if(CONFIG_VFS_SUPPORT_IO)
-    idf_component_optional_requires(PRIVATE "vfs")
-endif()
+# if(CONFIG_ESP_COREDUMP_ENABLE)
+#     idf_component_optional_requires(PRIVATE "espcoredump")
+# endif()
 
-if(CONFIG_SW_COEXIST_ENABLE OR CONFIG_EXTERNAL_COEX_ENABLE)
-    idf_component_optional_requires(PRIVATE "esp_wifi")
-endif()
+# if(CONFIG_PM_ENABLE)
+#     idf_component_optional_requires(PRIVATE "pm")
+# endif()
 
-if(NOT BOOTLOADER_BUILD)
-    if(CONFIG_SPIRAM)
-        idf_component_optional_requires(PRIVATE "esp_psram")
-    endif()
-endif()
+# if(CONFIG_VFS_SUPPORT_IO)
+#     idf_component_optional_requires(PRIVATE "vfs")
+# endif()
+
+# if(CONFIG_SW_COEXIST_ENABLE OR CONFIG_EXTERNAL_COEX_ENABLE)
+#     idf_component_optional_requires(PRIVATE "esp_wifi")
+# endif()
+
+# if(NOT BOOTLOADER_BUILD)
+#     if(CONFIG_SPIRAM)
+#         idf_component_optional_requires(PRIVATE "esp_psram")
+#     endif()
+# endif()

@@ -60,7 +60,6 @@ __BEGIN_DECLS
     #define ESP_DRAM_LOGV(tag, format, ...)     \
         ESP_LOG_LEVEL(ESP_LOG_VERBOSE,  tag, format, ##__VA_ARGS__)
 
-
 #if BOOTLOADER_BUILD
     #define ESP_LOG_LEVEL(level, tag, format, ...)  (\
         CONFIG_BOOTLOADER_LOG_LEVEL < level ? ((void)level, (void)tag, (void)format) :  \
@@ -109,7 +108,7 @@ __BEGIN_DECLS
     */
     #ifndef LOG_LOCAL_LEVEL
         #ifndef BOOTLOADER_BUILD
-            #define LOG_LOCAL_LEVEL     CONFIG_LOG_MAXIMUM_LEVEL
+            #define LOG_LOCAL_LEVEL     0
         #else
             #define LOG_LOCAL_LEVEL     CONFIG_BOOTLOADER_LOG_LEVEL
         #endif
@@ -118,21 +117,11 @@ __BEGIN_DECLS
     #define esp_log_buffer_hex(tag, buffer, buff_len)
     // #define esp_log_buffer_char                 ESP_LOG_BUFFER_CHAR
 
-    typedef int (*vprintf_like_t)(const char *, va_list);
-static inline __attribute__((deprecated))
-    vprintf_like_t esp_log_set_vprintf(vprintf_like_t func) { return func; }
-
-extern __attribute__((nothrow))
-    void esp_log_level_set(char const *tag, esp_log_level_t level);
-
-extern __attribute__((nothrow))
-    esp_log_level_t esp_log_level_get(char const *tag);
-
 extern __attribute__((nothrow))
     uint32_t esp_log_timestamp(void);
 
-static inline
-    uint32_t esp_log_early_timestamp(void) { return esp_log_timestamp(); }
+extern __attribute__((nothrow))
+    uint32_t esp_log_early_timestamp(void);
 
 extern  __attribute__ ((nothrow, format (printf, 3, 4)))
     void esp_log_write(esp_log_level_t level, char const *tag, char const *format, ...);

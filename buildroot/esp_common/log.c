@@ -1,24 +1,17 @@
+#include "esp_cpu.h"
+#include "esp_rom_sys.h"
 #include "esp_log.h"
 
 /****************************************************************************
  *  export
 *****************************************************************************/
-void esp_log_level_set(char const *tag, esp_log_level_t level)
+uint32_t esp_log_early_timestamp(void)
 {
-    (void)tag;
-    (void)level;
+    return esp_cpu_get_cycle_count() / (esp_rom_get_cpu_ticks_per_us() * 1000);
 }
 
-esp_log_level_t esp_log_level_get(char const *tag)
-{
-    (void)tag;
-    return ESP_LOG_NONE;
-}
-
-uint32_t esp_log_timestamp(void)
-{
-    return 0;
-}
+__attribute__((weak, alias("esp_log_early_timestamp")))
+uint32_t esp_log_timestamp(void);
 
 void esp_log_write(esp_log_level_t level, char const *tag, char const *format, ...)
 {

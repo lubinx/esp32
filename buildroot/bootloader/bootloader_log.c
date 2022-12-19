@@ -1,8 +1,6 @@
-#include <stdio.h>
-
-#include "esp_log.h"
-#include "esp_rom_sys.h"
 #include "esp_cpu.h"
+#include "esp_rom_sys.h"
+#include "esp_log.h"
 
 uint32_t esp_log_timestamp(void)
 {
