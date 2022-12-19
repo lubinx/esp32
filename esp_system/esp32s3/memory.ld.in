@@ -34,7 +34,7 @@
     #endif
 #endif
     SRAM_TEXT_OVERLAPPED_START =    0x40378000;
-    SRAM_ESP_SYSTEM_START =         0x3FCD7E00;     /* see appendix */
+    SRAM_ESP_SYSTEM_START =         0x3FCE9710;     /* see appendix */
 
     MMU_PAGE_SIZE =                 CONFIG_MMU_PAGE_SIZE;
     ICACHE_SIZE =                   CONFIG_ESP32S3_INSTRUCTION_CACHE_SIZE;
@@ -61,8 +61,6 @@ MEMORY
             +--------+-----------------...---------------+----------------+
             ^        ^                                   ^
             SRAM0    SRAM1                               SRAM2
-            cache/data ================>
-                                        <================ instruction/cache
 
         .SRAM0
             0x40370000 => ICACHE, configuratable 16k/32K
@@ -73,7 +71,7 @@ MEMORY
             416K 0x3FC88000 ~ 0x3FCF0000: data segment
 
         .SRAM2
-            0x3FCF0000  => DCACHE, configuratable 16k/32k/64k
+            0x3FCF0000 <= DCACHE <= 0x3FD00000, configuratable 16k/32k/64k
 
         ADDR mapping
             0x40370000 => 32K ICACHE => 0x40378000 => 416K IRAM  => 0x403E0000
@@ -82,7 +80,7 @@ MEMORY
     ****************************************************************************
     */
 
-    SRAM_data_seg (RW) :            org = 0x3FC88000,   len = 480K - DCACHE_SIZE
+    SRAM_data_seg (RW) :            org = 0x3FC88000,   len = 480K
     SRAM_text_seg (RWX) :           org = 0x40370000 + ICACHE_SIZE, len = 448K - ICACHE_SIZE
 }
 MEMORY

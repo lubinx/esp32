@@ -39,10 +39,26 @@ PROVIDE(_invalid_pc_placeholder = ABSOLUTE(.));
         *(.init)
 
         . = ALIGN(4);
-_init_end = ABSOLUTE(.);
     } > SRAM_text_seg
 
-    .__SRAM_overlapped_dummy (NOLOAD):
+    .iram_attr.text :
+    {
+PROVIDE(_iram_text_start = ABSOLUTE(.));
+        mapping[iram0_text]
+
+        /* catch stray IRAM_ATTR */
+        *(.iram*)
+        /* iram_end_test section exists for use by memprot unit tests only */
+        /* *(.iram_end_test) */
+
+        /* ESP32-S3 memprot requires 16B padding for possible CPU prefetch  & alignment for PMS*/
+        . += 16;
+        . = ALIGN(256);
+PROVIDE(_iram_text_end = ABSOLUTE(.));
+PROVIDE(_iram_end = ABSOLUTE(.));
+    } > SRAM_text_seg
+
+    .__ram_overlapped_dummy (NOLOAD):
     {
         . = ORIGIN(SRAM_data_seg) + (_iram_end > SRAM_TEXT_OVERLAPPED_START ? _iram_end - SRAM_TEXT_OVERLAPPED_START : 0);
     } > SRAM_data_seg
@@ -96,8 +112,6 @@ PROVIDE(_bss_end = ABSOLUTE(.));
         *(.rodata_desc .rodata_desc.*)
         *(.rodata_custom_desc .rodata_custom_desc.*)
         */
-
-PROVIDE(_rodata_reserved_start = ABSOLUTE(.));
 PROVIDE(_flash_rodata_start = ABSOLUTE(.));
 
         mapping[flash_rodata]
@@ -164,8 +178,6 @@ PROVIDE(_thread_local_start = ABSOLUTE(.));
         . = ALIGN(4);
 PROVIDE(_thread_local_end = ABSOLUTE(.));
 
-PROVIDE(_rodata_reserved_end = ABSOLUTE(.));
-
         /* REVIEW: This section holds .ext_ram.bss data, and will be put in PSRAM */
         /*
         _ext_ram_bss_start = ABSOLUTE(.);
@@ -174,6 +186,7 @@ PROVIDE(_rodata_reserved_end = ABSOLUTE(.));
         . = ALIGN(4);
         _ext_ram_bss_end = ABSOLUTE(.);
         */
+PROVIDE(_flash_rodata_end = ABSOLUTE(.));
     } > FLASH_data_seg
 PROVIDE(_flash_rodata_align = ALIGNOF(.data.ro));
 
@@ -184,11 +197,9 @@ PROVIDE(_flash_rodata_align = ALIGNOF(.data.ro));
         . = ALIGN (4);
     } > FLASH_data_seg
 
-    .__FLASH_overlapped_dummy (NOLOAD):
+    .__flash_overlapped_dummy (NOLOAD):
     {
-        _flash_rodata_dummy_start = ABSOLUTE(.);
         . = . + SIZEOF(.data.ro) + SIZEOF(.data.ro_noload);
-
         . = ALIGN(MMU_PAGE_SIZE);
     } > FLASH_text_seg
 
@@ -210,23 +221,6 @@ PROVIDE(_flash_rodata_align = ALIGNOF(.data.ro));
     } > SRAM_text_seg
     */
 
-    .iram_attr.text :
-    {
-        PROVIDE(_iram_text_start = ABSOLUTE(.));
-        mapping[iram0_text]
-
-        /* catch stray IRAM_ATTR */
-        *(.iram*)
-        /* iram_end_test section exists for use by memprot unit tests only */
-        /* *(.iram_end_test) */
-
-        /* ESP32-S3 memprot requires 16B padding for possible CPU prefetch  & alignment for PMS*/
-        . += 16;
-        . = ALIGN(256);
-        PROVIDE(_iram_text_end = ABSOLUTE(.));
-        PROVIDE(_iram_end = ABSOLUTE(.));
-    } > SRAM_text_seg
-
     .flash.text :
     {
         *(.fini.literal)
@@ -244,23 +238,33 @@ PROVIDE(_flash_rodata_align = ALIGNOF(.data.ro));
         . += 16;
     } > FLASH_text_seg
 
-    .__heap_stack_dummy (NOLOAD) :
+    /* heap should present here see memory.ld appendix */
+    .__heap_dummy(NOLOAD) :
     {
         . = ALIGN(8);
-
-        PROVIDE(_heap_start = ABSOLUTE(.));
-        PROVIDE(end = ABSOLUTE(.));
+PROVIDE(_heap_start = ABSOLUTE(.));
+PROVIDE(end = ABSOLUTE(.));
 
         . = ABSOLUTE(SRAM_ESP_SYSTEM_START);
 
-        PROVIDE(__heap_limit__ = ABSOLUTE(.));
-        PROVIDE(_heap_end = ABSOLUTE(.));
-        /* PROVIDE(__stack = .); */
+PROVIDE(__heap_limit__ = ABSOLUTE(.));
     } > SRAM_data_seg
 
-    .__ESP_SYSTEM_reserved (NOLOAD) :
+    /* stacks should present here see memory.ld appendix */
+    .__stacks_dummy(NOLOAD) :
     {
-        . = ORIGIN(SRAM_data_seg) + LENGTH(SRAM_data_seg);
+        . = ALIGN(8);
+        . += 16384;
+    } > SRAM_data_seg
+
+    .__esp_system_reserved (NOLOAD) :
+    {
+        . = ORIGIN(SRAM_data_seg) + LENGTH(SRAM_data_seg) - DCACHE_SIZE;
+    } > SRAM_data_seg
+
+    .__dcache_unused_dummy (NOLOAD) :
+    {
+        . += DCACHE_SIZE;
     } > SRAM_data_seg
 
     .rtc.text :
