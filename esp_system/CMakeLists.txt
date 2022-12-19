@@ -4,7 +4,6 @@ list(APPEND includes
 list(APPEND srcs
     "${IDF_TARGET}/init.c"
     "startup.c"
-    # esp_system
     "${IDF_PATH}/components/esp_system/crosscore_int.c"
     "${IDF_PATH}/components/esp_system/esp_ipc.c"
     "${IDF_PATH}/components/esp_system/esp_err.c"
@@ -17,12 +16,12 @@ list(APPEND srcs
     "${IDF_PATH}/components/esp_system/ubsan.c"
     "${IDF_PATH}/components/esp_system/xt_wdt.c"
     "${IDF_PATH}/components/esp_system/debug_stubs.c"
-    # "${IDF_PATH}/components/esp_system/startup.c"
     "${IDF_PATH}/components/esp_system/port/brownout.c"
     "${IDF_PATH}/components/esp_system/port/esp_system_chip.c"
     "${IDF_PATH}/components/esp_system/port/panic_handler.c"
-    "${IDF_PATH}/components/esp_system/port/cpu_start.c"
-    "${IDF_PATH}/components/bootloader_support/bootloader_flash/src/bootloader_flash.c"
+    # "${IDF_PATH}/components/esp_system/startup.c"
+    # "${IDF_PATH}/components/esp_system/port/cpu_start.c"
+    # "${IDF_PATH}/components/bootloader_support/bootloader_flash/src/bootloader_flash.c"
 )
 
 if(CONFIG_ESP_TASK_WDT_EN)
@@ -59,17 +58,19 @@ idf_component_register(
         "${IDF_PATH}/components/esp_system/port/include/private"
     PRIV_INCLUDE_DIRS
         "${IDF_PATH}/components/esp_system/port/include"
+        "${IDF_PATH}/components/bootloader_support/include"
+        "${IDF_PATH}/components/spi_flash/include"
     SRCS
         ${srcs}
     PRIV_REQUIRES
         "efuse"
         "hal"
         "esp_common"
-        "esp_partition"
         "esp_timer"
-        # "spi_flash"
         # "pthread"
         # "driver"
+        # "esp_partition"
+        # "spi_flash"
     LDFRAGMENTS
         "${IDF_PATH}/components/esp_system/linker.lf"
         "${IDF_PATH}/components/esp_system/app.lf"

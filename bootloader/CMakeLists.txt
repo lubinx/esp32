@@ -4,6 +4,8 @@ if (NOT IDF_TARGET)
     message(FATAL_ERROR "this is bootloader for esp-idf project.")
 endif()
 
+# NOTE: sub-project bootloader
+#   direct add compile the src files without any dependency
 project (bootloader LANGUAGES C)
 
 add_executable(${PROJECT_NAME}

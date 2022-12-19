@@ -111,9 +111,10 @@ list(APPEND IDF_KERNEL_COMPONENTS
 
 # OBSOLETED_COMPONENTS: autoremove from REQUIRES & PRIV_REQUIRES
 list(APPEND OBSOLETED_COMPONENTS
-    # merged into esp_common
+    # merged into bootloader & esp_system
     "app_update"
     "esp_app_format"
+    "esp_partition"
     # merge into esp_system & direct ref by bootloader
     "bootloader_support"
     # removed

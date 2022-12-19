@@ -26,7 +26,6 @@
 */
 #if false
     # TODO: remove THIS
-
     #if CONFIG_ESP32S3_USE_FIXED_STATIC_RAM_SIZE
         ASSERT((CONFIG_ESP32S3_FIXED_STATIC_RAM_SIZE <= I_D_SRAM_SIZE), "Fixed static ram data does not fit.")
         #define DRAM0_0_SEG_LEN             CONFIG_ESP32S3_FIXED_STATIC_RAM_SIZE
@@ -90,14 +89,15 @@ MEMORY
 {
     /*
         external FLASH
+            // REVIEW: esptool_py hide something in the first 0x20(32 bytes)
     */
-    FLASH_data_seg (R) :            org = 0x3C000000 + 0x20,   len = 16M    /* TODO: remove this +0x20 */
-    FLASH_text_seg (RX) :           org = 0x42000000 + 0x20,   len = 16M
+    FLASH_data_seg (R) :            org = 0x3C000000 + 0x20,   len = 16M - 0x20
+    FLASH_text_seg (X) :            org = 0x42000000 + 0x20,   len = 16M - 0x20
 
     /*
         PSRAM
     */
-    PSRAM_data_seg (RWX) :          org = 0x3D000000,   len = 16M           /* REVIEW fix map PSRAM at 0x3C000000 + 16M?
+    PSRAM_seg (RWX) :               org = 0x3D000000,   len = 16M
 }
 MEMORY
 {
