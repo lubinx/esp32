@@ -273,57 +273,49 @@ PROVIDE(__heap_limit__ = ABSOLUTE(.));
 
         mapping[rtc_text]
 
-        *rtc_wake_stub*.*(.literal .text .literal.* .text.*)
+        *rtc_wake_stub*.*(.literal* .text*)
         *(.rtc_text_end_test)
 
         /* 16B padding for possible CPU prefetch and 4B alignment for PMS split lines */
         . += 16;
-
         . = ALIGN(4);
-        _rtc_text_end = ABSOLUTE(.);
-    } > RTC_fast_seg
+PROVIDE(_rtc_text_end = ABSOLUTE(.));
 
-    .rtc.force_fast :
-    {
         mapping[rtc_force_fast]
-        *(.rtc.force_fast .rtc.force_fast.*)
+        *(.rtc.force_fast*)
 
-        . = ALIGN(4);
-        _rtc_force_fast_end = ABSOLUTE(.);
+        . = ALIGN(4) ;
+PROVIDE(_rtc_force_fast_end = ABSOLUTE(.));
     } > RTC_fast_seg
 
-    /* CONFIG_ESP32S3_RTCDATA_IN_FAST_MEM option. */
     .rtc.data :
     {
         mapping[rtc_data]
-        *rtc_wake_stub*.*(.data .rodata .data.* .rodata.* .bss .bss.*)
 
-        . = ALIGN(4);
-    } > RTC_fast_seg
+        *rtc_wake_stub*.*(.data* .rodata*)
+        . = ALIGN(4) ;
 
-    /* RTC bss, from any source file named rtc_wake_stub*.c */
+        *(.rtc.force_slow*)
+        . = ALIGN(4) ;
+    } > RTC_slow_seg
+
     .rtc.bss (NOLOAD) :
     {
-        _rtc_bss_start = ABSOLUTE(.);
+PROVIDE(_rtc_bss_start = ABSOLUTE(.));
 
         *rtc_wake_stub*.*(.bss*)
         *rtc_wake_stub*.*(COMMON)
 
         mapping[rtc_bss]
 
-        . = ALIGN(4);
-        _rtc_bss_end = ABSOLUTE(.);
-    } > RTC_fast_seg
+        . = ALIGN(4) ;
+PROVIDE(_rtc_bss_end = ABSOLUTE(.));
+    } > RTC_slow_seg
 
     .rtc_noinit (NOLOAD):
     {
-        *(.rtc_noinit .rtc_noinit.*)
-        . = ALIGN(4);
-    } > RTC_fast_seg
-
-    .rtc.force_slow :
-    {
-        *(.rtc.force_slow .rtc.force_slow.*)
+        *(.rtc_noinit*)
+        . = ALIGN(4) ;
     } > RTC_slow_seg
 
     .xt.prop 0 :
