@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-include(../cmake/idf.cmake)
+include(./cmake/idf.cmake)
 
 project(kernel)
 

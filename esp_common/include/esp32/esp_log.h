@@ -108,7 +108,7 @@ __BEGIN_DECLS
     */
     #ifndef LOG_LOCAL_LEVEL
         #ifndef BOOTLOADER_BUILD
-            #define LOG_LOCAL_LEVEL     0
+            #define LOG_LOCAL_LEVEL     ESP_LOG_INFO
         #else
             #define LOG_LOCAL_LEVEL     CONFIG_BOOTLOADER_LOG_LEVEL
         #endif

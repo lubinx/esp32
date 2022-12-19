@@ -273,11 +273,12 @@ function(__build_init)
     idf_build_set_property(SDKCONFIG "${CMAKE_SOURCE_DIR}/sdkconfig") # from PROJECT_DIR
     idf_build_set_property(SDKCONFIG_DEFAULTS "")
 
+    # kconfig
+    # idf_build_set_property(IDF_PATH ${CMAKE_CURRENT_LIST_DIR})
+    __kconfig_init()
+
     # build esp-idf components
     idf_build_set_property(__PREFIX esp-idf)
-
-    # kconfig
-    __kconfig_init()
 
     # cmake cache all directory of ${IDF_PATH}/components
     if (NOT IDF_COMPONENTS_CACHE)
