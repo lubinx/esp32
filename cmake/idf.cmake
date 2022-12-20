@@ -82,7 +82,6 @@ list(APPEND IDF_COMPILE_DEFINITIONS
 
 # extra / override compile options for esp-idf'components only
 list(APPEND IDF_COMPILE_OPTIONS
-    "-O3"                       # ignore Kconfig force using O3 for now
     "-Wno-array-bounds"         # freertos
     "-Wno-conversion"
     "-Wno-enum-conversion"
@@ -296,9 +295,6 @@ function(__build_init)
             endif()
         endforeach()
     endif()
-
-    # esp-idf components common requires
-    idf_build_set_property(__COMPONENT_REQUIRES_COMMON "${IDF_KERNEL_COMPONENTS}" APPEND)
 endfunction()
 
 # 💡 build initialization
@@ -463,6 +459,9 @@ endmacro()
 function(__inherited_component_register component_target)
     __component_get_property(component_lib ${component_target} COMPONENT_LIB)
 
+    # Add component manifest to the list of dependencies
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${component_dir}/idf_component.yml")
+
     if(__SRC_DIRS)
         foreach(dir ${__SRC_DIRS})
             get_filename_component(dir ${dir} ABSOLUTE BASE_DIR ${CMAKE_CURRENT_LIST_DIR})
@@ -493,7 +492,6 @@ function(__inherited_component_register component_target)
     list(REMOVE_DUPLICATES sources)
 
     idf_build_get_property(config_dir CONFIG_DIR)
-    idf_build_get_property(common_reqs __COMPONENT_REQUIRES_COMMON)
     idf_build_get_property(component_targets __COMPONENT_TARGETS)
 
     macro(__component_set_dependencies reqs type)
@@ -523,9 +521,9 @@ function(__inherited_component_register component_target)
         idf_target_include_directories(${component_lib} PRIVATE "${__PRIV_INCLUDE_DIRS}")
 
         __component_get_property(reqs ${component_target} REQUIRES)
-        list(APPEND reqs ${common_reqs})
-            list(REMOVE_DUPLICATES reqs)
+        list(APPEND reqs ${IDF_KERNEL_COMPONENTS})
             list(REMOVE_ITEM reqs ${component_name})
+            list(REMOVE_DUPLICATES reqs)
         __component_set_dependencies("${reqs}" PUBLIC)
 
         __component_get_property(priv_reqs ${component_target} PRIV_REQUIRES)
@@ -567,6 +565,8 @@ endfunction()
 # idf_build()
 #############################################################################
 function(idf_build)
+    set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
     if (NOT TIME_T_SIZE)
         include(CheckTypeSize)
         check_type_size("time_t" TIME_T_SIZE)
@@ -578,9 +578,6 @@ function(idf_build)
         message(FATAL_ERROR "Failed to determine sizeof(time_t)")
     endif()
 
-    # build_command.json
-    set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
     # attach esp-idf'components compile options
     idf_build_set_property(COMPILE_DEFINITIONS "${IDF_COMPILE_DEFINITIONS}" APPEND)
     idf_build_set_property(COMPILE_OPTIONS "${COMPILE_OPTIONS}" APPEND)
@@ -589,9 +586,7 @@ function(idf_build)
 
     message("💡 Resolve dependencies")
     function(__resove_deps)
-        # add esp-idf common required components
-        idf_build_get_property(common_requires __COMPONENT_REQUIRES_COMMON)
-        foreach(iter ${common_requires})
+        foreach(iter ${IDF_KERNEL_COMPONENTS})
             idf_build_get_property(component_targets __COMPONENT_TARGETS)
             idf_get_component_target(req_target ${iter})
 
@@ -619,7 +614,7 @@ function(idf_build)
     __resove_deps()
 
     message("💡 Kconfig")
-    macro(__kconfig)
+    macro(__import_kconfig)
         # Generate sdkconfig.h/sdkconfig.cmake
         idf_build_get_property(sdkconfig SDKCONFIG)
         idf_build_get_property(sdkconfig_defaults SDKCONFIG_DEFAULTS)
@@ -678,7 +673,7 @@ function(idf_build)
             idf_build_set_property(COMPILE_OPTIONS "-msave-restore" APPEND)
         endif()
     endmacro()
-    __kconfig()
+    __import_kconfig()
 
     message("\n💡 Link dependencies")
     idf_build_get_property(component_targets __COMPONENT_TARGETS)
