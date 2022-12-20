@@ -21,7 +21,6 @@ list(APPEND srcs
     "${IDF_PATH}/components/esp_system/port/panic_handler.c"
     # "${IDF_PATH}/components/esp_system/startup.c"
     # "${IDF_PATH}/components/esp_system/port/cpu_start.c"
-    # "${IDF_PATH}/components/bootloader_support/bootloader_flash/src/bootloader_flash.c"
 )
 
 if(CONFIG_ESP_TASK_WDT_EN)

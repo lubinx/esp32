@@ -45,6 +45,7 @@ if (NOT IDF_ENV_PATH)
 endif()
 
 set(IDF_CMAKE_PATH ${IDF_PATH}/tools/cmake)
+# set(IDF_CMAKE_PATH "${CMAKE_CURRENT_LIST_DIR}/../cmake_idf/")
 
 #############################################################################
 # 💡 compiler toolchain variables
@@ -64,6 +65,7 @@ list(APPEND COMPILE_OPTIONS
     "-Wformat"
     "-Wundef"
     "-Wshadow"
+    "-Wwrite-strings"
 )
 
 # link options
@@ -102,9 +104,9 @@ if (NOT IDF_TARGET_ARCH STREQUAL "")
     list(APPEND IDF_KERNEL_COMPONENTS ${IDF_TARGET_ARCH})
 endif()
 list(APPEND IDF_KERNEL_COMPONENTS
-    "freertos" "newlib" "heap"  "cxx" "pthread"
-    "esp_common" "esp_hw_support" "esp_rom" "esp_system"
-    "soc" "hal" "efuse" "driver"
+    "esp_rom" "esp_common" "esp_system"
+    "soc" "hal" "esp_hw_support" "efuse" "esp_pm" "heap"
+    "freertos" "newlib" "pthread" "cxx" "driver"
     "spi_flash"
     "esptool_py"
 )
@@ -275,8 +277,9 @@ function(__build_init)
     idf_build_set_property(SDKCONFIG_DEFAULTS "")
 
     # kconfig
-    # idf_build_set_property(IDF_PATH ${CMAKE_CURRENT_LIST_DIR})
-    __kconfig_init()
+    idf_build_set_property(__OUTPUT_SDKCONFIG 1)
+    idf_build_set_property(__ROOT_KCONFIG "${CMAKE_CURRENT_LIST_DIR}/Kconfig.projbuild")
+    idf_build_set_property(__ROOT_SDKCONFIG_RENAME ${IDF_PATH}/sdkconfig.rename)
 
     # build esp-idf components
     idf_build_set_property(__PREFIX esp-idf)
@@ -323,7 +326,6 @@ endfunction()
 # idf_component_add() / idf_component_register()
 #############################################################################
 function(idf_component_add name_or_dir) # optional: prefix
-    # prefix
     list(POP_FRONT ARGN prefix)
 
     if (IS_DIRECTORY ${name_or_dir} OR IS_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/${name_or_dir}")
@@ -367,19 +369,32 @@ function(idf_component_add name_or_dir) # optional: prefix
 
     # TODO: sub components ?
     add_library(${component_target} STATIC IMPORTED)
+    # set BUILD_COMPONENT_DIRS build property
+    idf_build_set_property(BUILD_COMPONENT_DIRS ${component_dir} APPEND)
 
     # Set the basic properties of the component
     __component_set_property(${component_target} __PREFIX ${prefix})
     __component_set_property(${component_target} COMPONENT_NAME ${component_name})
     __component_set_property(${component_target} COMPONENT_LIB ${component_lib})
     __component_set_property(${component_target} COMPONENT_DIR ${component_dir})
-    # build dir
-    __component_set_property(${component_target} COMPONENT_BUILD_DIR "${CMAKE_BINARY_DIR}/${prefix}/${component_name}")
 
     # Set Kconfig related properties on the component
-    __kconfig_component_init(${component_target})
-    # set BUILD_COMPONENT_DIRS build property
-    idf_build_set_property(BUILD_COMPONENT_DIRS ${component_dir} APPEND)
+    function (__kconfig_add_component component_dir)
+        file(GLOB kconfig "${component_dir}/Kconfig")
+        file(GLOB kconfig_projbuild "${component_dir}/Kconfig.projbuild")
+        list(APPEND kconfig ${kconfig_projbuild})
+        if (${component_name} IN_LIST IDF_KERNEL_COMPONENTS)
+            __component_set_property(${component_target} KCONFIG_PROJBUILD "${kconfig}")
+        else()
+            __component_set_property(${component_target} KCONFIG "${kconfig}")
+        endif()
+
+        file(GLOB sdkconfig_rename "${component_dir}/sdkconfig.rename")
+        file(GLOB sdkconfig_rename_target "${component_dir}/sdkconfig.rename.${IDF_TARGET}")
+        list(APPEND sdkconfig_rename ${sdkconfig_rename_target})
+        __component_set_property(${component_target} SDKCONFIG_RENAME "${sdkconfig_rename}")
+    endfunction()
+    __kconfig_add_component(${component_dir})
 
     # ⚓ call macro idf_component_register()
     include(${component_dir}/CMakeLists.txt)
@@ -542,16 +557,6 @@ function(__inherited_component_register component_target)
         __ldgen_add_fragment_files("${__LDFRAGMENTS}")
     endif()
 
-    # Fill in the rest of component property
-    __component_set_property(${component_target} SRCS "${sources}")
-    __component_set_property(${component_target} INCLUDE_DIRS "${__INCLUDE_DIRS}")
-
-    # __component_set_property(${component_target} LDFRAGMENTS "${__LDFRAGMENTS}")
-    __component_set_property(${component_target} EMBED_FILES "${__EMBED_FILES}")
-    __component_set_property(${component_target} EMBED_TXTFILES "${__EMBED_TXTFILES}")
-    __component_set_property(${component_target} REQUIRED_IDF_TARGETS "${__REQUIRED_IDF_TARGETS}")
-
-    __component_set_property(${component_target} WHOLE_ARCHIVE ${__WHOLE_ARCHIVE})    # COMPONENT_TARGET is deprecated but is made available with same function
     # as COMPONENT_LIB for compatibility.
     set(COMPONENT_TARGET ${component_lib} PARENT_SCOPE)
     # Make the COMPONENT_LIB variable available in the component CMakeLists.txt
@@ -638,10 +643,6 @@ function(idf_build)
             add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-frtti>")
         else()
             add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>")
-        endif()
-
-        if(CONFIG_COMPILER_WARN_WRITE_STRINGS)
-            add_compile_options("-Wwrite-strings")
         endif()
 
         if(CONFIG_COMPILER_STACK_CHECK_MODE_NORM)

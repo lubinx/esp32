@@ -1,0 +1,8 @@
+config PARTITION_TABLE_OFFSET
+    hex
+    default 0x8000
+
+# esp_app_format
+config APP_RETRIEVE_LEN_ELF_SHA
+    int
+    default 16

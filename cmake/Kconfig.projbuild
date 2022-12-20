@@ -1,0 +1,491 @@
+#
+# Please run the following command for opening a page with more information about this configuration file:
+# idf.py docs -sp api-reference/kconfig.html
+#
+mainmenu "Espressif IoT Development Framework Configuration"
+
+orsource "${IDF_PATH}/components/soc/$IDF_TARGET/include/soc/Kconfig.soc_caps.in"
+
+config IDF_CMAKE
+    bool
+    default "y"
+
+config IDF_ENV_FPGA
+    # This option is for internal use only
+    bool
+    option env="IDF_ENV_FPGA"
+
+config IDF_CI_BUILD
+    bool
+    default y if "$(IDF_CI_BUILD)" = "y" || "$(IDF_CI_BUILD)" = 1
+
+config IDF_TARGET_ARCH_RISCV
+    bool
+    default "n"
+
+config IDF_TARGET_ARCH_XTENSA
+    bool
+    default "n"
+
+config IDF_TARGET_ARCH
+    string
+    default "riscv" if IDF_TARGET_ARCH_RISCV
+    default "xtensa" if IDF_TARGET_ARCH_XTENSA
+
+config IDF_TARGET
+    # This option records the IDF target when sdkconfig is generated the first time.
+    # It is not updated if environment variable $IDF_TARGET changes later, and
+    # the build system is responsible for detecting the mismatch between
+    # CONFIG_IDF_TARGET and $IDF_TARGET.
+    string
+    default "$IDF_TARGET"
+
+config IDF_TARGET_LINUX
+    bool
+    default "y" if IDF_TARGET="linux"
+
+config IDF_TARGET_ESP32
+    bool
+    default "y" if IDF_TARGET="esp32"
+    select IDF_TARGET_ARCH_XTENSA
+
+config IDF_TARGET_ESP32S2
+    bool
+    default "y" if IDF_TARGET="esp32s2"
+    select FREERTOS_UNICORE
+    select IDF_TARGET_ARCH_XTENSA
+
+config IDF_TARGET_ESP32S3
+    bool
+    default "y" if IDF_TARGET="esp32s3"
+    select IDF_TARGET_ARCH_XTENSA
+
+config IDF_TARGET_ESP32C3
+    bool
+    default "y" if IDF_TARGET="esp32c3"
+    select FREERTOS_UNICORE
+    select IDF_TARGET_ARCH_RISCV
+
+config IDF_TARGET_ESP32H4
+    bool
+    default "y" if IDF_TARGET="esp32h4"
+    select FREERTOS_UNICORE
+    select IDF_TARGET_ARCH_RISCV
+
+choice IDF_TARGET_ESP32H4_BETA_VERSION
+    prompt "ESP32-H4 beta version"
+    depends on IDF_TARGET_ESP32H4
+    default IDF_TARGET_ESP32H4_BETA_VERSION_2
+    help
+        Currently ESP32-H4 has several beta versions for internal use only.
+        Select the one that matches your chip model.
+
+    config IDF_TARGET_ESP32H4_BETA_VERSION_1
+        bool
+        prompt "ESP32-H4 beta1"
+    config IDF_TARGET_ESP32H4_BETA_VERSION_2
+        bool
+        prompt "ESP32-H4 beta2"
+endchoice
+
+config IDF_TARGET_ESP32C2
+    bool
+    default "y" if IDF_TARGET="esp32c2"
+    select FREERTOS_UNICORE
+    select IDF_TARGET_ARCH_RISCV
+
+config IDF_TARGET_ESP32C6
+    bool
+    default "y" if IDF_TARGET="esp32c6"
+    select FREERTOS_UNICORE
+    select IDF_TARGET_ARCH_RISCV
+
+config IDF_TARGET_LINUX
+    bool
+    default "y" if IDF_TARGET="linux"
+
+config IDF_FIRMWARE_CHIP_ID
+    hex
+    default 0x0000 if IDF_TARGET_ESP32
+    default 0x0002 if IDF_TARGET_ESP32S2
+    default 0x0005 if IDF_TARGET_ESP32C3
+    default 0x0009 if IDF_TARGET_ESP32S3
+    default 0x000A if IDF_TARGET_ESP32H4_BETA_VERSION_1
+    default 0x000C if IDF_TARGET_ESP32C2
+    default 0x000D if IDF_TARGET_ESP32C6
+    default 0x000E if IDF_TARGET_ESP32H4_BETA_VERSION_2 # ESP32-TODO: IDF-3475
+    default 0xFFFF
+
+menu "Compiler options"
+    choice COMPILER_OPTIMIZATION
+        prompt "Optimization Level"
+        default COMPILER_OPTIMIZATION_DEFAULT
+        help
+            This option sets compiler optimization level (gcc -O argument) for the app.
+
+            - The "Default" setting will add the -0g flag to CFLAGS.
+            - The "Size" setting will add the -0s flag to CFLAGS.
+            - The "Performance" setting will add the -O2 flag to CFLAGS.
+            - The "None" setting will add the -O0 flag to CFLAGS.
+
+            The "Size" setting cause the compiled code to be smaller and faster, but
+            may lead to difficulties of correlating code addresses to source file
+            lines when debugging.
+
+            The "Performance" setting causes the compiled code to be larger and faster,
+            but will be easier to correlated code addresses to source file lines.
+
+            "None" with -O0 produces compiled code without optimization.
+
+            Note that custom optimization levels may be unsupported.
+
+            Compiler optimization for the IDF bootloader is set separately,
+            see the BOOTLOADER_COMPILER_OPTIMIZATION setting.
+
+        config COMPILER_OPTIMIZATION_DEFAULT
+            bool "Debug (-Og)"
+        config COMPILER_OPTIMIZATION_SIZE
+            bool "Optimize for size (-Os)"
+        config COMPILER_OPTIMIZATION_PERF
+            bool "Optimize for performance (-O2)"
+        config COMPILER_OPTIMIZATION_NONE
+            bool "Debug without optimization (-O0)"
+    endchoice
+
+    choice COMPILER_OPTIMIZATION_ASSERTION_LEVEL
+        prompt "Assertion level"
+        default COMPILER_OPTIMIZATION_ASSERTIONS_ENABLE
+        help
+            Assertions can be:
+
+            - Enabled. Failure will print verbose assertion details. This is the default.
+
+            - Set to "silent" to save code size (failed assertions will abort() but user
+                needs to use the aborting address to find the line number with the failed assertion.)
+
+            - Disabled entirely (not recommended for most configurations.) -DNDEBUG is added
+                to CPPFLAGS in this case.
+
+        config COMPILER_OPTIMIZATION_ASSERTIONS_ENABLE
+            prompt "Enabled"
+            bool
+            help
+                Enable assertions. Assertion content and line number will be printed on failure.
+
+        config COMPILER_OPTIMIZATION_ASSERTIONS_SILENT
+            prompt "Silent (saves code size)"
+            bool
+            help
+                Enable silent assertions. Failed assertions will abort(), user needs to
+                use the aborting address to find the line number with the failed assertion.
+
+        config COMPILER_OPTIMIZATION_ASSERTIONS_DISABLE
+            prompt "Disabled (sets -DNDEBUG)"
+            bool
+            help
+                If assertions are disabled, -DNDEBUG is added to CPPFLAGS.
+    endchoice
+
+    choice COMPILER_FLOAT_LIB_FROM
+        prompt "Compiler float lib source"
+        default COMPILER_FLOAT_LIB_FROM_RVFPLIB if ESP_ROM_HAS_RVFPLIB
+        default COMPILER_FLOAT_LIB_FROM_GCCLIB
+        help
+            In the soft-fp part of libgcc, riscv version is written in C,
+            and handles all edge cases in IEEE754, which makes it larger
+            and performance is slow.
+
+            RVfplib is an optimized RISC-V library for FP arithmetic on 32-bit
+            integer processors, for single and double-precision FP.
+            RVfplib is "fast", but it has a few exceptions from IEEE 754 compliance.
+
+        config COMPILER_FLOAT_LIB_FROM_GCCLIB
+            bool "libgcc"
+        config COMPILER_FLOAT_LIB_FROM_RVFPLIB
+            depends on ESP_ROM_HAS_RVFPLIB
+            bool "librvfp"
+    endchoice # COMPILER_FLOAT_LIB_FROM
+
+    config COMPILER_OPTIMIZATION_ASSERTION_LEVEL
+        int
+        default 0 if COMPILER_OPTIMIZATION_ASSERTIONS_DISABLE
+        default 1 if COMPILER_OPTIMIZATION_ASSERTIONS_SILENT
+        default 2 if COMPILER_OPTIMIZATION_ASSERTIONS_ENABLE
+
+    config COMPILER_OPTIMIZATION_CHECKS_SILENT
+        bool "Disable messages in ESP_RETURN_ON_* and ESP_EXIT_ON_* macros"
+        default n
+        help
+            If enabled, the error messages will be discarded in following check macros:
+            - ESP_RETURN_ON_ERROR
+            - ESP_EXIT_ON_ERROR
+            - ESP_RETURN_ON_FALSE
+            - ESP_EXIT_ON_FALSE
+
+    menuconfig COMPILER_HIDE_PATHS_MACROS
+        bool "Replace ESP-IDF and project paths in binaries"
+        default y
+        help
+            When expanding the __FILE__ and __BASE_FILE__ macros, replace paths inside ESP-IDF
+            with paths relative to the placeholder string "IDF", and convert paths inside the
+            project directory to relative paths.
+
+            This allows building the project with assertions or other code that embeds file paths,
+            without the binary containing the exact path to the IDF or project directories.
+
+            This option passes -fmacro-prefix-map options to the GCC command line. To replace additional
+            paths in your binaries, modify the project CMakeLists.txt file to pass custom -fmacro-prefix-map or
+            -ffile-prefix-map arguments.
+
+    menuconfig COMPILER_CXX_EXCEPTIONS
+        bool "Enable C++ exceptions"
+        default n
+        help
+            Enabling this option compiles all IDF C++ files with exception support enabled.
+
+            Disabling this option disables C++ exception support in all compiled files, and any libstdc++ code
+            which throws an exception will abort instead.
+
+            Enabling this option currently adds an additional ~500 bytes of heap overhead
+            when an exception is thrown in user code for the first time.
+
+    config COMPILER_CXX_EXCEPTIONS_EMG_POOL_SIZE
+        int "Emergency Pool Size"
+        default 0
+        depends on COMPILER_CXX_EXCEPTIONS
+        help
+            Size (in bytes) of the emergency memory pool for C++ exceptions. This pool will be used to allocate
+            memory for thrown exceptions when there is not enough memory on the heap.
+
+    config COMPILER_CXX_RTTI
+        bool "Enable C++ run-time type info (RTTI)"
+        default n
+        help
+            Enabling this option compiles all C++ files with RTTI support enabled.
+            This increases binary size (typically by tens of kB) but allows using
+            dynamic_cast conversion and typeid operator.
+
+    choice COMPILER_STACK_CHECK_MODE
+        prompt "Stack smashing protection mode"
+        default COMPILER_STACK_CHECK_MODE_NONE
+        help
+            Stack smashing protection mode. Emit extra code to check for buffer overflows, such as stack
+            smashing attacks. This is done by adding a guard variable to functions with vulnerable objects.
+            The guards are initialized when a function is entered and then checked when the function exits.
+            If a guard check fails, program is halted. Protection has the following modes:
+
+            - In NORMAL mode (GCC flag: -fstack-protector) only functions that call alloca, and functions with
+                buffers larger than 8 bytes are protected.
+
+            - STRONG mode (GCC flag: -fstack-protector-strong) is like NORMAL, but includes additional functions
+                to be protected -- those that have local array definitions, or have references to local frame
+                addresses.
+
+            - In OVERALL mode (GCC flag: -fstack-protector-all) all functions are protected.
+
+            Modes have the following impact on code performance and coverage:
+
+            - performance: NORMAL > STRONG > OVERALL
+
+            - coverage: NORMAL < STRONG < OVERALL
+
+            The performance impact includes increasing the amount of stack memory required for each task.
+
+        config COMPILER_STACK_CHECK_MODE_NONE
+            bool "None"
+        config COMPILER_STACK_CHECK_MODE_NORM
+            bool "Normal"
+        config COMPILER_STACK_CHECK_MODE_STRONG
+            bool "Strong"
+        config COMPILER_STACK_CHECK_MODE_ALL
+            bool "Overall"
+    endchoice
+
+    config COMPILER_STACK_CHECK
+        bool
+        default !COMPILER_STACK_CHECK_MODE_NONE
+        help
+            Stack smashing protection.
+
+    config COMPILER_SAVE_RESTORE_LIBCALLS
+        bool "Enable -msave-restore flag to reduce code size"
+        depends on IDF_TARGET_ARCH_RISCV
+        help
+            Adds -msave-restore to C/C++ compilation flags.
+
+            When this flag is enabled, compiler will call library functions to
+            save/restore registers in function prologues/epilogues. This results
+            in lower overall code size, at the expense of slightly reduced performance.
+
+            This option can be enabled for RISC-V targets only.
+
+    config COMPILER_DUMP_RTL_FILES
+        bool "Dump RTL files during compilation"
+        help
+            If enabled, RTL files will be produced during compilation. These files
+            can be used by other tools, for example to calculate call graphs.
+endmenu
+
+menu "Bootloader config"
+    choice BOOTLOADER_COMPILER_OPTIMIZATION
+        prompt "Bootloader optimization Level"
+        default BOOTLOADER_COMPILER_OPTIMIZATION_SIZE
+        help
+            This option sets compiler optimization level (gcc -O argument)
+            for the bootloader.
+
+            - The default "Size" setting will add the -0s flag to CFLAGS.
+            - The "Debug" setting will add the -Og flag to CFLAGS.
+            - The "Performance" setting will add the -O2 flag to CFLAGS.
+            - The "None" setting will add the -O0 flag to CFLAGS.
+
+            Note that custom optimization levels may be unsupported.
+
+        config BOOTLOADER_COMPILER_OPTIMIZATION_SIZE
+            bool "Size (-Os)"
+        config BOOTLOADER_COMPILER_OPTIMIZATION_DEBUG
+            bool "Debug (-Og)"
+        config BOOTLOADER_COMPILER_OPTIMIZATION_PERF
+            bool "Optimize for performance (-O2)"
+        config BOOTLOADER_COMPILER_OPTIMIZATION_NONE
+            bool "Debug without optimization (-O0)"
+    endchoice
+
+    choice BOOTLOADER_LOG_LEVEL
+        bool "Bootloader log verbosity"
+        default BOOTLOADER_LOG_LEVEL_INFO
+        help
+            Specify how much output to see in bootloader logs.
+
+        config BOOTLOADER_LOG_LEVEL_NONE
+            bool "No output"
+        config BOOTLOADER_LOG_LEVEL_ERROR
+            bool "Error"
+        config BOOTLOADER_LOG_LEVEL_WARN
+            bool "Warning"
+        config BOOTLOADER_LOG_LEVEL_INFO
+            bool "Info"
+        config BOOTLOADER_LOG_LEVEL_DEBUG
+            bool "Debug"
+        config BOOTLOADER_LOG_LEVEL_VERBOSE
+            bool "Verbose"
+    endchoice
+
+    config BOOTLOADER_LOG_LEVEL
+        int
+        default 0 if BOOTLOADER_LOG_LEVEL_NONE
+        default 1 if BOOTLOADER_LOG_LEVEL_ERROR
+        default 2 if BOOTLOADER_LOG_LEVEL_WARN
+        default 3 if BOOTLOADER_LOG_LEVEL_INFO
+        default 4 if BOOTLOADER_LOG_LEVEL_DEBUG
+        default 5 if BOOTLOADER_LOG_LEVEL_VERBOSE
+
+    config BOOTLOADER_SPI_CUSTOM_WP_PIN
+        bool "Use custom SPI Flash WP Pin when flash pins set in eFuse (read help)"
+        depends on IDF_TARGET_ESP32 && (ESPTOOLPY_FLASHMODE_QIO || ESPTOOLPY_FLASHMODE_QOUT)
+        default y if BOOTLOADER_SPI_WP_PIN != 7  # backwards compatibility, can remove in IDF 5
+        default n
+        help
+            This setting is only used if the SPI flash pins have been overridden by setting the eFuses
+            SPI_PAD_CONFIG_xxx, and the SPI flash mode is QIO or QOUT.
+
+            When this is the case, the eFuse config only defines 3 of the 4 Quad I/O data pins. The WP pin (aka
+            ESP32 pin "SD_DATA_3" or SPI flash pin "IO2") is not specified in eFuse. The same pin is also used
+            for external SPIRAM if it is enabled.
+
+            If this config item is set to N (default), the correct WP pin will be automatically used for any
+            Espressif chip or module with integrated flash. If a custom setting is needed, set this config item to
+            Y and specify the GPIO number connected to the WP.
+
+    config BOOTLOADER_SPI_WP_PIN
+        int "Custom SPI Flash WP Pin"
+        range 0 33
+        default 7
+        depends on IDF_TARGET_ESP32 && (ESPTOOLPY_FLASHMODE_QIO || ESPTOOLPY_FLASHMODE_QOUT)
+        #depends on BOOTLOADER_SPI_CUSTOM_WP_PIN  # backwards compatibility, can uncomment in IDF 5
+        help
+            The option "Use custom SPI Flash WP Pin" must be set or this value is ignored
+
+            If burning a customized set of SPI flash pins in eFuse and using QIO or QOUT mode for flash, set this
+            value to the GPIO number of the SPI flash WP pin.
+
+    choice BOOTLOADER_VDDSDIO_BOOST
+        bool "VDDSDIO LDO voltage"
+        default BOOTLOADER_VDDSDIO_BOOST_1_9V
+        help
+            If this option is enabled, and VDDSDIO LDO is set to 1.8V (using eFuse
+            or MTDI bootstrapping pin), bootloader will change LDO settings to
+            output 1.9V instead. This helps prevent flash chip from browning out
+            during flash programming operations.
+
+            This option has no effect if VDDSDIO is set to 3.3V, or if the internal
+            VDDSDIO regulator is disabled via eFuse.
+
+        config BOOTLOADER_VDDSDIO_BOOST_1_8V
+            bool "1.8V"
+            depends on !ESPTOOLPY_FLASHFREQ_80M
+        config BOOTLOADER_VDDSDIO_BOOST_1_9V
+            bool "1.9V"
+    endchoice
+
+    config BOOTLOADER_REGION_PROTECTION_ENABLE
+        bool "Enable protection for unmapped memory regions"
+        default y
+        help
+            Protects the unmapped memory regions of the entire address space from unintended accesses.
+            This will ensure that an exception will be triggered whenever the CPU performs a memory
+            operation on unmapped regions of the address space.
+
+    config BOOTLOADER_WDT_ENABLE
+        bool "Use RTC watchdog in start code"
+        default y
+        help
+            Tracks the execution time of startup code.
+            If the execution time is exceeded, the RTC_WDT will restart system.
+            It is also useful to prevent a lock up in start code caused by an unstable power source.
+            NOTE: Tracks the execution time starts from the bootloader code - re-set timeout, while selecting the
+            source for slow_clk - and ends calling app_main.
+            Re-set timeout is needed due to WDT uses a SLOW_CLK clock source. After changing a frequency slow_clk a
+            time of WDT needs to re-set for new frequency.
+            slow_clk depends on RTC_CLK_SRC (INTERNAL_RC or EXTERNAL_CRYSTAL).
+
+    config BOOTLOADER_WDT_DISABLE_IN_USER_CODE
+        bool "Allows RTC watchdog disable in user code"
+        depends on BOOTLOADER_WDT_ENABLE
+        default n
+        help
+            If this option is set, the ESP-IDF app must explicitly reset, feed, or disable the rtc_wdt in
+            the app's own code.
+            If this option is not set (default), then rtc_wdt will be disabled by ESP-IDF before calling
+            the app_main() function.
+
+            Use function rtc_wdt_feed() for resetting counter of rtc_wdt.
+            Use function rtc_wdt_disable() for disabling rtc_wdt.
+
+    config BOOTLOADER_WDT_TIME_MS
+        int "Timeout for RTC watchdog (ms)"
+        depends on BOOTLOADER_WDT_ENABLE
+        default 9000
+        range 0 120000
+        help
+            Verify that this parameter is correct and more then the execution time.
+            Pay attention to options such as reset to factory, trigger test partition and encryption on boot
+            - these options can increase the execution time.
+            Note: RTC_WDT will reset while encryption operations will be performed.
+
+
+    config BOOTLOADER_FLASH_XMC_SUPPORT
+        bool "Enable the support for flash chips of XMC (READ HELP FIRST)"
+        default y
+        help
+            Perform the startup flow recommended by XMC. Please consult XMC for the details of this flow.
+            XMC chips will be forbidden to be used, when this option is disabled.
+
+            DON'T DISABLE THIS UNLESS YOU KNOW WHAT YOU ARE DOING.
+endmenu  # Bootloader
+
+    source "$COMPONENT_KCONFIGS_PROJBUILD_SOURCE_FILE"
+
+    menu "Component config"
+        source "$COMPONENT_KCONFIGS_SOURCE_FILE"
+    endmenu
