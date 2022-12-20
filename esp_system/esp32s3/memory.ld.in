@@ -1,14 +1,3 @@
-#define SRAM_DIRAM_I_START              0x40378000
-#define SRAM_IRAM_END                   0x403CC700 /* Please refer to ESP32-S3 bootloader.ld for more information on this */
-#define I_D_SRAM_OFFSET                 (0x6F0000)
-
-#define SRAM_DRAM_END                   (SRAM_IRAM_END - I_D_SRAM_OFFSET)  /* 2nd stage bootloader iram_loader_seg start address */
-#define I_D_SRAM_SIZE                   (SRAM_DRAM_END - 0x3FC88000)
-
-
-#define SRAM_IRAM_SIZE                  (I_D_SRAM_SIZE + ICACHE_SIZE - CONFIG_ESP32S3_INSTRUCTION_CACHE_SIZE)
-
-
 #include "sdkconfig.h"
 /*
     CONFIG_SOC_MEMPROT_CPU_PREFETCH_PAD_SIZE
@@ -19,20 +8,14 @@
 
     CONFIG_APP_BUILD_USE_FLASH_SECTIONS
         use static ld segments instead of configure this
+
+    CONFIG_ESP32S3_USE_FIXED_STATIC_RAM_SIZE
+        for what?
 */
 /****************************************************************************
  * sdkconfig.h
 *****************************************************************************
 */
-#if false
-    # TODO: remove THIS
-    #if CONFIG_ESP32S3_USE_FIXED_STATIC_RAM_SIZE
-        ASSERT((CONFIG_ESP32S3_FIXED_STATIC_RAM_SIZE <= I_D_SRAM_SIZE), "Fixed static ram data does not fit.")
-        #define DRAM0_0_SEG_LEN             CONFIG_ESP32S3_FIXED_STATIC_RAM_SIZE
-    #else
-        #define DRAM0_0_SEG_LEN             I_D_SRAM_SIZE
-    #endif
-#endif
     SRAM_TEXT_OVERLAPPED_START =    0x40378000;
     SRAM_ESP_SYSTEM_START =         0x3FCE9710;     /* see appendix */
 

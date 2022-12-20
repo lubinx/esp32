@@ -4,16 +4,20 @@
 #
 mainmenu "Espressif IoT Development Framework Configuration"
 
-orsource "$IDF_PATH/components/soc/$IDF_TARGET/include/soc/Kconfig.soc_caps.in"
-
 config PARTITION_TABLE_OFFSET
     hex
     default 0x8000
 
-# esp_app_format
 config APP_RETRIEVE_LEN_ELF_SHA
     int
     default 16
+
+config APP_BUILD_USE_FLASH_SECTIONS
+    # always mapping flash for executing code / readonly data
+    bool
+    default y
+
+orsource "$IDF_PATH/components/soc/$IDF_TARGET/include/soc/Kconfig.soc_caps.in"
 
 config IDF_CMAKE
     bool
@@ -24,10 +28,10 @@ config IDF_ENV_FPGA
     bool
     option env="IDF_ENV_FPGA"
 
-# warning deprecated
 config IDF_CI_BUILD
-    bool
-    default "y"
+        bool
+        # default y if "$(IDF_CI_BUILD)" = "y" || "$(IDF_CI_BUILD)" = 1
+        default y
 
 config IDF_TARGET_ARCH_RISCV
     bool
@@ -43,10 +47,6 @@ config IDF_TARGET_ARCH
     default "xtensa" if IDF_TARGET_ARCH_XTENSA
 
 config IDF_TARGET
-    # This option records the IDF target when sdkconfig is generated the first time.
-    # It is not updated if environment variable $IDF_TARGET changes later, and
-    # the build system is responsible for detecting the mismatch between
-    # CONFIG_IDF_TARGET and $IDF_TARGET.
     string
     default "$IDF_TARGET"
 
@@ -126,246 +126,28 @@ config IDF_FIRMWARE_CHIP_ID
     default 0x000E if IDF_TARGET_ESP32H4_BETA_VERSION_2 # ESP32-TODO: IDF-3475
     default 0xFFFF
 
-menu "Compiler options"
-    choice COMPILER_OPTIMIZATION
-        prompt "Optimization Level"
-        default COMPILER_OPTIMIZATION_DEFAULT
-        help
-            This option sets compiler optimization level (gcc -O argument) for the app.
-
-            - The "Default" setting will add the -0g flag to CFLAGS.
-            - The "Size" setting will add the -0s flag to CFLAGS.
-            - The "Performance" setting will add the -O2 flag to CFLAGS.
-            - The "None" setting will add the -O0 flag to CFLAGS.
-
-            The "Size" setting cause the compiled code to be smaller and faster, but
-            may lead to difficulties of correlating code addresses to source file
-            lines when debugging.
-
-            The "Performance" setting causes the compiled code to be larger and faster,
-            but will be easier to correlated code addresses to source file lines.
-
-            "None" with -O0 produces compiled code without optimization.
-
-            Note that custom optimization levels may be unsupported.
-
-            Compiler optimization for the IDF bootloader is set separately,
-            see the BOOTLOADER_COMPILER_OPTIMIZATION setting.
-
-        config COMPILER_OPTIMIZATION_DEFAULT
-            bool "Debug (-Og)"
-        config COMPILER_OPTIMIZATION_SIZE
-            bool "Optimize for size (-Os)"
-        config COMPILER_OPTIMIZATION_PERF
-            bool "Optimize for performance (-O2)"
-        config COMPILER_OPTIMIZATION_NONE
-            bool "Debug without optimization (-O0)"
-    endchoice
-
-    choice COMPILER_OPTIMIZATION_ASSERTION_LEVEL
-        prompt "Assertion level"
-        default COMPILER_OPTIMIZATION_ASSERTIONS_ENABLE
-        help
-            Assertions can be:
-
-            - Enabled. Failure will print verbose assertion details. This is the default.
-
-            - Set to "silent" to save code size (failed assertions will abort() but user
-                needs to use the aborting address to find the line number with the failed assertion.)
-
-            - Disabled entirely (not recommended for most configurations.) -DNDEBUG is added
-                to CPPFLAGS in this case.
-
-        config COMPILER_OPTIMIZATION_ASSERTIONS_ENABLE
-            prompt "Enabled"
-            bool
-            help
-                Enable assertions. Assertion content and line number will be printed on failure.
-
-        config COMPILER_OPTIMIZATION_ASSERTIONS_SILENT
-            prompt "Silent (saves code size)"
-            bool
-            help
-                Enable silent assertions. Failed assertions will abort(), user needs to
-                use the aborting address to find the line number with the failed assertion.
-
-        config COMPILER_OPTIMIZATION_ASSERTIONS_DISABLE
-            prompt "Disabled (sets -DNDEBUG)"
-            bool
-            help
-                If assertions are disabled, -DNDEBUG is added to CPPFLAGS.
-    endchoice
-
-    choice COMPILER_FLOAT_LIB_FROM
-        prompt "Compiler float lib source"
-        default COMPILER_FLOAT_LIB_FROM_RVFPLIB if ESP_ROM_HAS_RVFPLIB
-        default COMPILER_FLOAT_LIB_FROM_GCCLIB
-        help
-            In the soft-fp part of libgcc, riscv version is written in C,
-            and handles all edge cases in IEEE754, which makes it larger
-            and performance is slow.
-
-            RVfplib is an optimized RISC-V library for FP arithmetic on 32-bit
-            integer processors, for single and double-precision FP.
-            RVfplib is "fast", but it has a few exceptions from IEEE 754 compliance.
-
-        config COMPILER_FLOAT_LIB_FROM_GCCLIB
-            bool "libgcc"
-        config COMPILER_FLOAT_LIB_FROM_RVFPLIB
-            depends on ESP_ROM_HAS_RVFPLIB
-            bool "librvfp"
-    endchoice # COMPILER_FLOAT_LIB_FROM
-
-    config COMPILER_OPTIMIZATION_ASSERTION_LEVEL
-        int
-        default 0 if COMPILER_OPTIMIZATION_ASSERTIONS_DISABLE
-        default 1 if COMPILER_OPTIMIZATION_ASSERTIONS_SILENT
-        default 2 if COMPILER_OPTIMIZATION_ASSERTIONS_ENABLE
-
-    config COMPILER_OPTIMIZATION_CHECKS_SILENT
-        bool "Disable messages in ESP_RETURN_ON_* and ESP_EXIT_ON_* macros"
-        default n
-        help
-            If enabled, the error messages will be discarded in following check macros:
-            - ESP_RETURN_ON_ERROR
-            - ESP_EXIT_ON_ERROR
-            - ESP_RETURN_ON_FALSE
-            - ESP_EXIT_ON_FALSE
-
-    menuconfig COMPILER_HIDE_PATHS_MACROS
-        bool "Replace ESP-IDF and project paths in binaries"
-        default y
-        help
-            When expanding the __FILE__ and __BASE_FILE__ macros, replace paths inside ESP-IDF
-            with paths relative to the placeholder string "IDF", and convert paths inside the
-            project directory to relative paths.
-
-            This allows building the project with assertions or other code that embeds file paths,
-            without the binary containing the exact path to the IDF or project directories.
-
-            This option passes -fmacro-prefix-map options to the GCC command line. To replace additional
-            paths in your binaries, modify the project CMakeLists.txt file to pass custom -fmacro-prefix-map or
-            -ffile-prefix-map arguments.
-
-    menuconfig COMPILER_CXX_EXCEPTIONS
-        bool "Enable C++ exceptions"
-        default n
-        help
-            Enabling this option compiles all IDF C++ files with exception support enabled.
-
-            Disabling this option disables C++ exception support in all compiled files, and any libstdc++ code
-            which throws an exception will abort instead.
-
-            Enabling this option currently adds an additional ~500 bytes of heap overhead
-            when an exception is thrown in user code for the first time.
-
-    config COMPILER_CXX_EXCEPTIONS_EMG_POOL_SIZE
-        int "Emergency Pool Size"
-        default 0
-        depends on COMPILER_CXX_EXCEPTIONS
-        help
-            Size (in bytes) of the emergency memory pool for C++ exceptions. This pool will be used to allocate
-            memory for thrown exceptions when there is not enough memory on the heap.
-
-    config COMPILER_CXX_RTTI
-        bool "Enable C++ run-time type info (RTTI)"
-        default n
-        help
-            Enabling this option compiles all C++ files with RTTI support enabled.
-            This increases binary size (typically by tens of kB) but allows using
-            dynamic_cast conversion and typeid operator.
-
-    choice COMPILER_STACK_CHECK_MODE
-        prompt "Stack smashing protection mode"
-        default COMPILER_STACK_CHECK_MODE_NONE
-        help
-            Stack smashing protection mode. Emit extra code to check for buffer overflows, such as stack
-            smashing attacks. This is done by adding a guard variable to functions with vulnerable objects.
-            The guards are initialized when a function is entered and then checked when the function exits.
-            If a guard check fails, program is halted. Protection has the following modes:
-
-            - In NORMAL mode (GCC flag: -fstack-protector) only functions that call alloca, and functions with
-                buffers larger than 8 bytes are protected.
-
-            - STRONG mode (GCC flag: -fstack-protector-strong) is like NORMAL, but includes additional functions
-                to be protected -- those that have local array definitions, or have references to local frame
-                addresses.
-
-            - In OVERALL mode (GCC flag: -fstack-protector-all) all functions are protected.
-
-            Modes have the following impact on code performance and coverage:
-
-            - performance: NORMAL > STRONG > OVERALL
-
-            - coverage: NORMAL < STRONG < OVERALL
-
-            The performance impact includes increasing the amount of stack memory required for each task.
-
-        config COMPILER_STACK_CHECK_MODE_NONE
-            bool "None"
-        config COMPILER_STACK_CHECK_MODE_NORM
-            bool "Normal"
-        config COMPILER_STACK_CHECK_MODE_STRONG
-            bool "Strong"
-        config COMPILER_STACK_CHECK_MODE_ALL
-            bool "Overall"
-    endchoice
-
-    config COMPILER_STACK_CHECK
-        bool
-        default !COMPILER_STACK_CHECK_MODE_NONE
-        help
-            Stack smashing protection.
-
-    config COMPILER_SAVE_RESTORE_LIBCALLS
-        bool "Enable -msave-restore flag to reduce code size"
-        depends on IDF_TARGET_ARCH_RISCV
-        help
-            Adds -msave-restore to C/C++ compilation flags.
-
-            When this flag is enabled, compiler will call library functions to
-            save/restore registers in function prologues/epilogues. This results
-            in lower overall code size, at the expense of slightly reduced performance.
-
-            This option can be enabled for RISC-V targets only.
-
-    config COMPILER_DUMP_RTL_FILES
-        bool "Dump RTL files during compilation"
-        help
-            If enabled, RTL files will be produced during compilation. These files
-            can be used by other tools, for example to calculate call graphs.
-endmenu
-
-menu "Bootloader config"
+menu "Bootloader"
     choice BOOTLOADER_COMPILER_OPTIMIZATION
         prompt "Bootloader optimization Level"
-        default BOOTLOADER_COMPILER_OPTIMIZATION_SIZE
-        help
-            This option sets compiler optimization level (gcc -O argument)
-            for the bootloader.
+        default BOOTLOADER_COMPILER_OPTIMIZATION_FULL
 
-            - The default "Size" setting will add the -0s flag to CFLAGS.
-            - The "Debug" setting will add the -Og flag to CFLAGS.
-            - The "Performance" setting will add the -O2 flag to CFLAGS.
-            - The "None" setting will add the -O0 flag to CFLAGS.
-
-            Note that custom optimization levels may be unsupported.
-
-        config BOOTLOADER_COMPILER_OPTIMIZATION_SIZE
-            bool "Size (-Os)"
-        config BOOTLOADER_COMPILER_OPTIMIZATION_DEBUG
-            bool "Debug (-Og)"
-        config BOOTLOADER_COMPILER_OPTIMIZATION_PERF
-            bool "Optimize for performance (-O2)"
         config BOOTLOADER_COMPILER_OPTIMIZATION_NONE
-            bool "Debug without optimization (-O0)"
+            bool "-O0: none optimization"
+        config BOOTLOADER_COMPILER_OPTIMIZATION_BASIC
+            bool "-O1: basic optimization"
+        config BOOTLOADER_COMPILER_OPTIMIZATION_PERF
+            bool "-O2 performance optimization"
+        config BOOTLOADER_COMPILER_OPTIMIZATION_FULL
+            bool "-O3 full optimization"
+        config BOOTLOADER_COMPILER_OPTIMIZATION_SIZE
+            bool "-Os size optimization"
+        config BOOTLOADER_COMPILER_OPTIMIZATION_DEFAULT
+            bool "-Og debug optimization"
     endchoice
 
     choice BOOTLOADER_LOG_LEVEL
         bool "Bootloader log verbosity"
-        default BOOTLOADER_LOG_LEVEL_INFO
-        help
-            Specify how much output to see in bootloader logs.
+        default BOOTLOADER_LOG_LEVEL_DEBUG
 
         config BOOTLOADER_LOG_LEVEL_NONE
             bool "No output"
@@ -377,8 +159,8 @@ menu "Bootloader config"
             bool "Info"
         config BOOTLOADER_LOG_LEVEL_DEBUG
             bool "Debug"
-        config BOOTLOADER_LOG_LEVEL_VERBOSE
-            bool "Verbose"
+        # config BOOTLOADER_LOG_LEVEL_VERBOSE   no verbose logs for bootloader
+        #     bool "Verbose"
     endchoice
 
     config BOOTLOADER_LOG_LEVEL
@@ -483,19 +265,182 @@ menu "Bootloader config"
             - these options can increase the execution time.
             Note: RTC_WDT will reset while encryption operations will be performed.
 
-
     config BOOTLOADER_FLASH_XMC_SUPPORT
         bool "Enable the support for flash chips of XMC (READ HELP FIRST)"
         default y
         help
             Perform the startup flow recommended by XMC. Please consult XMC for the details of this flow.
             XMC chips will be forbidden to be used, when this option is disabled.
+            ** DON'T DISABLE THIS UNLESS YOU KNOW WHAT YOU ARE DOING. **
+endmenu
 
-            DON'T DISABLE THIS UNLESS YOU KNOW WHAT YOU ARE DOING.
-endmenu  # Bootloader
+menu "Compile options"
+    choice COMPILER_OPTIMIZATION
+        prompt "Optimization Level"
+        default COMPILER_OPTIMIZATION_BASIC
 
-    source "$COMPONENT_KCONFIGS_PROJBUILD_SOURCE_FILE"
+        config COMPILER_OPTIMIZATION_NONE
+            bool "-O0: none optimization"
+        config COMPILER_OPTIMIZATION_BASIC
+            bool "-O1: basic optimization"
+        config COMPILER_OPTIMIZATION_PERF
+            bool "-O2 performance optimization"
+        config COMPILER_OPTIMIZATION_FULL
+            bool "-O3 full optimization"
+        config COMPILER_OPTIMIZATION_SIZE
+            bool "-Os size optimization"
+        config COMPILER_OPTIMIZATION_DEFAULT
+            bool "-Og debug optimization"
+    endchoice
 
-    menu "Component config"
-        source "$COMPONENT_KCONFIGS_SOURCE_FILE"
-    endmenu
+    choice COMPILER_OPTIMIZATION_ASSERTION_LEVEL
+        prompt "Assertion level"
+        default COMPILER_OPTIMIZATION_ASSERTIONS_ENABLE
+        help
+            Assertions can be:
+            - Enabled. Failure will print verbose assertion details. This is the default.
+            - Set to "silent" to save code size (failed assertions will abort() but user
+                needs to use the aborting address to find the line number with the failed assertion.)
+            - Disabled entirely (not recommended for most configurations.) -DNDEBUG is added
+                to CPPFLAGS in this case.
+
+        config COMPILER_OPTIMIZATION_ASSERTIONS_ENABLE
+            prompt "Enabled"
+            bool
+            help
+                Enable assertions. Assertion content and line number will be printed on failure.
+
+        config COMPILER_OPTIMIZATION_ASSERTIONS_SILENT
+            prompt "Silent (saves code size)"
+            bool
+            help
+                Enable silent assertions. Failed assertions will abort(), user needs to
+                use the aborting address to find the line number with the failed assertion.
+
+        config COMPILER_OPTIMIZATION_ASSERTIONS_DISABLE
+            prompt "Disabled (sets -DNDEBUG)"
+            bool
+            help
+                If assertions are disabled, -DNDEBUG is added to CPPFLAGS.
+    endchoice
+
+    choice COMPILER_FLOAT_LIB_FROM
+        prompt "Compiler float lib source"
+        default COMPILER_FLOAT_LIB_FROM_RVFPLIB if ESP_ROM_HAS_RVFPLIB
+        default COMPILER_FLOAT_LIB_FROM_GCCLIB
+
+        config COMPILER_FLOAT_LIB_FROM_GCCLIB
+            bool "libgcc"
+        config COMPILER_FLOAT_LIB_FROM_RVFPLIB
+            depends on ESP_ROM_HAS_RVFPLIB
+            bool "librvfp"
+    endchoice
+
+    config COMPILER_OPTIMIZATION_ASSERTION_LEVEL
+        int
+        default 0 if COMPILER_OPTIMIZATION_ASSERTIONS_DISABLE
+        default 1 if COMPILER_OPTIMIZATION_ASSERTIONS_SILENT
+        default 2 if COMPILER_OPTIMIZATION_ASSERTIONS_ENABLE
+
+    config COMPILER_OPTIMIZATION_CHECKS_SILENT
+        bool "Disable messages in ESP_RETURN_ON_* and ESP_EXIT_ON_* macros"
+        default n
+        help
+            If enabled, the error messages will be discarded in following check macros:
+            - ESP_RETURN_ON_ERROR
+            - ESP_EXIT_ON_ERROR
+            - ESP_RETURN_ON_FALSE
+            - ESP_EXIT_ON_FALSE
+
+    # menuconfig COMPILER_HIDE_PATHS_MACROS
+    #     bool "Replace ESP-IDF and project paths in binaries"
+    #     default y
+    #     help
+    #         When expanding the __FILE__ and __BASE_FILE__ macros, replace paths inside ESP-IDF
+    #         with paths relative to the placeholder string "IDF", and convert paths inside the
+    #         project directory to relative paths.
+
+    #         This allows building the project with assertions or other code that embeds file paths,
+    #         without the binary containing the exact path to the IDF or project directories.
+
+    #         This option passes -fmacro-prefix-map options to the GCC command line. To replace additional
+    #         paths in your binaries, modify the project CMakeLists.txt file to pass custom -fmacro-prefix-map or
+    #         -ffile-prefix-map arguments.
+
+    menuconfig COMPILER_CXX_EXCEPTIONS
+        bool "Enable C++ exceptions"
+        default y
+
+    config COMPILER_CXX_EXCEPTIONS_EMG_POOL_SIZE
+        int "Emergency Pool Size"
+        default 0
+        depends on COMPILER_CXX_EXCEPTIONS
+        help
+            Size (in bytes) of the emergency memory pool for C++ exceptions. This pool will be used to allocate
+            memory for thrown exceptions when there is not enough memory on the heap.
+
+    config COMPILER_CXX_RTTI
+        bool "Enable C++ run-time type info (RTTI)"
+        default y
+
+    choice COMPILER_STACK_CHECK_MODE
+        prompt "Stack smashing protection mode"
+        default COMPILER_STACK_CHECK_MODE_NONE
+        help
+            Stack smashing protection mode. Emit extra code to check for buffer overflows, such as stack
+            smashing attacks. This is done by adding a guard variable to functions with vulnerable objects.
+            The guards are initialized when a function is entered and then checked when the function exits.
+            If a guard check fails, program is halted. Protection has the following modes:
+            - In NORMAL mode (GCC flag: -fstack-protector) only functions that call alloca, and functions with
+                buffers larger than 8 bytes are protected.
+            - STRONG mode (GCC flag: -fstack-protector-strong) is like NORMAL, but includes additional functions
+                to be protected -- those that have local array definitions, or have references to local frame
+                addresses.
+            - In OVERALL mode (GCC flag: -fstack-protector-all) all functions are protected.
+
+            Modes have the following impact on code performance and coverage:
+            - performance: NORMAL > STRONG > OVERALL
+            - coverage: NORMAL < STRONG < OVERALL
+
+            The performance impact includes increasing the amount of stack memory required for each task.
+
+        config COMPILER_STACK_CHECK_MODE_NONE
+            bool "None"
+        config COMPILER_STACK_CHECK_MODE_NORM
+            bool "Normal"
+        config COMPILER_STACK_CHECK_MODE_STRONG
+            bool "Strong"
+        config COMPILER_STACK_CHECK_MODE_ALL
+            bool "Overall"
+    endchoice
+
+    config COMPILER_STACK_CHECK
+        bool
+        default !COMPILER_STACK_CHECK_MODE_NONE
+        help
+            Stack smashing protection.
+
+    config COMPILER_SAVE_RESTORE_LIBCALLS
+        bool "Enable -msave-restore flag to reduce code size"
+        depends on IDF_TARGET_ARCH_RISCV
+        help
+            Adds -msave-restore to C/C++ compilation flags.
+
+            When this flag is enabled, compiler will call library functions to
+            save/restore registers in function prologues/epilogues. This results
+            in lower overall code size, at the expense of slightly reduced performance.
+
+            This option can be enabled for RISC-V targets only.
+
+    config COMPILER_DUMP_RTL_FILES
+        bool "Dump RTL files during compilation"
+        help
+            If enabled, RTL files will be produced during compilation. These files
+            can be used by other tools, for example to calculate call graphs.
+endmenu
+
+source "$COMPONENT_KCONFIGS_PROJBUILD_SOURCE_FILE"
+
+menu "Component config"
+    source "$COMPONENT_KCONFIGS_SOURCE_FILE"
+endmenu

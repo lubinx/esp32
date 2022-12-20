@@ -74,6 +74,25 @@ list(APPEND LINK_OPTIONS
     "-Wl,--warn-common"
 )
 
+# compile optimization level
+function (get_optimization_level level)     # optional __name
+    list(POP_FRONT ARGN __name)
+
+    if (${CONFIG${__name}_COMPILER_OPTIMIZATION_SIZE})
+        set(${level} "-Os" PARENT_SCOPE)
+    elseif (${CONFIG${__name}_COMPILER_OPTIMIZATION_FULL})
+        set(${level} "-O3" PARENT_SCOPE)
+    elseif (${CONFIG${__name}_COMPILER_OPTIMIZATION_PERF})
+        set(${level} "-O2" PARENT_SCOPE)
+    elseif (${CONFIG${__name}_COMPILER_OPTIMIZATION_BASIC})
+        set(${level} "-O1" PARENT_SCOPE)
+    elseif (${CONFIG${__name}_COMPILER_OPTIMIZATION_DEBUG})
+        set(${level} "-Og" PARENT_SCOPE)
+    else()
+        set(${level} "-O0" PARENT_SCOPE)
+    endif()
+endfunction()
+
 # compile definitions for esp-idf'components only
 list(APPEND IDF_COMPILE_DEFINITIONS
     "ESP_PLATFORM"          # 3party components porting
@@ -505,16 +524,16 @@ function(__inherited_component_register component_target)
         add_library(${component_lib} STATIC ${sources})
         set_target_properties(${component_lib} PROPERTIES OUTPUT_NAME ${component_name} LINKER_LANGUAGE C)
 
-        idf_build_get_property(include_directories INCLUDE_DIRECTORIES GENERATOR_EXPRESSION)
-        target_include_directories(${component_lib} INTERFACE "${include_directories}")
+        get_optimization_level(optimize)
+        target_compile_options(${component_lib} PRIVATE ${optimize})
+        idf_build_get_property(compile_options COMPILE_OPTIONS GENERATOR_EXPRESSION)
+        target_compile_options(${component_lib} PRIVATE ${compile_options})
 
         idf_build_get_property(compile_definitions COMPILE_DEFINITIONS GENERATOR_EXPRESSION)
         target_compile_definitions(${component_lib} PRIVATE "${compile_definitions}")
 
-        idf_build_get_property(compile_options COMPILE_OPTIONS GENERATOR_EXPRESSION)
-        foreach(option ${compile_options})
-            target_compile_options(${component_lib} PRIVATE ${option})
-        endforeach()
+        idf_build_get_property(include_directories INCLUDE_DIRECTORIES GENERATOR_EXPRESSION)
+        target_include_directories(${component_lib} INTERFACE "${include_directories}")
 
         idf_target_include_directories(${component_lib} INTERFACE "${config_dir}")
         idf_target_include_directories(${component_lib} PUBLIC "${__INCLUDE_DIRS}")
@@ -578,11 +597,13 @@ function(idf_build)
         message(FATAL_ERROR "Failed to determine sizeof(time_t)")
     endif()
 
+    # common compile & link options
+    add_compile_options(${COMPILE_OPTIONS})
+    add_link_options(${LINK_OPTIONS})
+
     # attach esp-idf'components compile options
     idf_build_set_property(COMPILE_DEFINITIONS "${IDF_COMPILE_DEFINITIONS}" APPEND)
-    idf_build_set_property(COMPILE_OPTIONS "${COMPILE_OPTIONS}" APPEND)
     idf_build_set_property(COMPILE_OPTIONS "${IDF_COMPILE_OPTIONS}" APPEND)
-    idf_build_set_property(LINK_OPTIONS "${LINK_OPTIONS}" APPEND)
 
     message("💡 Resolve dependencies")
     function(__resove_deps)
@@ -614,7 +635,7 @@ function(idf_build)
     __resove_deps()
 
     message("💡 Kconfig")
-    macro(__import_kconfig)
+    macro(__generate_import_kconfig)
         # Generate sdkconfig.h/sdkconfig.cmake
         idf_build_get_property(sdkconfig SDKCONFIG)
         idf_build_get_property(sdkconfig_defaults SDKCONFIG_DEFAULTS)
@@ -652,28 +673,27 @@ function(idf_build)
             add_compile_options("-fdump-rtl-expand")
         endif()
 
-        if(CONFIG_COMPILER_HIDE_PATHS_MACROS)
-            message("\t❓ CONFIG_COMPILER_HIDE_PATHS_MACROS")
-        endif()
-        if(CONFIG_APP_REPRODUCIBLE_BUILD)
-            message("\t❓ CONFIG_APP_REPRODUCIBLE_BUILD")
-        endif()
-
         if(CONFIG_ESP_SYSTEM_USE_EH_FRAME)
             add_compile_options("-fasynchronous-unwind-tables")
-            idf_build_set_property(LINK_OPTIONS "-Wl,--eh-frame-hdr" APPEND)
+            add_link_options("-Wl,--eh-frame-hdr" )
         endif()
 
         # SMP FreeRTOS user provided minimal idle hook. This allows the user to provide their own copy of vApplicationMinimalIdleHook()
         if(CONFIG_FREERTOS_USE_MINIMAL_IDLE_HOOK)
-            idf_build_set_property(LINK_OPTIONS "-Wl,--wrap=vApplicationMinimalIdleHook" APPEND)
+            add_link_options("-Wl,--wrap=vApplicationMinimalIdleHook")
         endif()
 
         if(CONFIG_COMPILER_SAVE_RESTORE_LIBCALLS)
             idf_build_set_property(COMPILE_OPTIONS "-msave-restore" APPEND)
         endif()
+
+        # TODO: what about these?
+        if(CONFIG_COMPILER_HIDE_PATHS_MACROS)
+        endif()
+        if(CONFIG_APP_REPRODUCIBLE_BUILD)
+        endif()
     endmacro()
-    __import_kconfig()
+    __generate_import_kconfig()
 
     message("\n💡 Link dependencies")
     idf_build_get_property(component_targets __COMPONENT_TARGETS)
@@ -720,10 +740,6 @@ function(idf_build)
     # Propagate link dependencies from component library targets to the executable
     idf_build_get_property(link_depends __LINK_DEPENDS)
     set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES LINK_DEPENDS "${link_depends}")
-
-    # Set additional link flags for the executable
-    idf_build_get_property(link_options LINK_OPTIONS)
-    target_link_options(${CMAKE_PROJECT_NAME} PRIVATE "${link_options}")
 
     if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
         # Add cross-reference table to the map file
