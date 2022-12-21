@@ -44,13 +44,13 @@ if (NOT IDF_ENV_PATH)
     message("❓ variable IDF_ENV_PATH is not set, default set to ${IDF_ENV_PATH}")
 endif()
 
-set(IDF_CMAKE_PATH ${IDF_PATH}/tools/cmake)
-# set(IDF_CMAKE_PATH "${CMAKE_CURRENT_LIST_DIR}/../cmake_idf/")
+# set(IDF_CMAKE_PATH ${IDF_PATH}/tools/cmake)
+set(IDF_CMAKE_PATH "${CMAKE_CURRENT_LIST_DIR}/../cmake_idf/")
 
 #############################################################################
 # 💡 compiler toolchain variables
 #############################################################################
-set(CMAKE_TOOLCHAIN_FILE ${IDF_PATH}/tools/cmake/toolchain-${IDF_TARGET}.cmake)
+set(CMAKE_TOOLCHAIN_FILE ${IDF_CMAKE_PATH}/toolchain-${IDF_TARGET}.cmake)
 
 # compile options for project source & esp-idf'components
 list(APPEND COMPILE_OPTIONS
@@ -737,6 +737,12 @@ function(idf_build)
     add_executable(${CMAKE_PROJECT_NAME} "dummy.c")
     set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME "${CMAKE_PROJECT_NAME}.elf")
 
+    # show size after build
+    # add_custom_command(
+    #     TARGET ${CMAKE_PROJECT_NAME}
+    #     COMMAND "${_CMAKE_TOOLCHAIN_PREFIX}size ${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}.elf -A"
+    #     VERBATIM
+    # )
     # Propagate link dependencies from component library targets to the executable
     idf_build_get_property(link_depends __LINK_DEPENDS)
     set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES LINK_DEPENDS "${link_depends}")
