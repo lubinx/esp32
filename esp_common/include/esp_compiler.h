@@ -6,8 +6,6 @@
 
 #pragma once
 
-#include "sdkconfig.h"
-
 /*
  * The likely and unlikely macro pairs:
  * These macros are useful to place when application
@@ -16,20 +14,11 @@
  * to reorder instructions producing more optimized
  * code.
  */
-#if (CONFIG_COMPILER_OPTIMIZATION_PERF)
-    #ifndef likely
-        #define likely(x)      __builtin_expect(!!(x), 1)
-    #endif
-    #ifndef unlikely
-        #define unlikely(x)    __builtin_expect(!!(x), 0)
-    #endif
-#else
-    #ifndef likely
-        #define likely(x)      (x)
-    #endif
-    #ifndef unlikely
-        #define unlikely(x)    (x)
-    #endif
+#ifndef likely
+    #define likely(x)      __builtin_expect(!!(x), 1)
+#endif
+#ifndef unlikely
+    #define unlikely(x)    __builtin_expect(!!(x), 0)
 #endif
 
 /*

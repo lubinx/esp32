@@ -26,19 +26,6 @@ target_compile_options(${PROJECT_NAME} PRIVATE ${compile_options})
 idf_build_get_property(compile_definitions COMPILE_DEFINITIONS GENERATOR_EXPRESSION)
 target_compile_definitions(${PROJECT_NAME} PRIVATE "BOOTLOADER_BUILD=1" ${compile_definitions})
 
-idf_build_get_property(link_options LINK_OPTIONS)
-target_link_options(${PROJECT_NAME} PRIVATE ${link_options})
-
-# ld
-list(APPEND link_scripts
-    "${CMAKE_CURRENT_LIST_DIR}/${IDF_TARGET}/bootloader.ld"
-    "${IDF_PATH}/components/soc/esp32s3/ld/esp32s3.peripherals.ld"
-    "${IDF_PATH}/components/esp_rom/esp32s3/ld/esp32s3.rom.ld"
-    "${IDF_PATH}/components/esp_rom/esp32s3/ld/esp32s3.rom.api.ld"
-    "${IDF_PATH}/components/esp_rom/esp32s3/ld/esp32s3.rom.version.ld"
-)
-target_linker_script(${PROJECT_NAME} PRIVATE "${link_scripts}")
-
 target_include_directories(${PROJECT_NAME} PRIVATE
     "${IDF_PATH}/components/xtensa/include"
     "${IDF_PATH}/components/bootloader_support/include"
@@ -46,7 +33,6 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     "${IDF_PATH}/components/esp_hw_support/include/esp_private"
     "${IDF_PATH}/components/esp_hw_support/port/include"
 )
-
 target_sources(${PROJECT_NAME} PRIVATE
     "${IDF_PATH}/components/bootloader_support/src/${IDF_TARGET}/bootloader_soc.c"
     "${IDF_PATH}/components/bootloader_support/src/bootloader_clock_init.c"
@@ -62,3 +48,14 @@ target_sources(${PROJECT_NAME} PRIVATE
     "${IDF_PATH}/components/hal/mpu_hal.c"
     "${IDF_PATH}/components/newlib/syscalls.c"
 )
+target_link_options(${PROJECT_NAME} PRIVATE ${LINK_OPTIONS})
+
+# ld
+list(APPEND link_scripts
+    "${CMAKE_CURRENT_LIST_DIR}/${IDF_TARGET}/bootloader.ld"
+    "${IDF_PATH}/components/soc/esp32s3/ld/esp32s3.peripherals.ld"
+    "${IDF_PATH}/components/esp_rom/esp32s3/ld/esp32s3.rom.ld"
+    "${IDF_PATH}/components/esp_rom/esp32s3/ld/esp32s3.rom.api.ld"
+    "${IDF_PATH}/components/esp_rom/esp32s3/ld/esp32s3.rom.version.ld"
+)
+target_linker_script(${PROJECT_NAME} PRIVATE "${link_scripts}")

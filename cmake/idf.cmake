@@ -382,7 +382,6 @@ function(idf_component_add name_or_dir) # optional: prefix
         return()
     endif()
 
-    # TODO: sub components ?
     add_library(${component_target} STATIC IMPORTED)
     # set BUILD_COMPONENT_DIRS build property
     idf_build_set_property(BUILD_COMPONENT_DIRS ${component_dir} APPEND)
@@ -417,18 +416,15 @@ function(idf_component_add name_or_dir) # optional: prefix
 endfunction()
 
 macro(idf_component_register)
-    set(options
-        WHOLE_ARCHIVE
+    set(APPEND single_value
+        "KCONFIG" "KCONFIG_PROJBUILD"
     )
-    set(single_value
-        KCONFIG KCONFIG_PROJBUILD
+    set(multi_value "SRCS" "SRC_DIRS" "EXCLUDE_SRCS"
+        "INCLUDE_DIRS" "PRIV_INCLUDE_DIRS"
+        "LDFRAGMENTS" "REQUIRES" "PRIV_REQUIRES"
+        "REQUIRED_IDF_TARGETS" "EMBED_FILES" "EMBED_TXTFILES"
     )
-    set(multi_value
-        SRCS SRC_DIRS EXCLUDE_SRCS
-        INCLUDE_DIRS PRIV_INCLUDE_DIRS LDFRAGMENTS REQUIRES
-        PRIV_REQUIRES REQUIRED_IDF_TARGETS EMBED_FILES EMBED_TXTFILES
-    )
-    cmake_parse_arguments(_ "${options}" "${single_value}" "${multi_value}" ${ARGN})
+    cmake_parse_arguments(_ "WHOLE_ARCHIVE" "${single_value}" "${multi_value}" ${ARGN})
 
     if(NOT __idf_component_context)
         if(__REQUIRED_IDF_TARGETS)
@@ -584,22 +580,21 @@ endfunction()
 # idf_build()
 #############################################################################
 function(idf_build)
+    set(multi_value
+        "COMPONENTS" "SRCS" "INCLUDE_DIRS"
+    )
+    cmake_parse_arguments(_ "" "" "${multi_value}" ${ARGN})
+
     set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
     if (NOT TIME_T_SIZE)
         include(CheckTypeSize)
         check_type_size("time_t" TIME_T_SIZE)
-        message("")
+        if(NOT TIME_T_SIZE)
+            message(FATAL_ERROR "Failed to determine sizeof(time_t)")
+        endif()
     endif()
-    if(TIME_T_SIZE)
-        idf_build_set_property(TIME_T_SIZE ${TIME_T_SIZE})
-    else()
-        message(FATAL_ERROR "Failed to determine sizeof(time_t)")
-    endif()
-
-    # common compile & link options
-    add_compile_options(${COMPILE_OPTIONS})
-    add_link_options(${LINK_OPTIONS})
+    idf_build_set_property(TIME_T_SIZE ${TIME_T_SIZE})
 
     # attach esp-idf'components compile options
     idf_build_set_property(COMPILE_DEFINITIONS "${IDF_COMPILE_DEFINITIONS}" APPEND)
@@ -633,6 +628,12 @@ function(idf_build)
         endwhile()
     endfunction()
     __resove_deps()
+
+    if (__COMPONENTS)
+        foreach(iter ${__COMPONENTS})
+            idf_component_add(${iter})
+        endforeach()
+    endif()
 
     message("💡 Kconfig")
     macro(__generate_import_kconfig)
@@ -734,8 +735,23 @@ function(idf_build)
     endmacro()
     __import_components()
 
-    add_executable(${CMAKE_PROJECT_NAME} "dummy.c")
+    add_executable(${CMAKE_PROJECT_NAME} ${__SRCS})
     set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME "${CMAKE_PROJECT_NAME}.elf")
+
+    idf_build_get_property(include_directories INCLUDE_DIRECTORIES)
+    target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${include_directories})
+    if (__INCLUDE_DIRS)
+        target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${__INCLUDE_DIRS})
+    endif()
+
+    get_optimization_level(optimize)
+    target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE ${optimize})
+    add_compile_options(${COMPILE_OPTIONS})
+    add_link_options(${LINK_OPTIONS})
+
+    target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE ${COMPILE_OPTIONS})
+    target_link_options(${PROJECT_NAME} PRIVATE ${LINK_OPTIONS})
+
 
     # show size after build
     # add_custom_command(
