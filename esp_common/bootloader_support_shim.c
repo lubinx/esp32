@@ -7,7 +7,6 @@
 #include "bootloader_flash.h"
 #include "bootloader_flash_priv.h"
 
-
 void bootloader_mspi_reset(void)
 {
     #if CONFIG_IDF_TARGET_ESP32

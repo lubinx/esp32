@@ -21,6 +21,26 @@ list(APPEND srcs
     "${IDF_PATH}/components/esp_system/port/panic_handler.c"
     # "${IDF_PATH}/components/esp_system/startup.c"
     # "${IDF_PATH}/components/esp_system/port/cpu_start.c"
+# retarget newlib
+    "newlib_retarget/abort.c"
+    "newlib_retarget/assert.c"
+    "newlib_retarget/heap.c"
+    "newlib_retarget/locks.c"
+    "newlib_retarget/poll.c"
+    "newlib_retarget/pthread.c"
+    "newlib_retarget/random.c"
+    "newlib_retarget/reent_init.c"
+    "newlib_retarget/newlib_init.c"
+    "newlib_retarget/syscalls.c"
+    "newlib_retarget/termios.c"
+    "newlib_retarget/time.c"
+    "newlib_retarget/sysconf.c"
+    "newlib_retarget/realpath.c"
+    "newlib_retarget/esp_time_impl.c"
+    # only #defines in this file, it could never link
+    #   TODO: assume this file will implement the <sys/atomic.h> at the global scope
+    #   so it keep here to further examination
+    # "newlib_retarget/stdatomic.c"
 )
 
 if(CONFIG_ESP_TASK_WDT_EN)
@@ -56,8 +76,8 @@ idf_component_register(
         "${IDF_PATH}/components/esp_system/include"
         "${IDF_PATH}/components/esp_system/port/include/private"
     PRIV_INCLUDE_DIRS
+        "include"
         "${IDF_PATH}/components/esp_system/port/include"
-        "${IDF_PATH}/components/bootloader_support/include"
         "${IDF_PATH}/components/spi_flash/include"
     SRCS
         ${srcs}
@@ -73,14 +93,25 @@ idf_component_register(
     LDFRAGMENTS
         "${IDF_PATH}/components/esp_system/linker.lf"
         "${IDF_PATH}/components/esp_system/app.lf"
+        # newlib
+        "${IDF_PATH}/components/newlib/newlib.lf"
+        "${IDF_PATH}/components/newlib/system_libs.lf"
 )
+set_source_files_properties(heap.c PROPERTIES COMPILE_FLAGS -fno-builtin)
+
+# REVIEW: remove these force links, its shuold merge into SystemInit()
+# Forces the linker to include heap, syscall, pthread, assert, and retargetable locks from this component,
+# instead of the implementations provided by newlib.
+list(APPEND EXTRA_LINK_FLAGS
+    "-u newlib_include_heap_impl"
+    "-u newlib_include_syscalls_impl"
+    "-u newlib_include_pthread_impl"
+    "-u newlib_include_assert_impl"
+)
+target_link_libraries(${COMPONENT_LIB} INTERFACE "${EXTRA_LINK_FLAGS}")
+
 add_subdirectory("${IDF_PATH}/components/esp_system/port/soc/${IDF_TARGET}"
     "${build_dir}/${prefix}/${component_name}/soc")
-
-if(CONFIG_IDF_ENV_FPGA)
-    # Forces the linker to include fpga stubs from this component
-    target_link_libraries(${COMPONENT_LIB} INTERFACE "-u esp_common_include_fpga_overrides")
-endif()
 
 # Force linking UBSAN hooks. If UBSAN is not enabled, the hooks will ultimately be removed
 # due to -ffunction-sections -Wl,--gc-sections options.

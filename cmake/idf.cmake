@@ -122,21 +122,23 @@ if (NOT IDF_TARGET_ARCH STREQUAL "")
     list(APPEND IDF_KERNEL_COMPONENTS ${IDF_TARGET_ARCH})
 endif()
 list(APPEND IDF_KERNEL_COMPONENTS
-    "esp_rom" "esp_common" "esp_system"
+    "esp_common" "esp_rom" "esp_system"
     "soc" "hal" "esp_hw_support" "efuse" "esp_pm" "heap"
-    "freertos" "newlib" "pthread" "cxx" "driver"
+    "freertos" "pthread" "cxx" "driver"
     "spi_flash"
     "esptool_py"
 )
 
 # OBSOLETED_COMPONENTS: autoremove from REQUIRES & PRIV_REQUIRES
 list(APPEND OBSOLETED_COMPONENTS
-    # merged into bootloader & esp_system
+    # merged into bootloader / esp_system
     "app_update"
     "esp_app_format"
     "esp_partition"
     # merge into esp_system & direct ref by bootloader
     "bootloader_support"
+    # merge into esp_system
+    "newlib"
     # removed
     "partition_table"
 )

@@ -19,19 +19,20 @@ config APP_BUILD_USE_FLASH_SECTIONS
 
 orsource "$IDF_PATH/components/soc/$IDF_TARGET/include/soc/Kconfig.soc_caps.in"
 
-config IDF_CMAKE
-    bool
-    default "y"
+# REVIEW: nobody care this?
+# config IDF_CMAKE
+#     bool
+#     default "y"
 
+#   REVIEW: after reviewing the code, this is really pointless, set ALWAYS false
 config IDF_ENV_FPGA
-    # This option is for internal use only
     bool
-    option env="IDF_ENV_FPGA"
+    default n
 
+# esp_attr.h: __attribute__((deprecated(REASON))) if this enables, set ALWAYS true
 config IDF_CI_BUILD
-        bool
-        # default y if "$(IDF_CI_BUILD)" = "y" || "$(IDF_CI_BUILD)" = 1
-        default y
+    bool
+    default y
 
 config IDF_TARGET_ARCH_RISCV
     bool
