@@ -11,6 +11,7 @@ project (bootloader LANGUAGES C)
 add_executable(${PROJECT_NAME}
     "${IDF_TARGET}/startup.c"
     "bootloader_log.c"
+    "bootloader_retarget.c"
 )
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${PROJECT_NAME}.elf")
 
@@ -46,7 +47,6 @@ target_sources(${PROJECT_NAME} PRIVATE
     "${IDF_PATH}/components/hal/cache_hal.c"
     "${IDF_PATH}/components/hal/mmu_hal.c"
     "${IDF_PATH}/components/hal/mpu_hal.c"
-    "${IDF_PATH}/components/newlib/syscalls.c"
 )
 target_link_options(${PROJECT_NAME} PRIVATE ${LINK_OPTIONS})
 
