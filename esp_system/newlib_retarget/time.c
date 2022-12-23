@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <limits.h>
+
 #include <errno.h>
 #include <stdlib.h>
 #include <time.h>
@@ -15,11 +17,12 @@
 #include <sys/times.h>
 #include <sys/lock.h>
 
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+
 #include "esp_system.h"
 #include "esp_attr.h"
 #include "esp_rom_sys.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
 
 #include "esp_private/system_internal.h"
 
@@ -29,78 +32,78 @@
 
 #include "sdkconfig.h"
 
-#if !CONFIG_ESP_TIME_FUNCS_USE_NONE
-#define IMPL_NEWLIB_TIME_FUNCS 1
+#if ! CONFIG_ESP_TIME_FUNCS_USE_NONE
+    #define IMPL_NEWLIB_TIME_FUNCS 1
 #endif
 
 #if IMPL_NEWLIB_TIME_FUNCS
-// stores the start time of the slew
-static uint64_t s_adjtime_start_us;
-// is how many microseconds total to slew
-static int64_t  s_adjtime_total_correction_us;
+    // stores the start time of the slew
+    static uint64_t s_adjtime_start_us;
+    // is how many microseconds total to slew
+    static int64_t  s_adjtime_total_correction_us;
 
-static _lock_t s_time_lock;
+    static _lock_t s_time_lock;
 
-// This function gradually changes boot_time to the correction value and immediately updates it.
-static uint64_t adjust_boot_time(void)
-{
-    #define ADJTIME_CORRECTION_FACTOR 6
+    // This function gradually changes boot_time to the correction value and immediately updates it.
+    static uint64_t adjust_boot_time(void)
+    {
+        #define ADJTIME_CORRECTION_FACTOR 6
 
-    uint64_t boot_time = esp_time_impl_get_boot_time();
-    if ((boot_time == 0) || (esp_time_impl_get_time_since_boot() < s_adjtime_start_us)) {
-        s_adjtime_start_us = 0;
-    }
-    if (s_adjtime_start_us > 0) {
-        uint64_t since_boot = esp_time_impl_get_time_since_boot();
-        // If to call this function once per second, then (since_boot - s_adjtime_start_us) will be 1_000_000 (1 second),
-        // and the correction will be equal to (1_000_000us >> 6) = 15_625 us.
-        // The minimum possible correction step can be (64us >> 6) = 1us.
-        // Example: if the time error is 1 second, then it will be compensate for 1 sec / 0,015625 = 64 seconds.
-        int64_t correction = (since_boot >> ADJTIME_CORRECTION_FACTOR) - (s_adjtime_start_us >> ADJTIME_CORRECTION_FACTOR);
-        if (correction > 0) {
-            s_adjtime_start_us = since_boot;
-            if (s_adjtime_total_correction_us < 0) {
-                if ((s_adjtime_total_correction_us + correction) >= 0) {
-                    boot_time = boot_time + s_adjtime_total_correction_us;
-                    s_adjtime_start_us = 0;
-                } else {
-                    s_adjtime_total_correction_us += correction;
-                    boot_time -= correction;
-                }
-            } else {
-                if ((s_adjtime_total_correction_us - correction) <= 0) {
-                    boot_time = boot_time + s_adjtime_total_correction_us;
-                    s_adjtime_start_us = 0;
-                } else {
-                    s_adjtime_total_correction_us -= correction;
-                    boot_time += correction;
-                }
-            }
-            esp_time_impl_set_boot_time(boot_time);
+        uint64_t boot_time = esp_time_impl_get_boot_time();
+        if ((boot_time == 0) || (esp_time_impl_get_time_since_boot() < s_adjtime_start_us)) {
+            s_adjtime_start_us = 0;
         }
+        if (s_adjtime_start_us > 0) {
+            uint64_t since_boot = esp_time_impl_get_time_since_boot();
+            // If to call this function once per second, then (since_boot - s_adjtime_start_us) will be 1_000_000 (1 second),
+            // and the correction will be equal to (1_000_000us >> 6) = 15_625 us.
+            // The minimum possible correction step can be (64us >> 6) = 1us.
+            // Example: if the time error is 1 second, then it will be compensate for 1 sec / 0,015625 = 64 seconds.
+            int64_t correction = (since_boot >> ADJTIME_CORRECTION_FACTOR) - (s_adjtime_start_us >> ADJTIME_CORRECTION_FACTOR);
+            if (correction > 0) {
+                s_adjtime_start_us = since_boot;
+                if (s_adjtime_total_correction_us < 0) {
+                    if ((s_adjtime_total_correction_us + correction) >= 0) {
+                        boot_time = boot_time + s_adjtime_total_correction_us;
+                        s_adjtime_start_us = 0;
+                    } else {
+                        s_adjtime_total_correction_us += correction;
+                        boot_time -= correction;
+                    }
+                } else {
+                    if ((s_adjtime_total_correction_us - correction) <= 0) {
+                        boot_time = boot_time + s_adjtime_total_correction_us;
+                        s_adjtime_start_us = 0;
+                    } else {
+                        s_adjtime_total_correction_us -= correction;
+                        boot_time += correction;
+                    }
+                }
+                esp_time_impl_set_boot_time(boot_time);
+            }
+        }
+        return boot_time;
     }
-    return boot_time;
-}
 
-// Get the adjusted boot time.
-static uint64_t get_adjusted_boot_time(void)
-{
-    _lock_acquire(&s_time_lock);
-    uint64_t adjust_time = adjust_boot_time();
-    _lock_release(&s_time_lock);
-    return adjust_time;
-}
-
-// Applying the accumulated correction to base_time and stopping the smooth time adjustment.
-static void adjtime_corr_stop (void)
-{
-    _lock_acquire(&s_time_lock);
-    if (s_adjtime_start_us != 0){
-        adjust_boot_time();
-        s_adjtime_start_us = 0;
+    // Get the adjusted boot time.
+    static uint64_t get_adjusted_boot_time(void)
+    {
+        _lock_acquire(&s_time_lock);
+        uint64_t adjust_time = adjust_boot_time();
+        _lock_release(&s_time_lock);
+        return adjust_time;
     }
-    _lock_release(&s_time_lock);
-}
+
+    // Applying the accumulated correction to base_time and stopping the smooth time adjustment.
+    static void adjtime_corr_stop(void)
+    {
+        _lock_acquire(&s_time_lock);
+        if (s_adjtime_start_us != 0){
+            adjust_boot_time();
+            s_adjtime_start_us = 0;
+        }
+        _lock_release(&s_time_lock);
+    }
 #endif
 
 int adjtime(const struct timeval *delta, struct timeval *outdelta)
@@ -147,12 +150,15 @@ int adjtime(const struct timeval *delta, struct timeval *outdelta)
 clock_t IRAM_ATTR _times_r(struct _reent *r, struct tms *ptms)
 {
     clock_t t = xTaskGetTickCount() * (portTICK_PERIOD_MS * CLK_TCK / 1000);
+
     ptms->tms_cstime = 0;
     ptms->tms_cutime = 0;
     ptms->tms_stime = t;
     ptms->tms_utime = 0;
+
     struct timeval tv = {0, 0};
     _gettimeofday_r(r, &tv, NULL);
+
     return (clock_t) tv.tv_sec;
 }
 
@@ -160,22 +166,19 @@ int IRAM_ATTR _gettimeofday_r(struct _reent *r, struct timeval *tv, void *tz)
 {
     (void) tz;
 
-#if IMPL_NEWLIB_TIME_FUNCS
     if (tv) {
         uint64_t microseconds = get_adjusted_boot_time() + esp_time_impl_get_time_since_boot();
         tv->tv_sec = microseconds / 1000000;
         tv->tv_usec = microseconds % 1000000;
     }
+
     return 0;
-#else
-    __errno_r(r) = ENOSYS;
-    return -1;
-#endif
 }
 
 int settimeofday(const struct timeval *tv, const struct timezone *tz)
 {
     (void) tz;
+
 #if IMPL_NEWLIB_TIME_FUNCS
     if (tv) {
         adjtime_corr_stop();
@@ -188,26 +191,6 @@ int settimeofday(const struct timeval *tv, const struct timezone *tz)
     errno = ENOSYS;
     return -1;
 #endif
-}
-
-int usleep(useconds_t us)
-{
-    const int us_per_tick = portTICK_PERIOD_MS * 1000;
-    if (us < us_per_tick) {
-        esp_rom_delay_us((uint32_t) us);
-    } else {
-        /* since vTaskDelay(1) blocks for anywhere between 0 and portTICK_PERIOD_MS,
-         * round up to compensate.
-         */
-        vTaskDelay((us + us_per_tick - 1) / us_per_tick);
-    }
-    return 0;
-}
-
-unsigned int sleep(unsigned int seconds)
-{
-    usleep(seconds*1000000UL);
-    return 0;
 }
 
 int clock_settime(clockid_t clock_id, const struct timespec *tp)
@@ -235,7 +218,7 @@ int clock_settime(clockid_t clock_id, const struct timespec *tp)
 #endif
 }
 
-int clock_gettime (clockid_t clock_id, struct timespec *tp)
+int clock_gettime(clockid_t clock_id, struct timespec *tp)
 {
 #if IMPL_NEWLIB_TIME_FUNCS
     if (tp == NULL) {
@@ -266,7 +249,7 @@ int clock_gettime (clockid_t clock_id, struct timespec *tp)
 #endif
 }
 
-int clock_getres (clockid_t clock_id, struct timespec *res)
+int clock_getres(clockid_t clock_id, struct timespec *res)
 {
 #if IMPL_NEWLIB_TIME_FUNCS
     if (res == NULL) {

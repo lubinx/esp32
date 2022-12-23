@@ -19,17 +19,17 @@
 extern void *heap_caps_malloc_default( size_t size );
 extern void *heap_caps_realloc_default( void *ptr, size_t size );
 
-void* malloc(size_t size)
+void *malloc(size_t size)
 {
     return heap_caps_malloc_default(size);
 }
 
-void* calloc(size_t n, size_t size)
+void *calloc(size_t n, size_t size)
 {
     return _calloc_r(_REENT, n, size);
 }
 
-void* realloc(void* ptr, size_t size)
+void *realloc(void *ptr, size_t size)
 {
     return heap_caps_realloc_default(ptr, size);
 }
@@ -39,22 +39,22 @@ void free(void *ptr)
     heap_caps_free(ptr);
 }
 
-void* _malloc_r(struct _reent *r, size_t size)
+void *_malloc_r(struct _reent *r, size_t size)
 {
     return heap_caps_malloc_default(size);
 }
 
-void _free_r(struct _reent *r, void* ptr)
+void _free_r(struct _reent *r, void *ptr)
 {
     heap_caps_free(ptr);
 }
 
-void* _realloc_r(struct _reent *r, void* ptr, size_t size)
+void *_realloc_r(struct _reent *r, void *ptr, size_t size)
 {
     return heap_caps_realloc_default( ptr, size );
 }
 
-void* _calloc_r(struct _reent *r, size_t nmemb, size_t size)
+void *_calloc_r(struct _reent *r, size_t nmemb, size_t size)
 {
     void *result;
     size_t size_bytes;
@@ -69,7 +69,7 @@ void* _calloc_r(struct _reent *r, size_t nmemb, size_t size)
     return result;
 }
 
-void* memalign(size_t alignment, size_t n)
+void *memalign(size_t alignment, size_t n)
 {
     return heap_caps_aligned_alloc(alignment, n, MALLOC_CAP_DEFAULT);
 }
@@ -109,7 +109,7 @@ int malloc_trim(size_t pad)
     return 0; // indicates failure
 }
 
-size_t malloc_usable_size(void* p)
+size_t malloc_usable_size(void *p)
 {
     return 0;
 }
@@ -129,6 +129,6 @@ struct mallinfo mallinfo(void)
     return dummy;
 }
 
-void* valloc(size_t n) __attribute__((alias("malloc")));
-void* pvalloc(size_t n) __attribute__((alias("malloc")));
-void cfree(void* p) __attribute__((alias("free")));
+void *valloc(size_t n) __attribute__((alias("malloc")));
+void *pvalloc(size_t n) __attribute__((alias("malloc")));
+void cfree(void *p) __attribute__((alias("free")));

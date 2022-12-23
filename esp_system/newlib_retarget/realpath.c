@@ -22,9 +22,9 @@
  *    - otherwise, add the component to output, increment out_level
  */
 
-char * realpath(const char *file_name, char *resolved_name)
+char *realpath(const char *file_name, char *resolved_name)
 {
-    char * out_path = resolved_name;
+    char *out_path = resolved_name;
     if (out_path == NULL) {
         /* allowed as an extension, allocate memory for the output path */
         out_path = malloc(PATH_MAX);
@@ -67,7 +67,7 @@ char * realpath(const char *file_name, char *resolved_name)
                 out_depth = 0;
             } else {
                 /* remove last path component and the separator preceding it */
-                char * prev_sep = strrchr(out_path, '/');
+                char *prev_sep = strrchr(out_path, '/');
                 assert(prev_sep > out_path);  /* this shouldn't be the leading separator */
                 out_ptr = prev_sep;
                 *out_ptr = '\0';
@@ -108,6 +108,7 @@ fail:
     return NULL;
 }
 
+/*
 char *getcwd(char *buf, size_t size)
 {
     if (buf == NULL) {
@@ -123,3 +124,4 @@ int chdir(const char *path)
     errno = ENOSYS;
     return -1;
 }
+*/

@@ -1,8 +1,9 @@
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
-#include <inttypes.h>
+#include <unistd.h>
+#include <stdio.h>
 
 #include "esp_chip_info.h"
+#include "esp_heap_caps.h"
+#include "esp_rom_sys.h"
 
 void __attribute__((weak)) app_main(void)
 {
@@ -19,12 +20,12 @@ void __attribute__((weak)) app_main(void)
     unsigned major_rev = chip_info.revision / 100;
     unsigned minor_rev = chip_info.revision % 100;
     printf("silicon revision v%d.%d, ", major_rev, minor_rev);
-    printf("Minimum free heap size: %"PRIu32" bytes\n", esp_get_minimum_free_heap_size());
+    printf("Minimum free heap size: %d bytes\n", heap_caps_get_minimum_free_size(MALLOC_CAP_DEFAULT));
 
     printf("infinite loop...\n");
     while (1)
     {
         esp_rom_printf("*");
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        sleep(1);
     }
 }

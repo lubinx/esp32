@@ -39,17 +39,13 @@
 
 static struct _reent s_reent;
 
-extern int _printf_float(struct _reent *rptr,
-               void *pdata,
-               FILE * fp,
-               int (*pfunc) (struct _reent *, FILE *, const char *, size_t len),
-               va_list * ap);
+extern __attribute__((nothrow))
+    int _printf_float(struct _reent *rptr, void *pdata,
+        FILE * fp, int (*pfunc) (struct _reent *, FILE *, const char *, size_t len), va_list * ap);
 
-
-extern int _scanf_float(struct _reent *rptr,
-              void *pdata,
-              FILE *fp,
-              va_list *ap);
+extern __attribute__((nothrow))
+    int _scanf_float(struct _reent *rptr, void *pdata,
+        FILE *fp, va_list *ap);
 
 static void raise_r_stub(struct _reent *rptr)
 {

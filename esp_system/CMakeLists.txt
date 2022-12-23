@@ -24,6 +24,7 @@ list(APPEND srcs
 # retarget newlib
     "newlib_retarget/abort.c"
     "newlib_retarget/assert.c"
+    "newlib_retarget/esp_time_impl.c"
     "newlib_retarget/heap.c"
     "newlib_retarget/locks.c"
     "newlib_retarget/poll.c"
@@ -36,7 +37,7 @@ list(APPEND srcs
     "newlib_retarget/time.c"
     "newlib_retarget/sysconf.c"
     "newlib_retarget/realpath.c"
-    "newlib_retarget/esp_time_impl.c"
+    "newlib_retarget/sleep.c"
     # only #defines in this file, it could never link
     #   TODO: assume this file will implement the <sys/atomic.h> at the global scope
     #   so it keep here to further examination

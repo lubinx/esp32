@@ -63,7 +63,7 @@ list(APPEND COMPILE_OPTIONS
     "-Wextra"
     "-Wconversion"
     "-Wformat"
-    "-Wundef"
+    # "-Wundef" cause too many errors due to sdkconfig.h
     "-Wshadow"
     "-Wwrite-strings"
 )
@@ -277,6 +277,8 @@ function(__build_init)
         message("\tComponents path: ${IDF_PATH}")
         message("\tTools path: ${IDF_ENV_PATH}")
         message("\tBuilding target: ${IDF_TARGET}")
+
+    set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "generate compile_commands.json")
 
     # setup for idf_build_set_property() / idf_build_get_property()
     add_library(__idf_build_target STATIC IMPORTED GLOBAL)
@@ -586,8 +588,6 @@ function(idf_build)
         "COMPONENTS" "SRCS" "INCLUDE_DIRS"
     )
     cmake_parse_arguments(_ "" "" "${multi_value}" ${ARGN})
-
-    set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
     if (NOT TIME_T_SIZE)
         include(CheckTypeSize)
