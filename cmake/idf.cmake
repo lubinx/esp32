@@ -1,10 +1,3 @@
-get_property(__idf_env_set GLOBAL PROPERTY __IDF_ENV_SET)
-if(NOT __idf_env_set)
-    set_property(GLOBAL PROPERTY __IDF_ENV_SET 1)
-else()
-    return()
-endif()
-
 #############################################################################
 # 💡 environment variables
 #############################################################################
@@ -95,7 +88,7 @@ endfunction()
 
 # compile definitions for esp-idf'components only
 list(APPEND IDF_COMPILE_DEFINITIONS
-    "ESP_PLATFORM"          # 3party components porting
+    "ESP_PLATFORM"              # 3party components porting
     "_GNU_SOURCE"
 )
 
@@ -124,7 +117,7 @@ endif()
 list(APPEND IDF_KERNEL_COMPONENTS
     "esp_common" "esp_rom" "esp_system"
     "soc" "hal" "esp_hw_support" "efuse" "esp_pm" "heap"
-    "freertos" "pthread" "cxx" "driver"
+    "freertos" "pthread" "cxx" "vfs" "driver" # "spiffs"
     "spi_flash"
     "esptool_py"
 )
@@ -444,6 +437,7 @@ macro(idf_component_register)
                     set_property(GLOBAL PROPERTY DEPENDED_COMPONENTS ${iter} APPEND)
                 endif()
             else()
+                list(APPEND obsoleted_components ${iter})
                 list(REMOVE_ITEM __REQUIRES ${iter})
                 list(REMOVE_ITEM __PRIV_REQUIRES ${iter})
             endif()
@@ -463,6 +457,9 @@ macro(idf_component_register)
             endif()
             if (__PRIV_REQUIRES)
                 message("\tprivate depends: ${__PRIV_REQUIRES}")
+            endif()
+            if (obsoleted_components)
+                message("\t❌ obsoleted depends: ${obsoleted_components}")
             endif()
         else()
             message("\tno dependencies")
