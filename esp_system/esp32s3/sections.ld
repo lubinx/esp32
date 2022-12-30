@@ -1,4 +1,4 @@
-ENTRY(SystemInit);
+ENTRY(Startup_Handler);
 
 SECTIONS
 {
@@ -88,7 +88,7 @@ PROVIDE(_data_end = ABSOLUTE(.));
     .data.zi (NOLOAD) :
     {
         . = ALIGN(8);
-PROVIDE(_bss_start = ABSOLUTE(.));
+        PROVIDE(__bss_start__ = ABSOLUTE(.));
 
         mapping[dram0_bss]
 
@@ -103,7 +103,7 @@ PROVIDE(_bss_start = ABSOLUTE(.));
         *(.gnu.linkonce.b.*)
 
         . = ALIGN(8);
-PROVIDE(_bss_end = ABSOLUTE(.));
+        PROVIDE(__bss_end__ = ABSOLUTE(.));
     } > SRAM_data_seg
 
     .data.ro : ALIGN(0x10)
@@ -111,7 +111,20 @@ PROVIDE(_bss_end = ABSOLUTE(.));
         /*
         *(.rodata_desc .rodata_desc.*)
         *(.rodata_custom_desc .rodata_custom_desc.*)
+        . = ALIGN(4);
         */
+
+PROVIDE(__zero_table_start__ = ABSOLUTE(.));
+        LONG (__bss_start__)
+        LONG (__bss_end__ - __bss_start__)
+        LONG (__rtc_bss_start__)
+        LONG (__rtc_bss_end__ - __rtc_bss_start__)
+        /*
+        LONG (_iram_bss_start)
+        LONG (_iram_bss_end - _iram_bss_start)
+        */
+PROVIDE(__zero_table_end__ = ABSOLUTE(.));
+
 PROVIDE(_flash_rodata_start = ABSOLUTE(.));
 
         mapping[flash_rodata]
@@ -120,7 +133,6 @@ PROVIDE(_flash_rodata_start = ABSOLUTE(.));
         *(.gnu.linkonce.r.*)
         *(.rodata1)
 
-        /* __XT_EXCEPTION_TABLE_ = ABSOLUTE(.); */
         *(.xt_except_table)
         *(.gcc_except_table .gcc_except_table.*)
         *(.gnu.linkonce.e.*)
@@ -131,8 +143,28 @@ PROVIDE(_flash_rodata_start = ABSOLUTE(.));
         KEEP(*(.eh_frame))
         . = ALIGN(8);   /* . = (. + 7) & ~ 3; */
 
-        /* C++ constructor and destructor tables */
+        /* preinit data */
+        PROVIDE_HIDDEN(__preinit_array_start = .);
+        KEEP(*(.preinit_array))
+        PROVIDE_HIDDEN(__preinit_array_end = .);
+
+        . = ALIGN(4);
+        /* init data */
+        PROVIDE_HIDDEN(__init_array_start = .);
+        KEEP(*(SORT(.init_array.*)))
+        KEEP(*(.init_array))
+        PROVIDE_HIDDEN(__init_array_end = .);
+
+        . = ALIGN(4);
+        /* finit data */
+        PROVIDE_HIDDEN(__fini_array_start = .);
+        KEEP(*(SORT(.fini_array.*)))
+        KEEP(*(.fini_array))
+        PROVIDE_HIDDEN(__fini_array_end = .);
+
         /* Don't include anything from crtbegin.o or crtend.o, as IDF doesn't use toolchain crt */
+        /* REVIEW: WHY they bypass this? */
+        /*
         __init_array_start = ABSOLUTE(.);
         KEEP (*(EXCLUDE_FILE (*crtend.* *crtbegin.*) .ctors SORT(.ctors.*)))
         __init_array_end = ABSOLUTE(.);
@@ -140,6 +172,7 @@ PROVIDE(_flash_rodata_start = ABSOLUTE(.));
         KEEP (*(EXCLUDE_FILE (*crtend.*) .dtors))
         KEEP (*(SORT(.dtors.*)))
         KEEP (*(.dtors))
+        */
 
         /* C++ exception handlers table: */
         /* __XT_EXCEPTION_DESCS_ = ABSOLUTE(.); */
@@ -250,9 +283,9 @@ PROVIDE(end = ABSOLUTE(.));
 PROVIDE(__heap_limit__ = ABSOLUTE(.));
     } > SRAM_data_seg
 
-    /* stacks should present here see memory.ld appendix */
     .__stacks_dummy(NOLOAD) :
     {
+        /* stacks should present here see memory.ld appendix */
         . = ALIGN(8);
         . += 16384;
     } > SRAM_data_seg
@@ -301,7 +334,7 @@ PROVIDE(_rtc_force_fast_end = ABSOLUTE(.));
 
     .rtc.bss (NOLOAD) :
     {
-PROVIDE(_rtc_bss_start = ABSOLUTE(.));
+PROVIDE(__rtc_bss_start__ = ABSOLUTE(.));
 
         *rtc_wake_stub*.*(.bss*)
         *rtc_wake_stub*.*(COMMON)
@@ -309,7 +342,7 @@ PROVIDE(_rtc_bss_start = ABSOLUTE(.));
         mapping[rtc_bss]
 
         . = ALIGN(4) ;
-PROVIDE(_rtc_bss_end = ABSOLUTE(.));
+PROVIDE(__rtc_bss_end__ = ABSOLUTE(.));
     } > RTC_slow_seg
 
     .rtc_noinit (NOLOAD):

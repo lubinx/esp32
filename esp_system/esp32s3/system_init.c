@@ -2,27 +2,29 @@
 
 #include "sdkconfig.h"
 
-#include "esp_clk_internal.h"
-#include "esp_cpu.h"
-// #include "esp_efuse.h"
-#include "esp_memprot.h"
-#include "esp_log.h"
+#include "esp_rom_caps.h"
+#include "esp_rom_efuse.h"
 #include "esp_rom_sys.h"
 #include "esp_rom_uart.h"
 
-#include "esp_rom_efuse.h"
-#include "esp_rom_uart.h"
-#include "esp_rom_sys.h"
-#include "esp_rom_caps.h"
+#include "esp_clk_internal.h"
+#include "esp_cpu.h"
+#include "esp_heap_caps_init.h"
+// #include "esp_efuse.h"
+#include "esp_log.h"
+#include "esp_memprot.h"
+#include "esp_pthread.h"
+#include "esp_newlib.h"
+#include "esp_timer.h"
 
 #include "soc/assist_debug_reg.h"
 #include "soc/rtc.h"
 #include "soc/periph_defs.h"
-#include "soc/system_reg.h"
 
 #include "esp32s3/rtc.h"
 #include "esp32s3/rom/ets_sys.h"
 
+#include "esp_private/brownout.h"
 #include "esp_private/cache_err_int.h"
 #include "esp_private/esp_clk.h"
 #include "esp_private/sleep_gpio.h"
@@ -33,7 +35,13 @@
     #include "esp_private/trax.h"
 #endif
 
+#if CONFIG_VFS_SUPPORT_IO
+    #include "esp_vfs_dev.h"
+    #include "esp_vfs_console.h"
+#endif
+
 static char const *TAG = "system_init";
+uint64_t g_startup_time = 0;
 
 /****************************************************************************
  *  imports
@@ -43,20 +51,19 @@ extern int _vector_table;
 extern int _rtc_bss_start;
 extern int _rtc_bss_end;
 
-extern int _bss_start;
-extern int _bss_end;
-//  CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY
-extern int _ext_ram_bss_start;
-extern int _ext_ram_bss_end;
-// CONFIG_ESP32_IRAM_AS_8BIT_ACCESSIBLE_MEMORY
-extern int _iram_bss_start;
-extern int _iram_bss_end;
+#if CONFIG_BOOT_ROM_LOG_ALWAYS_OFF
+    #define ROM_LOG_MODE                ESP_EFUSE_ROM_LOG_ALWAYS_OFF
+#elif CONFIG_BOOT_ROM_LOG_ON_GPIO_LOW
+    #define ROM_LOG_MODE                ESP_EFUSE_ROM_LOG_ON_GPIO_LOW
+#elif CONFIG_BOOT_ROM_LOG_ON_GPIO_HIGH
+    #define ROM_LOG_MODE                ESP_EFUSE_ROM_LOG_ON_GPIO_HIGH
+#endif
 
 /****************************************************************************
  *  local
 *****************************************************************************/
 static void core_intr_matrix_clear(void);
-static void core_cpu1_entry(void);
+static void core_other_cpu_init(void);
 
 /****************************************************************************
  *  exports
@@ -66,69 +73,7 @@ void SystemInit(void)
     // Move exception vectors to IRAM
     esp_cpu_intr_set_ivt_addr(&_vector_table);
 
-    //Clear BSS. Please do not attempt to do any complex stuff (like early logging) before this.
-    memset(&_bss_start, 0, (&_bss_end - &_bss_start) * sizeof(_bss_start));
-
-    #if defined(CONFIG_IDF_TARGET_ESP32) && defined(CONFIG_ESP32_IRAM_AS_8BIT_ACCESSIBLE_MEMORY)
-        // Clear IRAM BSS
-        memset(&_iram_bss_start, 0, (&_iram_bss_end - &_iram_bss_start) * sizeof(_iram_bss_start));
-    #endif
-
     soc_reset_reason_t reset_reason = esp_rom_get_reset_reason(0);
-
-    #if SOC_RTC_FAST_MEM_SUPPORTED || SOC_RTC_SLOW_MEM_SUPPORTED
-        /* Unless waking from deep sleep (implying RTC memory is intact), clear RTC bss */
-        if (RESET_REASON_CORE_DEEP_SLEEP != reset_reason)
-            memset(&_rtc_bss_start, 0, (&_rtc_bss_end - &_rtc_bss_start) * sizeof(_rtc_bss_start));
-    #endif
-
-    /*
-    #if CONFIG_ESPTOOLPY_OCT_FLASH && !CONFIG_ESPTOOLPY_FLASH_MODE_AUTO_DETECT
-        bool efuse_opflash_en = efuse_ll_get_flash_type();
-        if (!efuse_opflash_en) {
-            ESP_EARLY_LOGE(TAG, "Octal Flash option selected, but EFUSE not configured!");
-            abort();
-        }
-    #endif
-
-    esp_mspi_pin_init();
-    spi_flash_init_chip_state();
-    #if CONFIG_IDF_TARGET_ESP32S3
-        //On other chips, this feature is not provided by HW, or hasn't been tested yet.
-        spi_timing_flash_tuning();
-    #endif
-    */
-
-    #if CONFIG_SPIRAM_BOOT_INIT
-        if (esp_psram_init() != ESP_OK)
-        {
-        #if CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY
-            ESP_EARLY_LOGE(TAG, "Failed to init external RAM, needed for external .bss segment");
-            abort();
-        #endif
-
-        #if CONFIG_SPIRAM_IGNORE_NOTFOUND
-            ESP_EARLY_LOGI(TAG, "Failed to init external RAM; continuing without it.");
-        #else
-            ESP_EARLY_LOGE(TAG, "Failed to init external RAM!");
-            abort();
-        #endif
-        }
-    #endif
-
-    #if CONFIG_SPIRAM_MEMTEST
-        if (esp_psram_is_initialized()) {
-            bool ext_ram_ok = esp_psram_extram_test();
-            if (!ext_ram_ok) {
-                ESP_EARLY_LOGE(TAG, "External RAM failed memory test!");
-                abort();
-            }
-        }
-    #endif  //CONFIG_SPIRAM_MEMTEST
-
-    #if CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY
-        memset(&_ext_ram_bss_start, 0, (&_ext_ram_bss_end - &_ext_ram_bss_start) * sizeof(_ext_ram_bss_start));
-    #endif
 
     // Enable trace memory and immediately start trace.
     #if CONFIG_ESP32_TRAX || CONFIG_ESP32S2_TRAX || CONFIG_ESP32S3_TRAX
@@ -146,7 +91,6 @@ void SystemInit(void)
 
     esp_clk_init();
     esp_perip_clk_init();
-    ESP_EARLY_LOGI(TAG, "protocol cpu running...");
 
     // Now that the clocks have been set-up, set the startup time from RTC
     // and default RTC-backed system time provider.
@@ -197,43 +141,94 @@ void SystemInit(void)
         }
     #endif
 
-    /*
-    #if CONFIG_SPI_FLASH_SIZE_OVERRIDE
-        int app_flash_size = esp_image_get_flash_size(fhdr.spi_size);
-        if (app_flash_size < 1 * 1024 * 1024) {
-            ESP_EARLY_LOGE(TAG, "Invalid flash size in app image header.");
-            abort();
-        }
-        bootloader_flash_update_size(app_flash_size);
+    #ifdef ROM_LOG_MODE
+        esp_efuse_set_rom_log_scheme(ROM_LOG_MODE);
     #endif
-    */
 
-    ESP_EARLY_LOGI(TAG, "Starting application cpu, entry point is %p", core_cpu1_entry);
-    esp_cpu_unstall(1);
+    #ifdef CONFIG_SECURE_FLASH_ENC_ENABLED
+        esp_flash_encryption_init_checks();
+    #endif
 
-    if (! REG_GET_BIT(SYSTEM_CORE_1_CONTROL_0_REG, SYSTEM_CONTROL_CORE_1_CLKGATE_EN))
-    {
-        REG_SET_BIT(SYSTEM_CORE_1_CONTROL_0_REG, SYSTEM_CONTROL_CORE_1_CLKGATE_EN);
-        REG_CLR_BIT(SYSTEM_CORE_1_CONTROL_0_REG, SYSTEM_CONTROL_CORE_1_RUNSTALL);
-        REG_SET_BIT(SYSTEM_CORE_1_CONTROL_0_REG, SYSTEM_CONTROL_CORE_1_RESETING);
-        REG_CLR_BIT(SYSTEM_CORE_1_CONTROL_0_REG, SYSTEM_CONTROL_CORE_1_RESETING);
-    }
-    ets_set_appcpu_boot_addr((uint32_t)core_cpu1_entry);
+    heap_caps_init();
 
-    SYS_STARTUP_FN();
+    #if CONFIG_ESP_BROWNOUT_DET
+        esp_brownout_init();
+    #endif
+
+    #if CONFIG_ESP_XT_WDT
+        esp_xt_wdt_config_t cfg = {
+            .timeout                = CONFIG_ESP_XT_WDT_TIMEOUT,
+            .auto_backup_clk_enable = CONFIG_ESP_XT_WDT_BACKUP_CLK_ENABLE,
+        };
+        err = esp_xt_wdt_init(&cfg);
+        assert(err == ESP_OK && "Failed to init xtwdt");
+    #endif
+
+    esp_timer_early_init();
+
+    esp_newlib_init();
+    esp_newlib_time_init();
+
+    #if CONFIG_VFS_SUPPORT_IO
+        esp_vfs_console_register();
+    #endif
+
+    #if defined(CONFIG_VFS_SUPPORT_IO) && !defined(CONFIG_ESP_CONSOLE_NONE)
+        static char const *default_stdio_dev = "/dev/console/";
+        esp_reent_init(_GLOBAL_REENT);
+        _GLOBAL_REENT->_stdin  = fopen(default_stdio_dev, "r");
+        _GLOBAL_REENT->_stdout = fopen(default_stdio_dev, "w");
+        _GLOBAL_REENT->_stderr = fopen(default_stdio_dev, "w");
+        #if ESP_ROM_NEEDS_SWSETUP_WORKAROUND
+            /*
+            - This workaround for printf functions using 32-bit time_t after the 64-bit time_t upgrade
+            - The 32-bit time_t usage is triggered through ROM Newlib functions printf related functions calling __swsetup_r() on
+            the first call to a particular file pointer (i.e., stdin, stdout, stderr)
+            - Thus, we call the toolchain version of __swsetup_r() now (before any printf calls are made) to setup all of the
+            file pointers. Thus, the ROM newlib code will never call the ROM version of __swsetup_r().
+            - See IDFGH-7728 for more details
+            */
+            extern int __swsetup_r(struct _reent *, FILE *);
+            __swsetup_r(_GLOBAL_REENT, _GLOBAL_REENT->_stdout);
+            __swsetup_r(_GLOBAL_REENT, _GLOBAL_REENT->_stderr);
+            __swsetup_r(_GLOBAL_REENT, _GLOBAL_REENT->_stdin);
+        #endif
+    #else
+        _REENT_SMALL_CHECK_INIT(_GLOBAL_REENT);
+    #endif
+
+    esp_pthread_init();
 }
 
-static void core_intr_matrix_clear(void)
+ESP_SYSTEM_INIT_FN(init_components0, BIT(0), 200)
 {
-    uint32_t core_id = esp_cpu_get_core_id();
+    #if CONFIG_ESP_DEBUG_STUBS_ENABLE
+        extern void esp_dbg_stubs_init(void);
+        esp_dbg_stubs_init();
+    #endif
 
-    for (int i = 0; i < ETS_MAX_INTR_SOURCE; i++) {
-        esp_rom_route_intr_matrix(core_id, i, ETS_INVALID_INUM);
-    }
+    #if defined(CONFIG_PM_ENABLE)
+        extern void esp_pm_impl_init(void);
+        esp_pm_impl_init();
+    #endif
+
+    #if SOC_APB_BACKUP_DMA
+        extern void esp_apb_backup_dma_lock_init(void);
+        esp_apb_backup_dma_lock_init();
+    #endif
+
+    #if CONFIG_SW_COEXIST_ENABLE || CONFIG_EXTERNAL_COEX_ENABLE
+        esp_coex_adapter_register(&g_coex_adapter_funcs);
+        coex_pre_init();
+    #endif
+
+    return ESP_OK;
 }
 
-static void core_cpu1_entry(void)
+ESP_SYSTEM_INIT_FN(startup_other_cores, BIT(1), 201)
 {
+    esp_rom_printf("\n\n\ncpu1 init........................");
+
     ets_set_appcpu_boot_addr(0);
     esp_cpu_intr_set_ivt_addr(&_vector_table);
 
@@ -256,5 +251,18 @@ static void core_cpu1_entry(void)
         trax_start_trace(TRAX_DOWNCOUNT_WORDS);
     #endif
 
-    SYS_STARTUP_FN();
+    esp_rom_printf("...............\n\n\n");
+    return ESP_OK;
+}
+
+/****************************************************************************
+ *  local
+*****************************************************************************/
+static void core_intr_matrix_clear(void)
+{
+    uint32_t core_id = esp_cpu_get_core_id();
+
+    for (int i = 0; i < ETS_MAX_INTR_SOURCE; i++) {
+        esp_rom_route_intr_matrix(core_id, i, ETS_INVALID_INUM);
+    }
 }

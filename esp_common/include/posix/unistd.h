@@ -323,13 +323,7 @@ extern __attribute__((nothrow, deprecated))
     char *cuserid(char *s);
 
 extern __attribute__((nothrow))
-    int fdatasync(int fildes);
-
-extern __attribute__((nothrow))
     pid_t fork(void);
-
-extern __attribute__((nothrow))
-    int fsync(int fildes);
 
 extern __attribute__((nothrow, deprecated))
     int getdtablesize(void);
@@ -421,6 +415,9 @@ extern __attribute__((nothrow))
     int chdir(const char *path);
 extern __attribute__((nothrow))
     int fchdir(int fildes);
+extern __attribute__((nothrow, deprecated))
+    int chroot(const char *path);
+
 extern __attribute__((nothrow))
     int rmdir(const char *path);
 
@@ -449,11 +446,6 @@ extern __attribute__((nothrow))
 extern __attribute__((nothrow))
     int readlink(const char *path, char *buf, size_t bufsize);
 
-extern __attribute__((nothrow, deprecated))
-    int chroot(const char *path);
-
-extern __attribute__((nothrow))
-    void sync(void);
 extern __attribute__((nothrow))
     long int sysconf(int name);
 
@@ -466,11 +458,6 @@ extern __attribute__((nothrow))
     int ftruncate(int fildes, off_t length);
 extern __attribute__((nothrow))
     int truncate(const char *path, off_t length);
-
-extern __attribute__((nothrow))
-    char *ttyname(int fildes);
-extern __attribute__((nothrow))
-    int ttyname_r(int fildes, char *name, size_t namesize);
 
 /**
  *  file descriptors
@@ -504,6 +491,18 @@ extern __attribute__((nothrow))
 
 extern __attribute__((nothrow))
     int pipe(int fildes[2]);
+
+extern __attribute__((nothrow))
+    int fdatasync(int fildes);
+extern __attribute__((nothrow))
+    int fsync(int fildes);
+extern __attribute__((nothrow))
+    void sync(void);
+
+extern __attribute__((nothrow))
+    char *ttyname(int fildes);
+extern __attribute__((nothrow))
+    int ttyname_r(int fildes, char *name, size_t namesize);
 
 /**
  *  threads

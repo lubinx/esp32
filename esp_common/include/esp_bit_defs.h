@@ -3,7 +3,6 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-
 #pragma once
 
 #define BIT63                           (0x80000000ULL << 32)

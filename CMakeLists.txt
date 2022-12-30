@@ -7,5 +7,5 @@ idf_build(
     COMPONENTS
         # ...
     SRCS
-        "main.c"
+        "main.cpp"
 )

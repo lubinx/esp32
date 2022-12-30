@@ -2,8 +2,8 @@ list(APPEND includes
 )
 
 list(APPEND srcs
-    "${IDF_TARGET}/init.c"
-    "startup.c"
+    "${IDF_TARGET}/startup.c"
+    "${IDF_TARGET}/system_init.c"
     "${IDF_PATH}/components/esp_system/crosscore_int.c"
     "${IDF_PATH}/components/esp_system/esp_ipc.c"
     "${IDF_PATH}/components/esp_system/esp_err.c"
@@ -19,25 +19,19 @@ list(APPEND srcs
     "${IDF_PATH}/components/esp_system/port/brownout.c"
     "${IDF_PATH}/components/esp_system/port/esp_system_chip.c"
     "${IDF_PATH}/components/esp_system/port/panic_handler.c"
-    # "${IDF_PATH}/components/esp_system/startup.c"
-    # "${IDF_PATH}/components/esp_system/port/cpu_start.c"
 # retarget newlib
+    "newlib_retarget/newlib_init.c"
+    "newlib_retarget/os_sleeps.c"
     "newlib_retarget/abort.c"
     "newlib_retarget/assert.c"
     "newlib_retarget/esp_time_impl.c"
     "newlib_retarget/heap.c"
     "newlib_retarget/locks.c"
-    "newlib_retarget/poll.c"
+    # "newlib_retarget/poll.c"
     "newlib_retarget/pthread.c"
     "newlib_retarget/random.c"
-    "newlib_retarget/reent_init.c"
-    "newlib_retarget/newlib_init.c"
-    "newlib_retarget/syscalls.c"
-    "newlib_retarget/termios.c"
     "newlib_retarget/time.c"
-    "newlib_retarget/sysconf.c"
-    "newlib_retarget/realpath.c"
-    "newlib_retarget/sleep.c"
+    # "newlib_retarget/realpath.c"
     # only #defines in this file, it could never link
     #   TODO: assume this file will implement the <sys/atomic.h> at the global scope
     #   so it keep here to further examination
@@ -74,12 +68,12 @@ endif()
 
 idf_component_register(
     INCLUDE_DIRS
+        "include"
         "${IDF_PATH}/components/esp_system/include"
         "${IDF_PATH}/components/esp_system/port/include/private"
     PRIV_INCLUDE_DIRS
-        "include"
+        "priv_include"
         "${IDF_PATH}/components/esp_system/port/include"
-        "${IDF_PATH}/components/spi_flash/include"
     SRCS
         ${srcs}
     PRIV_REQUIRES
@@ -105,7 +99,6 @@ set_source_files_properties(heap.c PROPERTIES COMPILE_FLAGS -fno-builtin)
 # instead of the implementations provided by newlib.
 list(APPEND EXTRA_LINK_FLAGS
     "-u newlib_include_heap_impl"
-    "-u newlib_include_syscalls_impl"
     "-u newlib_include_pthread_impl"
     "-u newlib_include_assert_impl"
 )

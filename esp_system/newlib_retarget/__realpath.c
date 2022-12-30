@@ -1,3 +1,5 @@
+/* REVIEW: newlib don't have this realpath() function, about to remove this file later */
+
 /*
  * SPDX-FileCopyrightText: 2021-2022 Espressif Systems (Shanghai) CO LTD
  *

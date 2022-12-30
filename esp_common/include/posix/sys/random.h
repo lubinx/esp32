@@ -7,16 +7,13 @@
 #ifndef __SYS_RANDOM__
 #define __SYS_RANDOM__
 
+#include <features.h>
 #include <sys/types.h>
 
-#ifdef __cplusplus
-extern "C" {
+__BEGIN_DECLS
+
+extern __attribute__((nothrow))
+    ssize_t getrandom(void *buf, size_t buflen, unsigned int flags);
+
+__END_DECLS
 #endif
-
-ssize_t getrandom(void *buf, size_t buflen, unsigned int flags);
-
-#ifdef __cplusplus
-} // extern "C"
-#endif
-
-#endif //__SYS_RANDOM__

@@ -7,10 +7,7 @@
         fixed = 256
 
     CONFIG_APP_BUILD_USE_FLASH_SECTIONS
-        use static ld segments instead of configure this
-
-    CONFIG_ESP32S3_USE_FIXED_STATIC_RAM_SIZE
-        for what?
+        always true
 */
 /****************************************************************************
  * sdkconfig.h
