@@ -11,7 +11,6 @@
 #include <malloc.h>
 #include "esp_heap_caps.h"
 
-
 /*
  These contain the business logic for the malloc() and realloc() implementation. Because of heap tracing
  wrapping reasons, we do not want these to be a public api, however, so they're not defined publicly.
@@ -128,7 +127,3 @@ struct mallinfo mallinfo(void)
     struct mallinfo dummy = {0};
     return dummy;
 }
-
-void *valloc(size_t n) __attribute__((alias("malloc")));
-void *pvalloc(size_t n) __attribute__((alias("malloc")));
-void cfree(void *p) __attribute__((alias("free")));

@@ -13,7 +13,6 @@
 // #include "esp_efuse.h"
 #include "esp_log.h"
 #include "esp_memprot.h"
-#include "esp_pthread.h"
 #include "esp_newlib.h"
 #include "esp_timer.h"
 
@@ -165,9 +164,7 @@ void SystemInit(void)
     #endif
 
     esp_timer_early_init();
-
     esp_newlib_init();
-    esp_newlib_time_init();
 
     #if CONFIG_VFS_SUPPORT_IO
         esp_vfs_console_register();
@@ -196,8 +193,6 @@ void SystemInit(void)
     #else
         _REENT_SMALL_CHECK_INIT(_GLOBAL_REENT);
     #endif
-
-    esp_pthread_init();
 }
 
 ESP_SYSTEM_INIT_FN(init_components0, BIT(0), 200)
@@ -227,8 +222,6 @@ ESP_SYSTEM_INIT_FN(init_components0, BIT(0), 200)
 
 ESP_SYSTEM_INIT_FN(startup_other_cores, BIT(1), 201)
 {
-    esp_rom_printf("\n\n\ncpu1 init........................");
-
     ets_set_appcpu_boot_addr(0);
     esp_cpu_intr_set_ivt_addr(&_vector_table);
 
@@ -251,7 +244,6 @@ ESP_SYSTEM_INIT_FN(startup_other_cores, BIT(1), 201)
         trax_start_trace(TRAX_DOWNCOUNT_WORDS);
     #endif
 
-    esp_rom_printf("...............\n\n\n");
     return ESP_OK;
 }
 

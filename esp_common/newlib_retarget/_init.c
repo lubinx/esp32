@@ -12,11 +12,10 @@
 #include <sys/stat.h>
 #include <sys/reent.h>
 
-#include "esp_newlib.h"
-#include "esp_attr.h"
 #include "esp_rom_caps.h"
-
 #include "soc/soc_caps.h"
+
+#include "esp_newlib.h"
 
 #if CONFIG_IDF_TARGET_ESP32
     #include "esp32/rom/libc_stubs.h"
@@ -42,8 +41,7 @@ extern __attribute__((nothrow))
         FILE * fp, int (*pfunc) (struct _reent *, FILE *, const char *, size_t len), va_list * ap);
 
 extern __attribute__((nothrow))
-    int _scanf_float(struct _reent *rptr, void *pdata,
-        FILE *fp, va_list *ap);
+    int _scanf_float(struct _reent *rptr, void *pdata, FILE *fp, va_list *ap);
 
 extern void _cleanup_r(struct _reent* r);
 
@@ -149,10 +147,17 @@ void esp_newlib_init(void)
     static char *env[1] = {0};
     char **environ = env;
 
+    extern void esp_newlib_locks_init(void);
     esp_newlib_locks_init();
+
+    extern void esp_newlib_time_init(void);
+    esp_newlib_time_init();
+
+    extern void esp_pthread_init(void);
+    esp_pthread_init();
 }
 
-void IRAM_ATTR esp_reent_init(struct _reent* r)
+void esp_reent_init(struct _reent* r)
 {
     memset(r, 0, sizeof(*r));
 
@@ -236,11 +241,6 @@ void esp_reent_cleanup(void)
 // REVIEW: don't know who use this..
 void esp_setup_newlib_syscalls(void) __attribute__((alias("esp_newlib_init"), deprecated));
 
-long sysconf(int arg)
-{
-    errno = EINVAL;
-    return -1;
-}
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wattribute-alias"
@@ -283,20 +283,20 @@ void *_sbrk_r(struct _reent *r, ptrdiff_t sz)
     __attribute__((alias("syscall_not_implemented_aborts")));
 
 int _getpid_r(struct _reent *r)
-    __attribute__((alias("syscall_not_implemented")));
+    __attribute__((weak, alias("syscall_not_implemented")));
 int _kill_r(struct _reent *r, int pid, int sig)
-    __attribute__((alias("syscall_not_implemented")));
+    __attribute__((weak, alias("syscall_not_implemented")));
 void _exit(int __status)
-    __attribute__((alias("syscall_not_implemented_aborts")));
+    __attribute__((weak, alias("syscall_not_implemented_aborts")));
 
 /* These functions are not expected to be overridden */
 int _system_r(struct _reent *r, const char *str)
     __attribute__((alias("syscall_not_implemented")));
 
 int raise(int sig)
-    __attribute__((alias("syscall_not_implemented_aborts")));
+    __attribute__((weak, alias("syscall_not_implemented_aborts")));
 int _raise_r(struct _reent *r, int sig)
-    __attribute__((alias("syscall_not_implemented_aborts")));
+    __attribute__((weak, alias("syscall_not_implemented_aborts")));
 
 #pragma GCC diagnostic pop
 

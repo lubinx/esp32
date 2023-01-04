@@ -23,7 +23,6 @@
     #define HAS_ATOMICS_32 (XCHAL_HAVE_S32C1I == 1)
     // no 64-bit atomics on Xtensa
     #define HAS_ATOMICS_64 0
-
 #else
     // GCC toolchain will define this pre-processor if "A" extension is supported
     #ifndef __riscv_atomic

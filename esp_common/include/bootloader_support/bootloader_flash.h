@@ -21,7 +21,7 @@ __BEGIN_DECLS
 extern __attribute__((nothrow))
     uint32_t bootloader_read_flash_id(void);
 
-    #if SOC_CACHE_SUPPORT_WRAP
+#if SOC_CACHE_SUPPORT_WRAP
     /**
      * @brief Set the burst mode setting command for specified wrap mode.
      *
@@ -30,8 +30,7 @@ extern __attribute__((nothrow))
      */
     extern __attribute__((nothrow))
         esp_err_t bootloader_flash_wrap_set(spi_flash_wrap_mode_t mode);
-
-    #endif
+#endif
 
 extern __attribute__((nothrow))
     esp_err_t bootloader_flash_reset_chip(void);

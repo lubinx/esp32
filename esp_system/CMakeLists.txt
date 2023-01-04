@@ -6,36 +6,17 @@ list(APPEND srcs
     "${IDF_TARGET}/system_init.c"
     "${IDF_PATH}/components/esp_system/crosscore_int.c"
     "${IDF_PATH}/components/esp_system/esp_ipc.c"
-    "${IDF_PATH}/components/esp_system/esp_err.c"
     "${IDF_PATH}/components/esp_system/freertos_hooks.c"
     "${IDF_PATH}/components/esp_system/int_wdt.c"
-    "${IDF_PATH}/components/esp_system/esp_system.c"
-    "${IDF_PATH}/components/esp_system/panic.c"
-    # "${IDF_PATH}/components/esp_system/system_time.c"
     # "${IDF_PATH}/components/esp_system/stack_check.c"
     "${IDF_PATH}/components/esp_system/ubsan.c"
     "${IDF_PATH}/components/esp_system/xt_wdt.c"
     "${IDF_PATH}/components/esp_system/debug_stubs.c"
     "${IDF_PATH}/components/esp_system/port/brownout.c"
     "${IDF_PATH}/components/esp_system/port/esp_system_chip.c"
+
+    "${IDF_PATH}/components/esp_system/panic.c"
     "${IDF_PATH}/components/esp_system/port/panic_handler.c"
-# retarget newlib
-    "newlib_retarget/newlib_init.c"
-    "newlib_retarget/os_sleeps.c"
-    "newlib_retarget/abort.c"
-    "newlib_retarget/assert.c"
-    "newlib_retarget/esp_time_impl.c"
-    "newlib_retarget/heap.c"
-    "newlib_retarget/locks.c"
-    # "newlib_retarget/poll.c"
-    "newlib_retarget/pthread.c"
-    "newlib_retarget/random.c"
-    "newlib_retarget/time.c"
-    # "newlib_retarget/realpath.c"
-    # only #defines in this file, it could never link
-    #   TODO: assume this file will implement the <sys/atomic.h> at the global scope
-    #   so it keep here to further examination
-    # "newlib_retarget/stdatomic.c"
 )
 
 if(CONFIG_ESP_TASK_WDT_EN)
@@ -69,6 +50,7 @@ endif()
 idf_component_register(
     INCLUDE_DIRS
         "include"
+        # hmm...
         "${IDF_PATH}/components/esp_system/include"
         "${IDF_PATH}/components/esp_system/port/include/private"
     PRIV_INCLUDE_DIRS
@@ -83,26 +65,11 @@ idf_component_register(
         "esp_timer"
         # "pthread"
         # "driver"
-        # "esp_partition"
-        # "spi_flash"
     LDFRAGMENTS
         "${IDF_PATH}/components/esp_system/linker.lf"
         "${IDF_PATH}/components/esp_system/app.lf"
-        # newlib
-        "${IDF_PATH}/components/newlib/newlib.lf"
-        "${IDF_PATH}/components/newlib/system_libs.lf"
 )
 set_source_files_properties(heap.c PROPERTIES COMPILE_FLAGS -fno-builtin)
-
-# REVIEW: remove these force links, its shuold merge into SystemInit()
-# Forces the linker to include heap, syscall, pthread, assert, and retargetable locks from this component,
-# instead of the implementations provided by newlib.
-list(APPEND EXTRA_LINK_FLAGS
-    "-u newlib_include_heap_impl"
-    "-u newlib_include_pthread_impl"
-    "-u newlib_include_assert_impl"
-)
-target_link_libraries(${COMPONENT_LIB} INTERFACE "${EXTRA_LINK_FLAGS}")
 
 add_subdirectory("${IDF_PATH}/components/esp_system/port/soc/${IDF_TARGET}"
     "${build_dir}/${prefix}/${component_name}/soc")
@@ -162,18 +129,4 @@ idf_component_optional_requires(PRIVATE "esp_gdbstub")
 
 # if(CONFIG_PM_ENABLE)
 #     idf_component_optional_requires(PRIVATE "pm")
-# endif()
-
-# if(CONFIG_VFS_SUPPORT_IO)
-#     idf_component_optional_requires(PRIVATE "vfs")
-# endif()
-
-# if(CONFIG_SW_COEXIST_ENABLE OR CONFIG_EXTERNAL_COEX_ENABLE)
-#     idf_component_optional_requires(PRIVATE "esp_wifi")
-# endif()
-
-# if(NOT BOOTLOADER_BUILD)
-#     if(CONFIG_SPIRAM)
-#         idf_component_optional_requires(PRIVATE "esp_psram")
-#     endif()
 # endif()

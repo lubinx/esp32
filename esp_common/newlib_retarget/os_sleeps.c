@@ -15,11 +15,12 @@ int usleep(useconds_t us)
 
 unsigned int sleep(unsigned int seconds)
 {
-    usleep(1000000UL * seconds);
+    vTaskDelay(seconds * 1000 / portTICK_PERIOD_MS);
     return 0;
 }
 
 int msleep(uint32_t msec)
 {
-    return usleep(1000UL * msec);
+    vTaskDelay(msec / portTICK_PERIOD_MS);
+    return 0;
 }

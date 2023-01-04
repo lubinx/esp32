@@ -586,5 +586,3 @@ menu "IPC (Inter-Processor Call)"
             callbacks must be written with particular restrictions (see "IPC" and "High-Level Interrupt" docs for more
             details).
 endmenu # "IPC (Inter-Processor Call)
-
-rsource "newlib_retarget/Kconfig"
