@@ -1,3 +1,5 @@
+#include <sys/types.h>
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -23,4 +25,10 @@ int msleep(uint32_t msec)
 {
     vTaskDelay(msec / portTICK_PERIOD_MS);
     return 0;
+}
+
+// TODO: move to pthread.c
+int pthread_yield(void)
+{
+    msleep(0);
 }

@@ -18,7 +18,10 @@ int rand(void)
     return buf;
 }
 
-
+/**
+ *  none posix, but linux
+ *      TODO: plan to implement /dev/random in file system
+*/
 ssize_t getrandom(void *buf, size_t buflen, unsigned int flags)
 {
     if (buf == NULL) {
@@ -26,6 +29,7 @@ ssize_t getrandom(void *buf, size_t buflen, unsigned int flags)
         return -1;
     }
 
+    // esp_hw_support
     esp_fill_random(buf, buflen);
     return buflen;
 }

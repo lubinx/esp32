@@ -8,32 +8,13 @@ list(APPEND srcs
     "${IDF_PATH}/components/esp_system/esp_ipc.c"
     "${IDF_PATH}/components/esp_system/freertos_hooks.c"
     "${IDF_PATH}/components/esp_system/int_wdt.c"
-    # "${IDF_PATH}/components/esp_system/stack_check.c"
-    "${IDF_PATH}/components/esp_system/ubsan.c"
     "${IDF_PATH}/components/esp_system/xt_wdt.c"
     "${IDF_PATH}/components/esp_system/debug_stubs.c"
     "${IDF_PATH}/components/esp_system/port/brownout.c"
-    "${IDF_PATH}/components/esp_system/port/esp_system_chip.c"
-
+    # "${IDF_PATH}/components/esp_system/port/esp_system_chip.c"
     "${IDF_PATH}/components/esp_system/panic.c"
     "${IDF_PATH}/components/esp_system/port/panic_handler.c"
 )
-
-if(CONFIG_ESP_TASK_WDT_EN)
-    list(APPEND srcs
-        "${IDF_PATH}/components/esp_system/task_wdt/task_wdt.c"
-    )
-
-    if(CONFIG_ESP_TASK_WDT_USE_ESP_TIMER)
-        list(APPEND srcs
-            "${IDF_PATH}/components/esp_system/task_wdt/task_wdt_impl_esp_timer.c"
-        )
-    else()
-        list(APPEND srcs
-            "${IDF_PATH}/components/esp_system/task_wdt/task_wdt_impl_timergroup.c"
-        )
-    endif()
-endif()
 
 if(CONFIG_ESP_SYSTEM_USE_EH_FRAME)
     list(APPEND srcs
@@ -49,8 +30,6 @@ endif()
 
 idf_component_register(
     INCLUDE_DIRS
-        "include"
-        # hmm...
         "${IDF_PATH}/components/esp_system/include"
         "${IDF_PATH}/components/esp_system/port/include/private"
     PRIV_INCLUDE_DIRS
@@ -63,8 +42,6 @@ idf_component_register(
         "hal"
         "esp_common"
         "esp_timer"
-        # "pthread"
-        # "driver"
     LDFRAGMENTS
         "${IDF_PATH}/components/esp_system/linker.lf"
         "${IDF_PATH}/components/esp_system/app.lf"
@@ -108,25 +85,4 @@ target_linker_script(${COMPONENT_LIB} INTERFACE "${IDF_TARGET}/sections.ld"
     PROCESS "${config_dir}/${IDF_TARGET}_sections.ld"
 )
 
-# Disable stack protection in files which are involved in initialization of that feature
-# set_source_files_properties(
-#     "${IDF_PATH}/components/esp_system/stack_check.c"
-#     PROPERTIES COMPILE_FLAGS
-#     -fno-stack-protector
-# )
-
-# [refactor-todo] requirement from the panic handler,
-# need to introduce panic "event" concept to remove this dependency (IDF-2194)
 idf_component_optional_requires(PRIVATE "esp_gdbstub")
-
-# if(CONFIG_APPTRACE_ENABLE)
-#     idf_component_optional_requires(PRIVATE "app_trace")
-# endif()
-
-# if(CONFIG_ESP_COREDUMP_ENABLE)
-#     idf_component_optional_requires(PRIVATE "espcoredump")
-# endif()
-
-# if(CONFIG_PM_ENABLE)
-#     idf_component_optional_requires(PRIVATE "pm")
-# endif()

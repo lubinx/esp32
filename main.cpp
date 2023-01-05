@@ -1,7 +1,10 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <pthread.h>
+#include <assert.h>
+#include <errno.h>
 
 #include "esp_cpu.h"
 #include "esp_heap_caps.h"
@@ -15,6 +18,10 @@ int val = 0;
 
 extern "C" void __attribute__((weak)) app_main(void)
 {
+    printf("%d: %s\n", ENOSYS, strerror(ENOSYS));
+    printf("\n\n\n");
+    fflush(stdout);
+
     printf("Minimum free heap size: %d bytes\n", heap_caps_get_minimum_free_size(MALLOC_CAP_DEFAULT));
     printf ("cpu frequency: %d\n", esp_clk_cpu_freq());
 
@@ -38,10 +45,9 @@ extern "C" void __attribute__((weak)) app_main(void)
     pthread_create(&id, NULL, blink_thread1, NULL);
     pthread_create(&id, NULL, blink_thread2, NULL);
 
+
     while (1)
-    {
-        msleep(1000);
-    }
+        sleep(1);
 }
 
 static void *blink_thread1(void *arg)
@@ -53,15 +59,16 @@ static void *blink_thread1(void *arg)
         int err = pthread_mutex_lock(&mutex);
         if (0 == err)
         {
-            printf("blink thread1 cpu: %d, val %d\n", esp_cpu_get_core_id(), val);
+            printf("thread1: cpu: %d, val %d\n", esp_cpu_get_core_id(), val);
             pthread_mutex_unlock(&mutex);
         }
         else
             printf("err %d\n", err);
 
         fflush(stdout);
-        msleep(0);
+        pthread_yield();
     }
+
 }
 
 static void *blink_thread2(void *arg)
@@ -72,8 +79,10 @@ static void *blink_thread2(void *arg)
     {
         pthread_mutex_lock(&mutex);
         val ++;
+        printf("thread2: cpu: %d, val %d\n", esp_cpu_get_core_id(), val);
 
         msleep(1000);
         pthread_mutex_unlock(&mutex);
+        pthread_yield();
     }
 }
