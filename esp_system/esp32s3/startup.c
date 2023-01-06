@@ -4,7 +4,6 @@
 #include "esp_heap_caps_init.h"
 #include "esp_log.h"
 #include "esp_rom_sys.h"
-#include "esp_xt_wdt.h"
 #include "esp_timer.h"
 
 #include "soc/system_reg.h"
@@ -81,15 +80,6 @@ void Startup_Handler(void)
     do_global_ctors();
     do_system_init_fn();
 
-    #if CONFIG_ESP_XT_WDT
-        esp_xt_wdt_config_t cfg = {
-            .timeout                = CONFIG_ESP_XT_WDT_TIMEOUT,
-            .auto_backup_clk_enable = CONFIG_ESP_XT_WDT_BACKUP_CLK_ENABLE,
-        };
-        err = esp_xt_wdt_init(&cfg);
-        assert(err == ESP_OK && "Failed to init xtwdt");
-    #endif
-
     #ifndef CONFIG_BOOTLOADER_WDT_DISABLE_IN_USER_CODE
         #if CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32H2
             wdt_hal_context_t rtc_wdt_ctx = {.inst = WDT_RWDT, .rwdt_dev = &LP_WDT};
@@ -102,7 +92,6 @@ void Startup_Handler(void)
     #endif
 
     esp_cpu_unstall(1);
-
     if (! REG_GET_BIT(SYSTEM_CORE_1_CONTROL_0_REG, SYSTEM_CONTROL_CORE_1_CLKGATE_EN))
     {
         REG_SET_BIT(SYSTEM_CORE_1_CONTROL_0_REG, SYSTEM_CONTROL_CORE_1_CLKGATE_EN);
@@ -112,7 +101,6 @@ void Startup_Handler(void)
         REG_CLR_BIT(SYSTEM_CORE_1_CONTROL_0_REG, SYSTEM_CONTROL_CORE_1_RESETING);
     }
     ets_set_appcpu_boot_addr((uint32_t)startup_other_cores);
-
 
     esp_startup_start_app();
 }
@@ -131,8 +119,12 @@ static void do_global_ctors(void)
         __register_frame_info(__eh_frame, &ob);
     #endif
 
-    for (void (**p)(void) = &__init_array_end - 1; p >= &__init_array_start; --p)
+    for (void (**p)(void) = &__init_array_start;
+        p < &__init_array_end;
+        p ++)
+    {
         (*p)();
+    }
 }
 
 static void do_system_init_fn(void)
@@ -147,10 +139,7 @@ static void do_system_init_fn(void)
         {
             esp_err_t err = (*(p->fn))();
             if (err != ESP_OK)
-            {
-                ESP_LOGE(TAG, "init function %p has failed (0x%x), aborting", p->fn, err);
                 abort();
-            }
         }
     }
 }

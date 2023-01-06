@@ -1,8 +1,8 @@
 
 menu "ESP System Settings"
-    rsource "$IDF_PATH/components/esp_system/port/soc/$IDF_TARGET/Kconfig.cpu"
-    orsource "$IDF_PATH/components/esp_system/port/soc/$IDF_TARGET/Kconfig.cache"
-    orsource "$IDF_PATH/components/esp_system/port/soc/$IDF_TARGET/Kconfig.tracemem"
+    rsource "$IDF_TARGET/Kconfig.cpu"
+    orsource "$IDF_TARGET/Kconfig.cache"
+    orsource "$IDF_TARGET/Kconfig.tracemem"
 
     choice ESP_SYSTEM_PANIC
         prompt "Panic handler behaviour"
@@ -122,7 +122,6 @@ menu "ESP System Settings"
             This option shall NOT be used for production.
 
     menu "Memory protection"
-
         config ESP_SYSTEM_PMP_IDRAM_SPLIT
             bool "Enable IRAM/DRAM split protection"
             depends on SOC_CPU_IDRAM_SPLIT_USING_PMP
@@ -154,7 +153,6 @@ menu "ESP System Settings"
             help
                 Once locked, memory protection settings cannot be changed anymore.
                 The lock is reset only on the chip startup.
-
     endmenu  # Memory protection
 
     config ESP_SYSTEM_EVENT_QUEUE_SIZE
@@ -375,56 +373,6 @@ menu "ESP System Settings"
             If enabled, esp_rom_printf and ESP_EARLY_LOG output will also be sent over USB CDC.
             Disabling this option saves about 1kB or RAM.
 
-    config ESP_INT_WDT
-        bool "Interrupt watchdog"
-        default y
-        help
-            This watchdog timer can detect if the FreeRTOS tick interrupt has not been called for a certain time,
-            either because a task turned off interrupts and did not turn them on for a long time, or because an
-            interrupt handler did not return. It will try to invoke the panic handler first and failing that
-            reset the SoC.
-
-    config ESP_INT_WDT_TIMEOUT_MS
-        int "Interrupt watchdog timeout (ms)"
-        depends on ESP_INT_WDT
-        default 300 if !(SPIRAM && IDF_TARGET_ESP32)
-        default 800 if (SPIRAM && IDF_TARGET_ESP32)
-        range 10 10000
-        help
-            The timeout of the watchdog, in miliseconds. Make this higher than the FreeRTOS tick rate.
-
-    config ESP_INT_WDT_CHECK_CPU1
-        bool "Also watch CPU1 tick interrupt"
-        depends on ESP_INT_WDT && !FREERTOS_UNICORE
-        default y
-        help
-            Also detect if interrupts on CPU 1 are disabled for too long.
-
-    config ESP_XT_WDT
-        bool "Initialize XTAL32K watchdog timer on startup"
-        depends on !IDF_TARGET_ESP32 && (ESP_SYSTEM_RTC_EXT_OSC || ESP_SYSTEM_RTC_EXT_XTAL)
-        default n
-        help
-            This watchdog timer can detect oscillation failure of the XTAL32K_CLK. When such a failure
-            is detected the hardware can be set up to automatically switch to BACKUP32K_CLK and generate
-            an interrupt.
-
-    config ESP_XT_WDT_TIMEOUT
-        int "XTAL32K watchdog timeout period"
-        depends on ESP_XT_WDT
-        range 1 255
-        default 200
-        help
-            Timeout period configuration for the XTAL32K watchdog timer based on RTC_CLK.
-
-    config ESP_XT_WDT_BACKUP_CLK_ENABLE
-        bool "Automatically switch to BACKUP32K_CLK when timer expires"
-        depends on ESP_XT_WDT
-        default y
-        help
-            Enable this to automatically switch to BACKUP32K_CLK as the source of RTC_SLOW_CLK when
-            the watchdog timer expires.
-
     config ESP_PANIC_HANDLER_IRAM
         bool "Place panic handler code in IRAM"
         default n
@@ -489,36 +437,3 @@ menu "ESP System Settings"
             (2). For special workflow, the chip needs do more things instead of restarting directly. This part
                  needs to be done in callback function of interrupt.
 endmenu  # ESP System Settings
-
-menu "IPC (Inter-Processor Call)"
-    config ESP_IPC_TASK_STACK_SIZE
-        int "Inter-Processor Call (IPC) task stack size"
-        range 512 65536 if !APPTRACE_ENABLE
-        range 2048 65536 if APPTRACE_ENABLE
-        default 2048 if APPTRACE_ENABLE
-        default 1280 if !APPTRACE_ENABLE && IDF_TARGET_ESP32S3
-        default 1024
-        help
-            Configure the IPC tasks stack size. An IPC task runs on each core (in dual core mode), and allows for
-            cross-core function calls. See IPC documentation for more details. The default IPC stack size should be
-            enough for most common simple use cases. However, users can increase/decrease the stack size to their
-            needs.
-
-    config ESP_IPC_USES_CALLERS_PRIORITY
-        bool "IPC runs at caller's priority"
-        default y
-        depends on !FREERTOS_UNICORE
-        help
-            If this option is not enabled then the IPC task will keep behavior same as prior to that of ESP-IDF v4.0,
-            hence IPC task will run at (configMAX_PRIORITIES - 1) priority.
-
-    config ESP_IPC_ISR_ENABLE
-        bool
-        default y if !FREERTOS_UNICORE
-        help
-            The IPC ISR feature is similar to the IPC feature except that the callback function is executed in the
-            context of a High Priority Interrupt. The IPC ISR feature is itended for low latency execution of simple
-            callbacks written in assembly on another CPU. Due to being run in a High Priority Interrupt, the assembly
-            callbacks must be written with particular restrictions (see "IPC" and "High-Level Interrupt" docs for more
-            details).
-endmenu # "IPC (Inter-Processor Call)

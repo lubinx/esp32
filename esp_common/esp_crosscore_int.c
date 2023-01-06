@@ -11,7 +11,6 @@
 #include "esp_debug_helpers.h"
 #include "soc/periph_defs.h"
 
-
 #include "freertos/FreeRTOS.h"
 #include "freertos/portmacro.h"
 
@@ -49,21 +48,23 @@ static inline void IRAM_ATTR esp_crosscore_isr_handle_yield(void)
 static void IRAM_ATTR esp_crosscore_isr(void *arg) {
     uint32_t my_reason_val;
     //A pointer to the correct reason array item is passed to this ISR.
-    volatile uint32_t *my_reason=arg;
+    volatile uint32_t *my_reason = arg;
 
     //Clear the interrupt first.
 #if CONFIG_IDF_TARGET_ESP32
-    if (esp_cpu_get_core_id()==0) {
+    if (esp_cpu_get_core_id() == 0) {
         DPORT_WRITE_PERI_REG(DPORT_CPU_INTR_FROM_CPU_0_REG, 0);
-    } else {
+    }
+    else {
         DPORT_WRITE_PERI_REG(DPORT_CPU_INTR_FROM_CPU_1_REG, 0);
     }
 #elif CONFIG_IDF_TARGET_ESP32S2
     DPORT_WRITE_PERI_REG(DPORT_CPU_INTR_FROM_CPU_0_REG, 0);
 #elif CONFIG_IDF_TARGET_ESP32S3
-    if (esp_cpu_get_core_id()==0) {
+    if (esp_cpu_get_core_id() == 0) {
         WRITE_PERI_REG(SYSTEM_CPU_INTR_FROM_CPU_0_REG, 0);
-    } else {
+    }
+    else {
         WRITE_PERI_REG(SYSTEM_CPU_INTR_FROM_CPU_1_REG, 0);
     }
 #elif CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32H4 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32H2
@@ -72,8 +73,8 @@ static void IRAM_ATTR esp_crosscore_isr(void *arg) {
 
     //Grab the reason and clear it.
     portENTER_CRITICAL_ISR(&reason_spinlock);
-    my_reason_val=*my_reason;
-    *my_reason=0;
+    my_reason_val = *my_reason;
+    *my_reason = 0;
     portEXIT_CRITICAL_ISR(&reason_spinlock);
 
     //Check what we need to do.
@@ -95,15 +96,6 @@ static void IRAM_ATTR esp_crosscore_isr(void *arg) {
     if (my_reason_val & REASON_PRINT_BACKTRACE) {
         esp_backtrace_print(100);
     }
-
-#if CONFIG_ESP_TASK_WDT_EN
-    if (my_reason_val & REASON_TWDT_ABORT) {
-        extern void task_wdt_timeout_abort_xtensa(bool);
-        /* Called from a crosscore interrupt, thus, we are not the core that received
-         * the TWDT interrupt, call the function with `false` as a parameter. */
-        task_wdt_timeout_abort_xtensa(false);
-    }
-#endif // CONFIG_ESP_TASK_WDT_EN
 #endif // CONFIG_IDF_TARGET_ARCH_XTENSA
 }
 
@@ -111,40 +103,43 @@ static void IRAM_ATTR esp_crosscore_isr(void *arg) {
 //on each active core.
 void esp_crosscore_int_init(void) {
     portENTER_CRITICAL(&reason_spinlock);
-    reason[esp_cpu_get_core_id()]=0;
+    reason[esp_cpu_get_core_id()] = 0;
     portEXIT_CRITICAL(&reason_spinlock);
     esp_err_t err __attribute__((unused)) = ESP_OK;
 #if portNUM_PROCESSORS > 1
-    if (esp_cpu_get_core_id()==0) {
-        err = esp_intr_alloc(ETS_FROM_CPU_INTR0_SOURCE, ESP_INTR_FLAG_IRAM, esp_crosscore_isr, (void*)&reason[0], NULL);
-    } else {
-        err = esp_intr_alloc(ETS_FROM_CPU_INTR1_SOURCE, ESP_INTR_FLAG_IRAM, esp_crosscore_isr, (void*)&reason[1], NULL);
+    if (esp_cpu_get_core_id() == 0) {
+        err = esp_intr_alloc(ETS_FROM_CPU_INTR0_SOURCE, ESP_INTR_FLAG_IRAM, esp_crosscore_isr, (void *)&reason[0], NULL);
+    }
+    else {
+        err = esp_intr_alloc(ETS_FROM_CPU_INTR1_SOURCE, ESP_INTR_FLAG_IRAM, esp_crosscore_isr, (void *)&reason[1], NULL);
     }
 #else
-    err = esp_intr_alloc(ETS_FROM_CPU_INTR0_SOURCE, ESP_INTR_FLAG_IRAM, esp_crosscore_isr, (void*)&reason[0], NULL);
+    err = esp_intr_alloc(ETS_FROM_CPU_INTR0_SOURCE, ESP_INTR_FLAG_IRAM, esp_crosscore_isr, (void *)&reason[0], NULL);
 #endif
     ESP_ERROR_CHECK(err);
 }
 
 static void IRAM_ATTR esp_crosscore_int_send(int core_id, uint32_t reason_mask) {
-    assert(core_id<portNUM_PROCESSORS);
+    assert(core_id < portNUM_PROCESSORS);
     //Mark the reason we interrupt the other CPU
     portENTER_CRITICAL_ISR(&reason_spinlock);
     reason[core_id] |= reason_mask;
     portEXIT_CRITICAL_ISR(&reason_spinlock);
     //Poke the other CPU.
 #if CONFIG_IDF_TARGET_ESP32
-    if (core_id==0) {
+    if (core_id == 0) {
         DPORT_WRITE_PERI_REG(DPORT_CPU_INTR_FROM_CPU_0_REG, DPORT_CPU_INTR_FROM_CPU_0);
-    } else {
+    }
+    else {
         DPORT_WRITE_PERI_REG(DPORT_CPU_INTR_FROM_CPU_1_REG, DPORT_CPU_INTR_FROM_CPU_1);
     }
 #elif CONFIG_IDF_TARGET_ESP32S2
     DPORT_WRITE_PERI_REG(DPORT_CPU_INTR_FROM_CPU_0_REG, DPORT_CPU_INTR_FROM_CPU_0);
 #elif CONFIG_IDF_TARGET_ESP32S3
-    if (core_id==0) {
+    if (core_id == 0) {
         WRITE_PERI_REG(SYSTEM_CPU_INTR_FROM_CPU_0_REG, SYSTEM_CPU_INTR_FROM_CPU_0);
-    } else {
+    }
+    else {
         WRITE_PERI_REG(SYSTEM_CPU_INTR_FROM_CPU_1_REG, SYSTEM_CPU_INTR_FROM_CPU_1);
     }
 #elif CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32H4 || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32H2
@@ -173,9 +168,4 @@ void IRAM_ATTR esp_crosscore_int_send_print_backtrace(int core_id)
     esp_crosscore_int_send(core_id, REASON_PRINT_BACKTRACE);
 }
 
-#if CONFIG_ESP_TASK_WDT_EN
-void IRAM_ATTR esp_crosscore_int_send_twdt_abort(int core_id) {
-    esp_crosscore_int_send(core_id, REASON_TWDT_ABORT);
-}
-#endif // CONFIG_ESP_TASK_WDT_EN
 #endif

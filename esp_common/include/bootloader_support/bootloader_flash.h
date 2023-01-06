@@ -39,7 +39,6 @@ extern __attribute__((nothrow))
     bool bootloader_flash_is_octal_mode_enabled(void);
 
 
-
     #define FLASH_SECTOR_SIZE           0x1000
     #define FLASH_BLOCK_SIZE 	        0x10000
 

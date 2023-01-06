@@ -23,10 +23,8 @@
 #include "esp32s3/rtc.h"
 #include "esp32s3/rom/ets_sys.h"
 
-#include "esp_private/brownout.h"
 #include "esp_private/cache_err_int.h"
 #include "esp_private/esp_clk.h"
-#include "esp_private/sleep_gpio.h"
 #include "esp_private/startup_internal.h"
 #include "esp_private/system_internal.h"
 
@@ -111,8 +109,10 @@ void SystemInit(void)
     #endif
 
     // Need to unhold the IOs that were hold right before entering deep sleep, which are used as wakeup pins
+    /*
     if (RESET_REASON_CORE_DEEP_SLEEP == reset_reason)
         esp_deep_sleep_wakeup_io_reset();
+    */
 
     esp_cache_err_int_init();
 
@@ -149,19 +149,6 @@ void SystemInit(void)
     #endif
 
     heap_caps_init();
-
-    #if CONFIG_ESP_BROWNOUT_DET
-        esp_brownout_init();
-    #endif
-
-    #if CONFIG_ESP_XT_WDT
-        esp_xt_wdt_config_t cfg = {
-            .timeout                = CONFIG_ESP_XT_WDT_TIMEOUT,
-            .auto_backup_clk_enable = CONFIG_ESP_XT_WDT_BACKUP_CLK_ENABLE,
-        };
-        err = esp_xt_wdt_init(&cfg);
-        assert(err == ESP_OK && "Failed to init xtwdt");
-    #endif
 
     esp_timer_early_init();
     esp_newlib_init();

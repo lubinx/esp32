@@ -8,10 +8,12 @@ idf_component_register(
         "${IDF_PATH}/components/soc/${IDF_TARGET}/include"
     PRIV_INCLUDE_DIRS
     SRCS
-        "esp_platform.c"
         "glist.c"
-        "log.c"
-        "ubsan.c"
+        "esp_crosscore_int.c"
+        "esp_dbg_ubsan.c"       # debug for undefined behavior, but not sure if its works
+        "esp_log.c"
+        "esp_freertos_hooks.c"
+        "esp_platform.c"
     # retarget newlib
         "posix/_redirect.c"
         "posix/random.c"
@@ -25,11 +27,6 @@ idf_component_register(
         "posix/pthread_local_storage.c"
         "posix/time.c"
         "posix/sched.c"
-        # "posix/realpath.c"
-        # only #defines in this file, it could never link
-        #   TODO: assume this file will implement the <sys/atomic.h> at the global scope
-        #   so it keep here to further examination
-        # "posix/stdatomic.c"
     # compatiable
         "bootloader_support_shim.c"
     REQUIRES
@@ -40,3 +37,7 @@ idf_component_register(
         "${IDF_PATH}/components/esp_common/common.lf"
         "${IDF_PATH}/components/esp_common/soc.lf"
 )
+
+# Force linking UBSAN hooks. If UBSAN is not enabled, the hooks will ultimately be removed
+# due to -ffunction-sections -Wl,--gc-sections options.
+target_link_libraries(${COMPONENT_LIB} INTERFACE "-u __ubsan_include")

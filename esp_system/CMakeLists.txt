@@ -1,40 +1,28 @@
-list(APPEND includes
-)
 
 list(APPEND srcs
     "${IDF_TARGET}/startup.c"
     "${IDF_TARGET}/system_init.c"
-    "${IDF_PATH}/components/esp_system/crosscore_int.c"
-    "${IDF_PATH}/components/esp_system/esp_ipc.c"
-    "${IDF_PATH}/components/esp_system/freertos_hooks.c"
-    "${IDF_PATH}/components/esp_system/int_wdt.c"
-    "${IDF_PATH}/components/esp_system/xt_wdt.c"
-    "${IDF_PATH}/components/esp_system/debug_stubs.c"
-    "${IDF_PATH}/components/esp_system/port/brownout.c"
-    # "${IDF_PATH}/components/esp_system/port/esp_system_chip.c"
     "${IDF_PATH}/components/esp_system/panic.c"
     "${IDF_PATH}/components/esp_system/port/panic_handler.c"
 )
 
-if(CONFIG_ESP_SYSTEM_USE_EH_FRAME)
-    list(APPEND srcs
-        "${IDF_PATH}/components/esp_system/eh_frame_parser.c"
-    )
-endif()
+# if(CONFIG_ESP_SYSTEM_USE_EH_FRAME)
+#     list(APPEND srcs
+#         "${IDF_PATH}/components/esp_system/eh_frame_parser.c"
+#     )
+# endif()
 
-if(CONFIG_SOC_SYSTIMER_SUPPORT_ETM)
-    list(APPEND srcs
-        "${IDF_PATH}/components/esp_system/systick_etm.c"
-    )
-endif()
+# if(CONFIG_SOC_SYSTIMER_SUPPORT_ETM)
+#     list(APPEND srcs
+#         "${IDF_PATH}/components/esp_system/systick_etm.c"
+#     )
+# endif()
 
 idf_component_register(
     INCLUDE_DIRS
-        "${IDF_PATH}/components/esp_system/include"
-        "${IDF_PATH}/components/esp_system/port/include/private"
+        "include"
     PRIV_INCLUDE_DIRS
         "priv_include"
-        "${IDF_PATH}/components/esp_system/port/include"
     SRCS
         ${srcs}
     PRIV_REQUIRES
@@ -43,21 +31,12 @@ idf_component_register(
         "esp_common"
         "esp_timer"
     LDFRAGMENTS
-        "${IDF_PATH}/components/esp_system/linker.lf"
-        "${IDF_PATH}/components/esp_system/app.lf"
+        "memap.lf"
 )
 set_source_files_properties(heap.c PROPERTIES COMPILE_FLAGS -fno-builtin)
 
-add_subdirectory("${IDF_PATH}/components/esp_system/port/soc/${IDF_TARGET}"
+add_subdirectory("${IDF_TARGET}"
     "${build_dir}/${prefix}/${component_name}/soc")
-
-# Force linking UBSAN hooks. If UBSAN is not enabled, the hooks will ultimately be removed
-# due to -ffunction-sections -Wl,--gc-sections options.
-target_link_libraries(${COMPONENT_LIB} INTERFACE "-u __ubsan_include")
-
-if(NOT CONFIG_ESP_SYSTEM_SINGLE_CORE_MODE)
-    target_link_libraries(${COMPONENT_LIB} INTERFACE "-u start_app_other_cores")
-endif()
 
 # generate link scripts
 idf_build_get_property(sdkconfig_header SDKCONFIG_HEADER)

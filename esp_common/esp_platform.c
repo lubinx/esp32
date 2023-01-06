@@ -8,9 +8,15 @@
 #include "esp_attr.h"
 #include "esp_cpu.h"
 #include "esp_heap_caps.h"
+#include "esp_rom_sys.h"
 
 #include "esp_system.h"
 #include "esp_private/system_internal.h"
+
+__attribute__((constructor))
+void esp_platform_init(void)
+{
+}
 
 void esp_restart(void)
 {
@@ -65,4 +71,18 @@ char const *esp_err_to_name(esp_err_t code)
         sprintf(buf, "esp error %04x", code);
     }
     return retval;
+}
+
+#include "esp_ipc.h"
+
+esp_err_t esp_ipc_call(uint32_t cpu_id, esp_ipc_func_t func, void* arg)
+{
+    func(arg);
+    return ESP_OK;
+}
+
+esp_err_t esp_ipc_call_blocking(uint32_t cpu_id, esp_ipc_func_t func, void* arg)
+{
+    func(arg);
+    return ESP_OK;
 }

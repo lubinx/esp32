@@ -8,10 +8,6 @@
 #include "esp_err.h"
 #include "esp_log.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /**
  * Macro which can be used to check the error code. If the code is not ESP_OK, it prints the message and returns.
  */
@@ -302,8 +298,3 @@ extern "C" {
 #endif // !(defined(__cplusplus) && (__cplusplus >  201703L))
 
 #endif // !CONFIG_COMPILER_OPTIMIZATION_CHECKS_SILENT
-
-
-#ifdef __cplusplus
-}
-#endif
