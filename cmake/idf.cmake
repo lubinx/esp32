@@ -115,7 +115,7 @@ if (NOT IDF_TARGET_ARCH STREQUAL "")
     list(APPEND IDF_KERNEL_COMPONENTS ${IDF_TARGET_ARCH})
 endif()
 list(APPEND IDF_KERNEL_COMPONENTS
-    "esp_common" "esp_rom" "esp_system"
+    "esp_system" "esp_rom"
     "soc" "hal" "esp_hw_support" "efuse" "esp_pm" "heap"
     "freertos" "vfs" "driver" # "spiffs"
     "spi_flash"
@@ -127,6 +127,7 @@ list(APPEND OBSOLETED_COMPONENTS
     "app_update"
     "bootloader_support"
     "esp_app_format"
+    "esp_common"
     "esp_partition"
     "partition_table"
     "newlib"

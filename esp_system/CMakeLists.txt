@@ -1,10 +1,38 @@
+if ("xtensa" STREQUAL ${IDF_TARGET_ARCH})
+    include("${CMAKE_CURRENT_LIST_DIR}/arch/xtensa/.cmake")
+elseif("risv" STREQUAL ${IDF_TARGET_ARCH})
+    include("${CMAKE_CURRENT_LIST_DIR}/arch/risv/.cmake")
+else()
+    message(FATAL_ERROR "unknown arch")
+endif()
 
 list(APPEND srcs
+    "glist.c"
     "${IDF_TARGET}/startup.c"
     "${IDF_TARGET}/system_init.c"
+    "esp_crosscore_int.c"
+    "esp_dbg_ubsan.c"       # debug for undefined behavior, but not sure if its works
+    "esp_freertos_hooks.c"
+    "esp_platform.c"
+    "esp_log.c"
     "${IDF_PATH}/components/esp_system/panic.c"
     "${IDF_PATH}/components/esp_system/port/panic_handler.c"
+# compatiable
+    "bootloader_support_shim.c"
 )
+
+list(APPEND includes
+    "include"
+    "include/bootloader_support"
+    "include/dummy"
+    #  NOTE fix: soc => ${IDF_TARGET} subdir using relative paths
+    "${IDF_PATH}/components/soc/${IDF_TARGET}/include"
+)
+list(APPEND priv_includes
+    "priv_include"
+)
+
+include("${CMAKE_CURRENT_LIST_DIR}/posix/.cmake")
 
 # if(CONFIG_ESP_SYSTEM_USE_EH_FRAME)
 #     list(APPEND srcs
@@ -20,20 +48,21 @@ list(APPEND srcs
 
 idf_component_register(
     INCLUDE_DIRS
-        "include"
+        ${includes}
     PRIV_INCLUDE_DIRS
-        "priv_include"
+        ${priv_includes}
     SRCS
         ${srcs}
     PRIV_REQUIRES
         "efuse"
         "hal"
-        "esp_common"
         "esp_timer"
     LDFRAGMENTS
+        "${IDF_PATH}/components/esp_common/common.lf"
+        "${IDF_PATH}/components/esp_common/soc.lf"
         "memap.lf"
 )
-set_source_files_properties(heap.c PROPERTIES COMPILE_FLAGS -fno-builtin)
+target_link_libraries(${COMPONENT_LIB} INTERFACE "-u __ubsan_include")
 
 add_subdirectory("${IDF_TARGET}"
     "${build_dir}/${prefix}/${component_name}/soc")

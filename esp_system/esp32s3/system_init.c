@@ -45,9 +45,6 @@ uint64_t g_startup_time = 0;
 *****************************************************************************/
 extern int _vector_table;
 
-extern int _rtc_bss_start;
-extern int _rtc_bss_end;
-
 #if CONFIG_BOOT_ROM_LOG_ALWAYS_OFF
     #define ROM_LOG_MODE                ESP_EFUSE_ROM_LOG_ALWAYS_OFF
 #elif CONFIG_BOOT_ROM_LOG_ON_GPIO_LOW
@@ -149,7 +146,6 @@ void SystemInit(void)
     #endif
 
     heap_caps_init();
-
     esp_timer_early_init();
     esp_newlib_init();
 
@@ -192,11 +188,6 @@ ESP_SYSTEM_INIT_FN(init_components0, BIT(0), 200)
     #if defined(CONFIG_PM_ENABLE)
         extern void esp_pm_impl_init(void);
         esp_pm_impl_init();
-    #endif
-
-    #if SOC_APB_BACKUP_DMA
-        extern void esp_apb_backup_dma_lock_init(void);
-        esp_apb_backup_dma_lock_init();
     #endif
 
     #if CONFIG_SW_COEXIST_ENABLE || CONFIG_EXTERNAL_COEX_ENABLE

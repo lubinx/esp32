@@ -1,5 +1,4 @@
 menu "Cache config"
-
     choice ESP32S3_INSTRUCTION_CACHE_SIZE
         prompt "Instruction cache size"
         default ESP32S3_INSTRUCTION_CACHE_16KB
@@ -132,5 +131,4 @@ menu "Cache config"
             If enabled, data cache will use wrap mode to read spi flash or spi ram.
             The wrap length equals to ESP32S3_DATA_CACHE_LINE_SIZE.
             However, it depends on complex conditions.
-
 endmenu  # Cache config
