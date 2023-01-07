@@ -15,7 +15,7 @@
 #include "freertos/portmacro.h"
 
 #if CONFIG_ESP_SYSTEM_GDBSTUB_RUNTIME
-#include "esp_gdbstub.h"
+    #include "esp_gdbstub.h"
 #endif
 
 #if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S2

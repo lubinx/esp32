@@ -60,6 +60,11 @@ __BEGIN_DECLS
     #define ESP_DRAM_LOGV(tag, format, ...)     \
         ESP_LOG_LEVEL(ESP_LOG_VERBOSE,  tag, format, ##__VA_ARGS__)
 
+    #define ESP_EARLY_LOG(level, tag, format, ...)  (\
+        CONFIG_BOOTLOADER_LOG_LEVEL < level ? ((void)level, (void)tag, (void)format) :  \
+            esp_rom_printf(LOG_FORMAT(level, format), esp_log_timestamp(), tag, ##__VA_ARGS__)  \
+    )
+
 #if BOOTLOADER_BUILD
     #define ESP_LOG_LEVEL(level, tag, format, ...)  (\
         CONFIG_BOOTLOADER_LOG_LEVEL < level ? ((void)level, (void)tag, (void)format) :  \
@@ -98,14 +103,14 @@ __BEGIN_DECLS
     #define ESP_LOG_DEBUG_LETTER        "D"
     #define ESP_LOG_VERBOSE_LETTER      "V"
 
+// esp_hw_support
+    #define ESP_HW_LOGE(tag, fmt, ...)  ESP_EARLY_LOGE(tag, fmt, ##__VA_ARGS__)
+    #define ESP_HW_LOGW(tag, fmt, ...)  ESP_EARLY_LOGW(tag, fmt, ##__VA_ARGS__)
+    #define ESP_HW_LOGI(tag, fmt, ...)  ESP_EARLY_LOGI(tag, fmt, ##__VA_ARGS__)
+    #define ESP_HW_LOGD(tag, fmt, ...)  ESP_EARLY_LOGD(tag, fmt, ##__VA_ARGS__)
+    #define ESP_HW_LOGV(tag, fmt, ...)  ESP_EARLY_LOGV(tag, fmt, ##__VA_ARGS__)
+
 // to be back compatible
-    /*
-    #define ESP_LOG_BUFFER_HEX_LEVEL(tag, buffer, buff_len, level)
-    #define ESP_LOG_BUFFER_CHAR_LEVEL(tag, buffer, buff_len, level)
-    #define ESP_LOG_BUFFER_HEXDUMP(tag, buffer, buff_len, level)
-    #define ESP_LOG_BUFFER_HEX(tag, buffer, buff_len)
-    #define ESP_LOG_BUFFER_CHAR(tag, buffer, buff_len)
-    */
     #ifndef LOG_LOCAL_LEVEL
         #ifndef BOOTLOADER_BUILD
             #define LOG_LOCAL_LEVEL     ESP_LOG_INFO

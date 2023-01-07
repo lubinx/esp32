@@ -7,16 +7,17 @@ else()
 endif()
 
 list(APPEND srcs
-    "glist.c"
-    "${IDF_TARGET}/startup.c"
-    "${IDF_TARGET}/system_init.c"
+    "esp_cpu.c"
     "esp_crosscore_int.c"
-    "esp_dbg_ubsan.c"       # debug for undefined behavior, but not sure if its works
+    "esp_dbg_ubsan.c"                   # debug for undefined behavior, but not sure if its works
     "esp_freertos_hooks.c"
-    "esp_platform.c"
+    "esp_freertos_startup.c"
     "esp_log.c"
-    "${IDF_PATH}/components/esp_system/panic.c"
-    "${IDF_PATH}/components/esp_system/port/panic_handler.c"
+    "esp_platform_misc.c"
+    "esp_startup.c"
+    "esp_system_init.c"
+    "panic.c"
+    "panic_handler.c"
 # compatiable
     "bootloader_support_shim.c"
 )
@@ -32,6 +33,7 @@ list(APPEND priv_includes
     "priv_include"
 )
 
+include("${CMAKE_CURRENT_LIST_DIR}/ultracore/.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/posix/.cmake")
 
 # if(CONFIG_ESP_SYSTEM_USE_EH_FRAME)

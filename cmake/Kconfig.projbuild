@@ -83,22 +83,6 @@ config IDF_TARGET_ESP32H4
     select FREERTOS_UNICORE
     select IDF_TARGET_ARCH_RISCV
 
-choice IDF_TARGET_ESP32H4_BETA_VERSION
-    prompt "ESP32-H4 beta version"
-    depends on IDF_TARGET_ESP32H4
-    default IDF_TARGET_ESP32H4_BETA_VERSION_2
-    help
-        Currently ESP32-H4 has several beta versions for internal use only.
-        Select the one that matches your chip model.
-
-    config IDF_TARGET_ESP32H4_BETA_VERSION_1
-        bool
-        prompt "ESP32-H4 beta1"
-    config IDF_TARGET_ESP32H4_BETA_VERSION_2
-        bool
-        prompt "ESP32-H4 beta2"
-endchoice
-
 config IDF_TARGET_ESP32C2
     bool
     default "y" if IDF_TARGET="esp32c2"
@@ -201,70 +185,6 @@ menu "Bootloader"
 
             If burning a customized set of SPI flash pins in eFuse and using QIO or QOUT mode for flash, set this
             value to the GPIO number of the SPI flash WP pin.
-
-    choice BOOTLOADER_VDDSDIO_BOOST
-        bool "VDDSDIO LDO voltage"
-        default BOOTLOADER_VDDSDIO_BOOST_1_9V
-        help
-            If this option is enabled, and VDDSDIO LDO is set to 1.8V (using eFuse
-            or MTDI bootstrapping pin), bootloader will change LDO settings to
-            output 1.9V instead. This helps prevent flash chip from browning out
-            during flash programming operations.
-
-            This option has no effect if VDDSDIO is set to 3.3V, or if the internal
-            VDDSDIO regulator is disabled via eFuse.
-
-        config BOOTLOADER_VDDSDIO_BOOST_1_8V
-            bool "1.8V"
-            depends on !ESPTOOLPY_FLASHFREQ_80M
-        config BOOTLOADER_VDDSDIO_BOOST_1_9V
-            bool "1.9V"
-    endchoice
-
-    config BOOTLOADER_REGION_PROTECTION_ENABLE
-        bool "Enable protection for unmapped memory regions"
-        default y
-        help
-            Protects the unmapped memory regions of the entire address space from unintended accesses.
-            This will ensure that an exception will be triggered whenever the CPU performs a memory
-            operation on unmapped regions of the address space.
-
-    config BOOTLOADER_WDT_ENABLE
-        bool "Use RTC watchdog in start code"
-        default y
-        help
-            Tracks the execution time of startup code.
-            If the execution time is exceeded, the RTC_WDT will restart system.
-            It is also useful to prevent a lock up in start code caused by an unstable power source.
-            NOTE: Tracks the execution time starts from the bootloader code - re-set timeout, while selecting the
-            source for slow_clk - and ends calling app_main.
-            Re-set timeout is needed due to WDT uses a SLOW_CLK clock source. After changing a frequency slow_clk a
-            time of WDT needs to re-set for new frequency.
-            slow_clk depends on RTC_CLK_SRC (INTERNAL_RC or EXTERNAL_CRYSTAL).
-
-    config BOOTLOADER_WDT_DISABLE_IN_USER_CODE
-        bool "Allows RTC watchdog disable in user code"
-        depends on BOOTLOADER_WDT_ENABLE
-        default n
-        help
-            If this option is set, the ESP-IDF app must explicitly reset, feed, or disable the rtc_wdt in
-            the app's own code.
-            If this option is not set (default), then rtc_wdt will be disabled by ESP-IDF before calling
-            the app_main() function.
-
-            Use function rtc_wdt_feed() for resetting counter of rtc_wdt.
-            Use function rtc_wdt_disable() for disabling rtc_wdt.
-
-    config BOOTLOADER_WDT_TIME_MS
-        int "Timeout for RTC watchdog (ms)"
-        depends on BOOTLOADER_WDT_ENABLE
-        default 9000
-        range 0 120000
-        help
-            Verify that this parameter is correct and more then the execution time.
-            Pay attention to options such as reset to factory, trigger test partition and encryption on boot
-            - these options can increase the execution time.
-            Note: RTC_WDT will reset while encryption operations will be performed.
 
     config BOOTLOADER_FLASH_XMC_SUPPORT
         bool "Enable the support for flash chips of XMC (READ HELP FIRST)"

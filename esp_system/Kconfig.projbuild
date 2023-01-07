@@ -189,7 +189,6 @@ menu "ESP System Settings"
             depends on !FREERTOS_UNICORE
         config ESP_MAIN_TASK_AFFINITY_NO_AFFINITY
             bool "No affinity"
-
     endchoice
 
     config ESP_MAIN_TASK_AFFINITY
@@ -260,7 +259,6 @@ menu "ESP System Settings"
                 If you want to output in blocking mode with REPL or input through USB_SERIAL_JTAG port,
                 please change the primary config to ESP_CONSOLE_USB_SERIAL_JTAG above.
     endchoice
-
 
     config ESP_CONSOLE_UART
         # Internal option, indicates that console UART is used (and not USB, for example)

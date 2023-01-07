@@ -1,3 +1,4 @@
+#include <features.h>
 #include <sys/types.h>
 
 #include "freertos/FreeRTOS.h"
@@ -31,4 +32,16 @@ int msleep(uint32_t msec)
 int pthread_yield(void)
 {
     msleep(0);
+}
+
+int pthread_setcancelstate(int state, int *oldstate)
+{
+    ARG_UNUSED(state, oldstate);
+    return ENOSYS;
+}
+
+int pthread_setcanceltype(int type, int *old_type)
+{
+    ARG_UNUSED(type, old_type);
+    return ENOSYS;
 }

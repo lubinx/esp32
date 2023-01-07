@@ -31,22 +31,14 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     "${IDF_PATH}/components/xtensa/include"
     "${IDF_PATH}/components/bootloader_support/include"
     "${IDF_PATH}/components/bootloader_support/private_include"
-    "${IDF_PATH}/components/esp_hw_support/include/esp_private"
-    "${IDF_PATH}/components/esp_hw_support/port/include"
 )
 target_sources(${PROJECT_NAME} PRIVATE
-    "${IDF_PATH}/components/bootloader_support/src/${IDF_TARGET}/bootloader_soc.c"
-    "${IDF_PATH}/components/bootloader_support/src/bootloader_clock_init.c"
-    "${IDF_PATH}/components/bootloader_support/src/bootloader_mem.c"
-    "${IDF_PATH}/components/esp_hw_support/cpu.c"
-    "${IDF_PATH}/components/esp_hw_support/port/${IDF_TARGET}/rtc_clk.c"
-    "${IDF_PATH}/components/esp_hw_support/port/${IDF_TARGET}/rtc_clk_init.c"
-    "${IDF_PATH}/components/esp_hw_support/port/${IDF_TARGET}/rtc_init.c"
-    "${IDF_PATH}/components/esp_rom/patches/esp_rom_sys.c"
-    "${IDF_PATH}/components/esp_rom/patches/esp_rom_uart.c"
     "${IDF_PATH}/components/hal/cache_hal.c"
     "${IDF_PATH}/components/hal/mmu_hal.c"
     "${IDF_PATH}/components/hal/mpu_hal.c"
+    "${IDF_PATH}/components/esp_rom/patches/esp_rom_sys.c"
+    "${IDF_PATH}/components/bootloader_support/src/bootloader_mem.c"
+    "${IDF_PATH}/components/bootloader_support/src/${IDF_TARGET}/bootloader_soc.c"
 )
 target_link_options(${PROJECT_NAME} PRIVATE ${LINK_OPTIONS})
 

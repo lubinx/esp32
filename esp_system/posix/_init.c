@@ -58,9 +58,6 @@ static int syscall_not_implemented_aborts(void);
 *****************************************************************************/
 void esp_newlib_init(void)
 {
-    extern void __ubsan_include(void);
-    __ubsan_include();
-
     static const struct syscall_stub_table s_stub_table =
     {
         .__getreent = &__getreent,

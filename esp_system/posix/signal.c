@@ -31,10 +31,12 @@ void abort(void)
 
 void IRAM_ATTR _exit(int status)
 {
-    #ifdef CONFIG_IDF_TARGET_ARCH_RISCV
+    #ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
+        xt_ints_off(0xFFFFFFFF);
+    #elif CONFIG_IDF_TARGET_ARCH_RISCV
         rv_utils_intr_global_disable();
     #else
-        xt_ints_off(0xFFFFFFFF);
+        #pragma GCC error "unknown arch"
     #endif
 
     int core_id = esp_cpu_get_core_id();

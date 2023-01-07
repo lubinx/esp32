@@ -19,24 +19,8 @@ set(esptool_elf2image_args
     --flash_mode ${ESPFLASHMODE}
     --flash_freq ${CONFIG_ESPTOOLPY_FLASHFREQ}
     --flash_size ${CONFIG_ESPTOOLPY_FLASHSIZE}
-    # --dont-append-digest        # detect flash size?
+    --dont-append-digest
 )
-
-# We still set "--min-rev" to keep the app compatible with older booloaders where this field is controlled.
-if(CONFIG_IDF_TARGET_ESP32)
-    # for this chip min_rev is major revision
-    math(EXPR min_rev "${CONFIG_ESP_REV_MIN_FULL} / 100")
-endif()
-if(CONFIG_IDF_TARGET_ESP32C3)
-    # for this chip min_rev is minor revision
-    math(EXPR min_rev "${CONFIG_ESP_REV_MIN_FULL} % 100")
-endif()
-
-if(min_rev)
-    list(APPEND esptool_elf2image_args --min-rev ${min_rev})
-endif()
-list(APPEND esptool_elf2image_args --min-rev-full ${CONFIG_ESP_REV_MIN_FULL})
-list(APPEND esptool_elf2image_args --max-rev-full ${CONFIG_ESP_REV_MAX_FULL})
 
 add_custom_command(OUTPUT "project_elf2bin"
     COMMAND ${ESPTOOLPY} elf2image ${esptool_elf2image_args}

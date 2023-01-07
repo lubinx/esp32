@@ -9,8 +9,8 @@
 #include "sdkconfig.h"
 
 #if CONFIG_PM_ENABLE
-#include "esp_pm.h"
-#include "esp_private/pm_impl.h"
+    #include "esp_pm.h"
+    #include "esp_private/pm_impl.h"
 #endif
 
 //We use just a static array here because it's not expected many components will need
@@ -51,8 +51,6 @@ void esp_vApplicationIdleHook(void)
 #else
     esp_cpu_wait_for_intr();
 #endif
-
-
 }
 
 esp_err_t esp_register_freertos_idle_hook_for_cpu(esp_freertos_idle_cb_t new_idle_cb, UBaseType_t cpuid)

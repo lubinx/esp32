@@ -2,27 +2,18 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "xt_utils.h"
-
 #include "esp_attr.h"
-#include "esp_cpu.h"
 #include "esp_rom_sys.h"
 #include "esp_rom_uart.h"
 
 #include "soc/soc.h"
-
-#include "hal/mmu_ll.h"
-#include "hal/mmu_hal.h"
-
 #include "hal/cache_hal.h"
 #include "hal/cache_ll.h"
-#include "esp32s3/rom/cache.h"
-
-#include "hal/rtc_hal.h"
+#include "hal/mmu_ll.h"
+#include "hal/mmu_hal.h"
 #include "hal/wdt_hal.h"
 
 #include "bootloader_soc.h"
-#include "bootloader_clock.h"
 #include "bootloader_mem.h"
 
 #include "esp_app_format.h"
@@ -72,9 +63,6 @@ struct flash_segment_t
 /****************************************************************************
  *  local
 *****************************************************************************/
-static void bootloader_super_wdt_auto_feed(void);
-static void bootloader_config_wdt(void);
-
 static kernel_entry_t KERNEL_load(uintptr_t flash_location);
 
 static ssize_t FLASH_read(uintptr_t flash_location, void *buf, size_t bufsize);
@@ -101,18 +89,9 @@ void __attribute__((noreturn)) Reset_Handler(void)
     bootloader_ana_clock_glitch_reset_config(false);
 
     bootloader_init_mem();
-    bootloader_clock_configure();
+    // bootloader_clock_configure();
 
     memset(&__bss_start__, 0, (&__bss_end__ - &__bss_start__) * sizeof(__bss_start__));
-
-    /*
-    #ifdef CONFIG_EFUSE_VIRTUAL
-        ESP_LOGW(TAG, "eFuse virtual mode is enabled. If Secure boot or Flash encryption is enabled then it does not provide any security. FOR TESTING ONLY!");
-        #ifndef CONFIG_EFUSE_VIRTUAL_KEEP_IN_FLASH
-            esp_efuse_init_virtual_mode_in_ram();
-        #endif
-    #endif
-    */
 
     mmu_hal_init();
     cache_hal_init();
@@ -135,11 +114,25 @@ void __attribute__((noreturn)) Reset_Handler(void)
         esp_enable_cache_wrap(icache_wrap_enable, dcache_wrap_enable);
     #endif
 
-    bootloader_super_wdt_auto_feed();
-    bootloader_config_wdt();
-
     kernel_entry_t entry = KERNEL_load(0x10000);
-    ESP_LOGI(TAG, "entry => %p, sp: %p\n", entry, xt_utils_get_sp());
+    ESP_LOGI(TAG, "entry => %p\n");
+
+    // disable RWDT flashboot protection.
+    wdt_hal_context_t rwdt_ctx =
+        #if CONFIG_IDF_TARGET_ESP32C6 // TODO: IDF-5653
+            {.inst = WDT_RWDT, .rwdt_dev = &LP_WDT};
+        #else
+            {.inst = WDT_RWDT, .rwdt_dev = &RTCCNTL};
+        #endif
+    wdt_hal_write_protect_disable(&rwdt_ctx);
+    wdt_hal_set_flashboot_en(&rwdt_ctx, false);
+    wdt_hal_write_protect_enable(&rwdt_ctx);
+
+    // disable MWDT0 flashboot protection. But only after we've enabled the RWDT first so that there's not gap in WDT protection.
+    wdt_hal_context_t mwdt_ctx = {.inst = WDT_MWDT0, .mwdt_dev = &TIMERG0};
+    wdt_hal_write_protect_disable(&mwdt_ctx);
+    wdt_hal_set_flashboot_en(&mwdt_ctx, false);
+    wdt_hal_write_protect_enable(&mwdt_ctx);
 
     entry();
 }
@@ -160,51 +153,6 @@ int pthread_setcancelstate(int state, int *oldstate)
 /****************************************************************************
  *  local
 *****************************************************************************/
-static void bootloader_super_wdt_auto_feed(void)
-{
-    REG_WRITE(RTC_CNTL_SWD_WPROTECT_REG, RTC_CNTL_SWD_WKEY_VALUE);
-    REG_SET_BIT(RTC_CNTL_SWD_CONF_REG, RTC_CNTL_SWD_AUTO_FEED_EN);
-    REG_WRITE(RTC_CNTL_SWD_WPROTECT_REG, 0);
-}
-
-static void bootloader_config_wdt(void)
-{
-    /*
-     * At this point, the flashboot protection of RWDT and MWDT0 will have been
-     * automatically enabled. We can disable flashboot protection as it's not
-     * needed anymore. If configured to do so, we also initialize the RWDT to
-     * protect the remainder of the bootloader process.
-     */
-    // disable RWDT flashboot protection.
-    wdt_hal_context_t rwdt_ctx =
-        #if CONFIG_IDF_TARGET_ESP32C6 // TODO: IDF-5653
-            {.inst = WDT_RWDT, .rwdt_dev = &LP_WDT};
-        #else
-            {.inst = WDT_RWDT, .rwdt_dev = &RTCCNTL};
-        #endif
-    wdt_hal_write_protect_disable(&rwdt_ctx);
-    wdt_hal_set_flashboot_en(&rwdt_ctx, false);
-    wdt_hal_write_protect_enable(&rwdt_ctx);
-
-    #if CONFIG_BOOTLOADER_WDT_ENABLE
-        wdt_hal_init(&rwdt_ctx, WDT_RWDT, 0, false);
-        wdt_hal_write_protect_disable(&rwdt_ctx);
-
-        wdt_hal_config_stage(&rwdt_ctx, WDT_STAGE0,
-            (uint32_t)((uint64_t)CONFIG_BOOTLOADER_WDT_TIME_MS * rtc_clk_slow_freq_get_hz() / 1000),
-            WDT_STAGE_ACTION_RESET_RTC
-        );
-        wdt_hal_enable(&rwdt_ctx);
-        wdt_hal_write_protect_enable(&rwdt_ctx);
-    #endif
-
-    // disable MWDT0 flashboot protection. But only after we've enabled the RWDT first so that there's not gap in WDT protection.
-    wdt_hal_context_t mwdt_ctx = {.inst = WDT_MWDT0, .mwdt_dev = &TIMERG0};
-    wdt_hal_write_protect_disable(&mwdt_ctx);
-    wdt_hal_set_flashboot_en(&mwdt_ctx, false);
-    wdt_hal_write_protect_enable(&mwdt_ctx);
-}
-
 static kernel_entry_t KERNEL_load(uintptr_t flash_location)
 {
     esp_image_header_t hdr;

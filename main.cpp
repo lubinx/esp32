@@ -37,6 +37,11 @@ extern "C" void __attribute__((weak)) app_main(void)
         fflush(stdout);
     }
 
+    for (int i = 0; i < 100; i ++)
+    {
+        printf("random: %08x\n", rand());
+    }
+
     pthread_mutexattr_t attr;
     pthread_mutexattr_init(&attr);
     pthread_mutex_init(&mutex, &attr);
