@@ -18,11 +18,17 @@ void srand(unsigned seed)
 
 int rand(void)
 {
-    // mix pesudo-rng and true-rng
-    srand(REG_READ(WDEV_RND_REG));
+    int rng = REG_READ(WDEV_RND_REG);
+    int retval;
 
-    uint32_t retval = (uint32_t)(uint64_t)rand_seed * REG_READ(WDEV_RND_REG);
-    rand_seed = retval;
+    // mix pesudo-rng and true-rng
+    if (rand_seed)
+        retval = (int)((uint64_t)rng * rand_seed) ^ rand_seed;
+    else
+        retval = rng;
+
+    rand_seed = rng;
+    return retval;
 }
 
 /**
@@ -40,8 +46,8 @@ ssize_t getrandom(void *buf, size_t buflen, unsigned int flags)
     int len = buflen;
     while (len > 0)
     {
-        uint32_t rng = rand();
-        uint32_t to_copy = MIN(sizeof(rng), len);
+        int rng = rand();
+        int to_copy = MIN(sizeof(rng), len);
         memcpy(buf, &rng, to_copy);
 
         buf = (void *)((uintptr_t)buf + to_copy);

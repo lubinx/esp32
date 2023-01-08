@@ -23,89 +23,96 @@
 // CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
-
-#include <stdbool.h>
-#include <inttypes.h>
-#include <stdlib.h>
-#include <stddef.h>
-#include <stdio.h>
 #include <string.h>
-#include "esp_system.h"
-#include "esp_rom_sys.h"
+
 #include "esp_cpu.h"
+#include "esp_system.h"
 
-
-struct source_location {
+struct source_location
+{
     const char *file_name;
     uint32_t line;
     uint32_t column;
 };
 
-struct type_descriptor {
+struct type_descriptor
+{
     uint16_t type_kind;
     uint16_t type_info;
     char type_name[];
 };
 
-struct type_mismatch_data {
+struct type_mismatch_data
+{
     struct source_location loc;
     struct type_descriptor *type;
     unsigned long alignment;
     unsigned char type_check_kind;
 };
 
-struct type_mismatch_data_v1 {
+struct type_mismatch_data_v1
+{
     struct source_location loc;
     struct type_descriptor *type;
     unsigned char log_alignment;
     unsigned char type_check_kind;
 };
 
-struct overflow_data {
+struct overflow_data
+{
     struct source_location loc;
     struct type_descriptor *type;
 };
 
-struct shift_out_of_bounds_data {
+struct shift_out_of_bounds_data
+{
     struct source_location loc;
     struct type_descriptor *lhs_type;
     struct type_descriptor *rhs_type;
 };
 
-struct out_of_bounds_data {
+struct out_of_bounds_data
+{
     struct source_location loc;
     struct type_descriptor *array_type;
     struct type_descriptor *index_type;
 };
 
-struct unreachable_data {
+struct unreachable_data
+{
     struct source_location loc;
 };
 
-struct vla_bound_data {
-    struct source_location loc;
-    struct type_descriptor *type;
-};
-
-struct invalid_value_data {
+struct vla_bound_data
+{
     struct source_location loc;
     struct type_descriptor *type;
 };
 
-struct nonnull_arg_data {
+struct invalid_value_data
+{
+    struct source_location loc;
+    struct type_descriptor *type;
+};
+
+struct nonnull_arg_data
+{
     struct source_location loc;
 };
 
-struct nonnull_return_data {
+struct nonnull_return_data
+{
     struct source_location loc;
     struct source_location attr_loc;
 };
 
-struct pointer_overflow_data {
+struct pointer_overflow_data
+{
     struct source_location loc;
 };
 
-struct invalid_builtin_data {
+struct invalid_builtin_data
+{
     struct source_location loc;
     unsigned char kind;
 };
@@ -138,9 +145,8 @@ void __ubsan_handle_invalid_builtin(void *data_);
 
 static void __ubsan_maybe_debugbreak(void)
 {
-    if (esp_cpu_dbgr_is_attached()) {
+    if (esp_cpu_dbgr_is_attached())
         esp_cpu_dbgr_break();
-    }
 }
 
 static void __ubsan_default_handler(struct source_location *loc, const char *func)
@@ -161,74 +167,62 @@ static void __ubsan_default_handler(struct source_location *loc, const char *fun
      * the panic backtrace, not printing the line number here seems to be an okay choice.
      */
     char msg[60] = {};
-    (void) strlcat(msg, "Undefined behavior of type ", sizeof(msg));
-    (void) strlcat(msg, func + strlen("__ubsan_handle_"), sizeof(msg));
+    (void)strlcat(msg, "Undefined behavior of type ", sizeof(msg));
+    (void)strlcat(msg, func + strlen("__ubsan_handle_"), sizeof(msg));
+
     esp_system_abort(msg);
 }
 
-void __ubsan_handle_type_mismatch(void *data_,
-                                  void *ptr_)
+void __ubsan_handle_type_mismatch(void *data_, void *ptr_)
 {
     struct type_mismatch_data *data = data_;
     __ubsan_maybe_debugbreak();
     __ubsan_default_handler(&data->loc, __func__);
 }
 
-void __ubsan_handle_type_mismatch_v1(void *data_,
-                                     void *ptr)
+void __ubsan_handle_type_mismatch_v1(void *data_, void *ptr)
 {
     struct type_mismatch_data_v1 *data = data_;
     __ubsan_maybe_debugbreak();
     __ubsan_default_handler(&data->loc, __func__);
 }
 
-void __ubsan_handle_add_overflow(void *data_,
-                                 void *lhs_,
-                                 void *rhs_)
+void __ubsan_handle_add_overflow(void *data_, void *lhs_, void *rhs_)
 {
     struct overflow_data *data = data_;
     __ubsan_maybe_debugbreak();
     __ubsan_default_handler(&data->loc, __func__);
 }
 
-void __ubsan_handle_sub_overflow(void *data_,
-                                 void *lhs_,
-                                 void *rhs_)
+void __ubsan_handle_sub_overflow(void *data_, void *lhs_, void *rhs_)
 {
     struct overflow_data *data = data_;
     __ubsan_maybe_debugbreak();
     __ubsan_default_handler(&data->loc, __func__);
 }
 
-void __ubsan_handle_mul_overflow(void *data_,
-                                 void *lhs_,
-                                 void *rhs_)
+void __ubsan_handle_mul_overflow(void *data_, void *lhs_, void *rhs_)
 {
     struct overflow_data *data = data_;
     __ubsan_maybe_debugbreak();
     __ubsan_default_handler(&data->loc, __func__);
 }
 
-void __ubsan_handle_negate_overflow(void *data_,
-                                    void *old_val_)
+void __ubsan_handle_negate_overflow(void *data_, void *old_val_)
 {
     struct overflow_data *data = data_;
     __ubsan_maybe_debugbreak();
     __ubsan_default_handler(&data->loc, __func__);
 }
 
-void __ubsan_handle_divrem_overflow(void *data_,
-                                    void *lhs_,
-                                    void *rhs_)
+void __ubsan_handle_divrem_overflow(void *data_, void *lhs_, void *rhs_)
 {
     struct overflow_data *data = data_;
     __ubsan_maybe_debugbreak();
     __ubsan_default_handler(&data->loc, __func__);
 }
 
-void __ubsan_handle_shift_out_of_bounds(void *data_,
-                                        void *lhs_,
-                                        void *rhs_)
+void __ubsan_handle_shift_out_of_bounds(void *data_, void *lhs_, void *rhs_)
 {
     struct shift_out_of_bounds_data *data = data_;
     unsigned int rhs = (unsigned int)rhs_;
@@ -239,8 +233,7 @@ void __ubsan_handle_shift_out_of_bounds(void *data_,
     __ubsan_default_handler(&data->loc, __func__);
 }
 
-void __ubsan_handle_out_of_bounds(void *data_,
-                                  void *idx_)
+void __ubsan_handle_out_of_bounds(void *data_, void *idx_)
 {
     struct out_of_bounds_data *data = data_;
     __ubsan_maybe_debugbreak();
@@ -254,16 +247,14 @@ void __ubsan_handle_missing_return(void *data_)
     __ubsan_default_handler(&data->loc, __func__);
 }
 
-void __ubsan_handle_vla_bound_not_positive(void *data_,
-                                           void *bound_)
+void __ubsan_handle_vla_bound_not_positive(void *data_, void *bound_)
 {
     struct vla_bound_data *data = data_;
     __ubsan_maybe_debugbreak();
     __ubsan_default_handler(&data->loc, __func__);
 }
 
-void __ubsan_handle_load_invalid_value(void *data_,
-                                       void *val_)
+void __ubsan_handle_load_invalid_value(void *data_, void *val_)
 {
     struct invalid_value_data *data = data_;
     __ubsan_maybe_debugbreak();
@@ -291,9 +282,7 @@ void __ubsan_handle_builtin_unreachable(void *data_)
     __ubsan_default_handler(&data->loc, __func__);
 }
 
-void __ubsan_handle_pointer_overflow(void *data_,
-                                     void *base_,
-                                     void *result_)
+void __ubsan_handle_pointer_overflow(void *data_, void *base_, void *result_)
 {
     struct pointer_overflow_data *data = data_;
     __ubsan_maybe_debugbreak();

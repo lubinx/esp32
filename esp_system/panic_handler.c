@@ -22,11 +22,11 @@
 
 #if CONFIG_ESP_SYSTEM_MEMPROT_FEATURE
 #ifdef CONFIG_IDF_TARGET_ESP32S2
-#include "esp32s2/memprot.h"
+    #include "esp32s2/memprot.h"
 #elif CONFIG_IDF_TARGET_ESP32C2
-#include "esp32c2/memprot.h"
+    #include "esp32c2/memprot.h"
 #else
-#include "esp_memprot.h"
+    #include "esp_memprot.h"
 #endif
 #endif
 

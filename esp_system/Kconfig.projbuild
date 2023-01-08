@@ -1,3 +1,17 @@
+config ESP_SYSTEM_SINGLE_CORE_MODE
+    bool
+    default n
+config ESP_SYSTEM_RTC_EXT_XTAL
+    # This is a High Layer Kconfig option, invisible, can be selected by other Kconfig option
+    # e.g. It will be selected on when RTC_CLK_SRC_EXT_CRYS is on
+    bool
+    default n
+
+config ESP_SYSTEM_RTC_EXT_OSC
+    # This is a High Layer Kconfig option, invisible, can be selected by other Kconfig option
+    # e.g. It will be selected on when ESPX_RTC_CLK_SRC_EXT_OSC is on
+    bool
+    default n
 
 menu "ESP System Settings"
     rsource "$IDF_TARGET/Kconfig.cpu"
@@ -51,24 +65,6 @@ menu "ESP System Settings"
         help
             After the panic handler executes, you can specify a number of seconds to
             wait before the device reboots.
-
-    config ESP_SYSTEM_SINGLE_CORE_MODE
-        bool
-        default n
-        help
-            Only initialize and use the main core.
-
-    config ESP_SYSTEM_RTC_EXT_XTAL
-        # This is a High Layer Kconfig option, invisible, can be selected by other Kconfig option
-        # e.g. It will be selected on when RTC_CLK_SRC_EXT_CRYS is on
-        bool
-        default n
-
-    config ESP_SYSTEM_RTC_EXT_OSC
-        # This is a High Layer Kconfig option, invisible, can be selected by other Kconfig option
-        # e.g. It will be selected on when ESPX_RTC_CLK_SRC_EXT_OSC is on
-        bool
-        default n
 
     config ESP_SYSTEM_RTC_EXT_XTAL_BOOTSTRAP_CYCLES
         int "Bootstrap cycles for external 32kHz crystal"
@@ -153,7 +149,7 @@ menu "ESP System Settings"
             help
                 Once locked, memory protection settings cannot be changed anymore.
                 The lock is reset only on the chip startup.
-    endmenu  # Memory protection
+    endmenu
 
     config ESP_SYSTEM_EVENT_QUEUE_SIZE
         int "System event queue size"
@@ -331,7 +327,6 @@ menu "ESP System Settings"
 
             If the configuration is different in the Bootloader binary compared to the app binary, UART
             is reconfigured after the bootloader exits and the app starts.
-
 
     config ESP_CONSOLE_UART_BAUDRATE
         int

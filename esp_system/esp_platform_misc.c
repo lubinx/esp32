@@ -55,20 +55,6 @@ uint32_t esp_get_minimum_free_heap_size(void)
     return heap_caps_get_minimum_free_size(MALLOC_CAP_DEFAULT);
 }
 
-char const *esp_err_to_name(esp_err_t code)
-{
-    char const *retval = strerror(code);
-
-    if (! retval)
-    {
-        static char buf[10];
-        retval = buf;
-
-        sprintf(buf, "esp error %04x", code);
-    }
-    return retval;
-}
-
 #include "esp_ipc.h"
 
 esp_err_t esp_ipc_call(uint32_t cpu_id, esp_ipc_func_t func, void* arg)

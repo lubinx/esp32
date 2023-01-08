@@ -18,10 +18,6 @@ int val = 0;
 
 extern "C" void __attribute__((weak)) app_main(void)
 {
-    printf("%d: %s\n", ENOSYS, strerror(ENOSYS));
-    printf("\n\n\n");
-    fflush(stdout);
-
     printf("Minimum free heap size: %d bytes\n", heap_caps_get_minimum_free_size(MALLOC_CAP_DEFAULT));
     printf ("cpu frequency: %d\n", esp_clk_cpu_freq());
 
