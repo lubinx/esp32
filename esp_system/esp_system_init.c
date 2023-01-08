@@ -2,22 +2,15 @@
 
 #include "sdkconfig.h"
 
-#include "esp_rom_caps.h"
-#include "esp_rom_efuse.h"
-#include "esp_rom_sys.h"
-#include "esp_rom_uart.h"
-
 #include "esp_clk_internal.h"
-#include "esp_cpu.h"
 #include "esp_heap_caps_init.h"
-// #include "esp_efuse.h"
 #include "esp_log.h"
+#include "esp_rom_uart.h"
 #include "esp_memprot.h"
 #include "esp_newlib.h"
 #include "esp_timer.h"
 
 #include "soc/assist_debug_reg.h"
-#include "soc/rtc.h"
 #include "soc/periph_defs.h"
 
 #include "esp32s3/rtc.h"
@@ -45,14 +38,6 @@ uint64_t g_startup_time = 0;
 *****************************************************************************/
 extern int _vector_table;
 
-#if CONFIG_BOOT_ROM_LOG_ALWAYS_OFF
-    #define ROM_LOG_MODE                ESP_EFUSE_ROM_LOG_ALWAYS_OFF
-#elif CONFIG_BOOT_ROM_LOG_ON_GPIO_LOW
-    #define ROM_LOG_MODE                ESP_EFUSE_ROM_LOG_ON_GPIO_LOW
-#elif CONFIG_BOOT_ROM_LOG_ON_GPIO_HIGH
-    #define ROM_LOG_MODE                ESP_EFUSE_ROM_LOG_ON_GPIO_HIGH
-#endif
-
 /****************************************************************************
  *  local
 *****************************************************************************/
@@ -66,8 +51,6 @@ void SystemInit(void)
 {
     // Move exception vectors to IRAM
     esp_cpu_intr_set_ivt_addr(&_vector_table);
-
-    soc_reset_reason_t reset_reason = esp_rom_get_reset_reason(0);
 
     // Enable trace memory and immediately start trace.
     #if CONFIG_ESP32_TRAX || CONFIG_ESP32S2_TRAX || CONFIG_ESP32S3_TRAX
@@ -85,6 +68,7 @@ void SystemInit(void)
 
     esp_clk_init();
     esp_perip_clk_init();
+    // TODO: rtc clocks
 
     // Now that the clocks have been set-up, set the startup time from RTC
     // and default RTC-backed system time provider.
@@ -107,7 +91,7 @@ void SystemInit(void)
 
     // Need to unhold the IOs that were hold right before entering deep sleep, which are used as wakeup pins
     /*
-    if (RESET_REASON_CORE_DEEP_SLEEP == reset_reason)
+    if (RESET_REASON_CORE_DEEP_SLEEP == esp_rom_get_reset_reason(0))
         esp_deep_sleep_wakeup_io_reset();
     */
 
@@ -135,14 +119,6 @@ void SystemInit(void)
             ESP_EARLY_LOGE(TAG, "Failed to set Memprot feature (0x%08X: %s), rebooting.", memp_err, esp_err_to_name(memp_err));
             esp_restart_noos_dig();
         }
-    #endif
-
-    #ifdef ROM_LOG_MODE
-        esp_efuse_set_rom_log_scheme(ROM_LOG_MODE);
-    #endif
-
-    #ifdef CONFIG_SECURE_FLASH_ENC_ENABLED
-        esp_flash_encryption_init_checks();
     #endif
 
     heap_caps_init();

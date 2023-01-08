@@ -73,6 +73,18 @@ static void MAP_flash_segment(struct flash_segment_t *seg);
 *****************************************************************************/
 void __attribute__((noreturn)) Reset_Handler(void)
 {
+    // efuse esp_efuse_set_rom_log_scheme(): this will permanently disable logs before enter bootloader
+    #if CONFIG_BOOT_ROM_LOG_ALWAYS_OFF
+        #define ROM_LOG_MODE                ESP_EFUSE_ROM_LOG_ALWAYS_OFF
+    #elif CONFIG_BOOT_ROM_LOG_ON_GPIO_LOW
+        #define ROM_LOG_MODE                ESP_EFUSE_ROM_LOG_ON_GPIO_LOW
+    #elif CONFIG_BOOT_ROM_LOG_ON_GPIO_HIGH
+        #define ROM_LOG_MODE                ESP_EFUSE_ROM_LOG_ON_GPIO_HIGH
+    #endif
+    #ifdef ROM_LOG_MODE
+        esp_efuse_set_rom_log_scheme(ROM_LOG_MODE);
+    #endif
+
     #if CONFIG_BOOTLOADER_LOG_LEVEL
         esp_rom_install_uart_printf();
         esp_rom_uart_set_as_console(CONFIG_ESP_CONSOLE_UART_NUM);

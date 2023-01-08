@@ -18,9 +18,9 @@ static char const *TAG = "startup_handler";
  *  imports
 *****************************************************************************/
 // App entry point for core 0
-extern void esp_startup_start_app(void);
+extern __attribute__((noreturn)) void esp_startup_start_app(void);
 // App entry point for core [1..X]
-extern void esp_startup_start_app_other_cores(void);
+extern __attribute__((noreturn)) void esp_startup_start_app_other_cores(void);
 
 extern uint32_t __zero_table_start__;
 extern uint32_t __zero_table_end__;
@@ -148,8 +148,7 @@ static void startup_other_cores(void)
     esp_startup_start_app_other_cores();
 }
 
-__attribute__((weak, noreturn))
-void  esp_startup_start_app_other_cores(void)
+void __attribute__((weak)) esp_startup_start_app_other_cores(void)
 {
     while (1)
         esp_rom_delay_us(UINT32_MAX);
