@@ -57,7 +57,7 @@ typedef int esp_err_t;
 
 #define ESP_ERR_USER_BASE               0xe000
 
-/** /usr/include/asm-generic/errno-base.h */
+/* asm-generic/errno-base.h */
 
 #ifndef EPERM
     #define EPERM                       (1 /* Operation not permitted */)
@@ -223,7 +223,7 @@ typedef int esp_err_t;
     #define ERANGE                      (34 /* Out of range */)
 #endif
 
-/** /usr/include/asm-generic/errno.h     */
+/* asm-generic/errno.h */
 
 #ifndef EDEADLK
     #define EDEADLK                     (35 /* Resource deadlock would occur */)

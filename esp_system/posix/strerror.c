@@ -20,6 +20,31 @@ char *strerror(int err)
 
     switch (err)
     {
+    default:
+        if (err < ESP_ERR_BASE)
+            return "Unknown error";
+        else
+            return "esp error";
+
+/* esp error base */
+    case ESP_ERR_INVALID_STATE:
+        return "esp error invalid state";
+    case ESP_ERR_INVALID_SIZE:
+        return "esp error invalid size";
+    case ESP_ERR_NOT_FOUND:
+        return "esp error not found";
+    case ESP_ERR_INVALID_RESPONSE:
+        return "esp error invalid response";
+    case ESP_ERR_INVALID_CRC:
+        return "esp error invalid crc";
+    case ESP_ERR_INVALID_VERSION:
+        return "esp error invalid version";
+    case ESP_ERR_INVALID_MAC:
+        return "esp error invalid MAC";
+    case ESP_ERR_NOT_FINISHED:
+        return "esp error not finished";
+
+/* linux errors */
     case EPERM:
         return "Operation not permitted";
     case ENOENT:
@@ -274,7 +299,6 @@ char *strerror(int err)
         return "Key has been revoked";
     case EKEYREJECTED:
         return "Key was rejected by service";
-
     case EOWNERDEAD:
         return "Owner died";
     case ENOTRECOVERABLE:
@@ -283,33 +307,8 @@ char *strerror(int err)
         return "Operation not possible due to RF-kill";
     case EHWPOISON:
         return "Memory page has hardware error";
-
-/* esp error base starts here */
-    case ESP_ERR_INVALID_STATE:
-        return "esp error invalid state";
-    case ESP_ERR_INVALID_SIZE:
-        return "esp error invalid size";
-    case ESP_ERR_NOT_FOUND:
-        return "esp error not found";
-    case ESP_ERR_INVALID_RESPONSE:
-        return "esp error invalid response";
-    case ESP_ERR_INVALID_CRC:
-        return "esp error invalid crc";
-    case ESP_ERR_INVALID_VERSION:
-        return "esp error invalid version";
-    case ESP_ERR_INVALID_MAC:
-        return "esp error invalid MAC";
-    case ESP_ERR_NOT_FINISHED:
-        return "esp error not finished";
-
-    default:
-        if (err >= ESP_ERR_BASE)
-            return "esp error";
-        else
-            return "Unknown error";
     }
 }
-
 
 char const *esp_err_to_name(esp_err_t code)
     __attribute__((alias("strerror")));

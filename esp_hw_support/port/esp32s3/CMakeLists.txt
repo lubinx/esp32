@@ -14,7 +14,7 @@ set(srcs
 )
 
 if(CONFIG_ESP_SYSTEM_MEMPROT_FEATURE)
-    list(APPEND srcs "esp_memprot.c" "../esp_memprot_conv.c")
+    list(APPEND srcs "esp_memprot.c")
 endif()
 
 add_prefix(srcs "${CMAKE_CURRENT_LIST_DIR}/" "${srcs}")
