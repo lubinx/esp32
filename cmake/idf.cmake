@@ -117,7 +117,7 @@ endif()
 list(APPEND IDF_KERNEL_COMPONENTS
     "esp_system" "esp_rom"
     "soc" "hal" "esp_hw_support" "efuse" "esp_pm" "heap"
-    "freertos" "vfs" "driver"
+    "freertos" "vfs"
     "spi_flash"
     "esptool_py"
 )

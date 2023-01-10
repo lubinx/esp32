@@ -16,10 +16,17 @@ extern volatile __attribute__((pure, nothrow))
     int *__errno(void);
 
 static inline
-    int __set_errno(int err)
+    int __set_errno_neg(int err)
     {
         *__errno() = err;
         return -1;
+    }
+
+static inline
+    void *__set_errno_nullptr(int err)
+    {
+        *__errno() = err;
+        return NULL;
     }
 
 __END_DECLS

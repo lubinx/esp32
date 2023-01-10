@@ -5,6 +5,7 @@
 #include <pthread.h>
 #include <assert.h>
 #include <errno.h>
+#include "spinlock.h"
 
 #include "esp_cpu.h"
 #include "esp_heap_caps.h"
@@ -13,7 +14,8 @@
 static void *blink_thread1(void *arg);
 static void *blink_thread2(void *arg);
 
-pthread_mutex_t mutex;
+// pthread_mutex_t mutex;
+spinlock_t spinlock = SPINLOCK_INITIALIZER;
 int val = 0;
 
 extern "C" void __attribute__((weak)) app_main(void)
@@ -38,9 +40,11 @@ extern "C" void __attribute__((weak)) app_main(void)
         printf("random: %08x\n", rand());
     }
 
+    /*
     pthread_mutexattr_t attr;
     pthread_mutexattr_init(&attr);
     pthread_mutex_init(&mutex, &attr);
+    */
 
     pthread_t id;
     pthread_create(&id, NULL, blink_thread1, NULL);
@@ -57,14 +61,10 @@ static void *blink_thread1(void *arg)
 
     while (true)
     {
-        int err = pthread_mutex_lock(&mutex);
-        if (0 == err)
-        {
-            printf("thread1: cpu: %d, val %d\n", esp_cpu_get_core_id(), val);
-            pthread_mutex_unlock(&mutex);
-        }
-        else
-            printf("err %d\n", err);
+        spinlock_acquire(&spinlock, SPINLOCK_WAIT_FOREVER);
+
+        printf("thread1: cpu: %d, val %d\n", esp_cpu_get_core_id(), val);
+        spinlock_release(&spinlock);
 
         fflush(stdout);
         pthread_yield();
@@ -78,12 +78,12 @@ static void *blink_thread2(void *arg)
 
     while (true)
     {
-        pthread_mutex_lock(&mutex);
+        spinlock_acquire(&spinlock, SPINLOCK_WAIT_FOREVER);
         val ++;
         printf("thread2: cpu: %d, val %d\n", esp_cpu_get_core_id(), val);
 
         msleep(1000);
-        pthread_mutex_unlock(&mutex);
+        spinlock_release(&spinlock);
         pthread_yield();
     }
 }

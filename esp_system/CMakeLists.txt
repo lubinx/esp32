@@ -10,8 +10,6 @@ list(APPEND srcs
     "esp_cpu.c"
     "esp_crosscore_int.c"
     "esp_dbg_ubsan.c"                   # debug for undefined behavior, but not sure if its works
-    "esp_freertos_hooks.c"
-    "esp_freertos_startup.c"
     "esp_log.c"
     "esp_platform_misc.c"
     "esp_startup.c"
@@ -33,9 +31,10 @@ list(APPEND priv_includes
     "priv_include"
 )
 
-include("${CMAKE_CURRENT_LIST_DIR}/ultracore/.cmake")
-include("${CMAKE_CURRENT_LIST_DIR}/posix/.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/${IDF_TARGET}/.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/posix/.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/freertos_port/.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/ultracore/.cmake")
 
 
 # if(CONFIG_ESP_SYSTEM_USE_EH_FRAME)

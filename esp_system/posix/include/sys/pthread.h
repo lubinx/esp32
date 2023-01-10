@@ -319,51 +319,25 @@ extern __attribute__((nonnull(2), nothrow))
     int pthread_setspecific(pthread_key_t key, void const *val);
 
 //--------------------------------------------------------------------------
-//  pthread condition
-//      https://en.wikipedia.org/wiki/Monitor_(synchronization)
+//  pthread spinlock
 //--------------------------------------------------------------------------
     /**
-     *  pthread_condattr_destroy()/pthread_condattr_init()
-     *      destroy and initialize the condition variable attributes object
+     *  pthread_spin_init() pthread_spin_destroy()
      */
 extern __attribute__((nonnull, nothrow))
-    int pthread_condattr_init(pthread_condattr_t *cond);
+    int pthread_spin_init(pthread_spinlock_t *lock, int pshared);
 extern __attribute__((nonnull, nothrow))
-    int pthread_condattr_destroy(pthread_condattr_t *cond);
+    int pthread_spin_destroy(pthread_spinlock_t *lock);
 
     /**
-     *  pthread_condattr_getpshared()/pthread_condattr_setpshared()
-     *      get and set the process-shared condition variable attributes
-     *  **ALWAYS** PTHREAD_PROCESS_PRIVATE
+     *  pthread_spin_lock(), pthread_spin_trylock(), pthread_spin_unlock()
      */
 extern __attribute__((nonnull, nothrow))
-    int pthread_condattr_getpshared(const pthread_condattr_t *restrict attr, int *restrict pshared);
+       int pthread_spin_lock(pthread_spinlock_t *lock);
 extern __attribute__((nonnull, nothrow))
-    int pthread_condattr_setpshared(pthread_condattr_t *attr, int pshared);
-
-    /**
-     *  pthread_cond_init() / pthread_cond_destroy():
-     *      initialize destroy and condition variables
-     */
+       int pthread_spin_trylock(pthread_spinlock_t *lock);
 extern __attribute__((nonnull, nothrow))
-    int pthread_cond_init(pthread_cond_t *restrict cond, const pthread_condattr_t *restrict attr);
-extern __attribute__((nonnull, nothrow))
-    int pthread_cond_destroy(pthread_cond_t *cond);
-
-    /**
-     *  pthread_cond_broadcast()/pthread_cond_signal()
-     *      broadcast or signal a condition
-     */
-extern __attribute__((nonnull, nothrow))
-    int pthread_cond_broadcast(pthread_cond_t *cond);
-extern __attribute__((nonnull, nothrow))
-    int pthread_cond_signal(pthread_cond_t *cond);
-
-extern __attribute__((nonnull, nothrow))
-    int pthread_cond_timedwait(pthread_cond_t *restrict cond, pthread_mutex_t *restrict mutex,
-        struct timespec const *restrict ts);
-extern __attribute__((nonnull, nothrow))
-    int pthread_cond_wait(pthread_cond_t *restrict cond, pthread_mutex_t *restrict mutex);
+       int pthread_spin_unlock(pthread_spinlock_t *lock);
 
 //--------------------------------------------------------------------------
 //  pthread mutex
@@ -451,6 +425,53 @@ extern __attribute__((nonnull, nothrow))
      */
 extern __attribute__((nonnull, nothrow))
     int pthread_mutex_consistent(pthread_mutex_t *mutex);
+
+//--------------------------------------------------------------------------
+//  pthread condition
+//      https://en.wikipedia.org/wiki/Monitor_(synchronization)
+//--------------------------------------------------------------------------
+    /**
+     *  pthread_condattr_destroy()/pthread_condattr_init()
+     *      destroy and initialize the condition variable attributes object
+     */
+extern __attribute__((nonnull, nothrow))
+    int pthread_condattr_init(pthread_condattr_t *cond);
+extern __attribute__((nonnull, nothrow))
+    int pthread_condattr_destroy(pthread_condattr_t *cond);
+
+    /**
+     *  pthread_condattr_getpshared()/pthread_condattr_setpshared()
+     *      get and set the process-shared condition variable attributes
+     *  **ALWAYS** PTHREAD_PROCESS_PRIVATE
+     */
+extern __attribute__((nonnull, nothrow))
+    int pthread_condattr_getpshared(const pthread_condattr_t *restrict attr, int *restrict pshared);
+extern __attribute__((nonnull, nothrow))
+    int pthread_condattr_setpshared(pthread_condattr_t *attr, int pshared);
+
+    /**
+     *  pthread_cond_init() / pthread_cond_destroy():
+     *      initialize destroy and condition variables
+     */
+extern __attribute__((nonnull, nothrow))
+    int pthread_cond_init(pthread_cond_t *restrict cond, const pthread_condattr_t *restrict attr);
+extern __attribute__((nonnull, nothrow))
+    int pthread_cond_destroy(pthread_cond_t *cond);
+
+    /**
+     *  pthread_cond_broadcast()/pthread_cond_signal()
+     *      broadcast or signal a condition
+     */
+extern __attribute__((nonnull, nothrow))
+    int pthread_cond_broadcast(pthread_cond_t *cond);
+extern __attribute__((nonnull, nothrow))
+    int pthread_cond_signal(pthread_cond_t *cond);
+
+extern __attribute__((nonnull, nothrow))
+    int pthread_cond_timedwait(pthread_cond_t *restrict cond, pthread_mutex_t *restrict mutex,
+        struct timespec const *restrict ts);
+extern __attribute__((nonnull, nothrow))
+    int pthread_cond_wait(pthread_cond_t *restrict cond, pthread_mutex_t *restrict mutex);
 
 //--------------------------------------------------------------------------
 //  pthread rwlock

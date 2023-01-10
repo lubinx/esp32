@@ -3,16 +3,21 @@
 #include "sdkconfig.h"
 
 #include "esp_clk_internal.h"
+#include "esp_cpu.h"
 #include "esp_heap_caps_init.h"
 #include "esp_log.h"
-#include "esp_rom_uart.h"
+
 #include "esp_memprot.h"
+
+#include "esp_rom_caps.h"
+#include "esp_rom_uart.h"
 #include "esp_newlib.h"
 #include "esp_timer.h"
 
 #include "soc/assist_debug_reg.h"
 #include "soc/periph_defs.h"
 
+// #include "soc/rtc.h"
 #include "esp32s3/rtc.h"
 #include "esp32s3/rom/ets_sys.h"
 

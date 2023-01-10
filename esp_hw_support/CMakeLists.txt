@@ -19,19 +19,12 @@ list(APPEND srcs "esp_clk.c"
                     "mac_addr.c"
                     "periph_ctrl.c"
                     "rtc_module.c"
-                #  "sleep_modes.c"
-                    "sleep_gpio.c"
                     "sleep_mac_bb.c"
                     "regi2c_ctrl.c"
-                    "adc_share_hw_ctrl.c"
-                    "port/${target}/io_mux.c")
+                    "adc_share_hw_ctrl.c")
 
 # [refactor-todo]: requires "driver" for GPIO and RTC  (by sleep_gpio and sleep_modes)
 list(APPEND priv_requires esp_timer)
-
-if(CONFIG_SOC_SYSTIMER_SUPPORTED)
-    list(APPEND srcs "port/${target}/systimer.c")
-endif()
 
 if(CONFIG_SOC_HMAC_SUPPORTED)
     list(APPEND srcs "esp_hmac.c")
