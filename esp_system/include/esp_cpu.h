@@ -15,11 +15,9 @@
     #include "xt_utils.h"
 #elif __riscv
     #include "riscv/rv_utils.h"
-#else
-    #pragma GCC error "unknown arch"
 #endif
 
-#include "esp_intr_alloc.h"
+// #include "esp_intr_alloc.h"
 // #include "soc/soc_caps.h"
 
     // #include "esp_err.h"

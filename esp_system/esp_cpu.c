@@ -8,20 +8,7 @@
 #include <assert.h>
 
 #include "sdkconfig.h"
-#include "soc/soc.h"
-#include "soc/soc_caps.h"
 
-// TODO: IDF-5645
-#if CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32H2
-    #include "soc/lp_aon_reg.h"
-    #include "soc/pcr_reg.h"
-    #define SYSTEM_CPU_PER_CONF_REG PCR_CPU_WAITI_CONF_REG
-    #define SYSTEM_CPU_WAIT_MODE_FORCE_ON PCR_CPU_WAIT_MODE_FORCE_ON
-#else
-    #include "soc/rtc_cntl_reg.h"
-#endif
-
-#include "hal/mpu_hal.h"
 #include "esp_bit_defs.h"
 #include "esp_attr.h"
 #include "esp_err.h"
@@ -29,17 +16,34 @@
 #include "esp_memory_utils.h"
 #include "esp_fault.h"
 
-#if __XTENSA__
-    #include "xtensa/config/core-isa.h"
+#include "soc/soc.h"
+#include "soc/soc_caps.h"
+
+// TODO: IDF-5645
+#if CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32H2
+    #include "soc/lp_aon_reg.h"
+    #include "soc/pcr_reg.h"
+    #define SYSTEM_CPU_PER_CONF_REG         PCR_CPU_WAITI_CONF_REG
+    #define SYSTEM_CPU_WAIT_MODE_FORCE_ON   PCR_CPU_WAIT_MODE_FORCE_ON
 #else
-    #include "soc/system_reg.h"     // For SYSTEM_CPU_PER_CONF_REG
-    #include "soc/dport_access.h"   // For Dport access
-    #include "riscv/semihosting.h"
-    #include "riscv/csr.h"          // For PMP_ENTRY. [refactor-todo] create PMP abstraction in rv_utils.h
+    #include "soc/rtc_cntl_reg.h"
+#endif
+
+#include "hal/mpu_hal.h"
+
+#if __XTENSA__
+    // #include "xtensa/config/core-isa.h"
+#elif __riscv
+    #include "soc/system_reg.h"
+    #include "soc/dport_access.h"
+    // #include "riscv/semihosting.h"
+    // #include "riscv/csr.h"          // For PMP_ENTRY. [refactor-todo] create PMP abstraction in rv_utils.h
 
     #if SOC_CPU_HAS_FLEXIBLE_INTC
         #include "riscv/instruction_decode.h"
     #endif
+#else
+    #pragma GCC error "unknown arch"
 #endif
 
 /* --------------------------------------------------- CPU Control -----------------------------------------------------
