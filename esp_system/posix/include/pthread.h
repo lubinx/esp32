@@ -31,24 +31,23 @@
     #pragma clang system_header
 #endif
 
-// porting
+// pthread spinlock types
+    struct pthread_spinlock_t
+    {
+        pthread_t volatile owner;
+    };
+    typedef struct pthread_spinlock_t   pthread_spinlock_t;
+
+    #define PTHREAD_SPINLOCK_INITIALIZER   {0}
+
+// TODO: porting
 #include <sys/_pthreadtypes.h>
     typedef void *(*pthread_routine_t)(void *arg);
+
     typedef struct pthread_rwlockattr_t pthread_rwlockattr_t;
     typedef struct pthread_rwlock_t pthread_rwlock_t;
 
     #define PTHREAD_MUTEX_INITIALIZER   _PTHREAD_MUTEX_INITIALIZER
-
-// pthread spinlock types
-    struct pthread_spinlock_t
-    {
-        uintptr_t owner;
-        unsigned lock_count;
-    };
-    typedef struct pthread_spinlock_t   pthread_spinlock_t;
-
-    extern const struct pthread_spinlock_t PTHREAD_SPINLOCK_INITIALIZER;
-    #define PTHREAD_SPINLOCK_NO_OWNER   (0)
 
 /*
 // Detach state.

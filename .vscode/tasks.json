@@ -9,7 +9,7 @@
             "presentation": {
                 "echo": false,
                 "clear": true,
-                "focus": true,
+                "focus": false,
                 "panel": "shared",
                 "reveal": "always"
             },

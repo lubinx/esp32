@@ -22,7 +22,6 @@ list(APPEND srcs
 
 list(APPEND includes
     "include"
-    "include/bootloader_support"
     "include/dummy"
     #  NOTE fix: soc => ${IDF_TARGET} subdir using relative paths
     "${IDF_PATH}/components/soc/${IDF_TARGET}/include"

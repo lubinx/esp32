@@ -7,21 +7,24 @@
 #include <errno.h>
 #include "spinlock.h"
 
+#include "freertos/FreeRTOS.h"
+
 #include "esp_cpu.h"
+#include "esp_log.h"
 #include "esp_heap_caps.h"
 #include "esp_private/esp_clk.h"
 
 static void *blink_thread1(void *arg);
 static void *blink_thread2(void *arg);
+static void *blink_thread3(void *arg);
 
 // pthread_mutex_t mutex;
 spinlock_t spinlock = SPINLOCK_INITIALIZER;
-int val = 0;
 
 extern "C" void __attribute__((weak)) app_main(void)
 {
     printf("Minimum free heap size: %d bytes\n", heap_caps_get_minimum_free_size(MALLOC_CAP_DEFAULT));
-    printf ("cpu frequency: %d\n", esp_clk_cpu_freq());
+    printf("cpu frequency: %d\n", esp_clk_cpu_freq());
 
     printf("infinite loop...\n");
 
@@ -35,11 +38,6 @@ extern "C" void __attribute__((weak)) app_main(void)
         fflush(stdout);
     }
 
-    for (int i = 0; i < 100; i ++)
-    {
-        printf("random: %08x\n", rand());
-    }
-
     /*
     pthread_mutexattr_t attr;
     pthread_mutexattr_init(&attr);
@@ -49,25 +47,53 @@ extern "C" void __attribute__((weak)) app_main(void)
     pthread_t id;
     pthread_create(&id, NULL, blink_thread1, NULL);
     pthread_create(&id, NULL, blink_thread2, NULL);
-
+    pthread_create(&id, NULL, blink_thread3, NULL);
 
     while (1)
-        sleep(1);
+    {
+        spinlock_acquire(&spinlock, SPINLOCK_WAIT_FOREVER);
+        esp_rom_printf("...............................%d\n", esp_cpu_get_core_id());
+        fflush(stdout);
+        spinlock_release(&spinlock);
+
+        msleep(500);
+    }
 }
 
 static void *blink_thread1(void *arg)
 {
     ARG_UNUSED(arg);
+    int start_core_id = esp_cpu_get_core_id();
+
+    // uint32_t irq_status = XTOS_SET_INTLEVEL(XCHAL_EXCM_LEVEL);
+    // esp_rom_printf("...............................%lu\n\n\n", irq_status);
 
     while (true)
     {
-        spinlock_acquire(&spinlock, SPINLOCK_WAIT_FOREVER);
+        /*
+        for (int i = 0; i < 1000; i ++)
+            esp_rom_delay_us(1000);
 
         printf("thread1: cpu: %d, val %d\n", esp_cpu_get_core_id(), val);
-        spinlock_release(&spinlock);
+
+        spinlock_acquire(&spinlock, SPINLOCK_WAIT_FOREVER);
+        */
+        spinlock_acquire(&spinlock, SPINLOCK_WAIT_FOREVER);
+        int core_id = esp_cpu_get_core_id();
+
+        if (start_core_id == core_id)
+            printf("thread1: cpu: %d start_core_id == core_id\n", core_id);
+        else
+            printf("thread1: cpu: %d ########### start_core_id != core_id\n", core_id);
 
         fflush(stdout);
-        pthread_yield();
+        spinlock_release(&spinlock);
+
+        msleep(600);
+        /*
+        for (int i = 0; i < 1000; i ++)
+            esp_rom_delay_us(800);
+        */
     }
 
 }
@@ -79,11 +105,25 @@ static void *blink_thread2(void *arg)
     while (true)
     {
         spinlock_acquire(&spinlock, SPINLOCK_WAIT_FOREVER);
-        val ++;
-        printf("thread2: cpu: %d, val %d\n", esp_cpu_get_core_id(), val);
-
-        msleep(1000);
+        printf("thread2: cpu: %d\n", esp_cpu_get_core_id());
+        fflush(stdout);
         spinlock_release(&spinlock);
-        pthread_yield();
+
+        msleep(700);
+    }
+}
+
+static void *blink_thread3(void *arg)
+{
+    ARG_UNUSED(arg);
+
+    while (true)
+    {
+        spinlock_acquire(&spinlock, SPINLOCK_WAIT_FOREVER);
+        printf("thread3: cpu: %d\n", esp_cpu_get_core_id());
+        fflush(stdout);
+        spinlock_release(&spinlock);
+
+        msleep(800);
     }
 }

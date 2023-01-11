@@ -173,7 +173,7 @@ menu "ESP System Settings"
 
     choice ESP_MAIN_TASK_AFFINITY
         prompt "Main task core affinity"
-        default ESP_MAIN_TASK_AFFINITY_CPU0
+        default ESP_MAIN_TASK_AFFINITY_NO_AFFINITY
         help
             Configure the "main task" core affinity. This is the used core of the task
             which calls app_main(). If app_main() returns then this task is deleted.

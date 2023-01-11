@@ -36,6 +36,7 @@
     #include "soc/dport_access.h"   // For Dport access
     #include "riscv/semihosting.h"
     #include "riscv/csr.h"          // For PMP_ENTRY. [refactor-todo] create PMP abstraction in rv_utils.h
+
     #if SOC_CPU_HAS_FLEXIBLE_INTC
         #include "riscv/instruction_decode.h"
     #endif
@@ -136,7 +137,7 @@ void esp_cpu_wait_for_intr(void)
 
 #if SOC_CPU_HAS_FLEXIBLE_INTC
 
-static bool is_intr_num_resv(int intr_num)
+static bool is_intr_nb_resv(int intr_nb)
 {
     // Workaround to reserve interrupt number 1 for Wi-Fi, 5,8 for Bluetooth, 6 for "permanently disabled interrupt"
     // [TODO: IDF-2465]
@@ -147,12 +148,12 @@ static bool is_intr_num_resv(int intr_num)
     reserved |= BIT(0) | BIT(3) | BIT(4) | BIT(7);
 #endif
 
-    if (reserved & BIT(intr_num))
+    if (reserved & BIT(intr_nb))
         return true;
 
     extern int _vector_table;
     extern int _interrupt_handler;
-    const intptr_t pc = (intptr_t)(&_vector_table + intr_num);
+    const intptr_t pc = (intptr_t)(&_vector_table + intr_nb);
 
     /* JAL instructions are relative to the PC there are executed from. */
     const intptr_t destination = pc + riscv_decode_offset_from_jal_instruction(pc);
@@ -160,12 +161,12 @@ static bool is_intr_num_resv(int intr_num)
     return destination != (intptr_t)&_interrupt_handler;
 }
 
-void esp_cpu_intr_get_desc(int core_id, int intr_num, esp_cpu_intr_desc_t *intr_desc_ret)
+void esp_cpu_intr_get_desc(int core_id, int intr_nb, esp_cpu_intr_desc_t *intr_desc_ret)
 {
     intr_desc_ret->priority = 1;    //Todo: We should make this -1
     intr_desc_ret->type = ESP_CPU_INTR_TYPE_NA;
 #if __riscv
-    intr_desc_ret->flags = is_intr_num_resv(intr_num) ? ESP_CPU_INTR_DESC_FLAG_RESVD : 0;
+    intr_desc_ret->flags = is_intr_nb_resv(intr_nb) ? ESP_CPU_INTR_DESC_FLAG_RESVD : 0;
 #else
     intr_desc_ret->flags = 0;
 #endif
@@ -226,7 +227,7 @@ typedef struct
         {5, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD     }}, //31
     };
 #else
-    static const intr_desc_t intr_desc_table[SOC_CPU_INTR_NUM] =
+    static const intr_desc_t intr_desc_table[SOC_CPU_intr_nb] =
     {
         {1, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //0
         {1, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //1
@@ -271,16 +272,16 @@ typedef struct
     };
 #endif // SOC_CPU_CORES_NUM > 1
 
-void esp_cpu_intr_get_desc(int core_id, int intr_num, esp_cpu_intr_desc_t *intr_desc_ret)
+void esp_cpu_intr_get_desc(int core_id, int intr_nb, esp_cpu_intr_desc_t *intr_desc_ret)
 {
     assert(core_id >= 0 && core_id < SOC_CPU_CORES_NUM);
 #if SOC_CPU_CORES_NUM == 1
     core_id = 0;    //  If this is a single core target, hard code CPU ID to 0
 #endif
 
-    intr_desc_ret->priority = intr_desc_table[intr_num].priority;
-    intr_desc_ret->type = intr_desc_table[intr_num].type;
-    intr_desc_ret->flags = intr_desc_table[intr_num].flags[core_id];
+    intr_desc_ret->priority = intr_desc_table[intr_nb].priority;
+    intr_desc_ret->type = intr_desc_table[intr_nb].type;
+    intr_desc_ret->flags = intr_desc_table[intr_nb].flags[core_id];
 }
 
 #endif // SOC_CPU_HAS_FLEXIBLE_INTC
@@ -794,14 +795,14 @@ static void esp_cpu_configure_invalid_regions(void)
 // --------------- Breakpoints/Watchpoints -----------------
 
 #if SOC_CPU_BREAKPOINTS_NUM > 0
-    esp_err_t esp_cpu_set_breakpoint(int bp_num, const void *bp_addr)
+    esp_err_t esp_cpu_set_breakpoint(int bp_nb, const void *bp_addr)
     {
         /*
         Todo:
-        - Check that bp_num is in range
+        - Check that bp_nb is in range
         */
     #if __XTENSA__
-        xt_utils_set_breakpoint(bp_num, (uint32_t)bp_addr);
+        xt_utils_set_breakpoint(bp_nb, (uint32_t)bp_addr);
     #else
         if (esp_cpu_dbgr_is_attached())
         {
@@ -812,46 +813,46 @@ static void esp_cpu_configure_invalid_regions(void)
             *
             * So when debugger is connected we use special syscall to ask it to set breakpoint for us.
             */
-            long args[] = {true, bp_num, (long)bp_addr};
+            long args[] = {true, bp_nb, (long)bp_addr};
 
             if (0 == semihosting_call_noerrno(ESP_SEMIHOSTING_SYS_BREAKPOINT_SET, args))
                 return ESP_ERR_INVALID_RESPONSE;
         }
-        rv_utils_set_breakpoint(bp_num, (uint32_t)bp_addr);
+        rv_utils_set_breakpoint(bp_nb, (uint32_t)bp_addr);
     #endif
         return ESP_OK;
     }
 
-    esp_err_t esp_cpu_clear_breakpoint(int bp_num)
+    esp_err_t esp_cpu_clear_breakpoint(int bp_nb)
     {
         /*
         Todo:
-        - Check if the bp_num is valid
+        - Check if the bp_nb is valid
         */
     #if __XTENSA__
-        xt_utils_clear_breakpoint(bp_num);
+        xt_utils_clear_breakpoint(bp_nb);
     #else
         if (esp_cpu_dbgr_is_attached())
         {
             // See description in esp_cpu_set_breakpoint()
-            long args[] = {false, bp_num};
+            long args[] = {false, bp_nb};
 
             if (0 == semihosting_call_noerrno(ESP_SEMIHOSTING_SYS_BREAKPOINT_SET, args);)
                 return ESP_ERR_INVALID_RESPONSE;
         }
-        rv_utils_clear_breakpoint(bp_num);
+        rv_utils_clear_breakpoint(bp_nb);
     #endif
         return ESP_OK;
     }
 #endif
 
 #if SOC_CPU_WATCHPOINTS_NUM > 0
-    esp_err_t esp_cpu_set_watchpoint(int wp_num, const void *wp_addr, size_t size, esp_cpu_watchpoint_trigger_t trigger)
+    esp_err_t esp_cpu_set_watchpoint(int wp_nb, const void *wp_addr, size_t size, esp_cpu_watchpoint_trigger_t trigger)
     {
         /*
         Todo:
-        - Check that wp_num is in range
-        - Check if the wp_num is already in use
+        - Check that wp_nb is in range
+        - Check if the wp_nb is already in use
         */
         // Check if size is 2^n, where n is in [0...6]
         if (size < 1 || size > 64 || (size & (size - 1)) != 0) {
@@ -860,40 +861,40 @@ static void esp_cpu_configure_invalid_regions(void)
         bool on_read = (trigger == ESP_CPU_WATCHPOINT_LOAD || trigger == ESP_CPU_WATCHPOINT_ACCESS);
         bool on_write = (trigger == ESP_CPU_WATCHPOINT_STORE || trigger == ESP_CPU_WATCHPOINT_ACCESS);
     #if __XTENSA__
-        xt_utils_set_watchpoint(wp_num, (uint32_t)wp_addr, size, on_read, on_write);
+        xt_utils_set_watchpoint(wp_nb, (uint32_t)wp_addr, size, on_read, on_write);
     #else
         if (esp_cpu_dbgr_is_attached()) {
             // See description in esp_cpu_set_breakpoint()
-            long args[] = {true, wp_num, (long)wp_addr, (long)size,
+            long args[] = {true, wp_nb, (long)wp_addr, (long)size,
                 (long)((on_read ? ESP_SEMIHOSTING_WP_FLG_RD : 0) | (on_write ? ESP_SEMIHOSTING_WP_FLG_WR : 0))
             };
 
             if (0 == semihosting_call_noerrno(ESP_SEMIHOSTING_SYS_WATCHPOINT_SET, args))
                 return ESP_ERR_INVALID_RESPONSE;
         }
-        rv_utils_set_watchpoint(wp_num, (uint32_t)wp_addr, size, on_read, on_write);
+        rv_utils_set_watchpoint(wp_nb, (uint32_t)wp_addr, size, on_read, on_write);
     #endif
         return ESP_OK;
     }
 
-esp_err_t esp_cpu_clear_watchpoint(int wp_num)
+esp_err_t esp_cpu_clear_watchpoint(int wp_nb)
 {
     /*
     Todo:
-    - Check if the wp_num is valid
+    - Check if the wp_nb is valid
     */
 #if __XTENSA__
-    xt_utils_clear_watchpoint(wp_num);
+    xt_utils_clear_watchpoint(wp_nb);
 #else
     if (esp_cpu_dbgr_is_attached())
     {
         // See description in esp_cpu_dbgr_is_attached()
-        long args[] = {false, wp_num};
+        long args[] = {false, wp_nb};
 
         if (0 == semihosting_call_noerrno(ESP_SEMIHOSTING_SYS_WATCHPOINT_SET, args))
             return ESP_ERR_INVALID_RESPONSE;
     }
-    rv_utils_clear_watchpoint(wp_num);
+    rv_utils_clear_watchpoint(wp_nb);
 #endif // __XTENSA__
     return ESP_OK;
 }
