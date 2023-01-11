@@ -306,49 +306,37 @@ void IRAM_ATTR __retarget_lock_close_recursive(_LOCK_T lock)
     _lock_close_recursive(&lock);
 }
 
-/* Separate function, to prevent generating multiple assert strings */
-static void IRAM_ATTR check_lock_nonzero(_LOCK_T lock)
-{
-    assert(lock != NULL && "Uninitialized lock used");
-}
-
 void IRAM_ATTR __retarget_lock_acquire(_LOCK_T lock)
 {
-    check_lock_nonzero(lock);
     MAYBE_OVERRIDE_LOCK(lock, &s_common_mutex);
     _lock_acquire(&lock);
 }
 
 void IRAM_ATTR __retarget_lock_acquire_recursive(_LOCK_T lock)
 {
-    check_lock_nonzero(lock);
     MAYBE_OVERRIDE_LOCK(lock, &s_common_recursive_mutex);
     _lock_acquire_recursive(&lock);
 }
 
 int IRAM_ATTR __retarget_lock_try_acquire(_LOCK_T lock)
 {
-    check_lock_nonzero(lock);
     MAYBE_OVERRIDE_LOCK(lock, &s_common_mutex);
     return _lock_try_acquire(&lock);
 }
 
 int IRAM_ATTR __retarget_lock_try_acquire_recursive(_LOCK_T lock)
 {
-    check_lock_nonzero(lock);
     MAYBE_OVERRIDE_LOCK(lock, &s_common_recursive_mutex);
     return _lock_try_acquire_recursive(&lock);
 }
 
 void IRAM_ATTR __retarget_lock_release(_LOCK_T lock)
 {
-    check_lock_nonzero(lock);
     _lock_release(&lock);
 }
 
 void IRAM_ATTR __retarget_lock_release_recursive(_LOCK_T lock)
 {
-    check_lock_nonzero(lock);
     _lock_release_recursive(&lock);
 }
 
@@ -407,6 +395,6 @@ void esp_newlib_locks_init(void)
     _LOCK_T magic_mutex = (_LOCK_T) &magic_val;
     esp_rom_newlib_init_common_mutexes(magic_mutex, magic_mutex);
 #else // other target
-#error Unsupported target
+    #error Unsupported target
 #endif
 }

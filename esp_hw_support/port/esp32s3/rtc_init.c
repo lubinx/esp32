@@ -21,12 +21,10 @@
 #include "esp_log.h"
 #include "esp_err.h"
 #include "esp_attr.h"
-#include "esp_private/spi_flash_os.h"
 #include "hal/efuse_hal.h"
 #include "hal/efuse_ll.h"
-#ifndef BOOTLOADER_BUILD
+
 #include "esp_private/sar_periph_ctrl.h"
-#endif
 
 #define RTC_CNTL_MEM_FORCE_NOISO (RTC_CNTL_SLOWMEM_FORCE_NOISO | RTC_CNTL_FASTMEM_FORCE_NOISO)
 
@@ -193,10 +191,7 @@ void rtc_init(rtc_config_t cfg)
     REG_WRITE(RTC_CNTL_INT_ENA_REG, 0);
     REG_WRITE(RTC_CNTL_INT_CLR_REG, UINT32_MAX);
 
-#ifndef BOOTLOADER_BUILD
-    //initialise SAR related peripheral register settings
     sar_periph_ctrl_init();
-#endif
 }
 
 rtc_vddsdio_config_t rtc_vddsdio_get_config(void)
@@ -251,7 +246,6 @@ static void set_ocode_by_efuse(int calib_version)
  */
 static void calibrate_ocode(void)
 {
-#ifndef BOOTLOADER_BUILD
     /**
      * Background:
      * 1. Following code will switch the system clock to XTAL first, to self-calibrate the OCode.
@@ -260,8 +254,8 @@ static void calibrate_ocode(void)
      *
      * When CPU clock switches down, the delay should be cleared. Therefore here we call this function to remove the delays.
      */
-    spi_timing_change_speed_mode_cache_safe(true);
-#endif
+    // spi_timing_change_speed_mode_cache_safe(true);
+
     /*
     Bandgap output voltage is not precise when calibrate o-code by hardware sometimes, so need software o-code calibration (must turn off PLL).
     Method:
@@ -307,10 +301,9 @@ static void calibrate_ocode(void)
         }
     }
     rtc_clk_cpu_freq_set_config(&old_config);
-#ifndef BOOTLOADER_BUILD
+
     //System clock is switched back to PLL. Here we switch to the MSPI high speed mode, add the delays back
-    spi_timing_change_speed_mode_cache_safe(false);
-#endif
+    // spi_timing_change_speed_mode_cache_safe(false);
 }
 
 static uint32_t get_dig_dbias_by_efuse(uint8_t pvt_scheme_ver)

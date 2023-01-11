@@ -11,14 +11,6 @@ struct KERNEL_context_t
 };
 struct KERNEL_context_t KERNEL_context;
 
-static inline void ATOMIC_enter()
-{
-}
-
-static inline void ATOMIC_leave()
-{
-}
-
 static __attribute__((constructor))
 void KERNEL_init(void)
 {
@@ -28,6 +20,24 @@ void KERNEL_init(void)
         glist_push_back(&KERNEL_context.hdl_freed_list, &KERNEL_context.hdl[I]);
 }
 
+/***************************************************************************/
+/** atomic
+****************************************************************************/
+void ATOMIC_enter(void)
+{
+}
+
+void ATOMIC_leave(void)
+{
+}
+
+/***************************************************************************/
+/** spinlock
+****************************************************************************/
+
+/***************************************************************************/
+/** kernel
+****************************************************************************/
 handle_t KERNEL_handle_get(uint32_t id)
 {
     struct KERNEL_hdl *ptr;

@@ -7,6 +7,7 @@ list(APPEND srcs
     # "${CMAKE_CURRENT_LIST_DIR}/poll.c"
     "${CMAKE_CURRENT_LIST_DIR}/pthread.c"
     "${CMAKE_CURRENT_LIST_DIR}/pthread_local_storage.c"
+    "${CMAKE_CURRENT_LIST_DIR}/pthread_spinlock.c"
     "${CMAKE_CURRENT_LIST_DIR}/sched.c"
     "${CMAKE_CURRENT_LIST_DIR}/signal.c"
     "${CMAKE_CURRENT_LIST_DIR}/strerror.c"

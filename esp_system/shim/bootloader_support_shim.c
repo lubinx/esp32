@@ -1,10 +1,14 @@
 #include "sdkconfig.h"
 
 
-#include "soc/efuse_struct.h"
-#include "hal/efuse_ll.h"
+#include "esp_rom_spiflash.h"
 
-#include "bootloader_flash.h"
+#include "soc/efuse_struct.h"
+#include "soc/spi_mem_struct.h"
+#include "hal/efuse_ll.h"
+#include "hal/spi_flash_ll.h"
+
+// #include "bootloader_flash.h"
 
 void bootloader_mspi_reset(void)
 {

@@ -511,9 +511,6 @@ extern __attribute__((nothrow))
     int pause(void);
 
 extern __attribute__((nothrow))
-    int pthread_atfork(void (*prepare)(void), void (*parent)(void), void (*child)(void));
-
-extern __attribute__((nothrow))
     unsigned int sleep(unsigned int seconds);
 extern __attribute__((nothrow))
     int usleep(useconds_t useconds);

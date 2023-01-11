@@ -25,8 +25,10 @@
 #include <sys/types.h>
 
 #include "glist.h"
+#include "atomic.h"
 // #include "ultracore.h"
 // #include "svc.h"
+
     #define INVALID_HANDLE              ((void *)0)
     typedef void *                  handle_t;
 
@@ -61,25 +63,6 @@
         int     (* close) (int fd);
         int     (* ioctl) (int fd, unsigned long int request, va_list vl);
     };
-
-__BEGIN_DECLS
-
-/***************************************************************************/
-/** @kickless
-****************************************************************************/
-    /**
-     *  KERNEL_add_ticks()
-     *      increase millisecond to KERNEL_context.tick
-     */
-extern __attribute__((nothrow))
-    void KERNEL_add_ticks(uint32_t millisecond);
-
-    /**
-     *  KERNEL_next_tick()
-     *      implement tickless
-     */
-extern __attribute__((nothrow))
-    void KERNEL_next_tick(uint32_t millisecond);
 
 /***************************************************************************/
 /** @flags
@@ -131,10 +114,11 @@ extern __attribute__((nothrow))
         ///     fs will contain a none NULL struct FS_implement when fd is opened by filesystem
         //      and ext will point to a valid struct FS_ext
         struct FS_implement const *fs;
-        ///---- events
+        // + 4
         handle_t read_rdy;
         handle_t write_rdy;
-        ///---- lseek
+
+        /// +6 changing by seek
         uintptr_t position;
         uint32_t read_timeo, write_timeo;
     };
@@ -143,7 +127,7 @@ extern __attribute__((nothrow))
 /***************************************************************************/
 /** @virtual file descriptor
 ****************************************************************************/
-    struct CORE_vfd
+    struct KERNEL_vfd
     {
         void        *glist_next;
         uint8_t     cid;
@@ -173,6 +157,7 @@ extern __attribute__((nothrow))
     ///---- fd
         struct FD_implement const *implement;
         void *ext;
+
         char const *name;               // fs => name: posix compatiable
         struct MQ_list *queued;         // read_rdy => queued
         struct MQ_list *freed;          // write_rdy => freed
@@ -182,6 +167,8 @@ extern __attribute__((nothrow))
         uint32_t read_timeo, write_timeo;
     };
     #define AsMqd(handle)               ((struct KERNEL_mqd *)handle)
+
+__BEGIN_DECLS
 
 /***************************************************************************/
 /** kernel functions
@@ -237,6 +224,23 @@ extern __attribute__((nothrow))
      */
 extern __attribute__((nonnull, nothrow))
     void KERNEL_mfree(void *ptr);
+
+/***************************************************************************/
+/** @kickless
+****************************************************************************/
+    /**
+     *  KERNEL_add_ticks()
+     *      increase millisecond to KERNEL_context.tick
+     */
+extern __attribute__((nothrow))
+    void KERNEL_add_ticks(uint32_t millisecond);
+
+    /**
+     *  KERNEL_next_tick()
+     *      implement tickless
+     */
+extern __attribute__((nothrow))
+    void KERNEL_next_tick(uint32_t millisecond);
 
 __END_DECLS
 #endif

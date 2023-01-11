@@ -17,7 +17,7 @@ list(APPEND srcs
     "panic.c"
     "panic_handler.c"
 # compatiable
-    "bootloader_support_shim.c"
+    # "bootloader_support_shim.c"
 )
 
 list(APPEND includes
@@ -35,6 +35,7 @@ include("${CMAKE_CURRENT_LIST_DIR}/${IDF_TARGET}/.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/posix/.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/freertos_port/.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/ultracore/.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/shim/.cmake")
 
 
 # if(CONFIG_ESP_SYSTEM_USE_EH_FRAME)

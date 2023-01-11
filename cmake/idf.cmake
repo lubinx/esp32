@@ -118,7 +118,7 @@ list(APPEND IDF_KERNEL_COMPONENTS
     "esp_system" "esp_rom"
     "soc" "hal" "esp_hw_support" "efuse" "esp_pm" "heap"
     "freertos" "vfs"
-    "spi_flash"
+    # "spi_flash"
     "esptool_py"
 )
 
@@ -129,9 +129,10 @@ list(APPEND OBSOLETED_COMPONENTS
     "esp_app_format"
     "esp_common"
     "esp_partition"
+    # "driver"
     "partition_table"
     "newlib"
-    # "spi_flash"
+    "spi_flash"
 )
 
 #############################################################################

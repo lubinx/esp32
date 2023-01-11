@@ -8,7 +8,7 @@
 #include <features.h>
 
 #include "esp_err.h"
-#include "esp_private/spi_flash_os.h"
+// #include "esp_private/spi_flash_os.h"
 
 __BEGIN_DECLS
 
@@ -22,12 +22,15 @@ extern __attribute__((nothrow))
     uint32_t bootloader_read_flash_id(void);
 
 #if SOC_CACHE_SUPPORT_WRAP
-    /**
-     * @brief Set the burst mode setting command for specified wrap mode.
-     *
-     * @param mode The specified warp mode.
-     * @return always ESP_OK
-     */
+    typedef enum
+    {
+        FLASH_WRAP_MODE_8B = 0,
+        FLASH_WRAP_MODE_16B = 2,
+        FLASH_WRAP_MODE_32B = 4,
+        FLASH_WRAP_MODE_64B = 6,
+        FLASH_WRAP_MODE_DISABLE = 1
+    } spi_flash_wrap_mode_t;
+
     extern __attribute__((nothrow))
         esp_err_t bootloader_flash_wrap_set(spi_flash_wrap_mode_t mode);
 #endif

@@ -20,7 +20,7 @@
 #define __PTHREAD_H                     1
 
 #include <features.h>
-#include <stdint.h>
+#include <sys/types.h>
 
 #ifndef __GCC__
     #ifndef __KEIL_CC__
@@ -31,16 +31,34 @@
     #pragma clang system_header
 #endif
 
-#include <sys/types.h>
+// porting
+#include <sys/_pthreadtypes.h>
+    typedef void *(*pthread_routine_t)(void *arg);
+    typedef struct pthread_rwlockattr_t pthread_rwlockattr_t;
+    typedef struct pthread_rwlock_t pthread_rwlock_t;
 
-/* Detach state.  */
+    #define PTHREAD_MUTEX_INITIALIZER   _PTHREAD_MUTEX_INITIALIZER
+
+// pthread spinlock types
+    struct pthread_spinlock_t
+    {
+        uintptr_t owner;
+        unsigned lock_count;
+    };
+    typedef struct pthread_spinlock_t   pthread_spinlock_t;
+
+    extern const struct pthread_spinlock_t PTHREAD_SPINLOCK_INITIALIZER;
+    #define PTHREAD_SPINLOCK_NO_OWNER   (0)
+
+/*
+// Detach state.
     enum
     {
         PTHREAD_CREATE_JOINABLE,
         PTHREAD_CREATE_DETACHED
     };
 
-/* Mutex types.  */
+// Mutex types.
     enum
     {
         PTHREAD_MUTEX_NORMAL,
@@ -49,7 +67,7 @@
         PTHREAD_MUTEX_DEFAULT = PTHREAD_MUTEX_NORMAL
     };
 
-/* Mutex protocols.  */
+// Mutex protocols.
     enum
     {
         PTHREAD_PRIO_NONE,
@@ -57,31 +75,29 @@
         PTHREAD_PRIO_PROTECT
     };
 
-/* Scheduler inheritance.  */
+// Scheduler inheritance.
     enum
     {
         PTHREAD_INHERIT_SCHED,
         PTHREAD_EXPLICIT_SCHED
     };
 
-/* Scope handling.  */
+// Scope handling.
     enum
     {
         PTHREAD_SCOPE_PROCESS,
         PTHREAD_SCOPE_SYSTEM
     };
+*/
 
-/* Process shared or private flag.  */
+// Process shared or private flag.
     enum
     {
         PTHREAD_PROCESS_PRIVATE,
         PTHREAD_PROCESS_SHARED
     };
 
-/* Conditional variable handling.  */
-    #define PTHREAD_COND_INITIALIZER
-
-    /* Cancellation */
+// Conditional variable handling.
     enum
     {
         PTHREAD_CANCEL_ENABLE,
@@ -94,7 +110,7 @@
     };
     #define PTHREAD_CANCELED            ((void *) -1)
 
-/* Single execution handling.  */
+// Single execution handling.
     #define PTHREAD_ONCE_INIT           0
 
 __BEGIN_DECLS
@@ -104,8 +120,10 @@ __BEGIN_DECLS
      *      register fork handlers
      *      **NO SUPPORT** always returns ENOSYS
      */
+    /*
 extern __attribute__((nonnull, nothrow))
     int pthread_atfork(pthread_routine_t prepare, pthread_routine_t parent, pthread_routine_t child);
+    */
 
 //--------------------------------------------------------------------------
 //  pthread attr
@@ -125,7 +143,7 @@ extern __attribute__((nonnull, nothrow))
      *  **ALWAYS** PTHREAD_CREATE_JOINABLE
      */
 extern __attribute__((nonnull, nothrow))
-    int pthread_attr_getdetachstate(const pthread_attr_t *restrict attr, int *detachstate);
+    int pthread_attr_getdetachstate(pthread_attr_t const *restrict attr, int *detachstate);
 extern __attribute__((nonnull, nothrow))
     int pthread_attr_setdetachstate(pthread_attr_t *restrict attr, int detachstate);
 
@@ -135,7 +153,7 @@ extern __attribute__((nonnull, nothrow))
      *  **NO SUPPORT** always returns ENOSYS
      */
 extern __attribute__((nonnull, nothrow))
-    int pthread_attr_getguardsize(const pthread_attr_t *restrict attr, size_t *restrict guardsize);
+    int pthread_attr_getguardsize(pthread_attr_t const *restrict attr, size_t *restrict guardsize);
 extern __attribute__((nonnull, nothrow))
     int pthread_attr_setguardsize(pthread_attr_t *attr, size_t guardsize);
 
@@ -145,7 +163,7 @@ extern __attribute__((nonnull, nothrow))
      *  **ALWAYS** PTHREAD_INHERIT_SCHED
      */
 extern __attribute__((nonnull, nothrow))
-    int pthread_attr_getinheritsched(const pthread_attr_t *restrict attr, int *restrict inheritsched);
+    int pthread_attr_getinheritsched(pthread_attr_t const *restrict attr, int *restrict inheritsched);
 extern __attribute__((nonnull, nothrow))
     int pthread_attr_setinheritsched(pthread_attr_t *attr, int inheritsched);
 
@@ -155,7 +173,7 @@ extern __attribute__((nonnull, nothrow))
      *  **NO SUPPORT** always returns ENOSYS
      */
 extern __attribute__((nonnull, nothrow))
-    int pthread_attr_getschedparam(const pthread_attr_t *restrict attr, struct sched_param *restrict param);
+    int pthread_attr_getschedparam(pthread_attr_t const *restrict attr, struct sched_param *restrict param);
 extern __attribute__((nonnull, nothrow))
     int pthread_attr_setschedparam(pthread_attr_t *restrict attr, struct sched_param const *restrict param);
 
@@ -165,7 +183,7 @@ extern __attribute__((nonnull, nothrow))
      *  **ALWAYS** SCHED_FIFO
      */
 extern __attribute__((nonnull, nothrow))
-    int pthread_attr_getschedpolicy(const pthread_attr_t *restrict attr, int *policy);
+    int pthread_attr_getschedpolicy(pthread_attr_t const *restrict attr, int *policy);
 extern __attribute__((nonnull, nothrow))
     int pthread_attr_setschedpolicy(pthread_attr_t * attr, int policy);
 
@@ -175,7 +193,7 @@ extern __attribute__((nonnull, nothrow))
      *  **NO SUPPORT** pthread_attr_setscope() always returns ENOSYS
      */
 extern __attribute__((nonnull, nothrow))
-    int pthread_attr_getscope(const pthread_attr_t *restrict attr, int *scope);
+    int pthread_attr_getscope(pthread_attr_t const *restrict attr, int *scope);
 extern __attribute__((nonnull, nothrow))
     int pthread_attr_setscope(pthread_attr_t *attr, int scope);
 
@@ -184,7 +202,7 @@ extern __attribute__((nonnull, nothrow))
      *      get and set stack attributes
      */
 extern __attribute__((nonnull, nothrow))
-    int pthread_attr_getstack(const pthread_attr_t *restrict attr, void **restrict stackaddr, size_t *restrict stacksize);
+    int pthread_attr_getstack(pthread_attr_t const *restrict attr, void **restrict stackaddr, size_t *restrict stacksize);
 extern __attribute__((nonnull, nothrow))
     int pthread_attr_setstack(pthread_attr_t *attr, void *stackaddr, size_t stacksize);
 
@@ -193,7 +211,7 @@ extern __attribute__((nonnull, nothrow))
      *      get and set the stacksize attribute
      */
 extern __attribute__((nonnull, nothrow))
-    int pthread_attr_getstacksize(const pthread_attr_t *restrict attr, size_t *stacksize);
+    int pthread_attr_getstacksize(pthread_attr_t const *restrict attr, size_t *stacksize);
 extern __attribute__((nonnull, nothrow))
     int pthread_attr_setstacksize(pthread_attr_t *attr, size_t stacksize);
 
@@ -204,7 +222,7 @@ extern __attribute__((nonnull, nothrow))
      *  pthread_create(): thread creation
      */
 extern __attribute__((nonnull(1, 3), nothrow))
-    int pthread_create(pthread_t *restrict thread, const pthread_attr_t *restrict attr,
+    int pthread_create(pthread_t *restrict thread, pthread_attr_t const *restrict attr,
         pthread_routine_t routine, void *restrict arg);
 
     /**

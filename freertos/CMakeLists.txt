@@ -42,11 +42,11 @@ set(private_include_dirs
 
 if(CONFIG_FREERTOS_SMP)
     set(ldfragments linker_smp.lf)
-    list(APPEND include_dirs "${kernel_dir}/portable/${IDF_TARGET_ARCH}/include/freertos") # Xtensa headers via #include "xx.h"
+    list(APPEND include_dirs "${kernel_dir}/portable/${IDF_TARGET_ARCH}/include/freertos")  # Xtensa headers via #include "xx.h"
 else()
+    set(ldfragments linker.lf)
     list(APPEND srcs "${kernel_dir}/portable/port_systick.c")
     list(APPEND private_include_dirs "${kernel_dir}/portable/priv_include")                 # For port_systick.h on normal FreeRTOS
-    set(ldfragments linker.lf)
 endif()
 
 if(CONFIG_IDF_TARGET_ARCH_XTENSA)
@@ -67,8 +67,8 @@ idf_component_register(
         ${include_dirs}
     PRIV_INCLUDE_DIRS
         ${private_include_dirs}
-    LDFRAGMENTS
-        ${ldfragments}
+    # LDFRAGMENTS               # nothing is required into RAM
+    #     ${ldfragments}
     PRIV_REQUIRES
         "soc"
 )
