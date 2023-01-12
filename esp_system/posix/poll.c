@@ -25,9 +25,7 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout)
     int ret = 0;
 
     if (fds == NULL) {
-        __errno_r(r) = ENOENT;
-        return -1;
-    }
+        return __errno_r_neg(r, ENOENT);
 
     FD_ZERO(&readfds);
     FD_ZERO(&writefds);

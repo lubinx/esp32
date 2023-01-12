@@ -162,12 +162,12 @@ esp_err_t adc_lock_acquire(adc_unit_t adc_unit)
 esp_err_t adc_lock_release(adc_unit_t adc_unit)
 {
     if (adc_unit == ADC_UNIT_2) {
-        ESP_RETURN_ON_FALSE(((uint32_t *)adc2_lock != NULL), ESP_ERR_INVALID_STATE, TAG, "adc2 lock release without acquiring");
+        ESP_RETURN_ON_FALSE((adc2_lock.hdl != NULL), ESP_ERR_INVALID_STATE, TAG, "adc2 lock release without acquiring");
         _lock_release(&adc2_lock);
     }
 
     if (adc_unit == ADC_UNIT_1) {
-        ESP_RETURN_ON_FALSE(((uint32_t *)adc1_lock != NULL), ESP_ERR_INVALID_STATE, TAG, "adc1 lock release without acquiring");
+        ESP_RETURN_ON_FALSE((adc1_lock.hdl != NULL), ESP_ERR_INVALID_STATE, TAG, "adc1 lock release without acquiring");
         _lock_release(&adc1_lock);
     }
 

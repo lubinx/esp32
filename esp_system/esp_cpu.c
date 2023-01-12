@@ -113,30 +113,6 @@ void esp_cpu_reset(int core_id)
 #endif
 }
 
-void esp_cpu_wait_for_intr(void)
-{
-#if __XTENSA__
-    xt_utils_wait_for_intr();
-#else
-    // TODO: IDF-5645 (better to implement with ll) C6 register names converted in the #include section at the top
-    if (esp_cpu_dbgr_is_attached() && DPORT_REG_GET_BIT(SYSTEM_CPU_PER_CONF_REG, SYSTEM_CPU_WAIT_MODE_FORCE_ON) == 0)
-    {
-        /* when SYSTEM_CPU_WAIT_MODE_FORCE_ON is disabled in WFI mode SBA access to memory does not work for debugger,
-           so do not enter that mode when debugger is connected */
-        return;
-    }
-    rv_utils_wait_for_intr();
-#endif // __XTENSA__
-}
-
-/* -------------------------------------------------- CPU Registers ----------------------------------------------------
- *
- * ------------------------------------------------------------------------------------------------------------------ */
-
-/* ------------------------------------------------- CPU Interrupts ----------------------------------------------------
- *
- * ------------------------------------------------------------------------------------------------------------------ */
-
 // ---------------- Interrupt Descriptors ------------------
 
 #if SOC_CPU_HAS_FLEXIBLE_INTC

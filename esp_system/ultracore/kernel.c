@@ -1,23 +1,16 @@
 #include <ultracore/kernel.h>
 #include <string.h>
 #include <sys/errno.h>
+#include <sys/lock.h>
 
 #include "esp_cpu.h"
 #include "esp_log.h"
-
-#if defined(__XTENSA__)
-    #include "xtensa/xtruntime.h"
-    #include "xt_utils.h"
-    #include "spinlock.h"
-#elif defined(__riscv)
-#else
-    #pragma GCC error "pthread: unsupported arch"
-#endif
 
 #define DYNAMIC_INC_DESCRIPTORS         (1024 / sizeof(sizeof(struct KERNEL_hdl)))
 
 struct KERNEL_context_t
 {
+    struct __lock lock;         // TODO: atomic lock before porting ultracore
     struct KERNEL_hdl hdl[4096 / sizeof(struct KERNEL_hdl)];
     glist_t hdl_freed_list;
 };
@@ -26,6 +19,8 @@ struct KERNEL_context_t KERNEL_context;
 static __attribute__((constructor))
 void KERNEL_init(void)
 {
+    _lock_init_recursive(&KERNEL_context.lock);
+
     glist_initialize(&KERNEL_context.hdl_freed_list);
 
     for (unsigned I = 0; I < lengthof(KERNEL_context.hdl); I ++)
@@ -37,70 +32,12 @@ void KERNEL_init(void)
 ****************************************************************************/
 void ATOMIC_enter(void)
 {
+    __retarget_lock_acquire(&KERNEL_context.lock);
 }
 
 void ATOMIC_leave(void)
 {
-}
-
-void spinlock_initialize(spinlock_t *lock)
-{
-    lock->cpuid = 0;
-    lock->intr_status = 0;
-    lock->lock_count = 0;
-}
-
-bool spinlock_acquire(spinlock_t *lock, uint32_t timeout)
-{
-    if (SPINLOCK_WAIT_FOREVER != timeout)
-        ESP_LOGE("spinlock", "spinlock timeout should be SPINLOCK_WAIT_FOREVER");
-
-    bool lock_set;
-
-    #ifdef __XTENSA__
-        uint32_t irq_status = XTOS_SET_INTLEVEL(XCHAL_EXCM_LEVEL);
-        uint32_t core_id = xt_utils_get_raw_core_id() + 1;
-
-        // The caller is already the owner of the lock. Simply increment the nesting count
-        if (lock->cpuid == core_id)
-        {
-            lock->lock_count ++;
-            XTOS_RESTORE_INTLEVEL(irq_status);
-            return true;
-        }
-    #endif
-
-    if (SPINLOCK_WAIT_FOREVER == timeout)
-    {
-        while (! esp_cpu_compare_and_set(&lock->cpuid, 0, core_id));
-        lock_set = true;
-    }
-    else
-        lock_set = esp_cpu_compare_and_set(&lock->cpuid, 0, core_id);
-
-    if (lock_set)
-        lock->lock_count ++;
-
-    #ifdef __XTENSA__
-        XTOS_RESTORE_INTLEVEL(irq_status);
-    #endif
-
-    return lock_set;
-}
-
-void spinlock_release(spinlock_t *lock)
-{
-    #ifdef __XTENSA__
-        uint32_t irq_status = XTOS_SET_INTLEVEL(XCHAL_EXCM_LEVEL);
-        assert(lock->cpuid == xt_utils_get_raw_core_id() + 1);
-    #endif
-
-    if (0 == __sync_sub_and_fetch(&lock->lock_count, 1))
-        lock->cpuid = 0;
-
-    #ifdef __XTENSA__
-        XTOS_RESTORE_INTLEVEL(irq_status);
-    #endif
+    __retarget_lock_release_recursive(&KERNEL_context.lock);
 }
 
 /***************************************************************************/

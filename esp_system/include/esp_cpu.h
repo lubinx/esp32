@@ -46,9 +46,6 @@ extern __attribute__((nonnull, nothrow))
 /** CPU Control
 ****************************************************************************/
 extern __attribute__((nothrow))
-    void esp_cpu_wait_for_intr(void);
-
-extern __attribute__((nothrow))
     void esp_cpu_stall(int core_id);
 
 extern __attribute__((nothrow))
@@ -133,6 +130,8 @@ extern __attribute__((nonnull, nothrow))
         xt_int_has_handler(intr_nb, esp_cpu_get_core_id())
     #define esp_cpu_intr_set_handler(intr_nb, hdr, arg) \
         xt_set_interrupt_handler(intr_nb, (xt_handler)hdr, arg);
+    #define esp_cpu_intr_get_handler_arg(intr_nb)   \
+        xt_get_interrupt_handler_arg(intr_nb)
 #else
     #define esp_cpu_intr_set_ivt_addr(ivt)  \
         rv_utils_set_mtvec((uintptr_t)ivt)
@@ -141,6 +140,8 @@ extern __attribute__((nonnull, nothrow))
         intr_handler_get(intr_nb)
     #define esp_cpu_intr_set_handler(intr_nb, hdr, arg) \
         intr_handler_set(intr_nb, (intr_handler_t)hdr, arg);
+    #define esp_cpu_intr_get_handler_arg(intr_nb)   \
+        intr_handler_get_arg(intr_nb)
 
     // #if SOC_CPU_HAS_FLEXIBLE_INTC
     #define esp_cpu_intr_get_type(intr_nb)  \
@@ -152,17 +153,8 @@ extern __attribute__((nonnull, nothrow))
         esprv_intc_int_get_priority(intr_nb)
     #define esp_cpu_intr_set_priority(intr_nb, intr_prio)   \
         esprv_intc_int_set_priority(intr_nb, intr_prio);
+    // #endif
 #endif
-
-static inline __attribute__((always_inline))
-    void *esp_cpu_intr_get_handler_arg(int intr_nb)
-    {
-    #ifdef __XTENSA__
-        return xt_get_interrupt_handler_arg(intr_nb);
-    #else
-        return  intr_handler_get_arg(intr_nb);
-    #endif
-    }
 
 #ifdef __XTENSA__
     #define esp_cpu_intr_enable(intr_mask)  \
@@ -172,9 +164,11 @@ static inline __attribute__((always_inline))
     #define esp_cpu_intr_get_enabled_mask() \
         xt_utils_intr_get_enabled_mask()
 
+    #define esp_cpu_intr_waitfor()      \
+        xt_utils_wait_for_intr()
+
     #define esp_cpu_intr_clear(intr_nb) \
         xthal_set_intclear(1 << intr_nb)
-    #define esp_cpu_intr_edge_ack       esp_cpu_intr_clear
 #else
     #define esp_cpu_intr_enable(intr_mask)  \
         rv_utils_intr_enable(intr_mask)
@@ -183,19 +177,15 @@ static inline __attribute__((always_inline))
     #define esp_cpu_intr_get_enabled_mask() \
         rv_utils_intr_get_enabled_mask()
 
+    #define esp_cpu_intr_waitfor()      \
+        rv_utils_wait_for_intr()
+
     #define esp_cpu_intr_clear(intr_nb) \
         rv_utils_intr_edge_ack(1 << intr_nb)
-    #define esp_cpu_intr_edge_ack       esp_cpu_intr_clear
 #endif
-
-/***************************************************************************/
-/** Memory Ports
-****************************************************************************/
-/**
- * @brief Configure the CPU to disable access to invalid memory regions
- */
-extern __attribute__((nothrow))
-    void esp_cpu_configure_region_protection(void);
+// remap to esp-idf function name
+    #define esp_cpu_wait_for_intr       esp_cpu_intr_waitfor
+    #define esp_cpu_intr_edge_ack       esp_cpu_intr_clear
 
 /***************************************************************************/
 /** Debugger
@@ -206,7 +196,6 @@ extern __attribute__((nothrow))
 
     #define esp_cpu_dbgr_break()        \
         xt_utils_dbgr_break()
-
 
     #define esp_cpu_pc_to_addr(pc)      \
         ((void *)((pc & 0x3fffffffU) | 0x40000000U))
@@ -249,5 +238,14 @@ extern __attribute__((nonnull, nothrow))
     esp_err_t esp_cpu_set_watchpoint(int wp_nb, void const *wp_addr, size_t size, esp_cpu_watchpoint_trigger_t trigger);
 extern __attribute__((nothrow))
     esp_err_t esp_cpu_clear_watchpoint(int wp_nb);
+
+/***************************************************************************/
+/** Memory Ports
+****************************************************************************/
+/**
+ * @brief Configure the CPU to disable access to invalid memory regions
+ */
+extern __attribute__((nothrow))
+    void esp_cpu_configure_region_protection(void);
 
 __END_DECLS

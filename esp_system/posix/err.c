@@ -1,6 +1,18 @@
 #include <sys/errno.h>
 #include "esp_err.h"
 
+int __set_errno_neg(struct _reent *r, int err)
+{
+    r->_errno = err;
+    return -1;
+}
+
+void *__set_errno_nullptr(struct _reent *r, int err)
+{
+    r->_errno = err;
+    return NULL;
+}
+
 char *strerror(int err)
 {
     // do not change order

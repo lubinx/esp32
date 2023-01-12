@@ -33,6 +33,9 @@
     #include "esp32c6/rom/libc_stubs.h"
 #endif
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
+
 /****************************************************************************
  *  imports
 *****************************************************************************/
@@ -296,7 +299,7 @@ static void raise_r_stub(struct _reent *rptr)
 
 static int syscall_not_implemented(struct _reent *r, ...)
 {
-    __errno_r(r) = ENOSYS;
+    r->_errno = ENOSYS;
     return -1;
 }
 
@@ -304,3 +307,99 @@ static int syscall_not_implemented_aborts(void)
 {
     abort();
 }
+
+struct free_rtos_lock
+{
+    SemaphoreHandle_t hdl;
+    StaticSemaphore_t lock;
+};
+
+struct free_rtos_lock   __lock___sinit_recursive_mutex;
+struct free_rtos_lock   __lock___sfp_recursive_mutex;
+struct free_rtos_lock   __lock___env_recursive_mutex;
+struct free_rtos_lock   __lock___malloc_recursive_mutex;
+struct free_rtos_lock   __lock___atexit_recursive_mutex;
+struct free_rtos_lock   __lock___at_quick_exit_mutex;
+struct free_rtos_lock   __lock___tz_mutex;
+struct free_rtos_lock   __lock___dd_hash_mutex;
+struct free_rtos_lock   __lock___arc4random_mutex;
+
+void esp_newlib_locks_init(void)
+{
+    __lock___sinit_recursive_mutex.hdl =
+        xSemaphoreCreateRecursiveMutexStatic(&__lock___sinit_recursive_mutex.lock);
+    __lock___sfp_recursive_mutex.hdl =
+        xSemaphoreCreateRecursiveMutexStatic(&__lock___sfp_recursive_mutex.lock);
+    __lock___env_recursive_mutex.hdl =
+        xSemaphoreCreateRecursiveMutexStatic(&__lock___env_recursive_mutex.lock);
+    __lock___malloc_recursive_mutex.hdl =
+        xSemaphoreCreateRecursiveMutexStatic(&__lock___malloc_recursive_mutex.lock);
+    __lock___atexit_recursive_mutex.hdl =
+        xSemaphoreCreateRecursiveMutexStatic(&__lock___atexit_recursive_mutex.lock);
+
+    __lock___at_quick_exit_mutex.hdl =
+        xSemaphoreCreateMutexStatic(&__lock___at_quick_exit_mutex.lock);
+    __lock___tz_mutex.hdl =
+        xSemaphoreCreateMutexStatic(&__lock___tz_mutex.lock);
+    __lock___dd_hash_mutex.hdl =
+        xSemaphoreCreateMutexStatic(&__lock___dd_hash_mutex.lock);
+    __lock___arc4random_mutex.hdl =
+        xSemaphoreCreateMutexStatic(&__lock___arc4random_mutex.lock);
+}
+
+void __retarget_lock_init(_LOCK_T *lock)
+{
+    (*lock)->hdl = xSemaphoreCreateMutexStatic((void *)&((*lock)->dummy));
+}
+
+void __retarget_lock_init_recursive(_LOCK_T *lock)
+{
+    (*lock)->hdl = xSemaphoreCreateRecursiveMutexStatic((void *)(&(*lock)->dummy));
+}
+
+void __retarget_lock_close(_LOCK_T lock)
+{
+    ARG_UNUSED(lock);
+}
+
+void __retarget_lock_close_recursive(_LOCK_T lock)
+    __attribute__((alias("__retarget_lock_close")));
+void _lock_close(_LOCK_T lock)
+    __attribute__((alias("__retarget_lock_close")));
+void _lock_close_recursive(_LOCK_T lock)
+    __attribute__((alias("__retarget_lock_close")));
+
+
+void __retarget_lock_acquire(_LOCK_T lock)
+{
+    xSemaphoreTake(lock->hdl, portMAX_DELAY);
+}
+
+void __retarget_lock_acquire_recursive(_LOCK_T lock)
+    __attribute__((alias("__retarget_lock_acquire")));
+void _lock_acquire(_LOCK_T lock)
+    __attribute__((alias("__retarget_lock_acquire")));
+void _lock_acquire_recursive(_LOCK_T lock)
+    __attribute__((alias("__retarget_lock_acquire")));
+
+int __retarget_lock_try_acquire(_LOCK_T lock)
+{
+    return xSemaphoreTake(lock->hdl, 0);
+}
+
+int __retarget_lock_try_acquire_recursive(_LOCK_T lock)
+    __attribute__((alias("__retarget_lock_try_acquire")));
+int _lock_try_acquire(_LOCK_T lock)
+    __attribute__((alias("__retarget_lock_try_acquire")));
+int _lock_try_acquire_recursive(_LOCK_T lock)
+    __attribute__((alias("__retarget_lock_try_acquire")));
+
+void __retarget_lock_release(_LOCK_T lock)
+{
+    xSemaphoreGive(lock->hdl);
+}
+
+void _lock_release(_LOCK_T lock)
+    __attribute__((alias("__retarget_lock_release")));
+void _lock_release_recursive(_LOCK_T lock)
+    __attribute__((alias("__retarget_lock_release")));

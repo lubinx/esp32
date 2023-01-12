@@ -12,22 +12,14 @@
 
 __BEGIN_DECLS
 
-extern volatile __attribute__((pure, nothrow))
+extern volatile __attribute__((nothrow, pure))
     int *__errno(void);
 
-static inline
-    int __set_errno_neg(int err)
-    {
-        *__errno() = err;
-        return -1;
-    }
+extern __attribute__((nothrow, pure))
+    int __set_errno_neg(struct _reent *r, int err);
 
-static inline
-    void *__set_errno_nullptr(int err)
-    {
-        *__errno() = err;
-        return NULL;
-    }
+extern __attribute__((nothrow, pure))
+    void *__set_errno_nullptr(struct _reent *r, int err);
 
 __END_DECLS
 

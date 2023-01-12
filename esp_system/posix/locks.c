@@ -14,10 +14,6 @@
 #include "freertos/portable.h"
 #include "esp_rom_caps.h"
 
-struct __lock {
-   int reserved[23];
-};
-
 /* Compatibility definitions for the legacy ESP-specific locking implementation.
  * These used to be provided by libc/sys/xtensa/sys/lock.h in newlib.
  * Newer versions of newlib don't have this ESP-specific lock.h header, and are

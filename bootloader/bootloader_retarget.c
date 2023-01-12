@@ -10,7 +10,7 @@
 
 static int syscall_not_implemented(struct _reent *r, ...)
 {
-    __errno_r(r) = ENOSYS;
+    r->_errno = ENOSYS;
     return -1;
 }
 
