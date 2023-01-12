@@ -4,38 +4,44 @@
 
 struct __lock
 {
-    void *hdl;          // SemaphoreHandle_t
-    unsigned dummy[12];
+    int __dummy[20];
 };
-typedef struct __lock _lock_t;
+typedef struct __lock   sys_static_lock_t;
 
-static inline __attribute((nonnull, nothrow))
-    void _lock_init(_LOCK_T lock)
-    {
-        __retarget_lock_init(&lock);
-    }
+/**
+ *  lock static initialize
+*/
+extern __attribute__((nonnull, nothrow))
+    void _static_lock_init(_LOCK_T lock);
+extern __attribute__((nonnull, nothrow))
+    void _static_lock_init_recursive(_LOCK_T lock);
 
-static inline __attribute((nonnull, nothrow))
-    void _lock_init_recursive(_LOCK_T lock)
-    {
-        __retarget_lock_init_recursive(&lock);
-    }
+/***************************************************************************/
+/** esp-idf
+****************************************************************************/
+typedef _LOCK_T _lock_t;
 
-extern __attribute((nonnull, nothrow))
-    void _lock_close(_LOCK_T lock);
-extern __attribute((nonnull, nothrow))
-    void _lock_close_recursive(_LOCK_T lock);
+extern __attribute__((nonnull, nothrow))
+    void _lock_init(_lock_t *lock);
+extern __attribute__((nonnull, nothrow))
+    void _lock_init_recursive(_lock_t *lock);
 
-extern __attribute((nonnull, nothrow))
-    void _lock_acquire(_LOCK_T lock);
-extern __attribute((nonnull, nothrow))
-    void _lock_acquire_recursive(_LOCK_T lock);
-extern __attribute((nonnull, nothrow))
-    int _lock_try_acquire(_LOCK_T lock);
-extern __attribute((nonnull, nothrow))
-    int _lock_try_acquire_recursive(_LOCK_T lock);
+extern __attribute__((nonnull, nothrow))
+    void _lock_close(_lock_t *lock);
+extern __attribute__((nonnull, nothrow))
+    void _lock_close_recursive(_lock_t *lock);
 
-extern __attribute((nonnull, nothrow))
-    void _lock_release(_LOCK_T lock);
-extern __attribute((nonnull, nothrow))
-    void _lock_release_recursive(_LOCK_T lock);
+extern __attribute__((nonnull, nothrow))
+    void _lock_acquire(_lock_t *lock);
+extern __attribute__((nonnull, nothrow))
+    void _lock_acquire_recursive(_lock_t *lock);
+
+extern __attribute__((nonnull, nothrow))
+    int _lock_try_acquire(_lock_t *lock);
+extern __attribute__((nonnull, nothrow))
+    int _lock_try_acquire_recursive(_lock_t *lock);
+
+extern __attribute__((nonnull, nothrow))
+    void _lock_release(_lock_t *lock);
+extern __attribute__((nonnull, nothrow))
+    void _lock_release_recursive(_lock_t *lock);

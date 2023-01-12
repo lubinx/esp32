@@ -10,7 +10,7 @@
 
 struct KERNEL_context_t
 {
-    struct __lock lock;         // TODO: atomic lock before porting ultracore
+    sys_static_lock_t lock;             // TODO: atomic lock before porting ultracore
     struct KERNEL_hdl hdl[4096 / sizeof(struct KERNEL_hdl)];
     glist_t hdl_freed_list;
 };
@@ -19,7 +19,7 @@ struct KERNEL_context_t KERNEL_context;
 static __attribute__((constructor))
 void KERNEL_init(void)
 {
-    _lock_init_recursive(&KERNEL_context.lock);
+    _static_lock_init_recursive(&KERNEL_context.lock);
 
     glist_initialize(&KERNEL_context.hdl_freed_list);
 
@@ -28,7 +28,7 @@ void KERNEL_init(void)
 }
 
 /***************************************************************************/
-/** @implements atomic.h / spinlock.h
+/** @implements atomic.h
 ****************************************************************************/
 void ATOMIC_enter(void)
 {
@@ -41,7 +41,7 @@ void ATOMIC_leave(void)
 }
 
 /***************************************************************************/
-/** kernel
+/** @implements kernel.h
 ****************************************************************************/
 handle_t KERNEL_handle_get(uint32_t id)
 {
