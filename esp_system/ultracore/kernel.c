@@ -1,16 +1,13 @@
-#include <ultracore/kernel.h>
 #include <string.h>
 #include <sys/errno.h>
 #include <sys/lock.h>
 
-#include "esp_cpu.h"
-#include "esp_log.h"
+#include "ultracore/kernel.h"
 
 #define DYNAMIC_INC_DESCRIPTORS         (1024 / sizeof(sizeof(struct KERNEL_hdl)))
 
 struct KERNEL_context_t
 {
-    sys_static_lock_t lock;             // TODO: atomic lock before porting ultracore
     struct KERNEL_hdl hdl[4096 / sizeof(struct KERNEL_hdl)];
     glist_t hdl_freed_list;
 };
@@ -19,25 +16,10 @@ struct KERNEL_context_t KERNEL_context;
 static __attribute__((constructor))
 void KERNEL_init(void)
 {
-    _static_lock_init_recursive(&KERNEL_context.lock);
-
     glist_initialize(&KERNEL_context.hdl_freed_list);
 
     for (unsigned I = 0; I < lengthof(KERNEL_context.hdl); I ++)
         glist_push_back(&KERNEL_context.hdl_freed_list, &KERNEL_context.hdl[I]);
-}
-
-/***************************************************************************/
-/** @implements atomic.h
-****************************************************************************/
-void ATOMIC_enter(void)
-{
-    __retarget_lock_acquire(&KERNEL_context.lock);
-}
-
-void ATOMIC_leave(void)
-{
-    __retarget_lock_release_recursive(&KERNEL_context.lock);
 }
 
 /***************************************************************************/

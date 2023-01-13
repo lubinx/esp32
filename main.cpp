@@ -5,6 +5,7 @@
 #include <pthread.h>
 #include <assert.h>
 #include <errno.h>
+#include <sys/reent.h>
 #include "spinlock.h"
 
 #include "freertos/FreeRTOS.h"
@@ -23,10 +24,10 @@ spinlock_t spinlock = SPINLOCK_INITIALIZER;
 
 extern "C" void __attribute__((weak)) app_main(void)
 {
-    printf("Minimum free heap size: %d bytes\n", heap_caps_get_minimum_free_size(MALLOC_CAP_DEFAULT));
-    printf("cpu frequency: %d\n", esp_clk_cpu_freq());
+    esp_rom_printf("Minimum free heap size: %d bytes\n", heap_caps_get_minimum_free_size(MALLOC_CAP_DEFAULT));
+    esp_rom_printf("cpu frequency: %d\n", esp_clk_cpu_freq());
 
-    printf("infinite loop...\n");
+    esp_rom_printf("infinite loop...\n");
 
     try
     {
@@ -34,9 +35,11 @@ extern "C" void __attribute__((weak)) app_main(void)
     }
     catch(char const *e)
     {
-        printf("catched c++ exception: %s\n", e);
+        esp_rom_printf("catched c++ exception: %s\n", e);
         fflush(stdout);
     }
+
+    // printf("break\n");
 
     /*
     pthread_mutexattr_t attr;
@@ -74,7 +77,7 @@ static void *blink_thread1(void *arg)
         for (int i = 0; i < 1000; i ++)
             esp_rom_delay_us(1000);
 
-        printf("thread1: cpu: %d, val %d\n", esp_cpu_get_core_id(), val);
+        esp_rom_printf("thread1: cpu: %d, val %d\n", esp_cpu_get_core_id(), val);
 
         spinlock_acquire(&spinlock, SPINLOCK_WAIT_FOREVER);
         */
@@ -82,9 +85,9 @@ static void *blink_thread1(void *arg)
         int core_id = esp_cpu_get_core_id();
 
         if (start_core_id == core_id)
-            printf("thread1: cpu: %d start_core_id == core_id\n", core_id);
+            esp_rom_printf("thread1: cpu: %d start_core_id == core_id\n", core_id);
         else
-            printf("thread1: cpu: %d ########### start_core_id != core_id\n", core_id);
+            esp_rom_printf("thread1: cpu: %d ########### start_core_id != core_id\n", core_id);
 
         fflush(stdout);
         spinlock_release(&spinlock);
@@ -105,7 +108,7 @@ static void *blink_thread2(void *arg)
     while (true)
     {
         spinlock_acquire(&spinlock, SPINLOCK_WAIT_FOREVER);
-        printf("thread2: cpu: %d\n", esp_cpu_get_core_id());
+        esp_rom_printf("thread2: cpu: %d\n", esp_cpu_get_core_id());
         fflush(stdout);
         spinlock_release(&spinlock);
 
@@ -120,7 +123,7 @@ static void *blink_thread3(void *arg)
     while (true)
     {
         spinlock_acquire(&spinlock, SPINLOCK_WAIT_FOREVER);
-        printf("thread3: cpu: %d\n", esp_cpu_get_core_id());
+        esp_rom_printf("thread3: cpu: %d\n", esp_cpu_get_core_id());
         fflush(stdout);
         spinlock_release(&spinlock);
 

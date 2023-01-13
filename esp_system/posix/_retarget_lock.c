@@ -60,7 +60,7 @@ extern struct __lock    __lock___tz_mutex               __attribute__((alias("__
 extern struct __lock    __lock___dd_hash_mutex          __attribute__((alias("__dd_hash_mutex")));
 extern struct __lock    __lock___arc4random_mutex       __attribute__((alias("__arc4random_mutex")));
 
-void esp_newlib_locks_init(void)
+void __retarget_lock(void)
 {
     xSemaphoreCreateRecursiveMutexStatic((void *)&__lock___sinit_recursive_mutex.__dummy);
     xSemaphoreCreateRecursiveMutexStatic((void *)&__lock___sfp_recursive_mutex.__dummy);

@@ -127,7 +127,7 @@ void __attribute__((noreturn)) Reset_Handler(void)
     #endif
 
     kernel_entry_t entry = KERNEL_load(0x10000);
-    ESP_LOGI(TAG, "entry => %p\n");
+    ESP_LOGI(TAG, "entry => %p\n", entry);
 
     // disable RWDT flashboot protection.
     wdt_hal_context_t rwdt_ctx =

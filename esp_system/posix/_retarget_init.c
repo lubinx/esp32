@@ -12,6 +12,7 @@
 #include <sys/stat.h>
 #include <sys/reent.h>
 
+#include "esp_log.h"
 #include "esp_rom_caps.h"
 #include "esp_newlib.h"
 
@@ -51,91 +52,23 @@ extern __attribute__((nothrow))
 extern void _cleanup_r(struct _reent* r);
 
 /****************************************************************************
- *  local
+ *  @internal
 *****************************************************************************/
 static void raise_r_stub(struct _reent *rptr);
 
 static int syscall_not_implemented(struct _reent *r, ...);
 static int syscall_not_implemented_aborts(void);
 
+static const struct syscall_stub_table s_stub_table;
+static struct _reent s_reent;
+
 /****************************************************************************
- *  exports
+ *  @implements
 *****************************************************************************/
 void esp_newlib_init(void)
 {
-    static const struct syscall_stub_table s_stub_table =
-    {
-        .__getreent = &__getreent,
-        ._malloc_r = &_malloc_r,
-        ._free_r = &_free_r,
-        ._realloc_r = &_realloc_r,
-        ._calloc_r = &_calloc_r,
-        ._abort = &abort,
-        ._system_r = &_system_r,
-        ._rename_r = &_rename_r,
-        ._times_r = &_times_r,
-        ._gettimeofday_r = &_gettimeofday_r,
-        ._raise_r = &raise_r_stub,
-        ._unlink_r = &_unlink_r,
-        ._link_r = &_link_r,
-        ._stat_r = &_stat_r,
-        ._fstat_r = &_fstat_r,
-        ._sbrk_r = &_sbrk_r,
-        ._getpid_r = &_getpid_r,
-        ._kill_r = &_kill_r,
-        ._exit_r = NULL,    // never called in ROM
-        ._close_r = &_close_r,
-        ._open_r = &_open_r,
-        ._write_r = (int (*)(struct _reent *r, int, const void *, int)) &_write_r,
-        ._lseek_r = (int (*)(struct _reent *r, int, int, int)) &_lseek_r,
-        ._read_r = (int (*)(struct _reent *r, int, void *, int)) &_read_r,
-        #if ESP_ROM_HAS_RETARGETABLE_LOCKING
-            ._retarget_lock_init = &__retarget_lock_init,
-            ._retarget_lock_init_recursive = &__retarget_lock_init_recursive,
-            ._retarget_lock_close = &__retarget_lock_close,
-            ._retarget_lock_close_recursive = &__retarget_lock_close_recursive,
-            ._retarget_lock_acquire = &__retarget_lock_acquire,
-            ._retarget_lock_acquire_recursive = &__retarget_lock_acquire_recursive,
-            ._retarget_lock_try_acquire = &__retarget_lock_try_acquire,
-            ._retarget_lock_try_acquire_recursive = &__retarget_lock_try_acquire_recursive,
-            ._retarget_lock_release = &__retarget_lock_release,
-            ._retarget_lock_release_recursive = &__retarget_lock_release_recursive,
-        #else
-            ._lock_init = &_lock_init,
-            ._lock_init_recursive = &_lock_init_recursive,
-            ._lock_close = &_lock_close,
-            ._lock_close_recursive = &_lock_close_recursive,
-            ._lock_acquire = &_lock_acquire,
-            ._lock_acquire_recursive = &_lock_acquire_recursive,
-            ._lock_try_acquire = &_lock_try_acquire,
-            ._lock_try_acquire_recursive = &_lock_try_acquire_recursive,
-            ._lock_release = &_lock_release,
-            ._lock_release_recursive = &_lock_release_recursive,
-        #endif
-        #ifdef CONFIG_NEWLIB_NANO_FORMAT
-            ._printf_float = &_printf_float,
-            ._scanf_float = &_scanf_float,
-        #else
-            ._printf_float = NULL,
-            ._scanf_float = NULL,
-        #endif
-        #if CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32H4 \
-            || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C6
-            /* TODO IDF-2570 : mark that this assert failed in ROM, to avoid confusion between IDF & ROM
-            assertion failures (as function names & source file names will be similar)
-            */
-            .__assert_func = __assert_func,
-
-            /* We don't expect either ROM code or IDF to ever call __sinit, so it's implemented as abort() for now.
-
-            esp_reent_init() does this job inside IDF.
-
-            Kept in the syscall table in case we find a need for it later.
-            */
-            .__sinit = (void *)abort,
-            ._cleanup_r = &_cleanup_r,
-        #endif
-    };
+    extern void __retarget_lock(void);
+    __retarget_lock();
 
     #if CONFIG_IDF_TARGET_ESP32
         syscall_table_ptr_pro = syscall_table_ptr_app = &s_stub_table;
@@ -146,14 +79,12 @@ void esp_newlib_init(void)
         syscall_table_ptr = (void *)&s_stub_table;
     #endif
 
-    static struct _reent s_reent;
     _GLOBAL_REENT = &s_reent;
+    _REENT_SMALL_CHECK_INIT(_GLOBAL_REENT);
+    esp_reent_init(_GLOBAL_REENT);
 
     static char *env[1] = {0};
     char **environ = env;
-
-    extern void esp_newlib_locks_init(void);
-    esp_newlib_locks_init();
 
     extern void esp_newlib_time_init(void);
     esp_newlib_time_init();
@@ -292,8 +223,82 @@ int _system_r(struct _reent *r, const char *str)
 #pragma GCC diagnostic pop
 
 /****************************************************************************
- *  local
+ *  @internal
 *****************************************************************************/
+static const struct syscall_stub_table s_stub_table =
+{
+    .__getreent = &__getreent,
+    ._malloc_r = &_malloc_r,
+    ._free_r = &_free_r,
+    ._realloc_r = &_realloc_r,
+    ._calloc_r = &_calloc_r,
+    ._abort = &abort,
+    ._system_r = &_system_r,
+    ._rename_r = &_rename_r,
+    ._times_r = &_times_r,
+    ._gettimeofday_r = &_gettimeofday_r,
+    ._raise_r = &raise_r_stub,
+    ._unlink_r = &_unlink_r,
+    ._link_r = &_link_r,
+    ._stat_r = &_stat_r,
+    ._fstat_r = &_fstat_r,
+    ._sbrk_r = &_sbrk_r,
+    ._getpid_r = &_getpid_r,
+    ._kill_r = &_kill_r,
+    ._exit_r = NULL,    // never called in ROM
+    ._close_r = &_close_r,
+    ._open_r = &_open_r,
+    ._write_r = (int (*)(struct _reent *r, int, const void *, int)) &_write_r,
+    ._lseek_r = (int (*)(struct _reent *r, int, int, int)) &_lseek_r,
+    ._read_r = (int (*)(struct _reent *r, int, void *, int)) &_read_r,
+#if ESP_ROM_HAS_RETARGETABLE_LOCKING
+    ._retarget_lock_init = &__retarget_lock_init,
+    ._retarget_lock_init_recursive = &__retarget_lock_init_recursive,
+    ._retarget_lock_close = &__retarget_lock_close,
+    ._retarget_lock_close_recursive = &__retarget_lock_close_recursive,
+    ._retarget_lock_acquire = &__retarget_lock_acquire,
+    ._retarget_lock_acquire_recursive = &__retarget_lock_acquire_recursive,
+    ._retarget_lock_try_acquire = &__retarget_lock_try_acquire,
+    ._retarget_lock_try_acquire_recursive = &__retarget_lock_try_acquire_recursive,
+    ._retarget_lock_release = &__retarget_lock_release,
+    ._retarget_lock_release_recursive = &__retarget_lock_release_recursive,
+#else
+    ._lock_init = &_lock_init,
+    ._lock_init_recursive = &_lock_init_recursive,
+    ._lock_close = &_lock_close,
+    ._lock_close_recursive = &_lock_close_recursive,
+    ._lock_acquire = &_lock_acquire,
+    ._lock_acquire_recursive = &_lock_acquire_recursive,
+    ._lock_try_acquire = &_lock_try_acquire,
+    ._lock_try_acquire_recursive = &_lock_try_acquire_recursive,
+    ._lock_release = &_lock_release,
+    ._lock_release_recursive = &_lock_release_recursive,
+#endif
+#ifdef CONFIG_NEWLIB_NANO_FORMAT
+    ._printf_float = &_printf_float,
+    ._scanf_float = &_scanf_float,
+#else
+    ._printf_float = NULL,
+    ._scanf_float = NULL,
+#endif
+#if CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32H4 \
+    || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C6
+    /* TODO IDF-2570 : mark that this assert failed in ROM, to avoid confusion between IDF & ROM
+    assertion failures (as function names & source file names will be similar)
+    */
+    .__assert_func = __assert_func,
+
+    /* We don't expect either ROM code or IDF to ever call __sinit, so it's implemented as abort() for now.
+
+    esp_reent_init() does this job inside IDF.
+
+    Kept in the syscall table in case we find a need for it later.
+    */
+    .__sinit = (void *)abort,
+    ._cleanup_r = &_cleanup_r,
+#endif
+};
+
 static void raise_r_stub(struct _reent *rptr)
 {
     _raise_r(rptr, 0);
@@ -301,7 +306,10 @@ static void raise_r_stub(struct _reent *rptr)
 
 static int syscall_not_implemented(struct _reent *r, ...)
 {
+    ESP_LOGE(TAG, "_isatty_r() not implementd");
     r->_errno = ENOSYS;
+
+    while (1);
     return -1;
 }
 

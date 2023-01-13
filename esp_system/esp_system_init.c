@@ -7,10 +7,8 @@
 #include "esp_heap_caps_init.h"
 #include "esp_log.h"
 
-#include "esp_memprot.h"
-
 #include "esp_rom_caps.h"
-#include "esp_rom_uart.h"
+#include "esp_rom_sys.h"
 #include "esp_newlib.h"
 #include "esp_timer.h"
 
@@ -28,11 +26,6 @@
 
 #if CONFIG_ESP32_TRAX || CONFIG_ESP32S2_TRAX || CONFIG_ESP32S3_TRAX
     #include "esp_private/trax.h"
-#endif
-
-#if CONFIG_VFS_SUPPORT_IO
-    #include "esp_vfs_dev.h"
-    #include "esp_vfs_console.h"
 #endif
 
 static char const *TAG = "system_init";
@@ -89,8 +82,8 @@ void SystemInit(void)
             #if ESP_ROM_UART_CLK_IS_XTAL
                 clock_hz = esp_clk_xtal_freq(); // From esp32-s3 on, UART clock source is selected to XTAL in ROM
             #endif
-            esp_rom_uart_tx_wait_idle(CONFIG_ESP_CONSOLE_UART_NUM);
-            esp_rom_uart_set_clock_baudrate(CONFIG_ESP_CONSOLE_UART_NUM, clock_hz, CONFIG_ESP_CONSOLE_UART_BAUDRATE);
+            // esp_rom_uart_tx_wait_idle(CONFIG_ESP_CONSOLE_UART_NUM);
+            // esp_rom_uart_set_clock_baudrate(CONFIG_ESP_CONSOLE_UART_NUM, clock_hz, CONFIG_ESP_CONSOLE_UART_BAUDRATE);
         #endif
     #endif
 
@@ -101,6 +94,13 @@ void SystemInit(void)
     */
 
     esp_cache_err_int_init();
+
+    heap_caps_init();
+    esp_timer_early_init();
+    esp_newlib_init();
+
+    /*
+        // TODO: enablie it somehow conflict with vfs => uart driver, somehting outside the memory protect area
 
     #if CONFIG_ESP_SYSTEM_MEMPROT_FEATURE && !CONFIG_ESP_SYSTEM_MEMPROT_TEST
         // Memprot cannot be locked during OS startup as the lock-on prevents any PMS changes until a next reboot
@@ -125,38 +125,7 @@ void SystemInit(void)
             esp_restart_noos_dig();
         }
     #endif
-
-    heap_caps_init();
-    esp_timer_early_init();
-    esp_newlib_init();
-
-    #if CONFIG_VFS_SUPPORT_IO
-        esp_vfs_console_register();
-    #endif
-
-    #if defined(CONFIG_VFS_SUPPORT_IO) && !defined(CONFIG_ESP_CONSOLE_NONE)
-        static char const *default_stdio_dev = "/dev/console/";
-        esp_reent_init(_GLOBAL_REENT);
-        _GLOBAL_REENT->_stdin  = fopen(default_stdio_dev, "r");
-        _GLOBAL_REENT->_stdout = fopen(default_stdio_dev, "w");
-        _GLOBAL_REENT->_stderr = fopen(default_stdio_dev, "w");
-        #if ESP_ROM_NEEDS_SWSETUP_WORKAROUND
-            /*
-            - This workaround for printf functions using 32-bit time_t after the 64-bit time_t upgrade
-            - The 32-bit time_t usage is triggered through ROM Newlib functions printf related functions calling __swsetup_r() on
-            the first call to a particular file pointer (i.e., stdin, stdout, stderr)
-            - Thus, we call the toolchain version of __swsetup_r() now (before any printf calls are made) to setup all of the
-            file pointers. Thus, the ROM newlib code will never call the ROM version of __swsetup_r().
-            - See IDFGH-7728 for more details
-            */
-            extern int __swsetup_r(struct _reent *, FILE *);
-            __swsetup_r(_GLOBAL_REENT, _GLOBAL_REENT->_stdout);
-            __swsetup_r(_GLOBAL_REENT, _GLOBAL_REENT->_stderr);
-            __swsetup_r(_GLOBAL_REENT, _GLOBAL_REENT->_stdin);
-        #endif
-    #else
-        _REENT_SMALL_CHECK_INIT(_GLOBAL_REENT);
-    #endif
+    */
 }
 
 ESP_SYSTEM_INIT_FN(init_components0, BIT(0), 200)
@@ -183,14 +152,6 @@ ESP_SYSTEM_INIT_FN(startup_other_cores, BIT(1), 201)
 {
     ets_set_appcpu_boot_addr(0);
     esp_cpu_intr_set_ivt_addr(&_vector_table);
-
-    #if CONFIG_ESP_CONSOLE_NONE
-        esp_rom_install_channel_putc(1, NULL);
-        esp_rom_install_channel_putc(2, NULL);
-    #else
-        esp_rom_install_uart_printf();
-        esp_rom_uart_set_as_console(CONFIG_ESP_CONSOLE_UART_NUM);
-    #endif
 
     REG_WRITE(ASSIST_DEBUG_CORE_1_RCD_PDEBUGENABLE_REG, 1);
     REG_WRITE(ASSIST_DEBUG_CORE_1_RCD_RECORDING_REG, 1);

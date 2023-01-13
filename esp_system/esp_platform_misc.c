@@ -17,6 +17,7 @@
 void esp_restart(void)
 {
     exit(0);
+    while (1);
 }
 
 void esp_restart_noos(void)

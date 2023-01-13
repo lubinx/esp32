@@ -102,9 +102,8 @@ list(APPEND IDF_COMPILE_OPTIONS
     "-Wno-sign-compare"
     "-Wno-undef"
     "-Wno-unused-parameter"
-    "-Wno-unused-variable"
-    "-fno-jump-tables"
-    "-fno-tree-switch-conversion"
+    # "-fno-jump-tables"
+    # "-fno-tree-switch-conversion"
     "$<$<COMPILE_LANGUAGE:C>:-fstrict-volatile-bitfields>"
     "$<$<COMPILE_LANGUAGE:C>:-Wno-old-style-declaration>"
 )
@@ -117,7 +116,7 @@ endif()
 list(APPEND IDF_KERNEL_COMPONENTS
     "esp_system" "esp_rom"
     "soc" "hal" "esp_hw_support" "efuse" "esp_pm" "heap"
-    "freertos" "vfs"
+    "freertos"
     # "spi_flash"
     "esptool_py"
 )

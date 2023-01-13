@@ -13,6 +13,27 @@ config ESP_SYSTEM_RTC_EXT_OSC
     bool
     default n
 
+# vfs related
+config VFS_SUPPORT_IO
+    bool
+    default y
+config VFS_SUPPORT_DIR
+    bool
+    default y
+config VFS_SUPPORT_SELECT
+    bool
+    default y
+config VFS_SUPPRESS_SELECT_DEBUG_OUTPUT
+    bool
+    default y
+config VFS_SUPPORT_TERMIOS
+    bool
+    default y
+config VFS_SEMIHOSTFS_MAX_MOUNT_POINTS
+    # do not how
+    int
+    default 1
+
 menu "ESP System Settings"
     rsource "$IDF_TARGET/Kconfig.cpu"
     orsource "$IDF_TARGET/Kconfig.cache"
