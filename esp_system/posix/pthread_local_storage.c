@@ -6,12 +6,14 @@
 #include <errno.h>
 #include <pthread.h>
 #include <string.h>
-#include "esp_err.h"
+#include <sys/errno.h>
+#include <sys/lock.h>
+#include <sys/queue.h>
+
 #include "esp_log.h"
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "sys/lock.h"
-#include "sys/queue.h"
 
 #include "pthread_internal.h"
 

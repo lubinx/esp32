@@ -2,6 +2,9 @@
 
 #include <sys/features.h>
 #include <sys/cdefs.h>
+    #ifndef STRINGIFY
+        #define STRINGIFY(val)              #val
+    #endif
 
     // REVIEW: restrict keyword not defined?
     #define restrict

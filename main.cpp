@@ -9,6 +9,7 @@
 #include "spinlock.h"
 
 #include "freertos/FreeRTOS.h"
+#include "ultracore/kernel.h"
 
 #include "esp_cpu.h"
 #include "esp_log.h"
@@ -18,6 +19,7 @@
 static void *blink_thread1(void *arg);
 static void *blink_thread2(void *arg);
 static void *blink_thread3(void *arg);
+
 
 // pthread_mutex_t mutex;
 spinlock_t spinlock = SPINLOCK_INITIALIZER;
@@ -39,7 +41,15 @@ extern "C" void __attribute__((weak)) app_main(void)
         fflush(stdout);
     }
 
-    // printf("break\n");
+    void *hdl = KERNEL_handle_get(CID_FD);
+    esp_rom_printf("hdl: %p\n", hdl);
+
+    printf("hello world!\n");
+
+    FILE *f = fopen("foo", "w+");
+    if (f)
+    {
+    }
 
     /*
     pthread_mutexattr_t attr;

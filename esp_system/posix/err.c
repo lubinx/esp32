@@ -1,13 +1,26 @@
+#include <string.h>
 #include <sys/errno.h>
-#include "esp_err.h"
 
-int __set_errno_neg(struct _reent *r, int err)
+#include "esp_err.h"
+#include "esp_log.h"
+
+static char const *TAG = "err";
+
+int *__errno(void)
 {
+    extern struct _reent *__getreent(void);     // freertos_tasks_c_additions.h linked by freertos
+    return &__getreent()->_errno;
+}
+
+int __set_errno_r_neg(struct _reent *r, int err, char const *__function__)
+{
+    ESP_LOGE(TAG, "%d, %s(): %s", err, __function__, strerror(err));
+
     r->_errno = err;
     return -1;
 }
 
-void *__set_errno_nullptr(struct _reent *r, int err)
+void *__set_errno_r_nullptr(struct _reent *r, int err, char const *__function__)
 {
     r->_errno = err;
     return NULL;

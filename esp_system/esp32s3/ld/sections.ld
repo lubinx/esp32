@@ -133,17 +133,19 @@ PROVIDE(_flash_rodata_start = ABSOLUTE(.));
         *(.gnu.linkonce.r.*)
         *(.rodata1)
 
-        *(.xt_except_table)
-        *(.gcc_except_table .gcc_except_table.*)
-        *(.gnu.linkonce.e.*)
-        *(.gnu.version_r)
-
         . = ALIGN(4);   /* WTF? . = (. + 3) & ~ 3; */
         __eh_frame = ABSOLUTE(.);
         KEEP(*(.eh_frame))
 
         . = ALIGN(4);
-        /* gcc constructors */
+        __XT_EXCEPTION_TABLE_ = ABSOLUTE(.);
+        *(.xt_except_table)
+        *(.gcc_except_table .gcc_except_table.*)
+        *(.gnu.linkonce.e.*)
+        *(.gnu.version_r)
+
+        /* constructor and destructor tables */
+        /* Don't include anything from crtbegin.o or crtend.o, as IDF doesn't use toolchain crt */
         __init_array_start = ABSOLUTE(.);
         KEEP (*(EXCLUDE_FILE (*crtend.* *crtbegin.*) .ctors SORT(.ctors.*)))
         __init_array_end = ABSOLUTE(.);
@@ -151,17 +153,12 @@ PROVIDE(_flash_rodata_start = ABSOLUTE(.));
         KEEP (*(EXCLUDE_FILE (*crtend.*) .dtors))
         KEEP (*(SORT(.dtors.*)))
         KEEP (*(.dtors))
-        /* System init functions registered via ESP_SYSTEM_INIT_FN */
-        _esp_system_init_fn_array_start = ABSOLUTE(.);
-        KEEP (*(SORT_BY_INIT_PRIORITY(.esp_system_init_fn.*)))
-        _esp_system_init_fn_array_end = ABSOLUTE(.);
-        PROVIDE(_rodata_end = ABSOLUTE(.));
 
         /* C++ exception handlers table: */
-        /* __XT_EXCEPTION_DESCS_ = ABSOLUTE(.); */
+        __XT_EXCEPTION_DESCS_ = ABSOLUTE(.);
         *(.xt_except_desc)
         *(.gnu.linkonce.h.*)
-        /* __XT_EXCEPTION_DESCS_END__ = ABSOLUTE(.); */
+        __XT_EXCEPTION_DESCS_END__ = ABSOLUTE(.);
         *(.xt_except_desc_end)
         *(.dynamic)
         *(.gnu.version_d)
@@ -170,6 +167,11 @@ PROVIDE(_flash_rodata_start = ABSOLUTE(.));
         soc_reserved_memory_region_start = ABSOLUTE(.);
         KEEP (*(.reserved_memory_address))
         soc_reserved_memory_region_end = ABSOLUTE(.);
+
+        /* System init functions registered via ESP_SYSTEM_INIT_FN */
+        _esp_system_init_fn_array_start = ABSOLUTE(.);
+        KEEP (*(SORT_BY_INIT_PRIORITY(.esp_system_init_fn.*)))
+        _esp_system_init_fn_array_end = ABSOLUTE(.);
 
         /* Literals are also RO data. */
         _lit4_start = ABSOLUTE(.);

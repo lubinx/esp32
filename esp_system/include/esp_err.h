@@ -16,9 +16,4 @@ __BEGIN_DECLS
 extern __attribute__((nothrow, const))
     char const *esp_err_to_name(esp_err_t code);
 
-/*
-extern __attribute__((nothrow, pure))
-    const char *esp_err_to_name_r(esp_err_t code, char *buf, size_t buflen);
-*/
-
 __END_DECLS

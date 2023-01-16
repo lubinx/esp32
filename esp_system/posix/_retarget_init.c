@@ -9,14 +9,13 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include <sys/stat.h>
+#include <sys/errno.h>
 #include <sys/reent.h>
+#include <sys/stat.h>
 
 #include "esp_log.h"
 #include "esp_rom_caps.h"
 #include "esp_newlib.h"
-
-#include "soc/soc_caps.h"
 
 #if CONFIG_IDF_TARGET_ESP32
     #include "esp32/rom/libc_stubs.h"
@@ -35,56 +34,60 @@
 #endif
 
 #include "freertos/FreeRTOS.h"
-#include "freertos/semphr.h"
-
-char const *TAG = "retargeting";
 
 /****************************************************************************
- *  imports
+ * @imports
 *****************************************************************************/
-extern __attribute__((nothrow))
-    int _printf_float(struct _reent *rptr, void *pdata,
-        FILE * fp, int (*pfunc) (struct _reent *, FILE *, const char *, size_t len), va_list * ap);
+extern void __LOCK_retarget(void);
+extern void __FILESYSTEM_init(void);
+extern void __IO_retarget(void);
 
-extern __attribute__((nothrow))
-    int _scanf_float(struct _reent *rptr, void *pdata, FILE *fp, va_list *ap);
+extern int _printf_float(struct _reent *rptr, void *pdata,
+    FILE * fp, int (*pfunc) (struct _reent *, FILE *, const char *, size_t len), va_list * ap);
+extern int _scanf_float(struct _reent *rptr, void *pdata, FILE *fp, va_list *ap);
 
 extern void _cleanup_r(struct _reent* r);
+extern struct _reent *__getreent(void);     // freertos_tasks_c_additions.h linked by freertos
 
 /****************************************************************************
  *  @internal
 *****************************************************************************/
 static void raise_r_stub(struct _reent *rptr);
 
-static int syscall_not_implemented(struct _reent *r, ...);
-static int syscall_not_implemented_aborts(void);
-
-static const struct syscall_stub_table s_stub_table;
-static struct _reent s_reent;
+static const struct syscall_stub_table __stub_table;
+static struct _reent __reent;
 
 /****************************************************************************
  *  @implements
 *****************************************************************************/
 void esp_newlib_init(void)
 {
-    extern void __retarget_lock(void);
-    __retarget_lock();
-
     #if CONFIG_IDF_TARGET_ESP32
-        syscall_table_ptr_pro = syscall_table_ptr_app = &s_stub_table;
+        syscall_table_ptr_pro = syscall_table_ptr_app = &__stub_table;
     #elif CONFIG_IDF_TARGET_ESP32S2
-        syscall_table_ptr_pro = &s_stub_table;
+        syscall_table_ptr_pro = &__stub_table;
     #elif CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32H4 \
         || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C6
-        syscall_table_ptr = (void *)&s_stub_table;
+        syscall_table_ptr = (void *)&__stub_table;
     #endif
 
-    _GLOBAL_REENT = &s_reent;
-    _REENT_SMALL_CHECK_INIT(_GLOBAL_REENT);
-    esp_reent_init(_GLOBAL_REENT);
+    _GLOBAL_REENT = &__reent;
+    esp_vfs_console_register();
 
-    static char *env[1] = {0};
-    char **environ = env;
+    #if defined(CONFIG_VFS_SUPPORT_IO) && !defined(CONFIG_ESP_CONSOLE_NONE)
+        esp_reent_init(_GLOBAL_REENT);
+
+        static char const *default_stdio_dev = "/dev/console/";
+        _GLOBAL_REENT->_stdin  = fopen(default_stdio_dev, "r");
+        _GLOBAL_REENT->_stdout = fopen(default_stdio_dev, "w");
+        _GLOBAL_REENT->_stderr = fopen(default_stdio_dev, "w");
+    #else
+        _REENT_SMALL_CHECK_INIT(_GLOBAL_REENT);
+    #endif
+
+    __LOCK_retarget();
+    __IO_retarget();
+    // __FILESYSTEM_init();
 
     extern void esp_newlib_time_init(void);
     esp_newlib_time_init();
@@ -174,58 +177,38 @@ void esp_reent_cleanup(void)
     r->_asctime_buf = NULL;
 }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wattribute-alias"
-
-int _isatty_r(struct _reent *r, int fd)
-    __attribute__((weak, alias("syscall_not_implemented")));
-
-int _open_r(struct _reent *r, const char *path, int flags, int mode)
-    __attribute__((weak, alias("syscall_not_implemented")));
-
-int _close_r(struct _reent *r, int fd)
-    __attribute__((weak, alias("syscall_not_implemented")));
-
-off_t _lseek_r(struct _reent *r, int fd, off_t size, int mode)
-    __attribute__((weak, alias("syscall_not_implemented")));
-
-ssize_t _read_r(struct _reent *r, int fd, void * dst, size_t size)
-    __attribute__((weak, alias("syscall_not_implemented")));
-
-ssize_t _write_r(struct _reent *r, int fd, const void * data, size_t size)
-    __attribute__((weak, alias("syscall_not_implemented")));
-
-int _fstat_r(struct _reent *r, int fd, struct stat *st)
-    __attribute__((weak, alias("syscall_not_implemented")));
-
-int _fcntl_r(struct _reent *r, int fd, int cmd, int arg)
-    __attribute__((weak, alias("syscall_not_implemented")));
-int _stat_r(struct _reent *r, const char *path, struct stat * st)
-    __attribute__((weak, alias("syscall_not_implemented")));
-
-int _link_r(struct _reent *r, const char* n1, const char* n2)
-    __attribute__((weak, alias("syscall_not_implemented")));
-int _unlink_r(struct _reent *r, const char *path)
-    __attribute__((weak, alias("syscall_not_implemented")));
-
-int _rename_r(struct _reent *r, const char *src, const char *dst)
-    __attribute__((weak, alias("syscall_not_implemented")));
-
 int _getpid_r(struct _reent *r)
-    __attribute__((weak, alias("syscall_not_implemented")));
-int _kill_r(struct _reent *r, int pid, int sig)
-    __attribute__((weak, alias("syscall_not_implemented")));
+{
+    ARG_UNUSED(r);
+    return 0;
+}
 
-/* These functions are not expected to be overridden */
-int _system_r(struct _reent *r, const char *str)
-    __attribute__((alias("syscall_not_implemented")));
+#define __ENOSYS                        { return __set_errno_neg(r, ENOSYS); }
+#define __WEAK                          __attribute__((weak))
 
-#pragma GCC diagnostic pop
+__WEAK int _system_r(struct _reent *r, const char *str)
+    // __attribute__((alias("syscall_not_implemented")));
+{
+    ESP_LOGE("syscall", "_system_r()");
+    while(1);
+}
+
+__WEAK int _isatty_r(struct _reent *r, int fd)                                   __ENOSYS;
+__WEAK int _open_r(struct _reent *r, const char *path, int flags, int mode)      __ENOSYS;
+__WEAK int _close_r(struct _reent *r, int fd)                                    __ENOSYS;
+__WEAK int _fstat_r(struct _reent *r, int fd, struct stat *st)                   __ENOSYS;
+__WEAK int _stat_r(struct _reent *r, const char *path, struct stat * st)         __ENOSYS;
+__WEAK int _link_r(struct _reent *r, const char* n1, const char* n2)             __ENOSYS;
+__WEAK int _unlink_r(struct _reent *r, const char *path)                         __ENOSYS;
+__WEAK int _rename_r(struct _reent *r, const char *src, const char *dst)         __ENOSYS;
+__WEAK ssize_t _read_r(struct _reent *r, int fd, void * dst, size_t size)        __ENOSYS;
+__WEAK ssize_t _write_r(struct _reent *r, int fd, void const *data, size_t size) __ENOSYS;
+__WEAK off_t _lseek_r(struct _reent *r, int fd, off_t size, int mode)            __ENOSYS;
 
 /****************************************************************************
  *  @internal
 *****************************************************************************/
-static const struct syscall_stub_table s_stub_table =
+static const struct syscall_stub_table __stub_table =
 {
     .__getreent = &__getreent,
     ._malloc_r = &_malloc_r,
@@ -283,16 +266,15 @@ static const struct syscall_stub_table s_stub_table =
 #endif
 #if CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32H4 \
     || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C6
-    /* TODO IDF-2570 : mark that this assert failed in ROM, to avoid confusion between IDF & ROM
-    assertion failures (as function names & source file names will be similar)
+    /*
+        TODO IDF-2570 : mark that this assert failed in ROM, to avoid confusion between IDF & ROM
+            assertion failures (as function names & source file names will be similar)
     */
     .__assert_func = __assert_func,
-
-    /* We don't expect either ROM code or IDF to ever call __sinit, so it's implemented as abort() for now.
-
-    esp_reent_init() does this job inside IDF.
-
-    Kept in the syscall table in case we find a need for it later.
+    /*
+        We don't expect either ROM code or IDF to ever call __sinit, so it's implemented as abort() for now.
+            esp_reent_init() does this job inside IDF.
+        Kept in the syscall table in case we find a need for it later.
     */
     .__sinit = (void *)abort,
     ._cleanup_r = &_cleanup_r,
@@ -302,18 +284,4 @@ static const struct syscall_stub_table s_stub_table =
 static void raise_r_stub(struct _reent *rptr)
 {
     _raise_r(rptr, 0);
-}
-
-static int syscall_not_implemented(struct _reent *r, ...)
-{
-    ESP_LOGE(TAG, "_isatty_r() not implementd");
-    r->_errno = ENOSYS;
-
-    while (1);
-    return -1;
-}
-
-static int syscall_not_implemented_aborts(void)
-{
-    abort();
 }

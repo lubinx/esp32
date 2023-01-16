@@ -3,7 +3,9 @@
 #include <sys/lock.h>
 
 #include "ultracore/kernel.h"
+#include "esp_log.h"
 
+static char const *TAG = "kernel";
 #define DYNAMIC_INC_DESCRIPTORS         (1024 / sizeof(sizeof(struct KERNEL_hdl)))
 
 struct KERNEL_context_t
@@ -13,9 +15,10 @@ struct KERNEL_context_t
 };
 struct KERNEL_context_t KERNEL_context;
 
-static __attribute__((constructor))
-void KERNEL_init(void)
+__attribute__((constructor))
+static void KERNEL_init(void)
 {
+    ESP_LOGD(TAG, "constructor: KERNEL_init()");
     glist_initialize(&KERNEL_context.hdl_freed_list);
 
     for (unsigned I = 0; I < lengthof(KERNEL_context.hdl); I ++)

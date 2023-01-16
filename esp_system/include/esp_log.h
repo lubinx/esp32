@@ -77,7 +77,7 @@ __BEGIN_DECLS
 #endif
 
     #define LOG_FORMAT(level, format)  \
-        level##_COLOR "%-6" PRIu32 level##_LETTER" %s: " format LOG_END"\n"
+        level##_COLOR "%-6" PRIu32 level##_LETTER" %s: " format LOG_END "\n"
 
     #define LOG_COLOR_BLACK             "30"
     #define LOG_COLOR_RED               "31"
@@ -86,8 +86,8 @@ __BEGIN_DECLS
     #define LOG_COLOR_BLUE              "34"
     #define LOG_COLOR_PURPLE            "35"
     #define LOG_COLOR_CYAN              "36"
-    #define LOG_COLOR(COLOR)            "\033[0;"COLOR"m"
-    #define LOG_BOLD(COLOR)             "\033[1;"COLOR"m"
+    #define LOG_COLOR(COLOR)            "\033[0;" COLOR "m"
+    #define LOG_BOLD(COLOR)             "\033[1;" COLOR "m"
     #define LOG_RESET_COLOR             "\033[0m"
 
     #define LOG_END                     LOG_RESET_COLOR

@@ -6,8 +6,8 @@
 #pragma once
 
 #include <features.h>
+#include <sys/errno.h>
 
-#include "esp_err.h"
 // #include "esp_private/spi_flash_os.h"
 
 __BEGIN_DECLS

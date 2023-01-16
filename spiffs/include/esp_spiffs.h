@@ -8,7 +8,7 @@
 #define _ESP_SPIFFS_H_
 
 #include <stdbool.h>
-#include "esp_err.h"
+#include <sys/errno.h>
 
 #ifdef __cplusplus
 extern "C" {

@@ -3,7 +3,6 @@
 #include <signal.h>
 #include <sys/errno.h>
 
-#include "esp_attr.h"
 #include "esp_cpu.h"
 #include "esp_log.h"
 #include "esp_rom_sys.h"
@@ -29,7 +28,12 @@ void abort(void)
     exit(EFAULT);
 }
 
-void IRAM_ATTR _exit(int status)
+int _kill_r(struct _reent *r, int pid, int sig)
+{
+    exit(EFAULT);
+}
+
+void _exit(int status)
 {
     #ifdef CONFIG_IDF_TARGET_ARCH_XTENSA
         xt_ints_off(0xFFFFFFFF);

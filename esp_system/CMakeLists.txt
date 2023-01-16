@@ -60,6 +60,7 @@ idf_component_register(
         "efuse"
         "hal"
         "esp_timer"
+        "vfs"
     LDFRAGMENTS
         "${IDF_PATH}/components/esp_common/common.lf"
         "${IDF_PATH}/components/esp_common/soc.lf"

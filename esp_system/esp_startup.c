@@ -1,16 +1,15 @@
 #include "sdkconfig.h"
 
+#include "esp_err.h"
 #include "esp_cpu.h"
-#include "esp_heap_caps_init.h"
-#include "esp_log.h"
 #include "esp_rom_sys.h"
-#include "esp_timer.h"
+#include "esp_rom_uart.h"
 
 #include "soc/system_reg.h"
 #include "hal/wdt_hal.h"
-#include "esp32s3/rom/ets_sys.h"
-
 #include "esp_private/startup_internal.h"
+
+#include "esp32s3/rom/ets_sys.h"
 
 static char const *TAG = "startup_handler";
 
@@ -29,8 +28,8 @@ extern uint32_t __zero_table_end__;
 extern void (*__init_array_start)(void);
 extern void (*__init_array_end)(void);
 // esp system extends ctors
-extern esp_system_init_fn_t _esp_system_init_fn_array_start;
-extern esp_system_init_fn_t _esp_system_init_fn_array_end;
+extern struct __esp_init_fn _esp_system_init_fn_array_start;
+extern struct __esp_init_fn _esp_system_init_fn_array_end;
 
 /****************************************************************************
  *  local
@@ -98,6 +97,7 @@ void Startup_Handler(void)
         REG_SET_BIT(SYSTEM_CORE_1_CONTROL_0_REG, SYSTEM_CONTROL_CORE_1_RESETING);
         REG_CLR_BIT(SYSTEM_CORE_1_CONTROL_0_REG, SYSTEM_CONTROL_CORE_1_RESETING);
     }
+
     ets_set_appcpu_boot_addr((uint32_t)startup_other_cores);
 
     esp_startup_start_app();
@@ -129,21 +129,23 @@ static void do_system_init_fn(void)
 {
     int core_id = esp_cpu_get_core_id();
 
-    for (esp_system_init_fn_t *p = &_esp_system_init_fn_array_start;
+    for (struct __esp_init_fn *p = &_esp_system_init_fn_array_start;
         p < &_esp_system_init_fn_array_end;
         p ++)
     {
         if (p->cores & BIT(core_id))
         {
             esp_err_t err = (*(p->fn))();
-            if (err != ESP_OK)
-                abort();
+            if (ESP_OK != err) abort();
         }
     }
 }
 
 static void startup_other_cores(void)
 {
+    // TODO: depend on LOG_LEVEL
+    esp_rom_uart_tx_wait_idle(CONFIG_ESP_CONSOLE_UART_NUM);
+
     do_system_init_fn();
     esp_startup_start_app_other_cores();
 }

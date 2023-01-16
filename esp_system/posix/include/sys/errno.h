@@ -10,23 +10,9 @@
 */
 // #include_next <sys/errno.h>
 
-__BEGIN_DECLS
-
-extern volatile __attribute__((nothrow, pure))
-    int *__errno(void);
-
-extern __attribute__((nothrow, pure))
-    int __set_errno_neg(struct _reent *r, int err);
-
-extern __attribute__((nothrow, pure))
-    void *__set_errno_nullptr(struct _reent *r, int err);
-
-__END_DECLS
-
-// REVIEW: direct set of reent?, THIS IS stupid and impossiable to port
-#define __errno_r(reent)                ((reent)->_errno)
-// REVIEW: since __errno_r() exists, its has to review if threads has its own "reent errno"
 #define errno                           (*__errno())
+#define error_r(reent)                  (*_errno_r(reent))
+#define __errno_r(reent)                (*_errno_r(reent))
 
 typedef int esp_err_t;
 
@@ -55,6 +41,24 @@ typedef int esp_err_t;
 #define ESP_ERR_MEMPROT_BASE            0xd000      /*!< Starting number of Memory Protection API error codes */
 
 #define ESP_ERR_USER_BASE               0xe000
+
+
+__BEGIN_DECLS
+
+extern __attribute__((nothrow, const))
+    int *__errno(void);
+static inline
+    int *_errno_r(struct _reent *r)    { return &r->_errno; }
+
+extern __attribute__((nothrow, pure))
+    int __set_errno_r_neg(struct _reent *r, int err, char const *__function__);
+#define __set_errno_neg(r, err)         __set_errno_r_neg(r, err, __func__)
+
+extern __attribute__((nothrow, pure))
+    void *__set_errno_r_nullptr(struct _reent *r, int err, char const *__function__);
+#define __set_errno_nullptr(r, err)     __set_errno_r_nullptr(r, err, __func__)
+
+__END_DECLS
 
 /* asm-generic/errno-base.h */
 

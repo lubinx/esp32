@@ -99,9 +99,7 @@ void SystemInit(void)
     esp_timer_early_init();
     esp_newlib_init();
 
-    /*
-        // TODO: enablie it somehow conflict with vfs => uart driver, somehting outside the memory protect area
-
+    /* TODO: enablie it somehow conflict with vfs => uart driver, somehting outside the memory protect area
     #if CONFIG_ESP_SYSTEM_MEMPROT_FEATURE && !CONFIG_ESP_SYSTEM_MEMPROT_TEST
         // Memprot cannot be locked during OS startup as the lock-on prevents any PMS changes until a next reboot
         // If such a situation appears, it is likely an malicious attempt to bypass the system safety setup -> print error & reset
