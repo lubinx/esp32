@@ -115,7 +115,7 @@ if (NOT IDF_TARGET_ARCH STREQUAL "")
 endif()
 list(APPEND IDF_KERNEL_COMPONENTS
     "esp_system" "esp_rom"
-    "soc" "hal" "esp_hw_support" "efuse" "esp_pm" "heap"
+    "soc" "hal" "esp_hw_support" "efuse" "heap"
     "freertos"
     # "spi_flash"
     "esptool_py"
@@ -128,6 +128,7 @@ list(APPEND OBSOLETED_COMPONENTS
     "esp_app_format"
     "esp_common"
     "esp_partition"
+    "esp_pm"
     # "driver"
     "partition_table"
     "newlib"

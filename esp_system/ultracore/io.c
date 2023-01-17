@@ -13,7 +13,7 @@ void __IO_retarget(void)
 
 ssize_t _read_r(struct _reent *r, int fd, void * dst, size_t size)
 {
-    ESP_LOGW(TAG, "esp_vfs_read");
+    ESP_LOGW(TAG, "_read_r");
     while (1);
 }
 
