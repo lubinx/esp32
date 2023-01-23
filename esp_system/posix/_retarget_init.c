@@ -1,9 +1,4 @@
-/*
- * SPDX-FileCopyrightText: 2015-2022 Espressif Systems (Shanghai) CO LTD
- *
- * SPDX-License-Identifier: Apache-2.0
- */
-
+#include <unistd.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <stdbool.h>
@@ -46,10 +41,6 @@ extern void __LOCK_retarget(void);
 extern void __FILESYSTEM_init(void);
 extern void __IO_retarget(void);
 
-extern int _printf_float(struct _reent *rptr, void *pdata,
-    FILE * fp, int (*pfunc) (struct _reent *, FILE *, const char *, size_t len), va_list * ap);
-extern int _scanf_float(struct _reent *rptr, void *pdata, FILE *fp, va_list *ap);
-
 extern void _cleanup_r(struct _reent* r);
 extern struct _reent *__getreent(void);     // freertos_tasks_c_additions.h linked by freertos
 
@@ -59,21 +50,27 @@ extern struct _reent *__getreent(void);     // freertos_tasks_c_additions.h link
 static void raise_r_stub(struct _reent *rptr);
 
 static const struct syscall_stub_table __stub_table;
-static struct _reent __reent;
+
+static struct _reent __reent = {0};
+static FILE _stdin = {0};
+static FILE _stdout = {0};
+static FILE _stderr = {0};
 
 /****************************************************************************
  *  @implements
 *****************************************************************************/
-int c_puts_r(struct _reent *, char const *str)
+int print_file(FILE *f)
 {
+    esp_rom_printf("_bf: %d\n", f->_bf);
+    esp_rom_printf("_blksize: %d\n", f->_blksize);
+    esp_rom_printf("_cookie: %d\n", f->_cookie);
+    esp_rom_printf("_data: %d\n", f->_data);
+    esp_rom_printf("_file: %d\n", f->_file);
+    esp_rom_printf("_flags2: %d\n", f->_flags2);
+    esp_rom_printf("_flags: %d\n", f->_flags);
+    esp_rom_printf("_lb: %p\n", f->_lb);
+    esp_rom_printf("_lock: %p\n", f->_lock);
 }
-
-/*
-int console_open(const char *path, int flags, int mode)
-{
-    return 0;
-}
-*/
 
 void esp_newlib_init(void)
 {
@@ -87,20 +84,24 @@ void esp_newlib_init(void)
     #endif
 
     _GLOBAL_REENT = &__reent;
-    esp_vfs_console_register();
+    __sinit(_GLOBAL_REENT);
 
-    #if defined(CONFIG_VFS_SUPPORT_IO) && !defined(CONFIG_ESP_CONSOLE_NONE)
-        esp_reent_init(_GLOBAL_REENT);
+    _stdin._file = STDIN_FILENO;
+    _stdout._file = STDOUT_FILENO;
+    _stderr._file = STDERR_FILENO;
 
-        static char const *default_stdio_dev = "/dev/console/";
-        _GLOBAL_REENT->_stdout = fopen(default_stdio_dev, "w");
-    #else
-        _REENT_SMALL_CHECK_INIT(_GLOBAL_REENT);
-    #endif
+    _stdin._close = _stdout._close = _stderr._close = (void *)&_close_r;
+    _stdin._read = _stdout._read = _stderr._read  = (void *)&_read_r;
+    _stdin._write = _stdout._write = _stderr._write = (void *)&_write_r;
+    _stdin._seek = _stdout._seek = _stderr._seek  = (void *)&_lseek_r;
+
+    _GLOBAL_REENT->_stdin = &_stdin;
+    _GLOBAL_REENT->_stdout = &_stdout;
+    _GLOBAL_REENT->_stderr = &_stderr;
 
     __LOCK_retarget();
     __IO_retarget();
-    // __FILESYSTEM_init();
+    __FILESYSTEM_init();
 
     extern void esp_newlib_time_init(void);
     esp_newlib_time_init();
@@ -111,6 +112,10 @@ void esp_newlib_init(void)
 
 void esp_reent_init(struct _reent* r)
 {
+    /**
+     *  REVIEW: SOO..hardcoded esp_reent_init() instead of __sinit()?
+     *      also checking comment in __stub_table() below
+    */
     memset(r, 0, sizeof(*r));
 
     r->_stdout = _GLOBAL_REENT->_stdout;
@@ -118,10 +123,12 @@ void esp_reent_init(struct _reent* r)
     r->_stdin  = _GLOBAL_REENT->_stdin;
 
     r->__cleanup = &_cleanup_r;
+    /*
     r->__sdidinit = 1;
     r->__sglue._next = NULL;
     r->__sglue._niobs = 0;
     r->__sglue._iobs = NULL;
+    */
 }
 
 void esp_reent_cleanup(void)
@@ -260,22 +267,27 @@ void abort(void)
     exit(EFAULT);
 }
 
-__WEAK int _isatty_r(struct _reent *r, int fd)                                   __ENOSYS;
-__WEAK int _open_r(struct _reent *r, const char *path, int flags, int mode)      __ENOSYS;
-__WEAK int _close_r(struct _reent *r, int fd)                                    __ENOSYS;
-__WEAK int _fstat_r(struct _reent *r, int fd, struct stat *st)                   __ENOSYS;
-__WEAK int _stat_r(struct _reent *r, const char *path, struct stat * st)         __ENOSYS;
-__WEAK int _link_r(struct _reent *r, const char* n1, const char* n2)             __ENOSYS;
-__WEAK int _unlink_r(struct _reent *r, const char *path)                         __ENOSYS;
-__WEAK int _rename_r(struct _reent *r, const char *src, const char *dst)         __ENOSYS;
+__WEAK int _isatty_r(struct _reent *r, int fd)                                      __ENOSYS;
+__WEAK int _open_r(struct _reent *r, const char *path, int flags, int mode)         __ENOSYS;
+__WEAK int _close_r(struct _reent *r, int fd)                                       __ENOSYS;
+__WEAK int _fcntl_r(struct _reent *r, int fd, int cmd, int arg)                     __ENOSYS
+__WEAK int _fstat_r(struct _reent *r, int fd, struct stat *st)                      __ENOSYS;
+__WEAK int _stat_r(struct _reent *r, const char *path, struct stat * st)            __ENOSYS;
+__WEAK int _link_r(struct _reent *r, const char* n1, const char* n2)                __ENOSYS;
+__WEAK int _unlink_r(struct _reent *r, const char *path)                            __ENOSYS;
+__WEAK int _rename_r(struct _reent *r, const char *src, const char *dst)            __ENOSYS;
 
-__WEAK ssize_t _read_r(struct _reent *r, int fd, void * dst, size_t size)        __ENOSYS;
-__WEAK ssize_t _write_r(struct _reent *r, int fd, void const *data, size_t size) __ENOSYS;
-__WEAK off_t _lseek_r(struct _reent *r, int fd, off_t size, int mode)            __ENOSYS;
+__WEAK ssize_t _read_r(struct _reent *r, int fd, void * dst, size_t size)           __ENOSYS;
+__WEAK ssize_t _write_r(struct _reent *r, int fd, void const *data, size_t size)    __ENOSYS;
+__WEAK off_t _lseek_r(struct _reent *r, int fd, off_t size, int mode)               __ENOSYS;
 
 /****************************************************************************
  *  @internal
 *****************************************************************************/
+extern int _printf_float(struct _reent *rptr, void *pdata,
+    FILE * fp, int (*pfunc) (struct _reent *, FILE *, const char *, size_t len), va_list * ap);
+extern int _scanf_float(struct _reent *rptr, void *pdata, FILE *fp, va_list *ap);
+
 static const struct syscall_stub_table __stub_table =
 {
     .__getreent = &__getreent,
@@ -325,6 +337,10 @@ static const struct syscall_stub_table __stub_table =
     ._lock_release = &_lock_release,
     ._lock_release_recursive = &_lock_release_recursive,
 #endif
+/* REVIEW: link with stdandard-newlib is hardcoded inside esp-idf
+    SOO...wtf is nano printf format?
+*/
+/*
 #ifdef CONFIG_NEWLIB_NANO_FORMAT
     ._printf_float = &_printf_float,
     ._scanf_float = &_scanf_float,
@@ -332,6 +348,8 @@ static const struct syscall_stub_table __stub_table =
     ._printf_float = NULL,
     ._scanf_float = NULL,
 #endif
+*/
+/* REVIEW: why they make these simply things so confuse? */
 #if CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32H4 \
     || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C6
     /*

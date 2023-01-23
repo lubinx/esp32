@@ -13,20 +13,17 @@ void __IO_retarget(void)
 
 ssize_t _read_r(struct _reent *r, int fd, void * dst, size_t size)
 {
-    ESP_LOGW(TAG, "_read_r");
-    while (1);
+    return __set_errno_neg(r, ENOSYS);
 }
 
 ssize_t _write_r(struct _reent *r, int fd, const void * data, size_t size)
 {
-    ESP_LOGW(TAG, "_write_r");
-    while (1);
+    return __set_errno_neg(r, ENOSYS);
 }
 
 off_t _lseek_r(struct _reent *r, int fd, off_t size, int mode)
 {
-    ESP_LOGW(TAG, "_lseek_r");
-    while (1);
+    return __set_errno_neg(r, ENOSYS);
 }
 
 /*

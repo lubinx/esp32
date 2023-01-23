@@ -229,7 +229,7 @@ void __retarget_lock_close_recursive(_LOCK_T lock)
 
 void __retarget_lock_acquire(_LOCK_T lock)
 {
-#if ROM_MUTEX_MAGIC
+#if ESP_ROM_HAS_RETARGETABLE_LOCKING
     if (ROM_MUTEX_MAGIC == *(int*)lock)
         lock = &s_common_mutex;
 #endif
@@ -238,7 +238,7 @@ void __retarget_lock_acquire(_LOCK_T lock)
 
 void __retarget_lock_acquire_recursive(_LOCK_T lock)
 {
-#if ROM_MUTEX_MAGIC
+#if ESP_ROM_HAS_RETARGETABLE_LOCKING
     if (ROM_MUTEX_MAGIC == *(int *)lock)
         lock = &s_common_recursive_mutex;
 #endif
@@ -247,7 +247,7 @@ void __retarget_lock_acquire_recursive(_LOCK_T lock)
 
 int __retarget_lock_try_acquire(_LOCK_T lock)
 {
-#if ROM_MUTEX_MAGIC
+#if ESP_ROM_HAS_RETARGETABLE_LOCKING
     if (ROM_MUTEX_MAGIC == *(int *)lock)
         lock = &s_common_mutex;
 #endif
@@ -256,7 +256,7 @@ int __retarget_lock_try_acquire(_LOCK_T lock)
 
 int __retarget_lock_try_acquire_recursive(_LOCK_T lock)
 {
-#if ROM_MUTEX_MAGIC
+#if ESP_ROM_HAS_RETARGETABLE_LOCKING
     if (ROM_MUTEX_MAGIC == *(int *)lock)
         lock = &s_common_recursive_mutex;
 #endif
@@ -265,7 +265,7 @@ int __retarget_lock_try_acquire_recursive(_LOCK_T lock)
 
 void __retarget_lock_release(_LOCK_T lock)
 {
-#if ROM_MUTEX_MAGIC
+#if ESP_ROM_HAS_RETARGETABLE_LOCKING
     if (ROM_MUTEX_MAGIC == *(int *)lock)
         lock = &s_common_mutex;
 #endif
@@ -274,7 +274,7 @@ void __retarget_lock_release(_LOCK_T lock)
 
 void __retarget_lock_release_recursive(_LOCK_T lock)
 {
-#if ROM_MUTEX_MAGIC
+#if ESP_ROM_HAS_RETARGETABLE_LOCKING
     if (ROM_MUTEX_MAGIC == *(int*)lock)
         lock = &s_common_recursive_mutex;
 #endif

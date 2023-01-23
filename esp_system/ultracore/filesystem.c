@@ -19,26 +19,23 @@ void __FILESYSTEM_init(void)
 
 int _open_r(struct _reent *r, char const *path, int flags, int mode)
 {
-    ESP_LOGW(TAG, "_open_r");
-    while (1);
+    __set_errno_neg(r, ENOSYS);
+    return 0x1234;
 }
 
 int _close_r(struct _reent *r, int fd)
 {
-    ESP_LOGW(TAG, "_close_r");
-    while (1);
+    return __set_errno_neg(r, ENOSYS);
 }
 
 int _fstat_r(struct _reent *r, int fd, struct stat *st)
 {
-    ESP_LOGW(TAG, "_fstat_r");
-    while (1);
+    return __set_errno_neg(r, ENOSYS);
 }
 
 int _fcntl_r(struct _reent *r, int fd, int cmd, int arg)
 {
-    ESP_LOGW(TAG, "_fcntl_r");
-    while (1);
+    return __set_errno_neg(r, ENOSYS);
 }
 
 int _stat_r(struct _reent *r, char const *path, struct stat *st)

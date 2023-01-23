@@ -22,6 +22,8 @@ int __set_errno_r_neg(struct _reent *r, int err, char const *__function__)
 
 void *__set_errno_r_nullptr(struct _reent *r, int err, char const *__function__)
 {
+    ESP_LOGE(TAG, "%d, %s(): %s", err, __function__, strerror(err));
+
     r->_errno = err;
     return NULL;
 }
