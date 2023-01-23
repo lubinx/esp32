@@ -50,11 +50,7 @@ extern struct _reent *__getreent(void);     // freertos_tasks_c_additions.h link
 static void raise_r_stub(struct _reent *rptr);
 
 static const struct syscall_stub_table __stub_table;
-
 static struct _reent __reent = {0};
-static FILE _stdin = {0};
-static FILE _stdout = {0};
-static FILE _stderr = {0};
 
 /****************************************************************************
  *  @implements
@@ -86,22 +82,9 @@ void esp_newlib_init(void)
     _GLOBAL_REENT = &__reent;
     __sinit(_GLOBAL_REENT);
 
-    _stdin._file = STDIN_FILENO;
-    _stdout._file = STDOUT_FILENO;
-    _stderr._file = STDERR_FILENO;
-
-    _stdin._close = _stdout._close = _stderr._close = (void *)&_close_r;
-    _stdin._read = _stdout._read = _stderr._read  = (void *)&_read_r;
-    _stdin._write = _stdout._write = _stderr._write = (void *)&_write_r;
-    _stdin._seek = _stdout._seek = _stderr._seek  = (void *)&_lseek_r;
-
-    _GLOBAL_REENT->_stdin = &_stdin;
-    _GLOBAL_REENT->_stdout = &_stdout;
-    _GLOBAL_REENT->_stderr = &_stderr;
-
     __LOCK_retarget();
-    __IO_retarget();
     __FILESYSTEM_init();
+    __IO_retarget();
 
     extern void esp_newlib_time_init(void);
     esp_newlib_time_init();
@@ -264,6 +247,7 @@ void abort(void)
     if (esp_cpu_dbgr_is_attached())
         esp_cpu_dbgr_break();
 
+    while(1);
     exit(EFAULT);
 }
 
