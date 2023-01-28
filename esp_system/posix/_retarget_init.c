@@ -55,19 +55,6 @@ static struct _reent __reent = {0};
 /****************************************************************************
  *  @implements
 *****************************************************************************/
-int print_file(FILE *f)
-{
-    esp_rom_printf("_bf: %d\n", f->_bf);
-    esp_rom_printf("_blksize: %d\n", f->_blksize);
-    esp_rom_printf("_cookie: %d\n", f->_cookie);
-    esp_rom_printf("_data: %d\n", f->_data);
-    esp_rom_printf("_file: %d\n", f->_file);
-    esp_rom_printf("_flags2: %d\n", f->_flags2);
-    esp_rom_printf("_flags: %d\n", f->_flags);
-    esp_rom_printf("_lb: %p\n", f->_lb);
-    esp_rom_printf("_lock: %p\n", f->_lock);
-}
-
 void esp_newlib_init(void)
 {
     #if CONFIG_IDF_TARGET_ESP32
@@ -82,6 +69,33 @@ void esp_newlib_init(void)
     _GLOBAL_REENT = &__reent;
     __sinit(_GLOBAL_REENT);
 
+    /*
+    static FILE _stdin = {0};
+    static FILE _stdout = {0};
+    static FILE _stderr = {0};
+
+    _stdin._file = STDIN_FILENO;
+    _stdin._close = (void *)&_close_r;
+    _stdin._read = (void *)&_read_r;
+    _stdin._write = (void *)&_write_r;
+    _stdin._seek = (void *)&_lseek_r;
+
+    _stdout._file = STDOUT_FILENO;
+    _stdout._close = (void *)&_close_r;
+    _stdout._read = (void *)&_read_r;
+    _stdout._write = (void *)&_write_r;
+    _stdout._seek = (void *)&_lseek_r;
+
+    _stderr._file = STDERR_FILENO;
+    _stderr._close = (void *)&_close_r;
+    _stderr._read  = (void *)&_read_r;
+    _stderr._write = (void *)&_write_r;
+    _stderr._seek  = (void *)&_lseek_r;
+
+    _GLOBAL_REENT->_stdin = &_stdin;
+    _GLOBAL_REENT->_stdout = &_stdout;
+    _GLOBAL_REENT->_stderr = &_stderr;
+*/
     __LOCK_retarget();
     __FILESYSTEM_init();
     __IO_retarget();
@@ -186,7 +200,7 @@ int _getpid_r(struct _reent *r)
     return 0;
 }
 
-#define __ENOSYS                        { return __set_errno_neg(r, ENOSYS); }
+#define __ENOSYS                        { return __set_errno_r_neg(r, ENOSYS); }
 #define __WEAK                          __attribute__((weak))
 
 __WEAK int _system_r(struct _reent *r, const char *str)
@@ -247,7 +261,6 @@ void abort(void)
     if (esp_cpu_dbgr_is_attached())
         esp_cpu_dbgr_break();
 
-    while(1);
     exit(EFAULT);
 }
 
@@ -261,9 +274,9 @@ __WEAK int _link_r(struct _reent *r, const char* n1, const char* n2)            
 __WEAK int _unlink_r(struct _reent *r, const char *path)                            __ENOSYS;
 __WEAK int _rename_r(struct _reent *r, const char *src, const char *dst)            __ENOSYS;
 
-__WEAK ssize_t _read_r(struct _reent *r, int fd, void * dst, size_t size)           __ENOSYS;
-__WEAK ssize_t _write_r(struct _reent *r, int fd, void const *data, size_t size)    __ENOSYS;
-__WEAK off_t _lseek_r(struct _reent *r, int fd, off_t size, int mode)               __ENOSYS;
+__WEAK ssize_t _read_r(struct _reent *r, int fd, void *buf, size_t bufsize)         __ENOSYS;
+__WEAK ssize_t _write_r(struct _reent *r, int fd, void const *buf, size_t count)    __ENOSYS;
+__WEAK off_t _lseek_r(struct _reent *r, int fd, off_t offset, int origin)           __ENOSYS;
 
 /****************************************************************************
  *  @internal

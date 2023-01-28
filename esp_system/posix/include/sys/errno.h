@@ -10,9 +10,13 @@
 */
 // #include_next <sys/errno.h>
 
-#define errno                           (*__errno())
-#define error_r(reent)                  (*_errno_r(reent))
-#define __errno_r(reent)                (*_errno_r(reent))
+#define errno                           __getreent()->_errno
+#define __set_errno_neg(err)            __set_errno_r_neg(__getreent(), err)
+#define __set_errno_nullptr(r, err)     __set_errno_r_nullptr(__getreent(), err)
+
+#define error_r(reent)                  reent->_errno
+#define __set_errno_r_neg(r, err)       __dbg_set_errno_r_neg(r, err, __func__)
+#define __set_errno_r_nullptr(r, err)   __dbg_set_errno_r_nullptr(r, err, __func__)
 
 typedef int esp_err_t;
 
@@ -39,24 +43,23 @@ typedef int esp_err_t;
 #define ESP_ERR_FLASH_BASE              0x6000      /*!< Starting number of flash error codes */
 #define ESP_ERR_HW_CRYPTO_BASE          0xc000      /*!< Starting number of HW cryptography module error codes */
 #define ESP_ERR_MEMPROT_BASE            0xd000      /*!< Starting number of Memory Protection API error codes */
-
 #define ESP_ERR_USER_BASE               0xe000
-
 
 __BEGIN_DECLS
 
-extern __attribute__((nothrow, const))
-    int *__errno(void);
+extern __attribute__((nothrow, pure))   // freertos_tasks_c_additions.h linked by freertos
+    struct _reent *__getreent(void);
+
 static inline
-    int *_errno_r(struct _reent *r)    { return &r->_errno; }
+    int *__errno(void)                  { return &__getreent()->_errno; }
+static inline
+    int *__errno_r(struct _reent *r)    { return &r->_errno; }
 
 extern __attribute__((nothrow, pure))
-    int __set_errno_r_neg(struct _reent *r, int err, char const *__function__);
-#define __set_errno_neg(r, err)         __set_errno_r_neg(r, err, __func__)
+    int __dbg_set_errno_r_neg(struct _reent *r, int err, char const *__function__);
 
 extern __attribute__((nothrow, pure))
-    void *__set_errno_r_nullptr(struct _reent *r, int err, char const *__function__);
-#define __set_errno_nullptr(r, err)     __set_errno_r_nullptr(r, err, __func__)
+    void *__dbg_set_errno_r_nullptr(struct _reent *r, int err, char const *__function__);
 
 __END_DECLS
 

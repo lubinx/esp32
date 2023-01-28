@@ -6,13 +6,7 @@
 
 static char const *TAG = "err";
 
-int *__errno(void)
-{
-    extern struct _reent *__getreent(void);     // freertos_tasks_c_additions.h linked by freertos
-    return &__getreent()->_errno;
-}
-
-int __set_errno_r_neg(struct _reent *r, int err, char const *__function__)
+int __dbg_set_errno_r_neg(struct _reent *r, int err, char const *__function__)
 {
     ESP_LOGE(TAG, "%d, %s(): %s", err, __function__, strerror(err));
 
@@ -20,7 +14,7 @@ int __set_errno_r_neg(struct _reent *r, int err, char const *__function__)
     return -1;
 }
 
-void *__set_errno_r_nullptr(struct _reent *r, int err, char const *__function__)
+void *__dbg_set_errno_r_nullptr(struct _reent *r, int err, char const *__function__)
 {
     ESP_LOGE(TAG, "%d, %s(): %s", err, __function__, strerror(err));
 
