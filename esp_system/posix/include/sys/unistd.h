@@ -14,7 +14,7 @@
 extern "C" {
 #endif
 
-int truncate(const char *, off_t __length);
+int truncate(char const *, off_t __length);
 int gethostname(char *__name, size_t __len);
 
 #ifdef __cplusplus

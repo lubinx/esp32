@@ -21,7 +21,7 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout)
     fd_set readfds;
     fd_set writefds;
     fd_set errorfds;
-    struct _reent* r = __getreent();
+    struct _reent *r = __getreent();
     int ret = 0;
 
     if (fds == NULL) {
@@ -58,7 +58,7 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout)
         }
     }
 
-    const int select_ret = select(max_fd + 1, &readfds, &writefds, &errorfds, timeout < 0 ? NULL: &tv);
+    int const select_ret = select(max_fd + 1, &readfds, &writefds, &errorfds, timeout < 0 ? NULL: &tv);
 
     if (select_ret > 0) {
         ret += select_ret;

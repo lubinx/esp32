@@ -12,7 +12,7 @@
 
 #define errno                           __getreent()->_errno
 #define __set_errno_neg(err)            __set_errno_r_neg(__getreent(), err)
-#define __set_errno_nullptr(r, err)     __set_errno_r_nullptr(__getreent(), err)
+#define __set_errno_nullptr(err)        __set_errno_r_nullptr(__getreent(), err)
 
 #define error_r(reent)                  reent->_errno
 #define __set_errno_r_neg(r, err)       __dbg_set_errno_r_neg(r, err, __func__)

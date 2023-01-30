@@ -27,7 +27,7 @@
 #include "esp_ipc.h"
 #endif
 
-static const char* TAG = "intr_alloc";
+static const char *TAG = "intr_alloc";
 
 #define ETS_INTERNAL_TIMER0_INTR_NO 6
 #define ETS_INTERNAL_TIMER1_INTR_NO 15

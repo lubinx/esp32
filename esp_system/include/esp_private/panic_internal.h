@@ -51,8 +51,8 @@ extern "C" {
     typedef struct {
         int core;                               // core which triggered panic
         panic_exception_t exception;            // non-architecture-specific exception code
-        const char *reason;                     // exception string
-        const char *description;                // short description of the exception
+        char const *reason;                     // exception string
+        char const *description;                // short description of the exception
         panic_info_dump_fn_t details;           // more details on the exception
         panic_info_dump_fn_t state;             // processor state, usually the contents of the registers
         const void *addr;                       // instruction address that triggered the exception
@@ -66,7 +66,7 @@ extern "C" {
     // when CONFIG_ESP_SYSTEM_PANIC_SILENT_REBOOT
 #if !CONFIG_ESP_SYSTEM_PANIC_SILENT_REBOOT
     void panic_print_char(char c);
-    void panic_print_str(const char *str);
+    void panic_print_str(char const *str);
     void panic_print_dec(int d);
     void panic_print_hex(int h);
 #else
@@ -76,7 +76,7 @@ extern "C" {
 #define panic_print_hex(h)
 #endif
 
-    void __attribute__((noreturn)) panic_abort(const char *details);
+    void __attribute__((noreturn)) panic_abort(char const *details);
 
     void panic_arch_fill_info(void *frame, panic_info_t *info);
 

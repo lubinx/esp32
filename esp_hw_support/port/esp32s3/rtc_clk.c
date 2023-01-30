@@ -23,7 +23,7 @@
 #include "soc/regi2c_dig_reg.h"
 #include "sdkconfig.h"
 
-static const char *TAG = "rtc_clk";
+static char const *TAG = "rtc_clk";
 
 // Current PLL frequency, in MHZ (320 or 480). Zero if PLL is not enabled.
 static uint32_t s_cur_pll_freq;

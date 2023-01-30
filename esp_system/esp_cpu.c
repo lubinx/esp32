@@ -133,10 +133,10 @@ static bool is_intr_nb_resv(int intr_nb)
 
     extern int _vector_table;
     extern int _interrupt_handler;
-    const intptr_t pc = (intptr_t)(&_vector_table + intr_nb);
+    intptr_t const pc = (intptr_t)(&_vector_table + intr_nb);
 
     /* JAL instructions are relative to the PC there are executed from. */
-    const intptr_t destination = pc + riscv_decode_offset_from_jal_instruction(pc);
+    intptr_t const destination = pc + riscv_decode_offset_from_jal_instruction(pc);
 
     return destination != (intptr_t)&_interrupt_handler;
 }

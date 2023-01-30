@@ -29,7 +29,7 @@ void panic_print_registers(const void *f, int core)
     int *regs = (int *)frame;
     (void)regs;
 
-    const char *sdesc[] = {
+    char const *sdesc[] = {
         "PC      ", "PS      ", "A0      ", "A1      ", "A2      ", "A3      ", "A4      ", "A5      ",
         "A6      ", "A7      ", "A8      ", "A9      ", "A10     ", "A11     ", "A12     ", "A13     ",
         "A14     ", "A15     ", "SAR     ", "EXCCAUSE", "EXCVADDR", "LBEG    ", "LEND    ", "LCOUNT  "
@@ -133,7 +133,7 @@ static void print_debug_exception_details(const void *f)
             }
 #endif
 
-            const char *name = pcTaskGetName(xTaskGetCurrentTaskHandleForCPU(core));
+            char const *name = pcTaskGetName(xTaskGetCurrentTaskHandleForCPU(core));
             panic_print_str("Stack canary watchpoint triggered (");
             panic_print_str(name);
             panic_print_str(") ");
@@ -249,7 +249,7 @@ static inline void print_memprot_err_details(const void *f)
 {
     uint32_t *fault_addr;
     uint32_t op_type = MEMPROT_OP_INVALID, op_subtype;
-    const char *operation_type;
+    char const *operation_type;
 
     mem_type_prot_t mem_type = esp_memprot_get_active_intr_memtype();
     if (mem_type != MEMPROT_NONE) {
@@ -351,7 +351,7 @@ static inline void print_cache_err_details(const void *f)
 void panic_arch_fill_info(void *f, panic_info_t *info)
 {
     XtExcFrame *frame = (XtExcFrame *) f;
-    static const char *reason[] = {
+    static char const *reason[] = {
         "IllegalInstruction", "Syscall", "InstructionFetchError", "LoadStoreError",
         "Level1Interrupt", "Alloca", "IntegerDivideByZero", "PCValue",
         "Privileged", "LoadStoreAlignment", "res", "res",
@@ -395,7 +395,7 @@ void panic_soc_fill_info(void *f, panic_info_t *info)
     } else {}
 
     //Please keep in sync with PANIC_RSN_* defines
-    static const char *pseudo_reason[] = {
+    static char const *pseudo_reason[] = {
         "Unknown reason",
         "Unhandled debug exception",
         "Double exception",

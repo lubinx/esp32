@@ -14,7 +14,7 @@ static portMUX_TYPE periph_spinlock = portMUX_INITIALIZER_UNLOCKED;
 static uint8_t s_periph_ref_counts = 0;
 static uint32_t s_rc_fast_freq = 0; // Frequency of the RC_FAST clock in Hz
 #if SOC_CLK_APLL_SUPPORTED
-static const char *TAG = "clk_ctrl_os";
+static char const *TAG = "clk_ctrl_os";
 // Current APLL frequency, in HZ. Zero if APLL is not enabled.
 static uint32_t s_cur_apll_freq = 0;
 static int s_apll_ref_cnt = 0;

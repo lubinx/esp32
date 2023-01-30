@@ -17,7 +17,6 @@
 #include "esp_task_wdt.h"
 #include "esp_freertos_hooks.h"
 #include "esp_heap_caps_init.h"
-#include "esp_chip_info.h"
 
 #if CONFIG_SPIRAM
     /* Required by esp_psram_extram_reserve_dma_pool() */
@@ -58,7 +57,7 @@ CONFIG_FREERTOS_UNICORE and CONFIG_ESP_SYSTEM_SINGLE_CORE_MODE should be identic
 // -------------------- Declarations -----------------------
 
 static void main_task(void* args);
-static const char* APP_START_TAG = "app_start";
+static const char *APP_START_TAG = "app_start";
 
 // ------------------ CPU0 App Startup ---------------------
 
@@ -145,7 +144,7 @@ void esp_startup_start_app_other_cores(void)
  * - main_task will self delete if app_main returns
  * ------------------------------------------------------------------------------------------------------------------ */
 
-static const char* MAIN_TAG = "main_task";
+static const char *MAIN_TAG = "main_task";
 
 #if !CONFIG_FREERTOS_UNICORE
 static volatile bool s_other_cpu_startup_done = false;

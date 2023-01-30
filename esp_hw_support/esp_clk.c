@@ -104,13 +104,13 @@ uint64_t esp_rtc_get_time_us(void)
     return 0;
 #endif
     portENTER_CRITICAL_SAFE(&s_esp_rtc_time_lock);
-    const uint32_t cal = esp_clk_slowclk_cal_get();
+    uint32_t const cal = esp_clk_slowclk_cal_get();
     if (cal == 0) {
         s_esp_rtc_time_us = 0;
         s_rtc_last_ticks = 0;
     }
-    const uint64_t rtc_this_ticks = rtc_time_get();
-    const uint64_t ticks = rtc_this_ticks - s_rtc_last_ticks;
+    uint64_t const rtc_this_ticks = rtc_time_get();
+    uint64_t const ticks = rtc_this_ticks - s_rtc_last_ticks;
     /* RTC counter result is up to 2^48, calibration factor is up to 2^24,
      * for a 32kHz clock. We need to calculate (assuming no overflow):
      *   (ticks * cal) >> RTC_CLK_CAL_FRACT
@@ -122,9 +122,9 @@ uint64_t esp_rtc_get_time_us(void)
      * and the upper 16-bit parts of "ticks", i.e.:
      *   ((ticks_low + 2^32 * ticks_high) * cal) >> RTC_CLK_CAL_FRACT
      */
-    const uint64_t ticks_low = ticks & UINT32_MAX;
-    const uint64_t ticks_high = ticks >> 32;
-    const uint64_t delta_time_us = ((ticks_low * cal) >> RTC_CLK_CAL_FRACT) +
+    uint64_t const ticks_low = ticks & UINT32_MAX;
+    uint64_t const ticks_high = ticks >> 32;
+    uint64_t const delta_time_us = ((ticks_low * cal) >> RTC_CLK_CAL_FRACT) +
                                    ((ticks_high * cal) << (32 - RTC_CLK_CAL_FRACT));
     s_esp_rtc_time_us += delta_time_us;
     s_rtc_last_ticks = rtc_this_ticks;

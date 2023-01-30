@@ -15,7 +15,7 @@
 
 static portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 
-static DRAM_ATTR __attribute__((unused)) const char *TAG = "REGI2C";
+static DRAM_ATTR __attribute__((unused)) char const *TAG = "REGI2C";
 
 uint8_t IRAM_ATTR regi2c_ctrl_read_reg(uint8_t block, uint8_t host_id, uint8_t reg_add)
 {

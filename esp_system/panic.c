@@ -10,7 +10,6 @@
 #include "esp_attr.h"
 
 #include "esp_private/system_internal.h"
-#include "esp_private/usb_console.h"
 
 #include "esp_cpu.h"
 #include "soc/rtc.h"
@@ -73,7 +72,7 @@ static wdt_hal_context_t rtc_wdt_ctx = {.inst = WDT_RWDT, .rwdt_dev = &RTCCNTL};
 #if CONFIG_ESP_CONSOLE_UART
 static uart_hal_context_t s_panic_uart = { .dev = CONFIG_ESP_CONSOLE_UART_NUM == 0 ? &UART0 :&UART1 };
 
-static void panic_print_char_uart(const char c)
+static void panic_print_char_uart(char const c)
 {
     uint32_t sz = 0;
     while (!uart_hal_get_txfifo_len(&s_panic_uart));
@@ -83,7 +82,7 @@ static void panic_print_char_uart(const char c)
 
 
 #if CONFIG_ESP_CONSOLE_USB_CDC
-static void panic_print_char_usb_cdc(const char c)
+static void panic_print_char_usb_cdc(char const c)
 {
     esp_usb_console_write_buf(&c, 1);
     /* result ignored */
@@ -97,21 +96,21 @@ static void panic_print_char_usb_cdc(const char c)
 #define USBSERIAL_TIMEOUT_MAX_US 50000
 static int s_usbserial_timeout = 0;
 
-static void panic_print_char_usb_serial_jtag(const char c)
+static void panic_print_char_usb_serial_jtag(char const c)
 {
     while (!usb_serial_jtag_ll_txfifo_writable() && s_usbserial_timeout < (USBSERIAL_TIMEOUT_MAX_US / 100)) {
         esp_rom_delay_us(100);
         s_usbserial_timeout++;
     }
     if (usb_serial_jtag_ll_txfifo_writable()) {
-        usb_serial_jtag_ll_write_txfifo((const uint8_t *)&c, 1);
+        usb_serial_jtag_ll_write_txfifo((uint8_t const *)&c, 1);
         s_usbserial_timeout = 0;
     }
 }
 #endif //CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG || CONFIG_ESP_CONSOLE_SECONDARY_USB_SERIAL_JTAG
 
 
-void panic_print_char(const char c)
+void panic_print_char(char const c)
 {
 #if CONFIG_ESP_CONSOLE_UART
     panic_print_char_uart(c);
@@ -124,7 +123,7 @@ void panic_print_char(const char c)
 #endif
 }
 
-void panic_print_str(const char *str)
+void panic_print_str(char const *str)
 {
     for (int i = 0; str[i] != 0; i++) {
         panic_print_char(str[i]);
@@ -435,7 +434,7 @@ void esp_panic_handler(panic_info_t *info)
 }
 
 
-void IRAM_ATTR __attribute__((noreturn, no_sanitize_undefined)) panic_abort(const char *details)
+void IRAM_ATTR __attribute__((noreturn, no_sanitize_undefined)) panic_abort(char const *details)
 {
     g_panic_abort = true;
     s_panic_abort_details = (char *) details;

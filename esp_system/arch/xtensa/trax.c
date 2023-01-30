@@ -22,7 +22,7 @@
 #define WITH_TRAX 1
 #endif
 
-static const char* __attribute__((unused)) TAG = "trax";
+static const char *__attribute__((unused)) TAG = "trax";
 
 int trax_enable(trax_ena_select_t which)
 {

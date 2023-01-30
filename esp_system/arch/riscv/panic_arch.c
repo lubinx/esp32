@@ -38,8 +38,8 @@
  * a given status register.
  */
 typedef struct {
-    const uint32_t bit;
-    const char *msg;
+    uint32_t const bit;
+    char const *msg;
 } register_bit_t;
 
 /**
@@ -50,14 +50,14 @@ typedef struct {
  * The order of the bits in the array is important as only the first bit to
  * be set in the register will have its associated message printed.
  */
-static inline bool test_and_print_register_bits(const uint32_t status,
+static inline bool test_and_print_register_bits(uint32_t const status,
         const register_bit_t *reg_bits,
-        const uint32_t size)
+        uint32_t const size)
 {
     /* Browse the flag/bit array and test each one with the given status
      * register. */
     for (int i = 0; i < size; i++) {
-        const uint32_t bit = reg_bits[i].bit;
+        uint32_t const bit = reg_bits[i].bit;
         if ((status & bit) == bit) {
             /* Reason of the panic found, print the reason. */
             panic_print_str(reg_bits[i].msg);
@@ -128,7 +128,7 @@ static inline void print_cache_err_details(const void *frame)
 
     /* Read the status register EXTMEM_CORE0_ACS_CACHE_INT_ST_REG. This status
      * register is not equal to 0 when a cache access error occured. */
-    const uint32_t core0_status = REG_READ(EXTMEM_CORE0_ACS_CACHE_INT_ST_REG);
+    uint32_t const core0_status = REG_READ(EXTMEM_CORE0_ACS_CACHE_INT_ST_REG);
 
     /* If the panic is due to a cache access error, one of the bit of the
      * register is set. Thus, this function will return true. */
@@ -138,7 +138,7 @@ static inline void print_cache_err_details(const void *frame)
      * EXTMEM_CACHE_ILG_INT_ST_REG register should not me equal to 0.
      * Check each bit of it and print the message associated if found. */
     if (!handled) {
-        const uint32_t cache_ilg_status = REG_READ(EXTMEM_CACHE_ILG_INT_ST_REG);
+        uint32_t const cache_ilg_status = REG_READ(EXTMEM_CACHE_ILG_INT_ST_REG);
         handled = test_and_print_register_bits(cache_ilg_status, cache_ilg_bits, DIM(cache_ilg_bits));
 
         /* If the error was not found, print the both registers value */
@@ -228,7 +228,7 @@ void panic_print_registers(const void *f, int core)
     uint32_t *regs = (uint32_t *)f;
 
     // only print ABI name
-    const char *desc[] = {
+    char const *desc[] = {
         "MEPC    ", "RA      ", "SP      ", "GP      ", "TP      ", "T0      ", "T1      ", "T2      ",
         "S0/FP   ", "S1      ", "A0      ", "A1      ", "A2      ", "A3      ", "A4      ", "A5      ",
         "A6      ", "A7      ", "S2      ", "S3      ", "S4      ", "S5      ", "S6      ", "S7      ",
@@ -262,7 +262,7 @@ void panic_soc_fill_info(void *f, panic_info_t *info)
     RvExcFrame *frame = (RvExcFrame *) f;
 
     /* Please keep in sync with PANIC_RSN_* defines */
-    static const char *pseudo_reason[PANIC_RSN_COUNT] = {
+    static char const *pseudo_reason[PANIC_RSN_COUNT] = {
         "Unknown reason",
         "Interrupt wdt timeout on CPU0",
 #if SOC_CPU_NUM > 1
@@ -294,7 +294,7 @@ void panic_soc_fill_info(void *f, panic_info_t *info)
         /* Watchdog interrupt occured, get the core on which it happened
          * and update the reason/message accordingly. */
 
-        const int core = esp_cache_err_get_cpuid();
+        int const core = esp_cache_err_get_cpuid();
         info->core = core;
         info->exception = PANIC_EXCEPTION_IWDT;
 
@@ -320,7 +320,7 @@ void panic_arch_fill_info(void *frame, panic_info_t *info)
     info->exception = PANIC_EXCEPTION_FAULT;
 
     //Please keep in sync with PANIC_RSN_* defines
-    static const char *reason[] = {
+    static char const *reason[] = {
         "Instruction address misaligned",
         "Instruction access fault",
         "Illegal instruction",
@@ -356,7 +356,7 @@ static void panic_print_basic_backtrace(const void *frame, int core)
     // Basic backtrace
     panic_print_str("\r\nStack memory:\r\n");
     uint32_t sp = (uint32_t)((RvExcFrame *)frame)->sp;
-    const int per_line = 8;
+    int const per_line = 8;
     for (int x = 0; x < 1024; x += per_line * sizeof(uint32_t)) {
         uint32_t *spp = (uint32_t *)(sp + x);
         panic_print_hex(sp + x);

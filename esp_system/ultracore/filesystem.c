@@ -11,7 +11,7 @@
 
 #include "esp_log.h"
 
-static const char *TAG = "filesystem";
+static char const *TAG = "filesystem";
 
 void __FILESYSTEM_init(void)
 {

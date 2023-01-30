@@ -133,7 +133,7 @@ static List_t *pxGetNextTaskList(List_t *pxCurTaskList)
     // Current list is one of the non-ready task lists. Fetch the next non-ready task list
     if (pxNextTaskList == NULL) {
         int cur_list_idx;
-        const int num_non_ready_task_lists = (sizeof(non_ready_task_lists) / sizeof(List_t *));
+        int const num_non_ready_task_lists = (sizeof(non_ready_task_lists) / sizeof(List_t *));
         // Note: - 1 so that if the current list is the last on non_ready_task_lists[], the next list will return NULL
         for (cur_list_idx = 0; cur_list_idx < num_non_ready_task_lists - 1; cur_list_idx++) {
             if (pxCurTaskList == non_ready_task_lists[cur_list_idx]) {
@@ -206,7 +206,7 @@ BaseType_t vTaskGetSnapshot( TaskHandle_t pxTask, TaskSnapshot_t *pxTaskSnapshot
     return pdTRUE;
 }
 
-UBaseType_t uxTaskGetSnapshotAll( TaskSnapshot_t * const pxTaskSnapshotArray, const UBaseType_t uxArrayLength, UBaseType_t * const pxTCBSize )
+UBaseType_t uxTaskGetSnapshotAll( TaskSnapshot_t *const pxTaskSnapshotArray, const UBaseType_t uxArrayLength, UBaseType_t *const pxTCBSize )
 {
     UBaseType_t uxArrayNumFilled = 0;
 
@@ -280,11 +280,11 @@ const DRAM_ATTR uint8_t FreeRTOS_openocd_params[ESP_FREERTOS_DEBUG_TABLE_END]  =
 _Static_assert(tskNO_AFFINITY == CONFIG_FREERTOS_NO_AFFINITY, "CONFIG_FREERTOS_NO_AFFINITY must be the same as tskNO_AFFINITY");
 
 BaseType_t xTaskCreatePinnedToCore( TaskFunction_t pxTaskCode,
-                                    const char * const pcName,
-                                    const uint32_t usStackDepth,
-                                    void * const pvParameters,
+                                    const char *const pcName,
+                                    uint32_t const usStackDepth,
+                                    void *const pvParameters,
                                     UBaseType_t uxPriority,
-                                    TaskHandle_t * const pxCreatedTask,
+                                    TaskHandle_t *const pxCreatedTask,
                                     const BaseType_t xCoreID)
 {
     BaseType_t ret;
@@ -309,12 +309,12 @@ BaseType_t xTaskCreatePinnedToCore( TaskFunction_t pxTaskCode,
 
 #if ( configSUPPORT_STATIC_ALLOCATION == 1 )
 TaskHandle_t xTaskCreateStaticPinnedToCore( TaskFunction_t pxTaskCode,
-                                            const char * const pcName,
-                                            const uint32_t ulStackDepth,
-                                            void * const pvParameters,
+                                            const char *const pcName,
+                                            uint32_t const ulStackDepth,
+                                            void *const pvParameters,
                                             UBaseType_t uxPriority,
-                                            StackType_t * const puxStackBuffer,
-                                            StaticTask_t * const pxTaskBuffer,
+                                            StackType_t *const puxStackBuffer,
+                                            StaticTask_t *const pxTaskBuffer,
                                             const BaseType_t xCoreID)
 {
     TaskHandle_t ret;

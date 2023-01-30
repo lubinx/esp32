@@ -10,6 +10,7 @@ list(APPEND srcs
     "${CMAKE_CURRENT_LIST_DIR}/pthread_local_storage.c"
     "${CMAKE_CURRENT_LIST_DIR}/pthread_spinlock.c"
     "${CMAKE_CURRENT_LIST_DIR}/sched.c"
+    "${CMAKE_CURRENT_LIST_DIR}/semaphore.c"
     "${CMAKE_CURRENT_LIST_DIR}/time.c"
     "${CMAKE_CURRENT_LIST_DIR}/unistd.c"
 )

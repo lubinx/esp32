@@ -6,12 +6,12 @@
 
 int usleep(useconds_t us)
 {
-    const int us_per_tick = portTICK_PERIOD_MS * 1000;
+    uint32_t us_per_tick = portTICK_PERIOD_MS * 1000;
 
     if (us > us_per_tick)
         vTaskDelay((us + us_per_tick - 1) / us_per_tick);
     else
-        esp_rom_delay_us((uint32_t) us);
+        esp_rom_delay_us(us);
 
     return 0;
 }

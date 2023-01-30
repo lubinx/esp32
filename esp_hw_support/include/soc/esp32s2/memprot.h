@@ -150,7 +150,7 @@ esp_err_t IRAM_ATTR esp_memprot_get_fault_status(mem_type_prot_t mem_type, uint3
  *
  * @return mem_type as string
  */
-const char *IRAM_ATTR esp_memprot_type_to_str(mem_type_prot_t mem_type);
+char const *IRAM_ATTR esp_memprot_type_to_str(mem_type_prot_t mem_type);
 
 /**
  * @brief Detects whether any of the interrupt locks is active (requires digital system reset to unlock)

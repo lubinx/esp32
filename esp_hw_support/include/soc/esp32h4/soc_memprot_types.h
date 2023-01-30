@@ -66,7 +66,7 @@ typedef struct {
  *
  * @param mem_type Memory protection type
  */
-static inline const char *esp_mprot_mem_type_to_str(const esp_mprot_mem_t mem_type)
+static inline char const *esp_mprot_mem_type_to_str(esp_mprot_mem_t const mem_type)
 {
     switch (mem_type) {
     case MEMPROT_TYPE_NONE:
@@ -83,7 +83,7 @@ static inline const char *esp_mprot_mem_type_to_str(const esp_mprot_mem_t mem_ty
  *
  * @param line_type Split line type
  */
-static inline const char *esp_mprot_split_addr_to_str(const esp_mprot_split_addr_t line_type)
+static inline char const *esp_mprot_split_addr_to_str(const esp_mprot_split_addr_t line_type)
 {
     switch (line_type) {
     case MEMPROT_SPLIT_ADDR_NONE:
@@ -100,7 +100,7 @@ static inline const char *esp_mprot_split_addr_to_str(const esp_mprot_split_addr
  *
  * @param area_type PMS Area type
  */
-static inline const char *esp_mprot_pms_area_to_str(const esp_mprot_pms_area_t area_type)
+static inline char const *esp_mprot_pms_area_to_str(esp_mprot_pms_area_t const area_type)
 {
     switch (area_type) {
     case MEMPROT_PMS_AREA_NONE:

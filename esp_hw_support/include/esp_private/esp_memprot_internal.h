@@ -68,7 +68,7 @@ static inline
  * @param oper_type PMS operation type
  */
 static inline
-    const char *esp_mprot_oper_type_to_str(const uint32_t oper_type)
+    char const *esp_mprot_oper_type_to_str(uint32_t const oper_type)
     {
         switch (oper_type)
         {
@@ -91,7 +91,7 @@ static inline
  * @param area_type PMS World type
  */
 static inline
-    const char *esp_mprot_pms_world_to_str(const esp_mprot_pms_world_t world_type)
+    char const *esp_mprot_pms_world_to_str(esp_mprot_pms_world_t const world_type)
     {
         switch (world_type)
         {
@@ -124,7 +124,7 @@ static inline
  *         ESP_ERR_MEMPROT_SPLIT_ADDR_OUT_OF_RANGE on splitting line out of given memory-type range
  *         ESP_ERR_MEMPROT_SPLIT_ADDR_UNALIGNED on splitting line not aligned to PMS-required boundaries
  */
-esp_err_t esp_mprot_set_split_addr(const esp_mprot_mem_t mem_type, const esp_mprot_split_addr_t line_type, const void *line_addr, const int core);
+esp_err_t esp_mprot_set_split_addr(esp_mprot_mem_t const mem_type, const esp_mprot_split_addr_t line_type, const void *line_addr, int const core);
 
 /**
  * @brief Gets PMS splitting address for given split_addr type
@@ -141,7 +141,7 @@ esp_err_t esp_mprot_set_split_addr(const esp_mprot_mem_t mem_type, const esp_mpr
  *         ESP_ERR_MEMPROT_MEMORY_TYPE_INVALID on invalid mem_type
  *         ESP_ERR_MEMPROT_SPLIT_ADDR_INVALID on invalid line_type
  */
-esp_err_t esp_mprot_get_split_addr(const esp_mprot_mem_t mem_type, const esp_mprot_split_addr_t line_type, void **line_addr, const int core);
+esp_err_t esp_mprot_get_split_addr(esp_mprot_mem_t const mem_type, const esp_mprot_split_addr_t line_type, void **line_addr, int const core);
 
 /**
  * @brief Returns default main I/D splitting address for given Memory type
@@ -153,7 +153,7 @@ esp_err_t esp_mprot_get_split_addr(const esp_mprot_mem_t mem_type, const esp_mpr
  *         ESP_ERR_INVALID_ARG on invalid def_split_addr pointer
  *         ESP_ERR_MEMPROT_MEMORY_TYPE_INVALID on invalid mem_type
  */
-esp_err_t esp_mprot_get_default_main_split_addr(const esp_mprot_mem_t mem_type, void **def_split_addr);
+esp_err_t esp_mprot_get_default_main_split_addr(esp_mprot_mem_t const mem_type, void **def_split_addr);
 
 /**
  * @brief Sets a lock for the main IRAM/DRAM splitting addresses
@@ -165,7 +165,7 @@ esp_err_t esp_mprot_get_default_main_split_addr(const esp_mprot_mem_t mem_type, 
  * @return ESP_OK on success
  *         ESP_ERR_MEMPROT_MEMORY_TYPE_INVALID on invalid mem_type
  */
-esp_err_t esp_mprot_set_split_addr_lock(const esp_mprot_mem_t mem_type, const int core);
+esp_err_t esp_mprot_set_split_addr_lock(esp_mprot_mem_t const mem_type, int const core);
 
 /**
  * @brief Gets a lock status for the splitting address configuration of given Memory type
@@ -178,7 +178,7 @@ esp_err_t esp_mprot_set_split_addr_lock(const esp_mprot_mem_t mem_type, const in
  *         ESP_ERR_INVALID_ARGUMENT on invalid locked pointer
  *         ESP_ERR_MEMPROT_MEMORY_TYPE_INVALID on invalid mem_type
  */
-esp_err_t esp_mprot_get_split_addr_lock(const esp_mprot_mem_t mem_type, bool *locked, const int core);
+esp_err_t esp_mprot_get_split_addr_lock(esp_mprot_mem_t const mem_type, bool *locked, int const core);
 
 /**
  * @brief Sets a lock for PMS Area settings of required Memory type
@@ -190,7 +190,7 @@ esp_err_t esp_mprot_get_split_addr_lock(const esp_mprot_mem_t mem_type, bool *lo
  * @return ESP_OK on success
  *         ESP_ERR_MEMPROT_MEMORY_TYPE_INVALID on invalid mem_type
  */
-esp_err_t esp_mprot_set_pms_lock(const esp_mprot_mem_t mem_type, const int core);
+esp_err_t esp_mprot_set_pms_lock(esp_mprot_mem_t const mem_type, int const core);
 
 /**
  * @brief Gets a lock status for PMS Area settings of required Memory type
@@ -203,7 +203,7 @@ esp_err_t esp_mprot_set_pms_lock(const esp_mprot_mem_t mem_type, const int core)
  *         ESP_ERR_MEMPROT_MEMORY_TYPE_INVALID on invalid mem_type
  *         ESP_ERR_INVALID_ARGUMENT on invalid locked pointer
  */
-esp_err_t esp_mprot_get_pms_lock(const esp_mprot_mem_t mem_type, bool *locked, const int core);
+esp_err_t esp_mprot_get_pms_lock(esp_mprot_mem_t const mem_type, bool *locked, int const core);
 
 /**
  * @brief Sets permissions for given PMS Area
@@ -215,7 +215,7 @@ esp_err_t esp_mprot_get_pms_lock(const esp_mprot_mem_t mem_type, bool *locked, c
  * @return ESP_OK on success
  *         ESP_ERR_MEMPROT_MEMORY_TYPE_INVALID on invalid mem_type
  */
-esp_err_t esp_mprot_set_pms_area(const esp_mprot_pms_area_t area_type, const uint32_t flags, const int core);
+esp_err_t esp_mprot_set_pms_area(esp_mprot_pms_area_t const area_type, uint32_t const flags, int const core);
 
 /**
  * @brief Gets current permissions for given PMS Area
@@ -228,7 +228,7 @@ esp_err_t esp_mprot_set_pms_area(const esp_mprot_pms_area_t area_type, const uin
  *         ESP_ERR_MEMPROT_MEMORY_TYPE_INVALID on invalid mem_type
  *         ESP_ERR_INVALID_ARG on invalid flags pointer
  */
-esp_err_t esp_mprot_get_pms_area(const esp_mprot_pms_area_t area_type, uint32_t *flags, const int core);
+esp_err_t esp_mprot_get_pms_area(esp_mprot_pms_area_t const area_type, uint32_t *flags, int const core);
 
 /**
  * @brief Sets a lock for PMS interrupt monitor settings of required Memory type
@@ -241,7 +241,7 @@ esp_err_t esp_mprot_get_pms_area(const esp_mprot_pms_area_t area_type, uint32_t 
  * @return ESP_OK on success
  *         ESP_ERR_MEMPROT_MEMORY_TYPE_INVALID on invalid mem_type
  */
-esp_err_t esp_mprot_set_monitor_lock(const esp_mprot_mem_t mem_type, const int core);
+esp_err_t esp_mprot_set_monitor_lock(esp_mprot_mem_t const mem_type, int const core);
 
 /**
  * @brief Gets a lock status for PMS interrupt monitor settings of required Memory type
@@ -254,7 +254,7 @@ esp_err_t esp_mprot_set_monitor_lock(const esp_mprot_mem_t mem_type, const int c
  *         ESP_ERR_MEMPROT_MEMORY_TYPE_INVALID on invalid mem_type
  *         ESP_ERR_INVALID_ARG on invalid locked pointer
  */
-esp_err_t esp_mprot_get_monitor_lock(const esp_mprot_mem_t mem_type, bool *locked, const int core);
+esp_err_t esp_mprot_get_monitor_lock(esp_mprot_mem_t const mem_type, bool *locked, int const core);
 
 /**
  * @brief Enable PMS violation interrupt monitoring of required Memory type
@@ -266,7 +266,7 @@ esp_err_t esp_mprot_get_monitor_lock(const esp_mprot_mem_t mem_type, bool *locke
  * @return ESP_OK on success
  *         ESP_ERR_MEMPROT_MEMORY_TYPE_INVALID on invalid mem_type
  */
-esp_err_t esp_mprot_set_monitor_en(const esp_mprot_mem_t mem_type, const bool enable, const int core);
+esp_err_t esp_mprot_set_monitor_en(esp_mprot_mem_t const mem_type, const bool enable, int const core);
 
 /**
  * @brief Gets PMS violation-monitoring-enabled flag for required Memory type
@@ -279,7 +279,7 @@ esp_err_t esp_mprot_set_monitor_en(const esp_mprot_mem_t mem_type, const bool en
  *         ESP_ERR_INVALID_ARG on invalid enabled pointer
  *         ESP_ERR_MEMPROT_MEMORY_TYPE_INVALID on invalid mem_type
  */
-esp_err_t esp_mprot_get_monitor_en(const esp_mprot_mem_t mem_type, bool* enabled, const int core);
+esp_err_t esp_mprot_get_monitor_en(esp_mprot_mem_t const mem_type, bool* enabled, int const core);
 
 #ifdef __cplusplus
 }

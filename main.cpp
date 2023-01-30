@@ -6,6 +6,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <sys/reent.h>
+#include <semaphore.h>
 #include "spinlock.h"
 
 #include "freertos/FreeRTOS.h"
@@ -22,14 +23,20 @@ static void *blink_thread3(void *arg);
 
 
 // pthread_mutex_t mutex;
-spinlock_t spinlock = SPINLOCK_INITIALIZER;
+static spinlock_t spinlock = SPINLOCK_INITIALIZER;
+static sem_t sema;
+
 
 extern "C" void __attribute__((weak)) app_main(void)
 {
     esp_rom_printf("Minimum free heap size: %d bytes\n", heap_caps_get_minimum_free_size(MALLOC_CAP_DEFAULT));
     esp_rom_printf("cpu frequency: %d\n", esp_clk_cpu_freq());
 
+    sem_init(&sema, 0, 10);
+    esp_rom_printf("semaphore init...\n");
+
     esp_rom_printf("infinite loop...\n");
+
 
     try
     {
@@ -64,8 +71,10 @@ extern "C" void __attribute__((weak)) app_main(void)
 
     while (1)
     {
+        sem_post(&sema);
+
         spinlock_acquire(&spinlock, SPINLOCK_WAIT_FOREVER);
-        esp_rom_printf("...............................%d\n", esp_cpu_get_core_id());
+        esp_rom_printf("thread0: cpu: %d\n", esp_cpu_get_core_id());
         fflush(stdout);
         spinlock_release(&spinlock);
 
@@ -76,7 +85,6 @@ extern "C" void __attribute__((weak)) app_main(void)
 static void *blink_thread1(void *arg)
 {
     ARG_UNUSED(arg);
-    int start_core_id = esp_cpu_get_core_id();
 
     // uint32_t irq_status = XTOS_SET_INTLEVEL(XCHAL_EXCM_LEVEL);
     // esp_rom_printf("...............................%lu\n\n\n", irq_status);
@@ -92,12 +100,7 @@ static void *blink_thread1(void *arg)
         spinlock_acquire(&spinlock, SPINLOCK_WAIT_FOREVER);
         */
         spinlock_acquire(&spinlock, SPINLOCK_WAIT_FOREVER);
-        int core_id = esp_cpu_get_core_id();
-
-        if (start_core_id == core_id)
-            esp_rom_printf("thread1: cpu: %d start_core_id == core_id\n", core_id);
-        else
-            esp_rom_printf("thread1: cpu: %d ########### start_core_id != core_id\n", core_id);
+        esp_rom_printf("thread1: cpu: %d\n", esp_cpu_get_core_id());
 
         fflush(stdout);
         spinlock_release(&spinlock);
@@ -122,7 +125,7 @@ static void *blink_thread2(void *arg)
         fflush(stdout);
         spinlock_release(&spinlock);
 
-        msleep(700);
+        sem_timedwait_ms(&sema, 500);
     }
 }
 

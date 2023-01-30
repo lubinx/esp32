@@ -26,7 +26,7 @@ void esp_restart_noos(void)
 void esp_restart_noos_dig(void)
     __attribute__((alias("esp_restart")));
 
-void esp_system_abort(const char* details)
+void esp_system_abort(const char *details)
 {
     abort();
 }
@@ -36,7 +36,7 @@ esp_err_t esp_register_shutdown_handler(void (*function)(void))
     return atexit(function);
 }
 
-const char* esp_get_idf_version(void)
+const char *esp_get_idf_version(void)
 {
     return IDF_VER;
 }
@@ -68,15 +68,4 @@ esp_err_t esp_ipc_call_blocking(uint32_t cpu_id, esp_ipc_func_t func, void* arg)
 {
     func(arg);
     return ESP_OK;
-}
-
-#include "esp_chip_info.h"
-
-void esp_chip_info(esp_chip_info_t *out_info)
-{
-    memset(out_info, 0, sizeof(*out_info));
-    out_info->model = CHIP_ESP32S3;
-    out_info->revision = efuse_hal_chip_revision();
-    out_info->cores = 2;
-    out_info->features = CHIP_FEATURE_WIFI_BGN | CHIP_FEATURE_BLE;
 }

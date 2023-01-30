@@ -18,7 +18,7 @@ struct utimbuf {
     time_t modtime;      // modification time
 };
 
-int utime(const char *path, const struct utimbuf *times);
+int utime(char const *path, const struct utimbuf *times);
 
 #ifdef __cplusplus
 };

@@ -312,7 +312,7 @@ extern __attribute__((nothrow))
     size_t confstr(int name, char *buf, size_t len);
 
 extern __attribute__((nothrow))
-    char *crypt(const char *key, const char *salt);
+    char *crypt(char const *key, char const *salt);
 extern __attribute__((nothrow))
     void encrypt(char block[64], int edflag);
 
@@ -388,13 +388,13 @@ extern char *optarg;
 extern int optind, opterr, optopt;
 
 extern __attribute__((nothrow))
-    int getopt(int argc, char *const argv[], const char *optstring);
+    int getopt(int argc, char *const argv[], char const *optstring);
 
 extern __attribute__((nothrow, deprecated))
     int getpagesize(void);
 
 extern __attribute__((nothrow, deprecated))
-    char *getpass(const char *prompt);
+    char *getpass(char const *prompt);
 
 extern __attribute__((nothrow))
     int nice(int incr);
@@ -409,17 +409,17 @@ extern __attribute__((nothrow))
  *  file system
 */
 extern __attribute__((nothrow))
-    int access(const char *path, int amode);
+    int access(char const *path, int amode);
 
 extern __attribute__((nothrow))
-    int chdir(const char *path);
+    int chdir(char const *path);
 extern __attribute__((nothrow))
     int fchdir(int fildes);
 extern __attribute__((nothrow, deprecated))
-    int chroot(const char *path);
+    int chroot(char const *path);
 
 extern __attribute__((nothrow))
-    int rmdir(const char *path);
+    int rmdir(char const *path);
 
 extern __attribute__((nothrow))
     char *getcwd(char *buf, size_t size);
@@ -427,24 +427,24 @@ extern __attribute__((nothrow))
     char *getwd(char *path_name);
 
 extern __attribute__((nothrow))
-    int link(const char *path1, const char *path2);
+    int link(char const *path1, char const *path2);
 extern __attribute__((nothrow))
-    int symlink(const char *path1, const char *path2);
+    int symlink(char const *path1, char const *path2);
 extern __attribute__((nothrow))
-    int unlink(const char *path);
+    int unlink(char const *path);
 
 extern __attribute__((nothrow))
-    int chown(const char *path, uid_t owner, gid_t group);
+    int chown(char const *path, uid_t owner, gid_t group);
 extern __attribute__((nothrow))
     int fchown(int fildes, uid_t owner, gid_t group);
 extern __attribute__((nothrow))
-    int lchown(const char *path, uid_t owner, gid_t group);
+    int lchown(char const *path, uid_t owner, gid_t group);
 
 extern __attribute__((nothrow))
-    long int pathconf(const char *path, int name);
+    long int pathconf(char const *path, int name);
 
 extern __attribute__((nothrow))
-    int readlink(const char *path, char *buf, size_t bufsize);
+    int readlink(char const *path, char *buf, size_t bufsize);
 
 extern __attribute__((nothrow))
     long int sysconf(int name);
@@ -452,12 +452,12 @@ extern __attribute__((nothrow))
 extern __attribute__((nothrow))
     long int fpathconf(int fildes, int name);
 extern __attribute__((nothrow))
-    long int pathconf(const char *path, int name);
+    long int pathconf(char const *path, int name);
 
 extern __attribute__((nothrow))
     int ftruncate(int fildes, off_t length);
 extern __attribute__((nothrow))
-    int truncate(const char *path, off_t length);
+    int truncate(char const *path, off_t length);
 
 /**
  *  file descriptors
@@ -527,17 +527,17 @@ extern __attribute__((nothrow))
 extern char **environ;
 
 extern __attribute__((nothrow))
-    int execl(const char *path, const char *arg0, ... /*, (char *)0 */);
+    int execl(char const *path, char const *arg0, ... /*, (char *)0 */);
 extern __attribute__((nothrow))
-    int execv(const char *path, char *const argv[]);
+    int execv(char const *path, char *const argv[]);
 extern __attribute__((nothrow))
-    int execle(const char *path, const char *arg0, ... /*, (char *)0, char *const envp[]*/);
+    int execle(char const *path, char const *arg0, ... /*, (char *)0, char *const envp[]*/);
 extern __attribute__((nothrow))
-    int execve(const char *path, char *const argv[], char *const envp[]);
+    int execve(char const *path, char *const argv[], char *const envp[]);
 extern __attribute__((nothrow))
-    int execlp(const char *file, const char *arg0, ... /*, (char *)0 */);
+    int execlp(char const *file, char const *arg0, ... /*, (char *)0 */);
 extern __attribute__((nothrow))
-    int execvp(const char *file, char *const argv[]);
+    int execvp(char const *file, char *const argv[]);
 
 /**
  *  no stdandard function

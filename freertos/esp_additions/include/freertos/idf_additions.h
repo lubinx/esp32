@@ -34,11 +34,11 @@
  *         file projdefs.h
  */
 BaseType_t xTaskCreatePinnedToCore( TaskFunction_t pxTaskCode,
-                                    const char * const pcName,
-                                    const uint32_t usStackDepth,
-                                    void * const pvParameters,
+                                    const char *const pcName,
+                                    uint32_t const usStackDepth,
+                                    void *const pvParameters,
                                     UBaseType_t uxPriority,
-                                    TaskHandle_t * const pxCreatedTask,
+                                    TaskHandle_t *const pxCreatedTask,
                                     const BaseType_t xCoreID);
 
 
@@ -59,12 +59,12 @@ BaseType_t xTaskCreatePinnedToCore( TaskFunction_t pxTaskCode,
  */
 #if ( configSUPPORT_STATIC_ALLOCATION == 1 )
 TaskHandle_t xTaskCreateStaticPinnedToCore( TaskFunction_t pxTaskCode,
-                                            const char * const pcName,
-                                            const uint32_t ulStackDepth,
-                                            void * const pvParameters,
+                                            const char *const pcName,
+                                            uint32_t const ulStackDepth,
+                                            void *const pvParameters,
                                             UBaseType_t uxPriority,
-                                            StackType_t * const puxStackBuffer,
-                                            StaticTask_t * const pxTaskBuffer,
+                                            StackType_t *const puxStackBuffer,
+                                            StaticTask_t *const pxTaskBuffer,
                                             const BaseType_t xCoreID );
 #endif /* configSUPPORT_STATIC_ALLOCATION */
 

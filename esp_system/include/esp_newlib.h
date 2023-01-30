@@ -15,10 +15,7 @@ extern __attribute__((nothrow))
     void esp_newlib_init(void);
 
 extern __attribute__((nothrow))
-    void esp_reent_init(struct _reent* r);
-
-extern __attribute__((nothrow))
-    void esp_reent_cleanup(void);
+    void esp_reent_init(struct _reent *r);
 
 /**
  * Update current microsecond time from RTC

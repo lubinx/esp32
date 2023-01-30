@@ -41,7 +41,7 @@ extern void __LOCK_retarget(void);
 extern void __FILESYSTEM_init(void);
 extern void __IO_retarget(void);
 
-extern void _cleanup_r(struct _reent* r);
+extern void _cleanup_r(struct _reent *r);
 extern struct _reent *__getreent(void);     // freertos_tasks_c_additions.h linked by freertos
 
 /****************************************************************************
@@ -67,35 +67,8 @@ void esp_newlib_init(void)
     #endif
 
     _GLOBAL_REENT = &__reent;
-    __sinit(_GLOBAL_REENT);
+    __sinit(&__reent);
 
-    /*
-    static FILE _stdin = {0};
-    static FILE _stdout = {0};
-    static FILE _stderr = {0};
-
-    _stdin._file = STDIN_FILENO;
-    _stdin._close = (void *)&_close_r;
-    _stdin._read = (void *)&_read_r;
-    _stdin._write = (void *)&_write_r;
-    _stdin._seek = (void *)&_lseek_r;
-
-    _stdout._file = STDOUT_FILENO;
-    _stdout._close = (void *)&_close_r;
-    _stdout._read = (void *)&_read_r;
-    _stdout._write = (void *)&_write_r;
-    _stdout._seek = (void *)&_lseek_r;
-
-    _stderr._file = STDERR_FILENO;
-    _stderr._close = (void *)&_close_r;
-    _stderr._read  = (void *)&_read_r;
-    _stderr._write = (void *)&_write_r;
-    _stderr._seek  = (void *)&_lseek_r;
-
-    _GLOBAL_REENT->_stdin = &_stdin;
-    _GLOBAL_REENT->_stdout = &_stdout;
-    _GLOBAL_REENT->_stderr = &_stderr;
-*/
     __LOCK_retarget();
     __FILESYSTEM_init();
     __IO_retarget();
@@ -107,7 +80,7 @@ void esp_newlib_init(void)
     esp_pthread_init();
 }
 
-void esp_reent_init(struct _reent* r)
+void esp_reent_init(struct _reent *r)
 {
     /**
      *  REVIEW: SOO..hardcoded esp_reent_init() instead of __sinit()?
@@ -128,89 +101,13 @@ void esp_reent_init(struct _reent* r)
     */
 }
 
-void esp_reent_cleanup(void)
-{
-    struct _reent* r = __getreent();
-    /* Clean up storage used by mprec functions */
-    if (r->_mp)
-    {
-        if (_REENT_MP_FREELIST(r))
-        {
-            for (unsigned int i = 0; i < _Kmax; ++i)
-            {
-                struct _Bigint *cur, *next;
-                next = _REENT_MP_FREELIST(r)[i];
-                while (next) {
-                    cur = next;
-                    next = next->_next;
-                    free(cur);
-                }
-            }
-        }
-        free(_REENT_MP_FREELIST(r));
-        free(_REENT_MP_RESULT(r));
-    }
-
-    /* Clean up "glue" (lazily-allocated FILE objects) */
-    struct _glue* prev = &_GLOBAL_REENT->__sglue;
-    for (struct _glue* cur = _GLOBAL_REENT->__sglue._next; cur != NULL;)
-    {
-        if (cur->_niobs == 0)
-        {
-            cur = cur->_next;
-            continue;
-        }
-        bool has_open_files = false;
-        for (int i = 0; i < cur->_niobs; ++i)
-        {
-            FILE* fp = &cur->_iobs[i];
-            if (fp->_flags != 0)
-            {
-                has_open_files = true;
-                break;
-            }
-        }
-        if (has_open_files)
-        {
-            prev = cur;
-            cur = cur->_next;
-            continue;
-        }
-
-        struct _glue* next = cur->_next;
-        prev->_next = next;
-        free(cur);
-        cur = next;
-    }
-
-    /* Clean up various other buffers */
-    free(r->_mp);
-    r->_mp = NULL;
-    free(r->_r48);
-    r->_r48 = NULL;
-    free(r->_localtime_buf);
-    r->_localtime_buf = NULL;
-    free(r->_asctime_buf);
-    r->_asctime_buf = NULL;
-}
-
 int _getpid_r(struct _reent *r)
 {
     ARG_UNUSED(r);
     return 0;
 }
 
-#define __ENOSYS                        { return __set_errno_r_neg(r, ENOSYS); }
-#define __WEAK                          __attribute__((weak))
-
-__WEAK int _system_r(struct _reent *r, const char *str)
-    // __attribute__((alias("syscall_not_implemented")));
-{
-    ESP_LOGE("syscall", "_system_r()");
-    while(1);
-}
-
-__WEAK void __attribute__((noreturn)) __assert_func(const char *file, int line, const char *func, const char *failedexpr)
+void __assert_func(char const *file, int line, char const *func, char const *failedexpr)
 {
     ESP_LOGE("assertion", "\"%s\" failed\n\tfile \"%s\", line %d%s%s\n",
         failedexpr, file, line, func ? ", function: " : "", func ? func : "");
@@ -238,8 +135,6 @@ void _exit(int status)
             esp_cpu_unstall(i);
     }
 
-    ESP_LOGE(TAG, "calling _exit() %d", status);
-    while (1);
     esp_rom_software_reset_system();
     while (1);
 }
@@ -247,11 +142,6 @@ void _exit(int status)
 int _kill_r(struct _reent *r, int pid, int sig)
 {
     exit(EFAULT);
-}
-
-int atexit(void (*function)(void))
-{
-    return 0;
 }
 
 void abort(void)
@@ -264,15 +154,25 @@ void abort(void)
     exit(EFAULT);
 }
 
+int atexit(void (*function)(void))
+{
+    return 0;
+}
+
+#define __ENOSYS                        { return __set_errno_r_neg(r, ENOSYS); }
+#define __WEAK                          __attribute__((weak))
+
+__WEAK int _system_r(struct _reent *r, char const *str)                             __ENOSYS;
+
 __WEAK int _isatty_r(struct _reent *r, int fd)                                      __ENOSYS;
-__WEAK int _open_r(struct _reent *r, const char *path, int flags, int mode)         __ENOSYS;
+__WEAK int _open_r(struct _reent *r, char const *path, int flags, int mode)         __ENOSYS;
 __WEAK int _close_r(struct _reent *r, int fd)                                       __ENOSYS;
 __WEAK int _fcntl_r(struct _reent *r, int fd, int cmd, int arg)                     __ENOSYS
 __WEAK int _fstat_r(struct _reent *r, int fd, struct stat *st)                      __ENOSYS;
-__WEAK int _stat_r(struct _reent *r, const char *path, struct stat * st)            __ENOSYS;
-__WEAK int _link_r(struct _reent *r, const char* n1, const char* n2)                __ENOSYS;
-__WEAK int _unlink_r(struct _reent *r, const char *path)                            __ENOSYS;
-__WEAK int _rename_r(struct _reent *r, const char *src, const char *dst)            __ENOSYS;
+__WEAK int _stat_r(struct _reent *r, char const *path, struct stat * st)            __ENOSYS;
+__WEAK int _link_r(struct _reent *r, const char *n1, const char *n2)                __ENOSYS;
+__WEAK int _unlink_r(struct _reent *r, char const *path)                            __ENOSYS;
+__WEAK int _rename_r(struct _reent *r, char const *src, char const *dst)            __ENOSYS;
 
 __WEAK ssize_t _read_r(struct _reent *r, int fd, void *buf, size_t bufsize)         __ENOSYS;
 __WEAK ssize_t _write_r(struct _reent *r, int fd, void const *buf, size_t count)    __ENOSYS;
@@ -282,7 +182,7 @@ __WEAK off_t _lseek_r(struct _reent *r, int fd, off_t offset, int origin)       
  *  @internal
 *****************************************************************************/
 extern int _printf_float(struct _reent *rptr, void *pdata,
-    FILE * fp, int (*pfunc) (struct _reent *, FILE *, const char *, size_t len), va_list * ap);
+    FILE * fp, int (*pfunc) (struct _reent *, FILE *, char const *, size_t len), va_list * ap);
 extern int _scanf_float(struct _reent *rptr, void *pdata, FILE *fp, va_list *ap);
 
 static const struct syscall_stub_table __stub_table =
@@ -359,7 +259,7 @@ static const struct syscall_stub_table __stub_table =
             esp_reent_init() does this job inside IDF.
         Kept in the syscall table in case we find a need for it later.
     */
-    .__sinit = (void *)abort,
+    .__sinit = (void *)abort,   // &__sinit,
     ._cleanup_r = &_cleanup_r,
 #endif
 };

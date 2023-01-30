@@ -129,9 +129,5 @@ static uint32_t bootloader_flash_execute_command_common(uint8_t command, uint32_
 
 uint32_t bootloader_execute_flash_command(uint8_t command, uint32_t mosi_data, uint8_t mosi_len, uint8_t miso_len)
 {
-    const uint8_t addr_len = 0;
-    const uint8_t address = 0;
-    const uint8_t dummy_len = 0;
-
-    return bootloader_flash_execute_command_common(command, addr_len, address, dummy_len, mosi_len, mosi_data, miso_len);
+    return bootloader_flash_execute_command_common(command, 0, 0, 0, mosi_len, mosi_data, miso_len);
 }

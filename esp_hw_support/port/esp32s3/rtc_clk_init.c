@@ -16,7 +16,7 @@
 #include "esp_log.h"
 #include "esp_cpu.h"
 
-static const char *TAG = "rtc_clk_init";
+static char const *TAG = "rtc_clk_init";
 
 void rtc_clk_init(rtc_clk_config_t cfg)
 {

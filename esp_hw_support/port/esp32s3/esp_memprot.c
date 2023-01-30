@@ -40,7 +40,7 @@ static esp_memp_config_t s_memp_cfg = ESP_MEMPROT_ZERO_CONFIG();
 //////////////////////////////////////////////////////////////////////////////
 // internal helpers
 
-static esp_err_t esp_mprot_cpuid_valid(const int core)
+static esp_err_t esp_mprot_cpuid_valid(int const core)
 {
     for (size_t x = 0; x < s_memp_cfg.target_cpu_count; x++) {
         if (core == s_memp_cfg.target_cpu[x]) {
@@ -68,7 +68,7 @@ static void *esp_memprot_rtcfast_get_min_split_addr(void)
 
 //register MEMPROT-relevant interrupts in the global matrix (to deploy panic handling)
 //mapped to ETS_MEMACCESS_ERR_INUM (shared with cache-access interrupts)
-static esp_err_t esp_mprot_set_intr_matrix(const esp_mprot_mem_t mem_type, const int core)
+static esp_err_t esp_mprot_set_intr_matrix(esp_mprot_mem_t const mem_type, int const core)
 {
     ESP_INTR_DISABLE(ETS_MEMACCESS_ERR_INUM);
 
@@ -101,7 +101,7 @@ static esp_err_t esp_mprot_set_intr_matrix(const esp_mprot_mem_t mem_type, const
 // PMS configuration APIs (set/get/lock)
 // IRAM/DRAM settings are shared by both CPUs, RTCFAST settings are separate for each core
 
-esp_err_t esp_mprot_set_split_addr(const esp_mprot_mem_t mem_type, const esp_mprot_split_addr_t line_type, const void *line_addr, const int core __attribute__((unused)))
+esp_err_t esp_mprot_set_split_addr(esp_mprot_mem_t const mem_type, const esp_mprot_split_addr_t line_type, const void *line_addr, int const core __attribute__((unused)))
 {
     switch (mem_type) {
     case MEMPROT_TYPE_IRAM0_SRAM:
@@ -139,7 +139,7 @@ esp_err_t esp_mprot_set_split_addr(const esp_mprot_mem_t mem_type, const esp_mpr
     }
 }
 
-esp_err_t esp_mprot_get_split_addr(const esp_mprot_mem_t mem_type, const esp_mprot_split_addr_t line_type, void **line_addr, const int core __attribute__((unused)))
+esp_err_t esp_mprot_get_split_addr(esp_mprot_mem_t const mem_type, const esp_mprot_split_addr_t line_type, void **line_addr, int const core __attribute__((unused)))
 {
     if (line_addr == NULL) {
         return ESP_ERR_INVALID_ARG;
@@ -187,7 +187,7 @@ esp_err_t esp_mprot_get_split_addr(const esp_mprot_mem_t mem_type, const esp_mpr
     return ESP_OK;
 }
 
-esp_err_t esp_mprot_get_default_main_split_addr(const esp_mprot_mem_t mem_type, void **def_split_addr)
+esp_err_t esp_mprot_get_default_main_split_addr(esp_mprot_mem_t const mem_type, void **def_split_addr)
 {
     if (def_split_addr == NULL) {
         return ESP_ERR_INVALID_ARG;
@@ -210,7 +210,7 @@ esp_err_t esp_mprot_get_default_main_split_addr(const esp_mprot_mem_t mem_type, 
     return ESP_OK;
 }
 
-esp_err_t esp_mprot_set_split_addr_lock(const esp_mprot_mem_t mem_type, const int core __attribute__((unused)))
+esp_err_t esp_mprot_set_split_addr_lock(esp_mprot_mem_t const mem_type, int const core __attribute__((unused)))
 {
     switch (mem_type) {
     case MEMPROT_TYPE_IRAM0_SRAM:
@@ -229,7 +229,7 @@ esp_err_t esp_mprot_set_split_addr_lock(const esp_mprot_mem_t mem_type, const in
     return ESP_OK;
 }
 
-esp_err_t esp_mprot_get_split_addr_lock(const esp_mprot_mem_t mem_type, bool *locked, const int core __attribute__((unused)))
+esp_err_t esp_mprot_get_split_addr_lock(esp_mprot_mem_t const mem_type, bool *locked, int const core __attribute__((unused)))
 {
     if (locked == NULL) {
         return ESP_ERR_INVALID_ARG;
@@ -252,7 +252,7 @@ esp_err_t esp_mprot_get_split_addr_lock(const esp_mprot_mem_t mem_type, bool *lo
     return ESP_OK;
 }
 
-esp_err_t esp_mprot_set_pms_lock(const esp_mprot_mem_t mem_type, const int core __attribute__((unused)))
+esp_err_t esp_mprot_set_pms_lock(esp_mprot_mem_t const mem_type, int const core __attribute__((unused)))
 {
     switch (mem_type) {
     case MEMPROT_TYPE_IRAM0_SRAM:
@@ -273,7 +273,7 @@ esp_err_t esp_mprot_set_pms_lock(const esp_mprot_mem_t mem_type, const int core 
     return ESP_OK;
 }
 
-esp_err_t esp_mprot_get_pms_lock(const esp_mprot_mem_t mem_type, bool *locked, const int core __attribute__((unused)))
+esp_err_t esp_mprot_get_pms_lock(esp_mprot_mem_t const mem_type, bool *locked, int const core __attribute__((unused)))
 {
     if (locked == NULL) {
         return ESP_ERR_INVALID_ARG;
@@ -298,7 +298,7 @@ esp_err_t esp_mprot_get_pms_lock(const esp_mprot_mem_t mem_type, bool *locked, c
     return ESP_OK;
 }
 
-esp_err_t esp_mprot_set_pms_area(const esp_mprot_pms_area_t area_type, const uint32_t flags, const int core __attribute__((unused)))
+esp_err_t esp_mprot_set_pms_area(esp_mprot_pms_area_t const area_type, uint32_t const flags, int const core __attribute__((unused)))
 {
     esp_err_t err;
     bool r = flags & MEMPROT_OP_READ;
@@ -351,7 +351,7 @@ esp_err_t esp_mprot_set_pms_area(const esp_mprot_pms_area_t area_type, const uin
     return ESP_OK;
 }
 
-esp_err_t esp_mprot_get_pms_area(const esp_mprot_pms_area_t area_type, uint32_t *flags, const int core __attribute__((unused)))
+esp_err_t esp_mprot_get_pms_area(esp_mprot_pms_area_t const area_type, uint32_t *flags, int const core __attribute__((unused)))
 {
     if (flags == NULL) {
         return ESP_ERR_INVALID_ARG;
@@ -419,7 +419,7 @@ esp_err_t esp_mprot_get_pms_area(const esp_mprot_pms_area_t area_type, uint32_t 
     return ESP_OK;
 }
 
-esp_err_t esp_mprot_set_monitor_lock(const esp_mprot_mem_t mem_type, const int core)
+esp_err_t esp_mprot_set_monitor_lock(esp_mprot_mem_t const mem_type, int const core)
 {
     esp_err_t err;
     ESP_MEMPROT_ERR_CHECK(err, esp_mprot_cpuid_valid(core))
@@ -441,7 +441,7 @@ esp_err_t esp_mprot_set_monitor_lock(const esp_mprot_mem_t mem_type, const int c
     return ESP_OK;
 }
 
-esp_err_t esp_mprot_get_monitor_lock(const esp_mprot_mem_t mem_type, bool *locked, const int core)
+esp_err_t esp_mprot_get_monitor_lock(esp_mprot_mem_t const mem_type, bool *locked, int const core)
 {
     if (locked == NULL) {
         return ESP_ERR_INVALID_ARG;
@@ -467,7 +467,7 @@ esp_err_t esp_mprot_get_monitor_lock(const esp_mprot_mem_t mem_type, bool *locke
     return ESP_OK;
 }
 
-esp_err_t esp_mprot_set_monitor_en(const esp_mprot_mem_t mem_type, const bool enable, const int core)
+esp_err_t esp_mprot_set_monitor_en(esp_mprot_mem_t const mem_type, const bool enable, int const core)
 {
     esp_err_t err;
     ESP_MEMPROT_ERR_CHECK(err, esp_mprot_cpuid_valid(core))
@@ -489,7 +489,7 @@ esp_err_t esp_mprot_set_monitor_en(const esp_mprot_mem_t mem_type, const bool en
     return ESP_OK;
 }
 
-esp_err_t esp_mprot_get_monitor_en(esp_mprot_mem_t mem_type, bool *enabled, const int core)
+esp_err_t esp_mprot_get_monitor_en(esp_mprot_mem_t mem_type, bool *enabled, int const core)
 {
     if (enabled == NULL) {
         return ESP_ERR_INVALID_ARG;
@@ -605,7 +605,7 @@ esp_err_t IRAM_ATTR esp_mprot_get_active_intr(esp_memp_intr_source_t *active_mem
     return ESP_OK;
 }
 
-esp_err_t IRAM_ATTR esp_mprot_monitor_clear_intr(esp_mprot_mem_t mem_type, const int core)
+esp_err_t IRAM_ATTR esp_mprot_monitor_clear_intr(esp_mprot_mem_t mem_type, int const core)
 {
     esp_err_t err;
     ESP_MEMPROT_ERR_CHECK(err, esp_mprot_cpuid_valid(core))
@@ -744,7 +744,7 @@ esp_err_t IRAM_ATTR esp_mprot_is_intr_ena_any(bool *enabled)
     return ESP_OK;
 }
 
-esp_err_t IRAM_ATTR esp_mprot_get_violate_addr(const esp_mprot_mem_t mem_type, void **fault_addr, const int core)
+esp_err_t IRAM_ATTR esp_mprot_get_violate_addr(esp_mprot_mem_t const mem_type, void **fault_addr, int const core)
 {
     if (fault_addr == NULL) {
         return ESP_ERR_INVALID_ARG;
@@ -774,7 +774,7 @@ esp_err_t IRAM_ATTR esp_mprot_get_violate_addr(const esp_mprot_mem_t mem_type, v
     return ESP_OK;
 }
 
-esp_err_t IRAM_ATTR esp_mprot_get_violate_world(const esp_mprot_mem_t mem_type, esp_mprot_pms_world_t *world, const int core)
+esp_err_t IRAM_ATTR esp_mprot_get_violate_world(esp_mprot_mem_t const mem_type, esp_mprot_pms_world_t *world, int const core)
 {
     if (world == NULL) {
         return ESP_ERR_INVALID_ARG;
@@ -808,7 +808,7 @@ esp_err_t IRAM_ATTR esp_mprot_get_violate_world(const esp_mprot_mem_t mem_type, 
     return ESP_OK;
 }
 
-esp_err_t IRAM_ATTR esp_mprot_get_violate_operation(const esp_mprot_mem_t mem_type, uint32_t *oper, const int core)
+esp_err_t IRAM_ATTR esp_mprot_get_violate_operation(esp_mprot_mem_t const mem_type, uint32_t *oper, int const core)
 {
     if (oper == NULL) {
         return ESP_ERR_INVALID_ARG;
@@ -853,12 +853,12 @@ esp_err_t IRAM_ATTR esp_mprot_get_violate_operation(const esp_mprot_mem_t mem_ty
     return ESP_OK;
 }
 
-bool IRAM_ATTR esp_mprot_has_byte_enables(const esp_mprot_mem_t mem_type)
+bool IRAM_ATTR esp_mprot_has_byte_enables(esp_mprot_mem_t const mem_type)
 {
     return mem_type == MEMPROT_TYPE_DRAM0_SRAM;
 }
 
-esp_err_t IRAM_ATTR esp_mprot_get_violate_byte_enables(const esp_mprot_mem_t mem_type, uint32_t *byte_en, const int core)
+esp_err_t IRAM_ATTR esp_mprot_get_violate_byte_enables(esp_mprot_mem_t const mem_type, uint32_t *byte_en, int const core)
 {
     if (byte_en == NULL) {
         return ESP_ERR_INVALID_ARG;
@@ -1052,7 +1052,7 @@ esp_err_t esp_mprot_set_prot(const esp_memp_config_t *memp_config)
         uint32_t check_val;
 
         //IRAM0 split lines
-        memprot_ll_prepare_iram0_split_line_regval((const uint32_t) line_addr, &check_val);
+        memprot_ll_prepare_iram0_split_line_regval((uint32_t const) line_addr, &check_val);
 
         if (memprot_ll_get_iram0_split_line_main_I_D_regval() != check_val) {
             esp_rom_printf(
@@ -1074,7 +1074,7 @@ esp_err_t esp_mprot_set_prot(const esp_memp_config_t *memp_config)
         }
 
         //DRAM0 split lines
-        memprot_ll_prepare_dram0_split_line_regval(MAP_IRAM_TO_DRAM((const uint32_t) line_addr), &check_val);
+        memprot_ll_prepare_dram0_split_line_regval(MAP_IRAM_TO_DRAM((uint32_t const) line_addr), &check_val);
 
         if (memprot_ll_get_dram0_split_line_main_D_0_regval() != check_val) {
             esp_rom_printf(

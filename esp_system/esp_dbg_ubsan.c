@@ -30,7 +30,7 @@
 
 struct source_location
 {
-    const char *file_name;
+    char const *file_name;
     uint32_t line;
     uint32_t column;
 };
@@ -118,7 +118,7 @@ struct invalid_builtin_data
 };
 
 
-static void __ubsan_default_handler(struct source_location *loc, const char *func) __attribute__((noreturn));
+static void __ubsan_default_handler(struct source_location *loc, char const *func) __attribute__((noreturn));
 
 /*
  * When compiling with -fsanitize=undefined the compiler expects functions
@@ -149,7 +149,7 @@ static void __ubsan_maybe_debugbreak(void)
         esp_cpu_dbgr_break();
 }
 
-static void __ubsan_default_handler(struct source_location *loc, const char *func)
+static void __ubsan_default_handler(struct source_location *loc, char const *func)
 {
     /* Although the source location is available here, it is not printed:
      *

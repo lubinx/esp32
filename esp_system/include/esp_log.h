@@ -137,7 +137,7 @@ extern
     void esp_rom_delay_us(uint32_t us);
 
 extern __attribute__ ((nothrow, format (printf, 1, 2)))
-    int esp_rom_printf(const char *fmt, ...);
+    int esp_rom_printf(char const *fmt, ...);
 
 __END_DECLS
 #endif

@@ -45,7 +45,7 @@ static void IRAM_ATTR print_entry(uint32_t pc, uint32_t sp, bool panic)
     }
 }
 
-static void IRAM_ATTR print_str(const char* str, bool panic)
+static void IRAM_ATTR print_str(const char *str, bool panic)
 {
     if (panic) {
         panic_print_str(str);

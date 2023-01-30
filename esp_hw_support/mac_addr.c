@@ -24,7 +24,7 @@
 #define ESP_MAC_ADDRESS_LEN 6
 #endif
 
-static const char *TAG = "system_api";
+static char const *TAG = "system_api";
 
 typedef enum {
     STATE_INIT      = 0,
@@ -113,7 +113,7 @@ size_t esp_mac_addr_len_get(esp_mac_type_t type)
     return 0;
 }
 
-esp_err_t esp_iface_mac_addr_set(const uint8_t *mac, esp_mac_type_t type)
+esp_err_t esp_iface_mac_addr_set(uint8_t const *mac, esp_mac_type_t type)
 {
     if (mac == NULL) {
         ESP_LOGE(TAG, "mac address param is NULL");
@@ -141,7 +141,7 @@ esp_err_t esp_iface_mac_addr_set(const uint8_t *mac, esp_mac_type_t type)
     return ESP_OK;
 }
 
-esp_err_t esp_base_mac_addr_set(const uint8_t *mac)
+esp_err_t esp_base_mac_addr_set(uint8_t const *mac)
 {
     return esp_iface_mac_addr_set(mac, ESP_MAC_BASE);
 }
@@ -236,7 +236,7 @@ esp_err_t esp_efuse_mac_get_default(uint8_t *mac)
     return ESP_OK;
 }
 
-esp_err_t esp_derive_local_mac(uint8_t *local_mac, const uint8_t *universal_mac)
+esp_err_t esp_derive_local_mac(uint8_t *local_mac, uint8_t const *universal_mac)
 {
     if (local_mac == NULL || universal_mac == NULL) {
         ESP_LOGE(TAG, "mac address param is NULL");

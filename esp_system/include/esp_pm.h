@@ -99,7 +99,7 @@ typedef struct esp_pm_lock* esp_pm_lock_handle_t;
  *      - ESP_ERR_NOT_SUPPORTED if CONFIG_PM_ENABLE is not enabled in sdkconfig
  */
 esp_err_t esp_pm_lock_create(esp_pm_lock_type_t lock_type, int arg,
-        const char* name, esp_pm_lock_handle_t* out_handle);
+        const char *name, esp_pm_lock_handle_t* out_handle);
 
 /**
  * @brief Take a power management lock

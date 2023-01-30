@@ -76,21 +76,21 @@ typedef enum
  *
  * @param mem_type Memory protection type (see mem_type_prot_t enum)
  */
-const char *esp_memprot_mem_type_to_str(mem_type_prot_t mem_type);
+char const *esp_memprot_mem_type_to_str(mem_type_prot_t mem_type);
 
 /**
  * @brief Converts Split line type to string
  *
  * @param line_type Split line type (see split_line_t enum)
  */
-const char *esp_memprot_split_line_to_str(split_line_t line_type);
+char const *esp_memprot_split_line_to_str(split_line_t line_type);
 
 /**
  * @brief Converts PMS Area type to string
  *
  * @param area_type PMS Area type (see pms_area_t enum)
  */
-const char *esp_memprot_pms_to_str(pms_area_t area_type);
+char const *esp_memprot_pms_to_str(pms_area_t area_type);
 
 /**
  * @brief Returns PMS splitting address for given Split line type

@@ -71,7 +71,7 @@ typedef enum {
   * @return ESP_OK on success
   *         ESP_ERR_INVALID_ARG If mac is NULL or is not a unicast MAC
   */
-esp_err_t esp_base_mac_addr_set(const uint8_t *mac);
+esp_err_t esp_base_mac_addr_set(uint8_t const *mac);
 
 /**
   * @brief  Return base MAC address which is set using esp_base_mac_addr_set.
@@ -160,7 +160,7 @@ esp_err_t esp_read_mac(uint8_t *mac, esp_mac_type_t type);
   *
   * @return ESP_OK on success
   */
-esp_err_t esp_derive_local_mac(uint8_t *local_mac, const uint8_t *universal_mac);
+esp_err_t esp_derive_local_mac(uint8_t *local_mac, uint8_t const *universal_mac);
 
 /**
   * @brief  Set custom MAC address of the interface. This function allows you to overwrite the MAC addresses
@@ -173,7 +173,7 @@ esp_err_t esp_derive_local_mac(uint8_t *local_mac, const uint8_t *universal_mac)
   *
   * @return ESP_OK on success
   */
-esp_err_t esp_iface_mac_addr_set(const uint8_t *mac, esp_mac_type_t type);
+esp_err_t esp_iface_mac_addr_set(uint8_t const *mac, esp_mac_type_t type);
 
 /**
   * @brief  Return the size of the MAC type in bytes.

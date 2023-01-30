@@ -24,7 +24,7 @@
 #include "esp_rom_sys.h"
 #include "hal/cache_ll.h"
 
-static const char *TAG = "CACHE_ERR";
+static char const *TAG = "CACHE_ERR";
 
 void esp_cache_err_int_init(void)
 {

@@ -78,7 +78,7 @@ esp_err_t esp_hmac_calculate(hmac_key_id_t key_id,
  *
  * @note  Return value of the API does not indicate the JTAG status.
  */
-esp_err_t esp_hmac_jtag_enable(hmac_key_id_t key_id, const uint8_t *token);
+esp_err_t esp_hmac_jtag_enable(hmac_key_id_t key_id, uint8_t const *token);
 
 /**
  *  @brief Disable the JTAG which might be enabled using the HMAC downstream mode. This function just clears the result generated

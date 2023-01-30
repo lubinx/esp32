@@ -144,7 +144,7 @@ PROVIDE(_flash_rodata_start = ABSOLUTE(.));
         *(.gnu.linkonce.e.*)
         *(.gnu.version_r)
 
-        /* constructor and destructor tables */
+        /*constructor and destructor tables */
         /* Don't include anything from crtbegin.o or crtend.o, as IDF doesn't use toolchain crt */
         __init_array_start = ABSOLUTE(.);
         KEEP (*(EXCLUDE_FILE (*crtend.* *crtbegin.*) .ctors SORT(.ctors.*)))

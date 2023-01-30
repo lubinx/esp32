@@ -19,7 +19,7 @@ typedef struct {
     size_t stack_size;  ///< The stack size of the pthread
     size_t prio;        ///< The thread's priority
     bool inherit_cfg;   ///< Inherit this configuration further
-    const char* thread_name;  ///< The thread name.
+    const char *thread_name;  ///< The thread name.
     int pin_to_core;    ///< The core id to pin the thread to. Has the same value range as xCoreId argument of xTaskCreatePinnedToCore.
 } esp_pthread_cfg_t;
 
@@ -219,7 +219,7 @@ int pthread_create(pthread_t *thread, pthread_attr_t const *attr,
     uint32_t stack_size = CONFIG_PTHREAD_TASK_STACK_SIZE_DEFAULT;
     BaseType_t prio = CONFIG_PTHREAD_TASK_PRIO_DEFAULT;
     BaseType_t core_id = get_default_pthread_core();
-    const char *task_name = CONFIG_PTHREAD_TASK_NAME_DEFAULT;
+    char const *task_name = CONFIG_PTHREAD_TASK_NAME_DEFAULT;
 
     esp_pthread_cfg_t *pthread_cfg = pthread_getspecific(s_pthread_cfg_key);
     if (pthread_cfg) {

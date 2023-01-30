@@ -29,7 +29,7 @@ extern "C" {
 typedef u32_t socklen_t;
 
 
-unsigned int if_nametoindex(const char *ifname);
+unsigned int if_nametoindex(char const *ifname);
 
 char *if_indextoname(unsigned int ifindex, char *ifname);
 

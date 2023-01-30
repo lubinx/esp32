@@ -28,7 +28,7 @@
 #include "sys/queue.h"
 
 #if CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32H2 // TODO: IDF-5645
-static const char *TAG = "rtc_module";
+static char const *TAG = "rtc_module";
 #endif
 
 #if !CONFIG_IDF_TARGET_ESP32C6 && !CONFIG_IDF_TARGET_ESP32H2 // TODO: IDF-5645

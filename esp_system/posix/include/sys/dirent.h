@@ -48,7 +48,7 @@ struct dirent {
 #endif
 };
 
-DIR* opendir(const char* name);
+DIR* opendir(const char *name);
 struct dirent* readdir(DIR* pdir);
 long telldir(DIR* pdir);
 void seekdir(DIR* pdir, long loc);

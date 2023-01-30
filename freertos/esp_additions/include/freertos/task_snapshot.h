@@ -71,7 +71,7 @@ BaseType_t vTaskGetSnapshot( TaskHandle_t pxTask, TaskSnapshot_t *pxTaskSnapshot
  * @param[out] pxTCBSize Size of the a task's TCB structure
  * @return UBaseType_t
  */
-UBaseType_t uxTaskGetSnapshotAll( TaskSnapshot_t * const pxTaskSnapshotArray, const UBaseType_t uxArrayLength, UBaseType_t * const pxTCBSize );
+UBaseType_t uxTaskGetSnapshotAll( TaskSnapshot_t *const pxTaskSnapshotArray, const UBaseType_t uxArrayLength, UBaseType_t *const pxTCBSize );
 
 #endif // CONFIG_FREERTOS_ENABLE_TASK_SNAPSHOT || defined __DOXYGEN__
 

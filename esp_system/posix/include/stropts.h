@@ -40,7 +40,7 @@
     #define I_SRDOPT                    (__SID |  6)
     /* Returns the current read mode setting. */
     #define I_GRDOPT                    (__SID |  7)
-    /* Construct an internal STREAMS `ioctl' message and send that message downstream. */
+    /*construct an internal STREAMS `ioctl' message and send that message downstream. */
     #define I_STR                       (__SID |  8)
     /* Inform the STREAM head that the process wants the SIGPOLL signal issued. */
     #define I_SETSIG                    (__SID |  9)

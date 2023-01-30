@@ -25,7 +25,7 @@
 
 #include "spiffs_api.h"
 
-static const char* TAG = "SPIFFS";
+static const char *TAG = "SPIFFS";
 
 #ifdef CONFIG_SPIFFS_USE_MTIME
 #ifdef CONFIG_SPIFFS_MTIME_WIDE_64_BITS
@@ -52,30 +52,30 @@ typedef struct {
 } vfs_spiffs_dir_t;
 
 static int spiffs_res_to_errno(s32_t fr);
-static int vfs_spiffs_open(void* ctx, const char * path, int flags, int mode);
+static int vfs_spiffs_open(void* ctx, const char *path, int flags, int mode);
 static ssize_t vfs_spiffs_write(void* ctx, int fd, const void * data, size_t size);
 static ssize_t vfs_spiffs_read(void* ctx, int fd, void * dst, size_t size);
 static int vfs_spiffs_close(void* ctx, int fd);
 static off_t vfs_spiffs_lseek(void* ctx, int fd, off_t offset, int mode);
 static int vfs_spiffs_fstat(void* ctx, int fd, struct stat * st);
 #ifdef CONFIG_VFS_SUPPORT_DIR
-static int vfs_spiffs_stat(void* ctx, const char * path, struct stat * st);
-static int vfs_spiffs_unlink(void* ctx, const char *path);
-static int vfs_spiffs_link(void* ctx, const char* n1, const char* n2);
-static int vfs_spiffs_rename(void* ctx, const char *src, const char *dst);
-static DIR* vfs_spiffs_opendir(void* ctx, const char* name);
+static int vfs_spiffs_stat(void* ctx, const char *path, struct stat * st);
+static int vfs_spiffs_unlink(void* ctx, char const *path);
+static int vfs_spiffs_link(void* ctx, const char *n1, const char *n2);
+static int vfs_spiffs_rename(void* ctx, char const *src, char const *dst);
+static DIR* vfs_spiffs_opendir(void* ctx, const char *name);
 static int vfs_spiffs_closedir(void* ctx, DIR* pdir);
 static struct dirent* vfs_spiffs_readdir(void* ctx, DIR* pdir);
 static int vfs_spiffs_readdir_r(void* ctx, DIR* pdir,
                                 struct dirent* entry, struct dirent** out_dirent);
 static long vfs_spiffs_telldir(void* ctx, DIR* pdir);
 static void vfs_spiffs_seekdir(void* ctx, DIR* pdir, long offset);
-static int vfs_spiffs_mkdir(void* ctx, const char* name, mode_t mode);
-static int vfs_spiffs_rmdir(void* ctx, const char* name);
-static int vfs_spiffs_truncate(void* ctx, const char *path, off_t length);
+static int vfs_spiffs_mkdir(void* ctx, const char *name, mode_t mode);
+static int vfs_spiffs_rmdir(void* ctx, const char *name);
+static int vfs_spiffs_truncate(void* ctx, char const *path, off_t length);
 static int vfs_spiffs_ftruncate(void* ctx, int fd, off_t length);
 #ifdef CONFIG_SPIFFS_USE_MTIME
-static int vfs_spiffs_utime(void *ctx, const char *path, const struct utimbuf *times);
+static int vfs_spiffs_utime(void *ctx, char const *path, const struct utimbuf *times);
 #endif // CONFIG_SPIFFS_USE_MTIME
 #endif // CONFIG_VFS_SUPPORT_DIR
 static void vfs_spiffs_update_mtime(spiffs *fs, spiffs_file f);
@@ -102,7 +102,7 @@ static void esp_spiffs_free(esp_spiffs_t ** efs)
     free(e);
 }
 
-static esp_err_t esp_spiffs_by_label(const char* label, int * index){
+static esp_err_t esp_spiffs_by_label(const char *label, int * index){
     int i;
     esp_spiffs_t * p;
     for (i = 0; i < CONFIG_SPIFFS_MAX_PARTITIONS; i++) {
@@ -246,7 +246,7 @@ static esp_err_t esp_spiffs_init(const esp_vfs_spiffs_conf_t* conf)
     }
 #endif
 
-    const uint32_t work_sz = efs->cfg.log_page_size * 2;
+    uint32_t const work_sz = efs->cfg.log_page_size * 2;
     efs->work = calloc(work_sz, 1);
     if (efs->work == NULL) {
         ESP_LOGE(TAG, "work buffer could not be allocated");
@@ -290,7 +290,7 @@ static esp_err_t esp_spiffs_init(const esp_vfs_spiffs_conf_t* conf)
     return ESP_OK;
 }
 
-bool esp_spiffs_mounted(const char* partition_label)
+bool esp_spiffs_mounted(const char *partition_label)
 {
     int index;
     if (esp_spiffs_by_label(partition_label, &index) != ESP_OK) {
@@ -299,7 +299,7 @@ bool esp_spiffs_mounted(const char* partition_label)
     return (SPIFFS_mounted(_efs[index]->fs));
 }
 
-esp_err_t esp_spiffs_info(const char* partition_label, size_t *total_bytes, size_t *used_bytes)
+esp_err_t esp_spiffs_info(const char *partition_label, size_t *total_bytes, size_t *used_bytes)
 {
     int index;
     if (esp_spiffs_by_label(partition_label, &index) != ESP_OK) {
@@ -309,7 +309,7 @@ esp_err_t esp_spiffs_info(const char* partition_label, size_t *total_bytes, size
     return ESP_OK;
 }
 
-esp_err_t esp_spiffs_check(const char* partition_label)
+esp_err_t esp_spiffs_check(const char *partition_label)
 {
     int index;
     if (esp_spiffs_by_label(partition_label, &index) != ESP_OK) {
@@ -325,7 +325,7 @@ esp_err_t esp_spiffs_check(const char* partition_label)
     return ESP_OK;
 }
 
-esp_err_t esp_spiffs_format(const char* partition_label)
+esp_err_t esp_spiffs_format(const char *partition_label)
 {
     bool partition_was_mounted = false;
     int index;
@@ -381,7 +381,7 @@ esp_err_t esp_spiffs_format(const char* partition_label)
     return ESP_OK;
 }
 
-esp_err_t esp_spiffs_gc(const char* partition_label, size_t size_to_gc)
+esp_err_t esp_spiffs_gc(const char *partition_label, size_t size_to_gc)
 {
     int index;
     if (esp_spiffs_by_label(partition_label, &index) != ESP_OK) {
@@ -453,7 +453,7 @@ esp_err_t esp_vfs_spiffs_register(const esp_vfs_spiffs_conf_t * conf)
     return ESP_OK;
 }
 
-esp_err_t esp_vfs_spiffs_unregister(const char* partition_label)
+esp_err_t esp_vfs_spiffs_unregister(const char *partition_label)
 {
     int index;
     if (esp_spiffs_by_label(partition_label, &index) != ESP_OK) {
@@ -526,7 +526,7 @@ static int spiffs_mode_conv(int m)
     return res;
 }
 
-static int vfs_spiffs_open(void* ctx, const char * path, int flags, int mode)
+static int vfs_spiffs_open(void* ctx, const char *path, int flags, int mode)
 {
     assert(path);
     esp_spiffs_t * efs = (esp_spiffs_t *)ctx;
@@ -613,7 +613,7 @@ static int vfs_spiffs_fstat(void* ctx, int fd, struct stat * st)
 
 #ifdef CONFIG_VFS_SUPPORT_DIR
 
-static int vfs_spiffs_stat(void* ctx, const char * path, struct stat * st)
+static int vfs_spiffs_stat(void* ctx, const char *path, struct stat * st)
 {
     assert(path);
     assert(st);
@@ -635,7 +635,7 @@ static int vfs_spiffs_stat(void* ctx, const char * path, struct stat * st)
     return res;
 }
 
-static int vfs_spiffs_rename(void* ctx, const char *src, const char *dst)
+static int vfs_spiffs_rename(void* ctx, char const *src, char const *dst)
 {
     assert(src);
     assert(dst);
@@ -649,7 +649,7 @@ static int vfs_spiffs_rename(void* ctx, const char *src, const char *dst)
     return res;
 }
 
-static int vfs_spiffs_unlink(void* ctx, const char *path)
+static int vfs_spiffs_unlink(void* ctx, char const *path)
 {
     assert(path);
     esp_spiffs_t * efs = (esp_spiffs_t *)ctx;
@@ -662,7 +662,7 @@ static int vfs_spiffs_unlink(void* ctx, const char *path)
     return res;
 }
 
-static DIR* vfs_spiffs_opendir(void* ctx, const char* name)
+static DIR* vfs_spiffs_opendir(void* ctx, const char *name)
 {
     assert(name);
     esp_spiffs_t * efs = (esp_spiffs_t *)ctx;
@@ -731,7 +731,7 @@ static int vfs_spiffs_readdir_r(void* ctx, DIR* pdir, struct dirent* entry,
         item_name = (char *)out.name;
         plen = strlen(dir->path);
 
-    } while ((plen > 1) && (strncasecmp(dir->path, (const char*)out.name, plen) || out.name[plen] != '/' || !out.name[plen + 1]));
+    } while ((plen > 1) && (strncasecmp(dir->path, (char const*)out.name, plen) || out.name[plen] != '/' || !out.name[plen + 1]));
 
     if (plen > 1) {
         item_name += plen + 1;
@@ -778,7 +778,7 @@ static void vfs_spiffs_seekdir(void* ctx, DIR* pdir, long offset)
         }
         size_t plen = strlen(dir->path);
         if (plen > 1) {
-            if (strncasecmp(dir->path, (const char *)tmp.name, plen) || tmp.name[plen] != '/' || !tmp.name[plen+1]) {
+            if (strncasecmp(dir->path, (char const *)tmp.name, plen) || tmp.name[plen] != '/' || !tmp.name[plen+1]) {
                 continue;
             }
         }
@@ -786,19 +786,19 @@ static void vfs_spiffs_seekdir(void* ctx, DIR* pdir, long offset)
     }
 }
 
-static int vfs_spiffs_mkdir(void* ctx, const char* name, mode_t mode)
+static int vfs_spiffs_mkdir(void* ctx, const char *name, mode_t mode)
 {
     errno = ENOTSUP;
     return -1;
 }
 
-static int vfs_spiffs_rmdir(void* ctx, const char* name)
+static int vfs_spiffs_rmdir(void* ctx, const char *name)
 {
     errno = ENOTSUP;
     return -1;
 }
 
-static int vfs_spiffs_truncate(void* ctx, const char *path, off_t length)
+static int vfs_spiffs_truncate(void* ctx, char const *path, off_t length)
 {
     assert(path);
     esp_spiffs_t * efs = (esp_spiffs_t *)ctx;
@@ -836,14 +836,14 @@ static int vfs_spiffs_ftruncate(void* ctx, int fd, off_t length)
     return res;
 }
 
-static int vfs_spiffs_link(void* ctx, const char* n1, const char* n2)
+static int vfs_spiffs_link(void* ctx, const char *n1, const char *n2)
 {
     errno = ENOTSUP;
     return -1;
 }
 
 #ifdef CONFIG_SPIFFS_USE_MTIME
-static int vfs_spiffs_update_mtime_value(spiffs *fs, const char *path, spiffs_time_t t)
+static int vfs_spiffs_update_mtime_value(spiffs *fs, char const *path, spiffs_time_t t)
 {
     int ret = SPIFFS_OK;
     spiffs_stat s;
@@ -862,7 +862,7 @@ static int vfs_spiffs_update_mtime_value(spiffs *fs, const char *path, spiffs_ti
 #endif //CONFIG_SPIFFS_USE_MTIME
 
 #ifdef CONFIG_SPIFFS_USE_MTIME
-static int vfs_spiffs_utime(void *ctx, const char *path, const struct utimbuf *times)
+static int vfs_spiffs_utime(void *ctx, char const *path, const struct utimbuf *times)
 {
     assert(path);
 

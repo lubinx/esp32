@@ -11,7 +11,7 @@ __BEGIN_DECLS
 extern __attribute__((nothrow, noreturn))
     void esp_restart(void);
 extern __attribute__((nothrow, noreturn))
-    void esp_system_abort(const char *details);
+    void esp_system_abort(char const *details);
 
 typedef void (*shutdown_handler_t)(void);
 

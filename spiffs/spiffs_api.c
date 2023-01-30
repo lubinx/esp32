@@ -10,7 +10,7 @@
 #include "esp_spiffs.h"
 #include "spiffs_api.h"
 
-static const char* TAG = "SPIFFS";
+static const char *TAG = "SPIFFS";
 
 void spiffs_api_lock(spiffs *fs)
 {
@@ -58,13 +58,13 @@ s32_t spiffs_api_erase(spiffs *fs, uint32_t addr, uint32_t size)
 void spiffs_api_check(spiffs *fs, spiffs_check_type type,
                             spiffs_check_report report, uint32_t arg1, uint32_t arg2)
 {
-    static const char * spiffs_check_type_str[3] = {
+    static const char *spiffs_check_type_str[3] = {
         "LOOKUP",
         "INDEX",
         "PAGE"
     };
 
-    static const char * spiffs_check_report_str[7] = {
+    static const char *spiffs_check_report_str[7] = {
         "PROGRESS",
         "ERROR",
         "FIX INDEX",
