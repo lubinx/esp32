@@ -178,7 +178,7 @@ extern __attribute__((nothrow))
 
     /**
      *  TIMER_match() attach a new matching point to current section
-     *      attatch big->small to *avoid* iterator the exist matching points
+     *      attatch big->small to *avoid *iterator the exist matching points
      *  @errors
      *      ENODEV
      *      EPERM when TIMER was not configured as matching

@@ -52,28 +52,28 @@ typedef struct {
 } vfs_spiffs_dir_t;
 
 static int spiffs_res_to_errno(s32_t fr);
-static int vfs_spiffs_open(void* ctx, const char *path, int flags, int mode);
-static ssize_t vfs_spiffs_write(void* ctx, int fd, const void * data, size_t size);
-static ssize_t vfs_spiffs_read(void* ctx, int fd, void * dst, size_t size);
-static int vfs_spiffs_close(void* ctx, int fd);
-static off_t vfs_spiffs_lseek(void* ctx, int fd, off_t offset, int mode);
-static int vfs_spiffs_fstat(void* ctx, int fd, struct stat * st);
+static int vfs_spiffs_open(void *ctx, const char *path, int flags, int mode);
+static ssize_t vfs_spiffs_write(void *ctx, int fd, const void * data, size_t size);
+static ssize_t vfs_spiffs_read(void *ctx, int fd, void * dst, size_t size);
+static int vfs_spiffs_close(void *ctx, int fd);
+static off_t vfs_spiffs_lseek(void *ctx, int fd, off_t offset, int mode);
+static int vfs_spiffs_fstat(void *ctx, int fd, struct stat * st);
 #ifdef CONFIG_VFS_SUPPORT_DIR
-static int vfs_spiffs_stat(void* ctx, const char *path, struct stat * st);
-static int vfs_spiffs_unlink(void* ctx, char const *path);
-static int vfs_spiffs_link(void* ctx, const char *n1, const char *n2);
-static int vfs_spiffs_rename(void* ctx, char const *src, char const *dst);
-static DIR* vfs_spiffs_opendir(void* ctx, const char *name);
-static int vfs_spiffs_closedir(void* ctx, DIR* pdir);
-static struct dirent* vfs_spiffs_readdir(void* ctx, DIR* pdir);
-static int vfs_spiffs_readdir_r(void* ctx, DIR* pdir,
+static int vfs_spiffs_stat(void *ctx, const char *path, struct stat * st);
+static int vfs_spiffs_unlink(void *ctx, char const *path);
+static int vfs_spiffs_link(void *ctx, const char *n1, const char *n2);
+static int vfs_spiffs_rename(void *ctx, char const *src, char const *dst);
+static DIR* vfs_spiffs_opendir(void *ctx, const char *name);
+static int vfs_spiffs_closedir(void *ctx, DIR* pdir);
+static struct dirent* vfs_spiffs_readdir(void *ctx, DIR* pdir);
+static int vfs_spiffs_readdir_r(void *ctx, DIR* pdir,
                                 struct dirent* entry, struct dirent** out_dirent);
-static long vfs_spiffs_telldir(void* ctx, DIR* pdir);
-static void vfs_spiffs_seekdir(void* ctx, DIR* pdir, long offset);
-static int vfs_spiffs_mkdir(void* ctx, const char *name, mode_t mode);
-static int vfs_spiffs_rmdir(void* ctx, const char *name);
-static int vfs_spiffs_truncate(void* ctx, char const *path, off_t length);
-static int vfs_spiffs_ftruncate(void* ctx, int fd, off_t length);
+static long vfs_spiffs_telldir(void *ctx, DIR* pdir);
+static void vfs_spiffs_seekdir(void *ctx, DIR* pdir, long offset);
+static int vfs_spiffs_mkdir(void *ctx, const char *name, mode_t mode);
+static int vfs_spiffs_rmdir(void *ctx, const char *name);
+static int vfs_spiffs_truncate(void *ctx, char const *path, off_t length);
+static int vfs_spiffs_ftruncate(void *ctx, int fd, off_t length);
 #ifdef CONFIG_SPIFFS_USE_MTIME
 static int vfs_spiffs_utime(void *ctx, char const *path, const struct utimbuf *times);
 #endif // CONFIG_SPIFFS_USE_MTIME
@@ -526,7 +526,7 @@ static int spiffs_mode_conv(int m)
     return res;
 }
 
-static int vfs_spiffs_open(void* ctx, const char *path, int flags, int mode)
+static int vfs_spiffs_open(void *ctx, const char *path, int flags, int mode)
 {
     assert(path);
     esp_spiffs_t * efs = (esp_spiffs_t *)ctx;
@@ -543,7 +543,7 @@ static int vfs_spiffs_open(void* ctx, const char *path, int flags, int mode)
     return fd;
 }
 
-static ssize_t vfs_spiffs_write(void* ctx, int fd, const void * data, size_t size)
+static ssize_t vfs_spiffs_write(void *ctx, int fd, const void * data, size_t size)
 {
     esp_spiffs_t * efs = (esp_spiffs_t *)ctx;
     ssize_t res = SPIFFS_write(efs->fs, fd, (void *)data, size);
@@ -555,7 +555,7 @@ static ssize_t vfs_spiffs_write(void* ctx, int fd, const void * data, size_t siz
     return res;
 }
 
-static ssize_t vfs_spiffs_read(void* ctx, int fd, void * dst, size_t size)
+static ssize_t vfs_spiffs_read(void *ctx, int fd, void * dst, size_t size)
 {
     esp_spiffs_t * efs = (esp_spiffs_t *)ctx;
     ssize_t res = SPIFFS_read(efs->fs, fd, dst, size);
@@ -567,7 +567,7 @@ static ssize_t vfs_spiffs_read(void* ctx, int fd, void * dst, size_t size)
     return res;
 }
 
-static int vfs_spiffs_close(void* ctx, int fd)
+static int vfs_spiffs_close(void *ctx, int fd)
 {
     esp_spiffs_t * efs = (esp_spiffs_t *)ctx;
     int res = SPIFFS_close(efs->fs, fd);
@@ -579,7 +579,7 @@ static int vfs_spiffs_close(void* ctx, int fd)
     return res;
 }
 
-static off_t vfs_spiffs_lseek(void* ctx, int fd, off_t offset, int mode)
+static off_t vfs_spiffs_lseek(void *ctx, int fd, off_t offset, int mode)
 {
     esp_spiffs_t * efs = (esp_spiffs_t *)ctx;
     off_t res = SPIFFS_lseek(efs->fs, fd, offset, mode);
@@ -591,7 +591,7 @@ static off_t vfs_spiffs_lseek(void* ctx, int fd, off_t offset, int mode)
     return res;
 }
 
-static int vfs_spiffs_fstat(void* ctx, int fd, struct stat * st)
+static int vfs_spiffs_fstat(void *ctx, int fd, struct stat * st)
 {
     assert(st);
     spiffs_stat s;
@@ -613,7 +613,7 @@ static int vfs_spiffs_fstat(void* ctx, int fd, struct stat * st)
 
 #ifdef CONFIG_VFS_SUPPORT_DIR
 
-static int vfs_spiffs_stat(void* ctx, const char *path, struct stat * st)
+static int vfs_spiffs_stat(void *ctx, const char *path, struct stat * st)
 {
     assert(path);
     assert(st);
@@ -635,7 +635,7 @@ static int vfs_spiffs_stat(void* ctx, const char *path, struct stat * st)
     return res;
 }
 
-static int vfs_spiffs_rename(void* ctx, char const *src, char const *dst)
+static int vfs_spiffs_rename(void *ctx, char const *src, char const *dst)
 {
     assert(src);
     assert(dst);
@@ -649,7 +649,7 @@ static int vfs_spiffs_rename(void* ctx, char const *src, char const *dst)
     return res;
 }
 
-static int vfs_spiffs_unlink(void* ctx, char const *path)
+static int vfs_spiffs_unlink(void *ctx, char const *path)
 {
     assert(path);
     esp_spiffs_t * efs = (esp_spiffs_t *)ctx;
@@ -662,7 +662,7 @@ static int vfs_spiffs_unlink(void* ctx, char const *path)
     return res;
 }
 
-static DIR* vfs_spiffs_opendir(void* ctx, const char *name)
+static DIR* vfs_spiffs_opendir(void *ctx, const char *name)
 {
     assert(name);
     esp_spiffs_t * efs = (esp_spiffs_t *)ctx;
@@ -682,7 +682,7 @@ static DIR* vfs_spiffs_opendir(void* ctx, const char *name)
     return (DIR*) dir;
 }
 
-static int vfs_spiffs_closedir(void* ctx, DIR* pdir)
+static int vfs_spiffs_closedir(void *ctx, DIR* pdir)
 {
     assert(pdir);
     esp_spiffs_t * efs = (esp_spiffs_t *)ctx;
@@ -697,7 +697,7 @@ static int vfs_spiffs_closedir(void* ctx, DIR* pdir)
     return res;
 }
 
-static struct dirent* vfs_spiffs_readdir(void* ctx, DIR* pdir)
+static struct dirent* vfs_spiffs_readdir(void *ctx, DIR* pdir)
 {
     assert(pdir);
     vfs_spiffs_dir_t * dir = (vfs_spiffs_dir_t *)pdir;
@@ -710,7 +710,7 @@ static struct dirent* vfs_spiffs_readdir(void* ctx, DIR* pdir)
     return out_dirent;
 }
 
-static int vfs_spiffs_readdir_r(void* ctx, DIR* pdir, struct dirent* entry,
+static int vfs_spiffs_readdir_r(void *ctx, DIR* pdir, struct dirent* entry,
                                 struct dirent** out_dirent)
 {
     assert(pdir);
@@ -747,14 +747,14 @@ static int vfs_spiffs_readdir_r(void* ctx, DIR* pdir, struct dirent* entry,
     return 0;
 }
 
-static long vfs_spiffs_telldir(void* ctx, DIR* pdir)
+static long vfs_spiffs_telldir(void *ctx, DIR* pdir)
 {
     assert(pdir);
     vfs_spiffs_dir_t * dir = (vfs_spiffs_dir_t *)pdir;
     return dir->offset;
 }
 
-static void vfs_spiffs_seekdir(void* ctx, DIR* pdir, long offset)
+static void vfs_spiffs_seekdir(void *ctx, DIR* pdir, long offset)
 {
     assert(pdir);
     esp_spiffs_t * efs = (esp_spiffs_t *)ctx;
@@ -786,19 +786,19 @@ static void vfs_spiffs_seekdir(void* ctx, DIR* pdir, long offset)
     }
 }
 
-static int vfs_spiffs_mkdir(void* ctx, const char *name, mode_t mode)
+static int vfs_spiffs_mkdir(void *ctx, const char *name, mode_t mode)
 {
     errno = ENOTSUP;
     return -1;
 }
 
-static int vfs_spiffs_rmdir(void* ctx, const char *name)
+static int vfs_spiffs_rmdir(void *ctx, const char *name)
 {
     errno = ENOTSUP;
     return -1;
 }
 
-static int vfs_spiffs_truncate(void* ctx, char const *path, off_t length)
+static int vfs_spiffs_truncate(void *ctx, char const *path, off_t length)
 {
     assert(path);
     esp_spiffs_t * efs = (esp_spiffs_t *)ctx;
@@ -824,7 +824,7 @@ err:
     return -1;
 }
 
-static int vfs_spiffs_ftruncate(void* ctx, int fd, off_t length)
+static int vfs_spiffs_ftruncate(void *ctx, int fd, off_t length)
 {
     esp_spiffs_t * efs = (esp_spiffs_t *)ctx;
     int res = SPIFFS_ftruncate(efs->fs, fd, length);
@@ -836,7 +836,7 @@ static int vfs_spiffs_ftruncate(void* ctx, int fd, off_t length)
     return res;
 }
 
-static int vfs_spiffs_link(void* ctx, const char *n1, const char *n2)
+static int vfs_spiffs_link(void *ctx, const char *n1, const char *n2)
 {
     errno = ENOTSUP;
     return -1;

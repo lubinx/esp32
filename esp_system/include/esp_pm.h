@@ -58,7 +58,7 @@ typedef enum {
  *      - ESP_ERR_NOT_SUPPORTED if certain combination of values is not supported,
  *        or if CONFIG_PM_ENABLE is not enabled in sdkconfig
  */
-esp_err_t esp_pm_configure(const void* config);
+esp_err_t esp_pm_configure(const void *config);
 
 /**
  * @brief Get implementation-specific power management configuration
@@ -67,7 +67,7 @@ esp_err_t esp_pm_configure(const void* config);
  *      - ESP_OK on success
  *      - ESP_ERR_INVALID_ARG if the pointer is null
  */
-esp_err_t esp_pm_get_configuration(void* config);
+esp_err_t esp_pm_get_configuration(void *config);
 
 /**
  * @brief Opaque handle to the power management lock

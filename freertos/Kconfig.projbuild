@@ -34,22 +34,12 @@ menu "FreeRTOS"
             Sets the FreeRTOS tick interrupt frequency in Hz (see configTICK_RATE_HZ documentation for more
             details).
 
-    config FREERTOS_OPTIMIZED_SCHEDULER
-        # Todo: Not available in SMP FREERTOS (IDF-3733)
-        bool "configUSE_PORT_OPTIMISED_TASK_SELECTION"
-        depends on FREERTOS_UNICORE
-        default y
-        help
-            Enables port specific task selection method. This option can speed up the search of ready tasks
-            when scheduling (see configUSE_PORT_OPTIMISED_TASK_SELECTION documentation for more details).
-
     choice FREERTOS_CHECK_STACKOVERFLOW
         prompt "configCHECK_FOR_STACK_OVERFLOW"
         default FREERTOS_CHECK_STACKOVERFLOW_CANARY
         help
             Enables FreeRTOS to check for stack overflows (see configCHECK_FOR_STACK_OVERFLOW documentation for
             more details).
-
             Note: If users do not provide their own ``vApplicationStackOverflowHook()`` function, a default
             function will be provided by ESP-IDF.
 
@@ -71,7 +61,7 @@ menu "FreeRTOS"
                 Places some magic bytes at the end of the stack area and on each context switch, check if these
                 bytes are still intact. More thorough than just checking the pointer, but also slightly slower.
                 (configCHECK_FOR_STACK_OVERFLOW = 2)
-    endchoice # FREERTOS_CHECK_STACKOVERFLOW
+    endchoice
 
     config FREERTOS_THREAD_LOCAL_STORAGE_POINTERS
         int "configNUM_THREAD_LOCAL_STORAGE_POINTERS"

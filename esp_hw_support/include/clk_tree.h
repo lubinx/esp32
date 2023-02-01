@@ -39,8 +39,7 @@ typedef enum {
  *      - ESP_ERR_INVALID_ARG  Parameter error
  *      - ESP_FAIL             Calibration failed
  */
-esp_err_t clk_tree_src_get_freq_hz(soc_module_clk_t clk_src, clk_tree_src_freq_precision_t precision,
-uint32_t *freq_value);
+    esp_err_t clk_tree_src_get_freq_hz(soc_module_clk_t clk_src, clk_tree_src_freq_precision_t precision, uint32_t *freq_value);
 
 #ifdef __cplusplus
 }

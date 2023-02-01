@@ -10,11 +10,6 @@
 #include "esp_bit_defs.h"
 #include "soc/soc_caps.h"
 
-// TODO: remove this
-extern uint64_t g_startup_time;   // Startup time that serves as the point of origin for system time. Should be set by the entry
-                                  // function in the port layer. May be 0 as well if this is not backed by a persistent counter, in which case
-                                  // startup time = system time = 0 at the point the entry function sets this variable.
-
 /**
  * @brief Define a system initialization function which will be executed on the specified cores
  *

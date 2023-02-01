@@ -36,7 +36,7 @@ extern "C" {
  *      - ESP_ERR_NO_MEM not enough memory to allocate handler structure
  *      - other errors returned by esp_intr_alloc
  */
-esp_err_t rtc_isr_register(intr_handler_t handler, void* handler_arg,
+esp_err_t rtc_isr_register(intr_handler_t handler, void *handler_arg,
                             uint32_t rtc_intr_mask, uint32_t flags);
 /**
  * @brief Deregister the handler previously registered using rtc_isr_register
@@ -47,7 +47,7 @@ esp_err_t rtc_isr_register(intr_handler_t handler, void* handler_arg,
  *      - ESP_ERR_INVALID_STATE if a handler matching both handler and
  *        handler_arg isn't registered
  */
-esp_err_t rtc_isr_deregister(intr_handler_t handler, void* handler_arg);
+esp_err_t rtc_isr_deregister(intr_handler_t handler, void *handler_arg);
 
 /**
  * @brief Disable the RTC interrupt that is allowed to be executed when cache is disabled.

@@ -15,7 +15,7 @@ set(priv_requires efuse)
 set(srcs "esp_memory_utils.c")
 list(APPEND srcs
     "esp_clk.c"
-    "clk_ctrl_os.c"
+    # "clk_ctrl_os.c"
     "intr_alloc.c"
     "mac_addr.c"
     "periph_ctrl.c"

@@ -19,14 +19,14 @@
 #define esp_ipc_isr_stall_abort()
 #define esp_ipc_isr_stall_resume()
 
-typedef void (*esp_ipc_func_t)(void* arg);
+typedef void (*esp_ipc_func_t)(void *arg);
 
 __BEGIN_DECLS
 
 extern __attribute__((nothrow))
-    esp_err_t esp_ipc_call(uint32_t cpu_id, esp_ipc_func_t func, void* arg);
+    esp_err_t esp_ipc_call(uint32_t cpu_id, esp_ipc_func_t func, void *arg);
 
 extern __attribute__((nothrow))
-    esp_err_t esp_ipc_call_blocking(uint32_t cpu_id, esp_ipc_func_t func, void* arg);
+    esp_err_t esp_ipc_call_blocking(uint32_t cpu_id, esp_ipc_func_t func, void *arg);
 
 __END_DECLS

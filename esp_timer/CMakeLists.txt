@@ -1,0 +1,11 @@
+idf_component_register(SRCS
+        "src/esp_timer.c"
+        "src/system_time.c"
+        "src/esp_timer_impl_systimer.c"
+    INCLUDE_DIRS
+        "include"
+    PRIV_INCLUDE_DIRS
+        "private_include"
+    PRIV_REQUIRES
+        "soc"
+)

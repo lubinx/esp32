@@ -58,13 +58,13 @@ uint32_t esp_get_minimum_free_heap_size(void)
 
 #include "esp_ipc.h"
 
-esp_err_t esp_ipc_call(uint32_t cpu_id, esp_ipc_func_t func, void* arg)
+esp_err_t esp_ipc_call(uint32_t cpu_id, esp_ipc_func_t func, void *arg)
 {
     func(arg);
     return ESP_OK;
 }
 
-esp_err_t esp_ipc_call_blocking(uint32_t cpu_id, esp_ipc_func_t func, void* arg)
+esp_err_t esp_ipc_call_blocking(uint32_t cpu_id, esp_ipc_func_t func, void *arg)
 {
     func(arg);
     return ESP_OK;

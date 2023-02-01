@@ -58,7 +58,6 @@ static uint64_t s_boot_time; // when RTC is used to persist time, two RTC_STORE 
 
 static _lock_t s_boot_time_lock;
 
-#if defined( CONFIG_ESP_TIME_FUNCS_USE_ESP_TIMER ) || defined( CONFIG_ESP_TIME_FUNCS_USE_RTC_TIMER )
 uint64_t esp_time_impl_get_time_since_boot(void)
 {
     uint64_t microseconds = 0;
@@ -86,8 +85,6 @@ uint64_t esp_time_impl_get_time(void)
     return microseconds;
 }
 
-#endif // defined( CONFIG_ESP_TIME_FUNCS_USE_ESP_TIMER ) || defined( CONFIG_ESP_TIME_FUNCS_USE_RTC_TIMER )
-
 
 void esp_time_impl_set_boot_time(uint64_t time_us)
 {
@@ -112,28 +109,4 @@ uint64_t esp_time_impl_get_boot_time(void)
 #endif
     _lock_release(&s_boot_time_lock);
     return result;
-}
-
-void esp_set_time_from_rtc(void)
-{
-#if defined( CONFIG_ESP_TIME_FUNCS_USE_ESP_TIMER ) && defined( CONFIG_ESP_TIME_FUNCS_USE_RTC_TIMER )
-    // initialize time from RTC clock
-    s_microseconds_offset = esp_rtc_get_time_us() - esp_system_get_time();
-#endif // CONFIG_ESP_TIME_FUNCS_USE_ESP_TIMER && CONFIG_ESP_TIME_FUNCS_USE_RTC_TIMER
-}
-
-void esp_sync_timekeeping_timers(void)
-{
-#if defined( CONFIG_ESP_TIME_FUNCS_USE_ESP_TIMER ) && defined( CONFIG_ESP_TIME_FUNCS_USE_RTC_TIMER )
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    settimeofday(&tv, NULL);
-    int64_t s_microseconds_offset_cur = esp_rtc_get_time_us() - esp_system_get_time();
-    esp_time_impl_set_boot_time(esp_time_impl_get_boot_time() + ((int64_t)s_microseconds_offset - s_microseconds_offset_cur));
-#endif
-}
-
-void esp_time_impl_init(void)
-{
-    esp_set_time_from_rtc();
 }

@@ -51,7 +51,7 @@ static void s_rtc_isr_noniram_hook_relieve(uint32_t rtc_intr_mask);
 typedef struct rtc_isr_handler_ {
     uint32_t mask;
     intr_handler_t handler;
-    void* handler_arg;
+    void *handler_arg;
     uint32_t flags;
     SLIST_ENTRY(rtc_isr_handler_) next;
 } rtc_isr_handler_t;
@@ -61,7 +61,7 @@ static DRAM_ATTR SLIST_HEAD(rtc_isr_handler_list_, rtc_isr_handler_) s_rtc_isr_h
 static DRAM_ATTR portMUX_TYPE s_rtc_isr_handler_list_lock = portMUX_INITIALIZER_UNLOCKED;
 static intr_handle_t s_rtc_isr_handle;
 
-IRAM_ATTR static void rtc_isr(void* arg)
+IRAM_ATTR static void rtc_isr(void *arg)
 {
     uint32_t status = REG_READ(RTC_CNTL_INT_ST_REG);
     rtc_isr_handler_t* it;
@@ -98,7 +98,7 @@ out:
 }
 #endif // !CONFIG_IDF_TARGET_ESP32C6 TODO: IDF-5645
 
-esp_err_t rtc_isr_register(intr_handler_t handler, void* handler_arg, uint32_t rtc_intr_mask, uint32_t flags)
+esp_err_t rtc_isr_register(intr_handler_t handler, void *handler_arg, uint32_t rtc_intr_mask, uint32_t flags)
 {
 #if CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32H2 // TODO: IDF-5645
     ESP_EARLY_LOGW(TAG, "rtc_isr_register() has not been implemented yet");
@@ -129,7 +129,7 @@ esp_err_t rtc_isr_register(intr_handler_t handler, void* handler_arg, uint32_t r
 #endif
 }
 
-esp_err_t rtc_isr_deregister(intr_handler_t handler, void* handler_arg)
+esp_err_t rtc_isr_deregister(intr_handler_t handler, void *handler_arg)
 {
 #if CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32H2 // TODO: IDF-5645
     ESP_EARLY_LOGW(TAG, "rtc_isr_deregister() has not been implemented yet");

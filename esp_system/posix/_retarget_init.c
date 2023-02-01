@@ -12,7 +12,9 @@
 #include "esp_log.h"
 #include "esp_rom_caps.h"
 #include "esp_rom_sys.h"
-#include "esp_newlib.h"
+
+#include "esp_heap_caps_init.h"
+#include "esp_timer.h"
 
 #if CONFIG_IDF_TARGET_ESP32
     #include "esp32/rom/libc_stubs.h"
@@ -41,7 +43,6 @@ extern void __LOCK_retarget(void);
 extern void __FILESYSTEM_init(void);
 extern void __IO_retarget(void);
 
-extern void _cleanup_r(struct _reent *r);
 extern struct _reent *__getreent(void);     // freertos_tasks_c_additions.h linked by freertos
 
 /****************************************************************************
@@ -55,8 +56,11 @@ static struct _reent __reent = {0};
 /****************************************************************************
  *  @implements
 *****************************************************************************/
-void esp_newlib_init(void)
+void __libc_retarget_init(void)
 {
+    heap_caps_init();
+    esp_timer_early_init();
+
     #if CONFIG_IDF_TARGET_ESP32
         syscall_table_ptr_pro = syscall_table_ptr_app = &__stub_table;
     #elif CONFIG_IDF_TARGET_ESP32S2
@@ -73,32 +77,8 @@ void esp_newlib_init(void)
     __FILESYSTEM_init();
     __IO_retarget();
 
-    extern void esp_newlib_time_init(void);
-    esp_newlib_time_init();
-
     extern void esp_pthread_init(void);
     esp_pthread_init();
-}
-
-void esp_reent_init(struct _reent *r)
-{
-    /**
-     *  REVIEW: SOO..hardcoded esp_reent_init() instead of __sinit()?
-     *      also checking comment in __stub_table() below
-    */
-    memset(r, 0, sizeof(*r));
-
-    r->_stdout = _GLOBAL_REENT->_stdout;
-    r->_stderr = _GLOBAL_REENT->_stderr;
-    r->_stdin  = _GLOBAL_REENT->_stdin;
-
-    r->__cleanup = &_cleanup_r;
-    /*
-    r->__sdidinit = 1;
-    r->__sglue._next = NULL;
-    r->__sglue._niobs = 0;
-    r->__sglue._iobs = NULL;
-    */
 }
 
 int _getpid_r(struct _reent *r)
@@ -181,6 +161,8 @@ __WEAK off_t _lseek_r(struct _reent *r, int fd, off_t offset, int origin)       
 /****************************************************************************
  *  @internal
 *****************************************************************************/
+extern void _cleanup_r(struct _reent *r);
+
 extern int _printf_float(struct _reent *rptr, void *pdata,
     FILE * fp, int (*pfunc) (struct _reent *, FILE *, char const *, size_t len), va_list * ap);
 extern int _scanf_float(struct _reent *rptr, void *pdata, FILE *fp, va_list *ap);

@@ -4,19 +4,15 @@
 
 #include "esp_clk_internal.h"
 #include "esp_cpu.h"
-#include "esp_heap_caps_init.h"
 #include "esp_log.h"
 
 #include "esp_rom_caps.h"
 #include "esp_rom_sys.h"
-#include "esp_newlib.h"
-#include "esp_timer.h"
 
 #include "soc/assist_debug_reg.h"
 #include "soc/periph_defs.h"
 
 // #include "soc/rtc.h"
-#include "esp32s3/rtc.h"
 #include "esp32s3/rom/ets_sys.h"
 
 #include "esp_private/cache_err_int.h"
@@ -29,7 +25,6 @@
 #endif
 
 static char const *TAG = "system_init";
-uint64_t g_startup_time = 0;
 
 /****************************************************************************
  *  imports
@@ -66,11 +61,6 @@ void SystemInit(void)
 
     esp_clk_init();
     esp_perip_clk_init();
-    // TODO: rtc clocks
-
-    // Now that the clocks have been set-up, set the startup time from RTC
-    // and default RTC-backed system time provider.
-    g_startup_time = esp_rtc_get_time_us();
 
     // Clear interrupt matrix for PRO CPU core
     core_intr_matrix_clear();
@@ -95,9 +85,8 @@ void SystemInit(void)
 
     esp_cache_err_int_init();
 
-    heap_caps_init();
-    esp_timer_early_init();
-    esp_newlib_init();
+    extern void __libc_retarget_init(void); //  _retarget_init.c
+    __libc_retarget_init();
 
     /* TODO: enablie it somehow conflict with vfs => uart driver, somehting outside the memory protect area
     #if CONFIG_ESP_SYSTEM_MEMPROT_FEATURE && !CONFIG_ESP_SYSTEM_MEMPROT_TEST

@@ -8,23 +8,23 @@
 #include <sys/cdefs.h>
 #include <sys/time.h>
 #include <sys/param.h>
-#include "sdkconfig.h"
-#include "esp_attr.h"
-#include "esp_log.h"
-#include "esp_cpu.h"
-#include "esp_clk_internal.h"
-#include "esp_rom_uart.h"
-#include "esp_rom_sys.h"
+
+#include "soc/syscon_reg.h"
 #include "soc/system_reg.h"
 #include "soc/soc.h"
 #include "soc/rtc.h"
 #include "soc/rtc_periph.h"
 #include "soc/i2s_reg.h"
-#include "hal/wdt_hal.h"
+
+#include "sdkconfig.h"
+
+#include "esp_log.h"
+#include "esp_cpu.h"
+#include "esp_clk_internal.h"
+#include "esp_rom_sys.h"
 #include "esp_private/periph_ctrl.h"
 #include "esp_private/esp_clk.h"
 #include "bootloader_clock.h"
-#include "soc/syscon_reg.h"
 
 static char const *TAG = "clk";
 
@@ -54,7 +54,7 @@ typedef enum {
 
 static void select_rtc_slow_clk(slow_clk_sel_t slow_clk);
 
-__attribute__((weak)) void esp_clk_init(void)
+void esp_clk_init(void)
 {
     rtc_config_t cfg = RTC_CONFIG_DEFAULT();
     soc_reset_reason_t rst_reas;
@@ -71,21 +71,6 @@ __attribute__((weak)) void esp_clk_init(void)
     rtc_clk_8m_enable(true, rc_fast_d256_is_enabled);
     rtc_clk_fast_src_set(SOC_RTC_FAST_CLK_SRC_RC_FAST);
 
-#ifdef CONFIG_BOOTLOADER_WDT_ENABLE
-    // WDT uses a SLOW_CLK clock source. After a function select_rtc_slow_clk a frequency of this source can changed.
-    // If the frequency changes from 150kHz to 32kHz, then the timeout set for the WDT will increase 4.6 times.
-    // Therefore, for the time of frequency change, set a new lower timeout value (1.6 sec).
-    // This prevents excessive delay before resetting in case the supply voltage is drawdown.
-    // (If frequency is changed from 150kHz to 32kHz then WDT timeout will increased to 1.6sec * 150/32 = 7.5 sec).
-    wdt_hal_context_t rtc_wdt_ctx = { .inst = WDT_RWDT, .rwdt_dev = &RTCCNTL };
-    uint32_t stage_timeout_ticks = (uint32_t)(1600ULL * rtc_clk_slow_freq_get_hz() / 1000ULL);
-    wdt_hal_write_protect_disable(&rtc_wdt_ctx);
-    wdt_hal_feed(&rtc_wdt_ctx);
-    //Bootloader has enabled RTC WDT until now. We're only modifying timeout, so keep the stage and timeout action the same
-    wdt_hal_config_stage(&rtc_wdt_ctx, WDT_STAGE0, stage_timeout_ticks, WDT_STAGE_ACTION_RESET_RTC);
-    wdt_hal_write_protect_enable(&rtc_wdt_ctx);
-#endif
-
 #if defined(CONFIG_RTC_CLK_SRC_EXT_CRYS)
     select_rtc_slow_clk(SLOW_CLK_32K_XTAL);
 #elif defined(CONFIG_RTC_CLK_SRC_EXT_OSC)
@@ -96,15 +81,6 @@ __attribute__((weak)) void esp_clk_init(void)
     select_rtc_slow_clk(SLOW_CLK_RTC);
 #endif
 
-#ifdef CONFIG_BOOTLOADER_WDT_ENABLE
-    // After changing a frequency WDT timeout needs to be set for new frequency.
-    stage_timeout_ticks = (uint32_t)((uint64_t)CONFIG_BOOTLOADER_WDT_TIME_MS * rtc_clk_slow_freq_get_hz() / 1000ULL);
-    wdt_hal_write_protect_disable(&rtc_wdt_ctx);
-    wdt_hal_feed(&rtc_wdt_ctx);
-    wdt_hal_config_stage(&rtc_wdt_ctx, WDT_STAGE0, stage_timeout_ticks, WDT_STAGE_ACTION_RESET_RTC);
-    wdt_hal_write_protect_enable(&rtc_wdt_ctx);
-#endif
-
     rtc_cpu_freq_config_t old_config, new_config;
     rtc_clk_cpu_freq_get_config(&old_config);
     uint32_t const old_freq_mhz = old_config.freq_mhz;
@@ -112,12 +88,6 @@ __attribute__((weak)) void esp_clk_init(void)
 
     bool res = rtc_clk_cpu_freq_mhz_to_config(new_freq_mhz, &new_config);
     assert(res);
-
-    // Wait for UART TX to finish, otherwise some UART output will be lost
-    // when switching APB frequency
-    if (CONFIG_ESP_CONSOLE_UART_NUM >= 0) {
-        esp_rom_uart_tx_wait_idle(CONFIG_ESP_CONSOLE_UART_NUM);
-    }
 
     if (res) {
         rtc_clk_cpu_freq_set_config(&new_config);
@@ -197,74 +167,47 @@ void rtc_clk_select_rtc_slow_clk(void)
  */
 void esp_perip_clk_init(void)
 {
-    uint32_t common_perip_clk, hwcrypto_perip_clk, wifi_bt_sdio_clk = 0;
-    uint32_t common_perip_clk1 = 0;
-
-#if CONFIG_FREERTOS_UNICORE
-    soc_reset_reason_t rst_reas[1];
-#else
-    soc_reset_reason_t rst_reas[2];
-#endif
-
-    rst_reas[0] = esp_rom_get_reset_reason(0);
-#if !CONFIG_FREERTOS_UNICORE
-    rst_reas[1] = esp_rom_get_reset_reason(1);
-#endif
-
-    /* For reason that only reset CPU, do not disable the clocks
-     * that have been enabled before reset.
-     */
-    if ((rst_reas[0] == RESET_REASON_CPU0_MWDT0 || rst_reas[0] == RESET_REASON_CPU0_SW ||
-        rst_reas[0] == RESET_REASON_CPU0_RTC_WDT || rst_reas[0] == RESET_REASON_CPU0_MWDT1)
-    #if !CONFIG_FREERTOS_UNICORE
-        || (rst_reas[1] == RESET_REASON_CPU1_MWDT0 || rst_reas[1] == RESET_REASON_CPU1_SW ||
-            rst_reas[1] == RESET_REASON_CPU1_RTC_WDT || rst_reas[1] == RESET_REASON_CPU1_MWDT1)
+    uint32_t common_perip_clk = SYSTEM_WDG_CLK_EN |
+        SYSTEM_I2S0_CLK_EN |
+    #if CONFIG_ESP_CONSOLE_UART_NUM != 0
+        SYSTEM_UART_CLK_EN |
     #endif
-        ) {
-        common_perip_clk = ~READ_PERI_REG(SYSTEM_PERIP_CLK_EN0_REG);
-        hwcrypto_perip_clk = ~READ_PERI_REG(SYSTEM_PERIP_CLK_EN1_REG);
-        wifi_bt_sdio_clk = ~READ_PERI_REG(SYSTEM_WIFI_CLK_EN_REG);
-    }
-    else {
-        common_perip_clk = SYSTEM_WDG_CLK_EN |
-            SYSTEM_I2S0_CLK_EN |
-        #if CONFIG_ESP_CONSOLE_UART_NUM != 0
-            SYSTEM_UART_CLK_EN |
-        #endif
-        #if CONFIG_ESP_CONSOLE_UART_NUM != 1
-            SYSTEM_UART1_CLK_EN |
-        #endif
-        #if CONFIG_ESP_CONSOLE_UART_NUM != 2
-            SYSTEM_UART2_CLK_EN |
-        #endif
-            SYSTEM_USB_CLK_EN |
-            SYSTEM_SPI2_CLK_EN |
-            SYSTEM_I2C_EXT0_CLK_EN |
-            SYSTEM_UHCI0_CLK_EN |
-            SYSTEM_RMT_CLK_EN |
-            SYSTEM_PCNT_CLK_EN |
-            SYSTEM_LEDC_CLK_EN |
-            SYSTEM_TIMERGROUP1_CLK_EN |
-            SYSTEM_SPI3_CLK_EN |
-            SYSTEM_SPI4_CLK_EN |
-            SYSTEM_PWM0_CLK_EN |
-            SYSTEM_TWAI_CLK_EN |
-            SYSTEM_PWM1_CLK_EN |
-            SYSTEM_I2S1_CLK_EN |
-            SYSTEM_SPI2_DMA_CLK_EN |
-            SYSTEM_SPI3_DMA_CLK_EN |
-            SYSTEM_PWM2_CLK_EN |
-            SYSTEM_PWM3_CLK_EN;
-        common_perip_clk1 = 0;
-        hwcrypto_perip_clk = SYSTEM_CRYPTO_AES_CLK_EN |
-            SYSTEM_CRYPTO_SHA_CLK_EN |
-            SYSTEM_CRYPTO_RSA_CLK_EN;
-        wifi_bt_sdio_clk = SYSTEM_WIFI_CLK_WIFI_EN |
-            SYSTEM_WIFI_CLK_BT_EN_M |
-            SYSTEM_WIFI_CLK_I2C_CLK_EN |
-            SYSTEM_WIFI_CLK_UNUSED_BIT12 |
-            SYSTEM_WIFI_CLK_SDIO_HOST_EN;
-    }
+    #if CONFIG_ESP_CONSOLE_UART_NUM != 1
+        SYSTEM_UART1_CLK_EN |
+    #endif
+    #if CONFIG_ESP_CONSOLE_UART_NUM != 2
+        SYSTEM_UART2_CLK_EN |
+    #endif
+        SYSTEM_USB_CLK_EN |
+        SYSTEM_SPI2_CLK_EN |
+        SYSTEM_I2C_EXT0_CLK_EN |
+        SYSTEM_UHCI0_CLK_EN |
+        SYSTEM_RMT_CLK_EN |
+        SYSTEM_PCNT_CLK_EN |
+        SYSTEM_LEDC_CLK_EN |
+        SYSTEM_TIMERGROUP1_CLK_EN |
+        SYSTEM_SPI3_CLK_EN |
+        SYSTEM_SPI4_CLK_EN |
+        SYSTEM_PWM0_CLK_EN |
+        SYSTEM_TWAI_CLK_EN |
+        SYSTEM_PWM1_CLK_EN |
+        SYSTEM_I2S1_CLK_EN |
+        SYSTEM_SPI2_DMA_CLK_EN |
+        SYSTEM_SPI3_DMA_CLK_EN |
+        SYSTEM_PWM2_CLK_EN |
+        SYSTEM_PWM3_CLK_EN |
+        0;
+    uint32_t hwcrypto_perip_clk = SYSTEM_CRYPTO_AES_CLK_EN |
+        SYSTEM_CRYPTO_SHA_CLK_EN |
+        SYSTEM_CRYPTO_RSA_CLK_EN |
+        0;
+    uint32_t wifi_bt_sdio_clk = SYSTEM_WIFI_CLK_WIFI_EN |
+        SYSTEM_WIFI_CLK_BT_EN_M |
+        SYSTEM_WIFI_CLK_I2C_CLK_EN |
+        SYSTEM_WIFI_CLK_UNUSED_BIT12 |
+        SYSTEM_WIFI_CLK_SDIO_HOST_EN |
+        0;
+    uint32_t common_perip_clk1 = 0;
 
     //Reset the communication peripherals like I2C, SPI, UART, I2S and bring them to known state.
     common_perip_clk |= SYSTEM_I2S0_CLK_EN |
@@ -289,7 +232,6 @@ void esp_perip_clk_init(void)
         SYSTEM_I2S1_CLK_EN |
         SYSTEM_SPI2_DMA_CLK_EN |
         SYSTEM_SPI3_DMA_CLK_EN;
-    common_perip_clk1 = 0;
 
     /* Disable some peripheral clocks. */
     CLEAR_PERI_REG_MASK(SYSTEM_PERIP_CLK_EN0_REG, common_perip_clk);
