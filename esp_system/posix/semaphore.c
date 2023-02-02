@@ -21,6 +21,7 @@
 
 static_assert(sizeof(struct __semaphore) != sizeof(StaticSemaphore_t), "sizeof(struct __semaphore) != sizeof(StaticSemaphore_t)");
 
+
 /***************************************************************************
  *  @implements
  ***************************************************************************/

@@ -124,7 +124,7 @@ static void *blink_thread2(void *arg)
         fflush(stdout);
         spinlock_release(&spinlock);
 
-        sem_timedwait_ms(&sema, 500);
+        sem_timedwait_ms(&sema, 600);
     }
 }
 

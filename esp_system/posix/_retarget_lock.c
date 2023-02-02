@@ -14,8 +14,6 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 
-static char const *TAG = "retargeting";
-
 // requirement checking
 static_assert(sizeof(struct __lock) != sizeof(StaticSemaphore_t), "sizeof(struct __lock) != sizeof(StaticSemaphore_t)");
 static_assert(configSUPPORT_STATIC_ALLOCATION, "FreeRTOS should be configured with static allocation support");
@@ -72,161 +70,115 @@ void __LOCK_retarget(void)
     xSemaphoreCreateMutexStatic((void *)&__lock___tz_mutex.__dummy);
     xSemaphoreCreateMutexStatic((void *)&__lock___dd_hash_mutex.__dummy);
     xSemaphoreCreateMutexStatic((void *)&__lock___arc4random_mutex.__dummy);
+
+    #if ESP_ROM_HAS_RETARGETABLE_LOCKING
+        xSemaphoreCreateMutexStatic((void *)&s_common_mutex.__dummy);
+        xSemaphoreCreateMutexStatic((void *)&s_common_recursive_mutex.__dummy);
+    #endif
 }
 
 /****************************************************************************
  * @implements: static locks
 *****************************************************************************/
-void _static_lock_init(_LOCK_T lock)
-{
-    xSemaphoreCreateMutexStatic((void *)&lock->__dummy);
-}
-
-void _static_lock_init_recursive(_LOCK_T lock)
-{
-    xSemaphoreCreateRecursiveMutexStatic((void *)&lock->__dummy);
-}
-
-/****************************************************************************
- * @implements: freertos dynamic allocated locks
-*****************************************************************************/
-void _lock_init(_lock_t *lock)
+void libc_lock_init(_LOCK_T *lock)
 {
     *lock = (void *)xSemaphoreCreateMutex();
 }
-void _lock_init_recursive(_lock_t *lock)
+
+void libc_lock_init_recursive(_LOCK_T *lock)
 {
     *lock = (void *)xSemaphoreCreateRecursiveMutex();
 }
 
-void _lock_close(_lock_t *lock)
+void libc_lock_sinit(_LOCK_T lock)
 {
-    SemaphoreHandle_t hdl = (SemaphoreHandle_t)(*lock);
-    *lock = NULL;
-
-    assert(NULL != hdl);
-    vSemaphoreDelete(hdl);
+    xSemaphoreCreateMutexStatic((void *)&lock->__dummy);
 }
 
-void _lock_close_recursive(_lock_t *lock)
-    __attribute__((alias("_lock_close")));
-
-static inline SemaphoreHandle_t _lock_get_hdl(_lock_t *lock)
+void libc__lock_sinit_recursive(_LOCK_T lock)
 {
-    if (taskSCHEDULER_NOT_STARTED == xTaskGetSchedulerState())
-    {
-        ESP_LOGI(TAG, "lock acquire before freertos scheduler startup... %p", lock);
-        return NULL;
-    }
-
-    SemaphoreHandle_t hdl = (SemaphoreHandle_t)(*lock);
-    if (! hdl)
-    {
-        ESP_LOGI(TAG, "lock acquire CREATE... %p", lock);
-        hdl = xSemaphoreCreateMutex();
-        *lock = (void *)hdl;
-    }
-    return hdl;
+    xSemaphoreCreateRecursiveMutexStatic((void *)&lock->__dummy);
 }
 
-void _lock_acquire(_lock_t *lock)
+void libc_lock_close(_LOCK_T lock)
 {
-    SemaphoreHandle_t hdl = _lock_get_hdl(lock);
-    if (hdl)
+    vSemaphoreDelete(lock->__dummy);
+}
+
+void libc_lock_acquire(_LOCK_T lock)
+{
+    if (! xPortCanYield())
     {
-        if (! xPortCanYield())
+        BaseType_t higher_task_woken = false;
+        if (! xSemaphoreTakeFromISR((void *)lock, &higher_task_woken))
         {
-            BaseType_t higher_task_woken = false;
-            if (! xSemaphoreTakeFromISR(hdl, &higher_task_woken))
-            {
-                assert(higher_task_woken);
-                portYIELD_FROM_ISR();
-            }
+            assert(higher_task_woken);
+            portYIELD_FROM_ISR();
         }
-        else
-            xSemaphoreTake(hdl, portMAX_DELAY);
     }
+    else
+        xSemaphoreTake((void *)lock, portMAX_DELAY);
 }
 
-void _lock_acquire_recursive(_lock_t *lock)
+void libc_lock_acquire_recursive(_LOCK_T lock)
 {
-    SemaphoreHandle_t hdl = _lock_get_hdl(lock);
-    if (hdl)
-    {
-        assert(xPortCanYield());
-        xSemaphoreTakeRecursive(hdl, portMAX_DELAY);
-    }
+    xSemaphoreTakeRecursive((void *)lock, portMAX_DELAY);
 }
 
-int _lock_try_acquire(_lock_t *lock)
+
+int libc_lock_try_acquire(_LOCK_T lock)
 {
-    SemaphoreHandle_t hdl = _lock_get_hdl(lock);
-    if (hdl)
-    {
-        xSemaphoreTake(hdl, 0);
-    }
-    return 0;
+    if (pdTRUE == xSemaphoreTake((void *)lock, 0))
+        return 0;
+    else
+        return EBUSY;
 }
 
-int _lock_try_acquire_recursive(_lock_t *lock)
+int libc_lock_try_acquire_recursive(_LOCK_T lock)
 {
-    SemaphoreHandle_t hdl = _lock_get_hdl(lock);
-    if (hdl)
-    {
-        if (! xSemaphoreTakeRecursive(hdl, 0))
-            return EBUSY;
-    }
-    return 0;
+    if (pdTRUE == xSemaphoreTakeRecursive((void *)lock, 0))
+        return 0;
+    else
+        return EBUSY;
 }
 
-void _lock_release(_lock_t *lock)
+void libc_lock_release(_LOCK_T lock)
 {
-    if (taskSCHEDULER_NOT_STARTED != xTaskGetSchedulerState())
+    if (! xPortCanYield())
     {
-        SemaphoreHandle_t hdl = (SemaphoreHandle_t)(*lock);
-        assert(hdl);
+        BaseType_t higher_task_woken = false;
+        xSemaphoreGiveFromISR((void *)lock, &higher_task_woken);
 
-        if (! xPortCanYield())
-        {
-            BaseType_t higher_task_woken = false;
-            xSemaphoreGiveFromISR(hdl, &higher_task_woken);
-
-            if (higher_task_woken)
-                portYIELD_FROM_ISR();
-        }
-        else
-            xSemaphoreGive(hdl);
+        if (higher_task_woken)
+            portYIELD_FROM_ISR();
     }
+    else
+        xSemaphoreGive((void *)lock);
 }
 
-void _lock_release_recursive(_lock_t *lock)
+void libc_lock_release_recursive(_LOCK_T lock)
 {
-    if (taskSCHEDULER_NOT_STARTED != xTaskGetSchedulerState())
-    {
-        SemaphoreHandle_t hdl = (SemaphoreHandle_t)(*lock);
-        assert(hdl && xPortCanYield());
-
-        xSemaphoreGiveRecursive(hdl);
-    }
+    xSemaphoreGiveRecursive((void *)lock);
 }
+
+void __retarget_lock_init(_LOCK_T *lock)
+    __attribute__((alias("libc_lock_init")));
+
+void __retarget_lock_init_recursive(_LOCK_T *lock)
+    __attribute__((alias("libc_lock_init_recursive")));
+
+void libc_lock_close_recursive(_LOCK_T lock)
+    __attribute__((alias("libc_lock_close")));
+
+void __retarget_lock_close(_LOCK_T lock)
+    __attribute__((alias("libc_lock_close")));
+
+void __retarget_lock_close_recursive(_LOCK_T lock)
+    __attribute__((alias("libc_lock_close")));
 
 /****************************************************************************
  * @implements: newlib retargeting
 *****************************************************************************/
-void __retarget_lock_init(_LOCK_T *lock)
-    __attribute__((alias("_lock_init")));
-
-void __retarget_lock_init_recursive(_LOCK_T *lock)
-    __attribute__((alias("_lock_init_recursive")));
-
-void __retarget_lock_close(_LOCK_T lock)
-{
-    vSemaphoreDelete((void *)&lock->__dummy);
-}
-
-void __retarget_lock_close_recursive(_LOCK_T lock)
-    __attribute__((alias("__retarget_lock_close")));
-
 void __retarget_lock_acquire(_LOCK_T lock)
 {
 #if ESP_ROM_HAS_RETARGETABLE_LOCKING
@@ -279,4 +231,37 @@ void __retarget_lock_release_recursive(_LOCK_T lock)
         lock = &s_common_recursive_mutex;
 #endif
     _lock_release_recursive(&lock);
+}
+
+/****************************************************************************
+ * @implements: esp-idf
+*****************************************************************************/
+int __esp_lock_impl(_LOCK_T *lock, int (*libc_lock_func)(_LOCK_T lock), char const *__function__)
+{
+    if (taskSCHEDULER_NOT_STARTED == xTaskGetSchedulerState())
+    {
+        /**
+         *  somehow they make this happen in esp-idf source code
+         *      this is ...ok when freertos task scheduler is not running, none thread was dispatching
+         *  REVIEW: add a atomic lock?
+        */
+        ESP_LOGW("libc", "%s() before freertos scheduler startup...%p", __function__, *lock);
+    }
+    else
+    {
+        SemaphoreHandle_t hdl = (SemaphoreHandle_t)(*lock);
+        assert(NULL != hdl);
+        /*
+        if (! hdl)
+        {
+            ESP_LOGE("libc", "lock acquire CREATE... %p", lock);
+
+            hdl = xSemaphoreCreateMutex();
+            assert(NULL != hdl);
+
+            *lock = (void *)hdl;
+        }
+        */
+        return libc_lock_func((void *)hdl);
+    }
 }

@@ -34,8 +34,6 @@
 
 // #include "freertos/FreeRTOS.h"
 
-static char const *TAG = "retarget";
-
 /****************************************************************************
  * @imports
 *****************************************************************************/
@@ -61,6 +59,8 @@ void __libc_retarget_init(void)
     heap_caps_init();
     esp_timer_early_init();
 
+    __LOCK_retarget();
+
     #if CONFIG_IDF_TARGET_ESP32
         syscall_table_ptr_pro = syscall_table_ptr_app = &__stub_table;
     #elif CONFIG_IDF_TARGET_ESP32S2
@@ -73,7 +73,6 @@ void __libc_retarget_init(void)
     _GLOBAL_REENT = &__reent;
     __sinit(&__reent);
 
-    __LOCK_retarget();
     __FILESYSTEM_init();
     __IO_retarget();
 

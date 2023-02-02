@@ -451,11 +451,7 @@ int pthread_cancel(pthread_t thread)
     return ENOSYS;
 }
 
-int sched_yield( void )
-{
-    vTaskDelay(0);
-    return 0;
-}
+
 
 pthread_t pthread_self(void)
 {
@@ -472,7 +468,7 @@ pthread_t pthread_self(void)
 
 int pthread_equal(pthread_t t1, pthread_t t2)
 {
-    return t1 == t2 ? 1 : 0;
+    return ((int)t1 - t2);
 }
 
 /***************** ONCE ******************/

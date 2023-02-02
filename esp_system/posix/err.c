@@ -8,7 +8,7 @@ static char const *TAG = "err";
 
 int __dbg_set_errno_r_neg(struct _reent *r, int err, char const *__function__)
 {
-    ESP_LOGE(TAG, "%d, %s(): %s", err, __function__, strerror(err));
+    ESP_LOGW(TAG, "%d, %s(): %s", err, __function__, strerror(err));
 
     r->_errno = err;
     return -1;
@@ -16,7 +16,7 @@ int __dbg_set_errno_r_neg(struct _reent *r, int err, char const *__function__)
 
 void *__dbg_set_errno_r_nullptr(struct _reent *r, int err, char const *__function__)
 {
-    ESP_LOGE(TAG, "%d, %s(): %s", err, __function__, strerror(err));
+    ESP_LOGW(TAG, "%d, %s(): %s", err, __function__, strerror(err));
 
     r->_errno = err;
     return NULL;

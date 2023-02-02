@@ -6,13 +6,15 @@
 
 int usleep(useconds_t us)
 {
-    uint32_t us_per_tick = portTICK_PERIOD_MS * 1000;
+    if (us)
+    {
+        uint32_t us_per_tick = portTICK_PERIOD_MS * 1000;
 
-    if (us > us_per_tick)
-        vTaskDelay((us + us_per_tick - 1) / us_per_tick);
-    else
-        esp_rom_delay_us(us);
-
+        if (us > us_per_tick)
+            vTaskDelay((us + us_per_tick - 1) / us_per_tick);
+        else
+            esp_rom_delay_us(us);
+    }
     return 0;
 }
 
@@ -24,14 +26,18 @@ unsigned int sleep(unsigned int seconds)
 
 int msleep(uint32_t msec)
 {
-    vTaskDelay(msec / portTICK_PERIOD_MS);
+    if (msec)
+        vTaskDelay(msec / portTICK_PERIOD_MS);
+    else
+        taskYIELD();
+
     return 0;
 }
 
 // TODO: move to pthread.c
 int pthread_yield(void)
 {
-    msleep(0);
+    taskYIELD();
 }
 
 int pthread_setcancelstate(int state, int *oldstate)

@@ -11,7 +11,7 @@ __attribute__((constructor))
 static void ATOMIC_init(void)
 {
     ESP_LOGD(TAG, "constructor: ATOMIC_init()");
-    _static_lock_init(&atomic_lock);
+    libc_lock_sinit(&atomic_lock);
 }
 
 void ATOMIC_enter(void)

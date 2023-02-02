@@ -34,7 +34,6 @@ static struct UART_context uart_context[SOC_UART_NUM] = {0};
 static uint32_t UART_get_baudrate(uart_dev_t *dev);
 static int UART_set_baudrate(uart_dev_t *dev, uint32_t bps);
 
-
 /****************************************************************************
  *  @implements
  ****************************************************************************/
