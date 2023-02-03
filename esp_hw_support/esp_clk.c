@@ -55,34 +55,6 @@ static portMUX_TYPE s_esp_rtc_time_lock = portMUX_INITIALIZER_UNLOCKED;
 // TODO: IDF-4239
 static RTC_NOINIT_ATTR uint64_t s_esp_rtc_time_us, s_rtc_last_ticks;
 
-inline static int IRAM_ATTR s_get_cpu_freq_mhz(void)
-{
-#if ESP_ROM_GET_CLK_FREQ
-    return esp_rom_get_cpu_ticks_per_us();
-#else
-    return g_ticks_per_us_pro;
-#endif
-}
-
-int IRAM_ATTR esp_clk_cpu_freq(void)
-{
-    return s_get_cpu_freq_mhz() * MHZ;
-}
-
-int IRAM_ATTR esp_clk_apb_freq(void)
-{
-    // TODO: IDF-5173 Require cleanup, implementation should be unified
-#if CONFIG_IDF_TARGET_ESP32C6
-    return rtc_clk_apb_freq_get();
-#else
-    return MIN(s_get_cpu_freq_mhz() * MHZ, APB_CLK_FREQ);
-#endif
-}
-
-int IRAM_ATTR esp_clk_xtal_freq(void)
-{
-    return rtc_clk_xtal_freq_get() * MHZ;
-}
 
 #if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3
 void IRAM_ATTR ets_update_cpu_frequency(uint32_t ticks_per_us)
@@ -155,14 +127,4 @@ uint64_t esp_clk_rtc_time(void)
 #else
     return 0;
 #endif
-}
-
-void esp_clk_private_lock(void)
-{
-    portENTER_CRITICAL(&s_esp_rtc_time_lock);
-}
-
-void esp_clk_private_unlock(void)
-{
-    portEXIT_CRITICAL(&s_esp_rtc_time_lock);
 }

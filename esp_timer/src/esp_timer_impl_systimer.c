@@ -125,12 +125,15 @@ void esp_timer_impl_advance(int64_t time_diff_us)
 esp_err_t esp_timer_impl_early_init(void)
 {
     periph_module_enable(PERIPH_SYSTIMER_MODULE);
+
+    /*
     systimer_hal_tick_rate_ops_t ops = {
         .ticks_to_us = systimer_ticks_to_us,
         .us_to_ticks = systimer_us_to_ticks,
     };
+    */
     systimer_hal_init(&systimer_hal);
-    systimer_hal_set_tick_rate_ops(&systimer_hal, &ops);
+    // systimer_hal_set_tick_rate_ops(&systimer_hal, &ops);
 
 #if !SOC_SYSTIMER_FIXED_DIVIDER
     assert(esp_clk_xtal_freq() == (40 * 1000000) &&

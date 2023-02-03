@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <features.h>
 #include <stdint.h>
 
 // we assign the systimer resources statically
@@ -15,9 +16,7 @@
 #define SYSTIMER_ALARM_OS_TICK_CORE1 1 // Alarm used by OS tick, dedicated for core 1
 #define SYSTIMER_ALARM_ESPTIMER      2 // Alarm used by esptimer
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+__BEGIN_DECLS
 
 /**
  * @brief Convert ticks to microseconds
@@ -25,16 +24,10 @@ extern "C" {
  * @param ticks ticks to convert
  * @return microseconds
  */
-uint64_t systimer_ticks_to_us(uint64_t ticks) __attribute__((const));
+extern __attribute__((const))
+    uint64_t systimer_ticks_to_us(uint64_t ticks);
 
-/**
- * @brief Convert microseconds to ticks
- *
- * @param us microseconds to convert
- * @return ticks
- */
-uint64_t systimer_us_to_ticks(uint64_t us) __attribute__((const));
+extern __attribute__((const))
+    uint64_t systimer_us_to_ticks(uint64_t us);
 
-#ifdef __cplusplus
-}
-#endif
+__END_DECLS

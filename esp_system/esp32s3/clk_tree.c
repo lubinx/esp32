@@ -6,279 +6,204 @@
 
 #include <stdint.h>
 
+#include "soc/soc.h"
 #include "soc/soc_caps.h"
+#include "soc/system_reg.h"
+#include "soc/rtc_cntl_reg.h"
 #include "soc/clk_tree_defs.h"
-#include "soc/rtc.h"
 
 #include "clk_tree.h"
-#include "esp_err.h"
-#include "esp_check.h"
-#include "soc/rtc.h"
 
-#include "hal/clk_tree_hal.h"
-#include "hal/clk_tree_ll.h"
+#define CLK_LL_PLL_80M_FREQ             (80000000ULL)
+#define CLK_LL_PLL_160M_FREQ            (160000000ULL)
+#define CLK_LL_PLL_240M_FREQ            (240000000ULL)
+#define CLK_LL_PLL_320M_FREQ            (320ULL)
+#define CLK_LL_PLL_480M_FREQ            (480ULL)
 
-#include "esp_private/esp_clk.h"
-#include "sdkconfig.h"
+#define CLK_LL_AHB_MAX_FREQ         CLK_LL_PLL_80M_FREQ
 
 
-static const char *TAG = "clk_tree";
+uint64_t systimer_ticks_to_us(uint64_t ticks)
+{
+    return ticks / 16;
+}
+
+uint64_t systimer_us_to_ticks(uint64_t us)
+{
+    return us * 16;
+}
 
 /****************************************************************************
- *  @internal
+ * @internal
  ****************************************************************************/
-#if SOC_CLK_RC_FAST_D256_SUPPORTED
-    static uint32_t clk_tree_rc_fast_d256_get_freq_hz(clk_tree_src_freq_precision_t precision);
-#endif
+static inline soc_cpu_clk_src_t clk_ll_cpu_get_src(void)
+{
+    uint32_t clk_sel = REG_GET_FIELD(SYSTEM_SYSCLK_CONF_REG, SYSTEM_SOC_CLK_SEL);
+    switch (clk_sel) {
+    case 0:
+        return SOC_CPU_CLK_SRC_XTAL;
+    case 1:
+        return SOC_CPU_CLK_SRC_PLL;
+    case 2:
+        return SOC_CPU_CLK_SRC_RC_FAST;
+    default:
+        // Invalid SOC_CLK_SEL value
+        return SOC_CPU_CLK_SRC_INVALID;
+    }
+}
 
-#if SOC_CLK_XTAL32K_SUPPORTED
-    static uint32_t clk_tree_xtal32k_get_freq_hz(clk_tree_src_freq_precision_t precision);
-#endif
+static inline uint64_t clk_ll_cpu_get_freq_from_pll(void)
+{
+    switch (REG_GET_FIELD(SYSTEM_CPU_PER_CONF_REG, SYSTEM_CPUPERIOD_SEL))
+    {
+    default:
+        return 0;
+    case 0:
+        return CLK_LL_PLL_80M_FREQ;
+    case 1:
+        return CLK_LL_PLL_160M_FREQ;
+    case 2:
+        // When PLL frequency selection is 320MHz but CPU frequency selection is 240MHz, it is an undetermined state.
+        // It is checked in the upper layer.
+        return CLK_LL_PLL_240M_FREQ;
+    }
+}
 
-#if SOC_CLK_OSC_SLOW_SUPPORTED
-    static uint32_t clk_tree_osc_slow_get_freq_hz(clk_tree_src_freq_precision_t precision);
-#endif
+static inline uint32_t clk_ll_cpu_get_divider(void)
+{
+    return REG_GET_FIELD(SYSTEM_SYSCLK_CONF_REG, SYSTEM_PRE_DIV_CNT) + 1;
+}
 
-static uint32_t clk_tree_rc_fast_get_freq_hz(clk_tree_src_freq_precision_t precision);
-static uint32_t clk_tree_lp_slow_get_freq_hz(clk_tree_src_freq_precision_t precision);
-static uint32_t clk_tree_lp_fast_get_freq_hz(clk_tree_src_freq_precision_t precision);
+static inline soc_rtc_slow_clk_src_t clk_ll_rtc_slow_get_src(void)
+{
+    switch (REG_GET_FIELD(RTC_CNTL_CLK_CONF_REG, RTC_CNTL_ANA_CLK_RTC_SEL))
+    {
+    case 0:
+        return SOC_RTC_SLOW_CLK_SRC_RC_SLOW;
+    case 1:
+        return SOC_RTC_SLOW_CLK_SRC_XTAL32K;
+    case 2:
+        return SOC_RTC_SLOW_CLK_SRC_RC_FAST_D256;
+    default:
+        return SOC_RTC_SLOW_CLK_SRC_INVALID;
+    }
+}
 
 /****************************************************************************
- *  @implements
+ *  @implements: hw external clocks
  ****************************************************************************/
-uint32_t clk_tree_get_module_freq(soc_module_clk_t clk_src)
+uint64_t clk_tree_rc_fast_freq(void)
 {
-
-}
-
-esp_err_t clk_tree_src_get_freq_hz(soc_module_clk_t clk_src, enum clk_tree_src_freq_precision_t precision, uint32_t *freq)
-{
-    uint32_t clk_src_freq = 0;
-    switch (clk_src)
-    {
-    case SOC_MOD_CLK_CPU:
-        clk_src_freq = clk_hal_cpu_get_freq_hz();
-        break;
-    case SOC_MOD_CLK_APB:
-        clk_src_freq = clk_hal_apb_get_freq_hz();
-        break;
-    case SOC_MOD_CLK_XTAL:
-        clk_src_freq = clk_hal_xtal_get_freq_mhz() * MHZ;
-        break;
-    case SOC_MOD_CLK_PLL_F80M:
-        clk_src_freq = CLK_LL_PLL_80M_FREQ_MHZ * MHZ;
-        break;
-    case SOC_MOD_CLK_PLL_F160M:
-        clk_src_freq = CLK_LL_PLL_160M_FREQ_MHZ * MHZ;
-        break;
-    case SOC_MOD_CLK_PLL_D2:
-        clk_src_freq = (clk_ll_bbpll_get_freq_mhz() * MHZ) >> 1;
-        break;
-    case SOC_MOD_CLK_RTC_SLOW:
-        clk_src_freq = clk_tree_lp_slow_get_freq_hz(precision);
-        break;
-    case SOC_MOD_CLK_RTC_FAST:
-        clk_src_freq = clk_tree_lp_fast_get_freq_hz(precision);
-        break;
-    case SOC_MOD_CLK_RC_FAST:
-    case SOC_MOD_CLK_TEMP_SENSOR:
-        clk_src_freq = clk_tree_rc_fast_get_freq_hz(precision);
-        break;
-    case SOC_MOD_CLK_RC_FAST_D256:
-        clk_src_freq = clk_tree_rc_fast_d256_get_freq_hz(precision);
-        break;
-    case SOC_MOD_CLK_XTAL32K:
-        clk_src_freq = clk_tree_xtal32k_get_freq_hz(precision);
-        break;
-
-    default:
-        clk_src_freq = 0;
-        break;
-    }
-
-    if (clk_src_freq)
-    {
-        *freq = clk_src_freq;
-        return ESP_OK;
-    }
-    else
-    {
-        ESP_LOGE(TAG, "freq shouldn't be 0, calibration failed");
-        return ESP_FAIL;
-    }
-}
-
-
-typedef struct clk_tree_calibrated_freq_t clk_tree_calibrated_freq_t;
-
-struct clk_tree_calibrated_freq_t
-{
-    #if SOC_CLK_RC_FAST_D256_SUPPORTED
-        uint32_t rc_fast_d256;
-    #elif SOC_CLK_RC_FAST_SUPPORT_CALIBRATION // && !SOC_CLK_RC_FAST_D256_SUPPORTED
-        uint32_t rc_fast;
-    #endif
-    #if SOC_CLK_XTAL32K_SUPPORTED
-        uint32_t xtal32k;
-    #endif
-    #if SOC_CLK_OSC_SLOW_SUPPORTED
-        uint32_t osc_slow;
-    #endif
-};
-
-// TODO: Better to implement a spinlock for the static variables
-static clk_tree_calibrated_freq_t s_calibrated_freq = {0};
-
-/* Number of cycles for RTC_SLOW_CLK calibration */
-#define RTC_SLOW_CLK_CAL_CYCLES     CONFIG_RTC_CLK_CAL_CYCLES
-/* Number of cycles for ~32kHz clocks calibration (rc_fast_d256, xtal32k, osc_slow, rc32k) */
-#define DEFAULT_32K_CLK_CAL_CYCLES  100
-/* Number of cycles for RC_FAST calibration */
-#define DEFAULT_RC_FAST_CAL_CYCLES  10000  // RC_FAST has a higher frequency, therefore, requires more cycles to get an accurate value
-
-
-/**
- * Performs a frequency calibration to RTC slow clock
- *
- * slowclk_cycles Number of slow clock cycles to count.
- *                If slowclk_cycles = 0, calibration will not be performed. Clock's theoretical value will be used.
- *
- * Returns the number of XTAL clock cycles within the given number of slow clock cycles
- * It returns 0 if calibration failed, i.e. clock is not running
- */
-static uint32_t clk_tree_rtc_slow_calibration(uint32_t slowclk_cycles)
-{
-    uint32_t cal_val = 0;
-    if (slowclk_cycles > 0) {
-        cal_val = rtc_clk_cal(RTC_CAL_RTC_MUX, slowclk_cycles);
-    } else {
-        const uint64_t cal_dividend = (1ULL << RTC_CLK_CAL_FRACT) * 1000000ULL;
-        uint32_t source_approx_freq = clk_hal_lp_slow_get_freq_hz();
-        assert(source_approx_freq);
-        cal_val = (uint32_t)(cal_dividend / source_approx_freq);
-    }
-    if (cal_val) {
-        ESP_EARLY_LOGD(TAG, "RTC_SLOW_CLK calibration value: %d", cal_val);
-        // Update the calibration value of RTC_SLOW_CLK
-        esp_clk_slowclk_cal_set(cal_val);
-    }
-    return cal_val;
-}
-
-#if SOC_CLK_RC_FAST_D256_SUPPORTED
-uint32_t clk_tree_rc_fast_d256_get_freq_hz(clk_tree_src_freq_precision_t precision)
-{
-    switch (precision) {
-    case CLK_TREE_SRC_FREQ_PRECISION_APPROX:
-        return SOC_CLK_RC_FAST_D256_FREQ_APPROX;
-    case CLK_TREE_SRC_FREQ_PRECISION_CACHED:
-        if (!s_calibrated_freq.rc_fast_d256) {
-            s_calibrated_freq.rc_fast_d256 = rtc_clk_freq_cal(rtc_clk_cal(RTC_CAL_8MD256, DEFAULT_32K_CLK_CAL_CYCLES));
-        }
-        return s_calibrated_freq.rc_fast_d256;
-    case CLK_TREE_SRC_FREQ_PRECISION_EXACT:
-        s_calibrated_freq.rc_fast_d256 = rtc_clk_freq_cal(rtc_clk_cal(RTC_CAL_8MD256, DEFAULT_32K_CLK_CAL_CYCLES));
-        return s_calibrated_freq.rc_fast_d256;
-    default:
-        return 0;
-    }
-}
-#endif
-
-#if SOC_CLK_XTAL32K_SUPPORTED
-uint32_t clk_tree_xtal32k_get_freq_hz(clk_tree_src_freq_precision_t precision)
-{
-    switch (precision) {
-    case CLK_TREE_SRC_FREQ_PRECISION_APPROX:
-        return SOC_CLK_XTAL32K_FREQ_APPROX;
-    case CLK_TREE_SRC_FREQ_PRECISION_CACHED:
-        if (!s_calibrated_freq.xtal32k) {
-            s_calibrated_freq.xtal32k = rtc_clk_freq_cal(rtc_clk_cal(RTC_CAL_32K_XTAL, DEFAULT_32K_CLK_CAL_CYCLES));
-        }
-        return s_calibrated_freq.xtal32k;
-    case CLK_TREE_SRC_FREQ_PRECISION_EXACT:
-        s_calibrated_freq.xtal32k = rtc_clk_freq_cal(rtc_clk_cal(RTC_CAL_32K_XTAL, DEFAULT_32K_CLK_CAL_CYCLES));
-        return s_calibrated_freq.xtal32k;
-    default:
-        return 0;
-    }
-}
-#endif
-
-#if SOC_CLK_OSC_SLOW_SUPPORTED
-uint32_t clk_tree_osc_slow_get_freq_hz(clk_tree_src_freq_precision_t precision)
-{
-    switch (precision) {
-    case CLK_TREE_SRC_FREQ_PRECISION_APPROX:
-        return SOC_CLK_OSC_SLOW_FREQ_APPROX;
-    case CLK_TREE_SRC_FREQ_PRECISION_CACHED:
-        if (!s_calibrated_freq.osc_slow) {
-            s_calibrated_freq.osc_slow = rtc_clk_freq_cal(rtc_clk_cal(RTC_CAL_32K_OSC_SLOW, DEFAULT_32K_CLK_CAL_CYCLES));
-        }
-        return s_calibrated_freq.osc_slow;
-    case CLK_TREE_SRC_FREQ_PRECISION_EXACT:
-        s_calibrated_freq.osc_slow = rtc_clk_freq_cal(rtc_clk_cal(RTC_CAL_32K_OSC_SLOW, DEFAULT_32K_CLK_CAL_CYCLES));
-        return s_calibrated_freq.osc_slow;
-    default:
-        return 0;
-    }
-}
-#endif
-
-uint32_t clk_tree_lp_slow_get_freq_hz(clk_tree_src_freq_precision_t precision)
-{
-    switch (precision) {
-    case CLK_TREE_SRC_FREQ_PRECISION_CACHED:
-        // This returns calibrated (if CONFIG_xxx_RTC_CLK_CAL_CYCLES) value stored in RTC storage register
-        return rtc_clk_freq_cal(clk_ll_rtc_slow_load_cal());
-    case CLK_TREE_SRC_FREQ_PRECISION_APPROX:
-        return clk_hal_lp_slow_get_freq_hz();
-    case CLK_TREE_SRC_FREQ_PRECISION_EXACT:
-        return rtc_clk_freq_cal(clk_tree_rtc_slow_calibration(RTC_SLOW_CLK_CAL_CYCLES));
-    default:
-        return 0;
-    }
-}
-
-uint32_t clk_tree_rc_fast_get_freq_hz(clk_tree_src_freq_precision_t precision)
-{
-#if SOC_CLK_RC_FAST_SUPPORT_CALIBRATION
-    if (precision == CLK_TREE_SRC_FREQ_PRECISION_APPROX) {
-        return SOC_CLK_RC_FAST_FREQ_APPROX;
-    }
-#if SOC_CLK_RC_FAST_D256_SUPPORTED
-    // If RC_FAST_D256 clock exists, calibration on a slow freq clock is much faster (less slow clock cycles need to wait)
-    return clk_tree_rc_fast_d256_get_freq_hz(precision) << 8;
-#else
-    // Calibrate directly on the RC_FAST clock requires much more slow clock cycles to get an accurate freq value
-    if (precision != CLK_TREE_SRC_FREQ_PRECISION_CACHED || !s_calibrated_freq.rc_fast) {
-        s_calibrated_freq.rc_fast = rtc_clk_freq_cal(rtc_clk_cal(RTC_CAL_RC_FAST, DEFAULT_RC_FAST_CAL_CYCLES));
-    }
-    return s_calibrated_freq.rc_fast;
-#endif //SOC_CLK_RC_FAST_D256_SUPPORTED
-#else //!SOC_CLK_RC_FAST_SUPPORT_CALIBRATION
-    if (precision != CLK_TREE_SRC_FREQ_PRECISION_APPROX) {
-        // No way of getting exact rc_fast freq
-        ESP_HW_LOGW(TAG, "unable to get the exact freq of rc_fast_clk, returning its approx. freq value");
-    }
     return SOC_CLK_RC_FAST_FREQ_APPROX;
-#endif //SOC_CLK_RC_FAST_SUPPORT_CALIBRATION
 }
 
-uint32_t clk_tree_lp_fast_get_freq_hz(clk_tree_src_freq_precision_t precision)
+uint64_t clk_tree_rc_slow_freq(void)
 {
-    switch (clk_ll_rtc_fast_get_src()) {
-    case SOC_RTC_FAST_CLK_SRC_XTAL_DIV:
-#if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S2 //SOC_RTC_FAST_CLK_SRC_XTAL_D4
-        return clk_hal_xtal_get_freq_mhz() * MHZ >> 2;
-#else //SOC_RTC_FAST_CLK_SRC_XTAL_D2
-        return clk_hal_xtal_get_freq_mhz() * MHZ >> 1;
-#endif
-    case SOC_RTC_FAST_CLK_SRC_RC_FAST:
-        return clk_tree_rc_fast_get_freq_hz(precision) / clk_ll_rc_fast_get_divider();
+    return SOC_CLK_RC_SLOW_FREQ_APPROX;
+}
+
+uint64_t clk_tree_xtal_freq(void)
+{
+    return 40000000;
+
+    /**
+     *  REVIEW: clk_ll_xtal_load_freq_mhz() load from RTC area
+     *      don't know why they doing that.
+     *      basicly xtal is depended by chip, which is fixed value
+    */
+    /*
+    uint32_t mhz = clk_ll_xtal_load_freq_mhz();
+    if (0 == mhz)
+    {
+        ESP_LOGW(TAG, "invalid RTC_XTAL_FREQ_REG value, assume %dMHz", CONFIG_XTAL_FREQ);
+        return CONFIG_XTAL_FREQ;
+    }
+    return mhz;
+    */
+}
+
+uint64_t clk_tree_xtal32k_freq(void)
+{
+    return SOC_CLK_XTAL32K_FREQ_APPROX;
+}
+
+uint64_t clk_tree_pll_freq(void)
+{
+    switch (REG_GET_FIELD(SYSTEM_CPU_PER_CONF_REG, SYSTEM_PLL_FREQ_SEL))
+    {
     default:
-        // Invalid clock source
-        assert(false);
         return 0;
+    case 0:
+        return CLK_LL_PLL_320M_FREQ;
+    case 1:
+        return CLK_LL_PLL_480M_FREQ;
+    }
+}
+
+/****************************************************************************
+ * cpu / systick / ahb / apb
+ ****************************************************************************/
+uint64_t clk_tree_cpu_freq(void)
+{
+    switch (clk_ll_cpu_get_src())
+    {
+    default:
+        return 0;
+    case SOC_CPU_CLK_SRC_XTAL:
+        return clk_tree_xtal_freq() / clk_ll_cpu_get_divider();
+    case SOC_CPU_CLK_SRC_RC_FAST:
+        return SOC_CLK_RC_FAST_FREQ_APPROX / clk_ll_cpu_get_divider();
+    case SOC_CPU_CLK_SRC_PLL:
+        return  clk_ll_cpu_get_freq_from_pll() / clk_ll_cpu_get_divider();
+    }
+}
+
+uint64_t clk_tree_systick_freq(void)
+{
+    return 16000000;
+}
+
+uint64_t clk_tree_ahb_freq(void)
+{
+    // AHB_CLK path is highly dependent on CPU_CLK path
+    switch (clk_ll_cpu_get_src())
+    {
+    // --- equal to cpu
+    case SOC_CPU_CLK_SRC_XTAL:
+        return clk_tree_xtal_freq() / clk_ll_cpu_get_divider();
+    case SOC_CPU_CLK_SRC_RC_FAST:
+        return SOC_CLK_RC_FAST_FREQ_APPROX / clk_ll_cpu_get_divider();
+    // ---
+
+    case SOC_CPU_CLK_SRC_PLL:
+        // AHB_CLK is a fixed value when CPU_CLK is clocked from PLL
+        return CLK_LL_AHB_MAX_FREQ;
+    }
+}
+
+// esp32s3 ahb = apb
+uint64_t clk_tree_apb_freq(void)
+    __attribute__((alias(("clk_tree_ahb_freq"))));
+
+/****************************************************************************
+ *  configure/provide source clocks
+ ****************************************************************************/
+uint64_t clk_tree_rtc_fast_src_freq(void)
+{
+    return 0; // clk_tree_lp_fast_get_freq_hz(precision);
+}
+
+uint64_t clk_tree_rtc_slow_src_freq(void)
+{
+    switch (clk_ll_rtc_slow_get_src())
+    {
+    default:
+        return 0;
+    case SOC_RTC_SLOW_CLK_SRC_RC_SLOW:
+        return SOC_CLK_RC_SLOW_FREQ_APPROX;
+    case SOC_RTC_SLOW_CLK_SRC_XTAL32K:
+        return SOC_CLK_XTAL32K_FREQ_APPROX;
+    case SOC_RTC_SLOW_CLK_SRC_RC_FAST_D256:
+        return SOC_CLK_RC_FAST_D256_FREQ_APPROX;
     }
 }

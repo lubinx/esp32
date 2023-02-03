@@ -5,6 +5,7 @@
 #include "esp_clk_internal.h"
 #include "esp_cpu.h"
 #include "esp_log.h"
+#include "clk_tree.h"
 
 #include "esp_rom_caps.h"
 #include "esp_rom_sys.h"
@@ -16,7 +17,6 @@
 #include "esp32s3/rom/ets_sys.h"
 
 #include "esp_private/cache_err_int.h"
-#include "esp_private/esp_clk.h"
 #include "esp_private/startup_internal.h"
 #include "esp_private/system_internal.h"
 
@@ -68,9 +68,9 @@ void SystemInit(void)
     // TODO: on FPGA it should be possible to configure this, not currently working with APB_CLK_FREQ changed
     #ifndef CONFIG_IDF_ENV_FPGA
         #ifdef CONFIG_ESP_CONSOLE_UART
-            uint32_t clock_hz = esp_clk_apb_freq();
+            uint32_t clock_hz = clk_tree_apb_freq();
             #if ESP_ROM_UART_CLK_IS_XTAL
-                clock_hz = esp_clk_xtal_freq(); // From esp32-s3 on, UART clock source is selected to XTAL in ROM
+                clock_hz = clk_tree_xtal_freq(); // From esp32-s3 on, UART clock source is selected to XTAL in ROM
             #endif
             // esp_rom_uart_tx_wait_idle(CONFIG_ESP_CONSOLE_UART_NUM);
             // esp_rom_uart_set_clock_baudrate(CONFIG_ESP_CONSOLE_UART_NUM, clock_hz, CONFIG_ESP_CONSOLE_UART_BAUDRATE);

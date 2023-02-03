@@ -10,10 +10,9 @@
 
 #include "spinlock.h"
 
-#include "esp_cpu.h"
+#include "clk_tree.h"
 #include "esp_log.h"
 #include "esp_heap_caps.h"
-#include "esp_private/esp_clk.h"
 
 #include "uart.h"
 
@@ -30,7 +29,7 @@ static sem_t sema;
 extern "C" void __attribute__((weak)) app_main(void)
 {
     esp_rom_printf("Minimum free heap size: %d bytes\n", heap_caps_get_minimum_free_size(MALLOC_CAP_DEFAULT));
-    esp_rom_printf("cpu frequency: %d\n", esp_clk_cpu_freq());
+    esp_rom_printf("cpu frequency: %llu Mhz\n", clk_tree_cpu_freq() / 1000000);
 
     sem_init(&sema, 0, 10);
     esp_rom_printf("semaphore init...\n");
