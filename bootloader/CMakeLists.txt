@@ -45,9 +45,9 @@ target_link_options(${PROJECT_NAME} PRIVATE ${LINK_OPTIONS})
 # ld
 list(APPEND link_scripts
     "${CMAKE_CURRENT_LIST_DIR}/${IDF_TARGET}/bootloader.ld"
-    "${IDF_PATH}/components/soc/esp32s3/ld/esp32s3.peripherals.ld"
     "${IDF_PATH}/components/esp_rom/esp32s3/ld/esp32s3.rom.ld"
     "${IDF_PATH}/components/esp_rom/esp32s3/ld/esp32s3.rom.api.ld"
     "${IDF_PATH}/components/esp_rom/esp32s3/ld/esp32s3.rom.version.ld"
+    "${IDF_PATH}/components/soc/esp32s3/ld/esp32s3.peripherals.ld"
 )
 target_linker_script(${PROJECT_NAME} PRIVATE "${link_scripts}")

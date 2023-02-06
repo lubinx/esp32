@@ -29,13 +29,13 @@ static sem_t sema;
 extern "C" void __attribute__((weak)) app_main(void)
 {
     esp_rom_printf("Minimum free heap size: %d bytes\n", heap_caps_get_minimum_free_size(MALLOC_CAP_DEFAULT));
-    esp_rom_printf("cpu frequency: %llu Mhz\n", clk_tree_cpu_freq() / 1000000);
+    esp_rom_printf("cpu frequency: %llu MHz\n", clk_tree_cpu_freq() / 1000000);
+    esp_rom_printf("ahb frequency: %llu MHz\n", clk_tree_ahb_freq() / 1000000);
 
-    sem_init(&sema, 0, 10);
+    esp_rom_printf("cpu frequency: %llu Hz \n", clk_tree_rtc_slow_src_freq());
+
     esp_rom_printf("semaphore init...\n");
-
-    esp_rom_printf("infinite loop...\n");
-
+    sem_init(&sema, 0, 10);
 
     try
     {
@@ -67,6 +67,7 @@ extern "C" void __attribute__((weak)) app_main(void)
     pthread_create(&id, NULL, blink_thread2, NULL);
     pthread_create(&id, NULL, blink_thread3, NULL);
 
+    esp_rom_printf("infinite loop...\n");
     while (1)
     {
         sem_post(&sema);

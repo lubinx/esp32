@@ -1,34 +1,21 @@
-/****************************************************************************
-  This file is part of UltraCore
+#pragma once
 
-  Copyright by UltraCreation Co Ltd 2018
--------------------------------------------------------------------------------
-    The contents of this file are used with permission, subject to the Mozilla
-  Public License Version 1.1 (the "License"); you may not use this file except
-  in compliance with the License. You may  obtain a copy of the License at
-  http://www.mozilla.org/MPL/MPL-1.1.html
+#include "hw/uart.h"
+#include "soc/uart_struct.h"
 
-    Software distributed under the License is distributed on an "AS IS" basis,
-  WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
-  the specific language governing rights and limitations under the License.
-****************************************************************************/
-#ifndef __UART_H
-#define __UART_H
+// ref 26.3
+/* REVIEW: esp-idf driver UART_SCLK_RTC = RTC_CLK_FREQ which is 20M
+    but...find nowwhere source this clock
+    in reference document:
+        1：APB_CLK；2：FOSC_CLK；3：XTAL_CLK
+        but FOSC is RC_FAST? which is 17.5M
+*/
+typedef enum
+{
+    SOC_UART_CLK_SRC_APB        = 1,
+    SOC_UART_CLK_SRC_RC_FAST,
+    SOC_UART_CLK_SRC_XTAL
+} soc_uart_clk_src_t;
 
-#include <features.h>
-#include <stdint.h>
-
-__BEGIN_DECLS
-    typedef enum {paNone, paOdd, paEven} parity_t;
-
-    /**
-     *  create uart fd
-     *
-     *  @param nb
-     *      0, 1... must select by PIN configuration, its depends on driver implementation
-     */
-extern __attribute__((nothrow))
-    int UART_createfd(int nb, uint32_t bps, parity_t parity, uint8_t stop_bits);
-
-__END_DECLS
-#endif
+extern __attribute__((nothrow, nonnull))
+    int UART_src_clk_route(uart_dev_t *dev, soc_uart_clk_src_t route);

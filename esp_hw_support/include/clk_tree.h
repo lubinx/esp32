@@ -62,7 +62,7 @@ extern __attribute__((nothrow, const))
     uint64_t clk_tree_apb_freq(void);
 
 /****************************************************************************
- *  configure/provide source clocks
+ *  rtc clks
  ****************************************************************************/
     /**
      *  configure rtc route
