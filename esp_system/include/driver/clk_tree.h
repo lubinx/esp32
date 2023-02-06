@@ -3,8 +3,7 @@
 #include <stdint.h>
 #include <sys/errno.h>
 
-#include "soc/clk_tree_defs.h"
-#include "soc/periph_defs.h"
+#include "clk_tree_defs.h"  // driver/include
 
 __BEGIN_DECLS
 /****************************************************************************
