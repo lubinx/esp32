@@ -14,7 +14,7 @@
 #include "esp_rom_sys.h"
 
 #include "esp_heap_caps_init.h"
-#include "esp_timer.h"
+// #include "esp_timer.h"
 
 #if CONFIG_IDF_TARGET_ESP32
     #include "esp32/rom/libc_stubs.h"
@@ -57,7 +57,7 @@ static struct _reent __reent = {0};
 void __libc_retarget_init(void)
 {
     heap_caps_init();
-    esp_timer_early_init();
+    // esp_timer_early_init();
 
     __LOCK_retarget();
 

@@ -4,6 +4,7 @@
 #include <sys/errno.h>
 
 #include "soc/clk_tree_defs.h"
+#include "soc/periph_defs.h"
 
 __BEGIN_DECLS
 /****************************************************************************
@@ -48,7 +49,7 @@ extern __attribute__((nothrow, const))
     /**
      *  systick clock'frequency
      *      this clock used by rtos to provide thread/time/clock precision
-     *      TODO: somehow systick has  no route for it, it fixed by XTAL / 2.5 in esp32s3
+     *      TODO: somehow systick has no route for it, it fixed by XTAL / 2.5 in esp32s3
     */
 extern __attribute__((nothrow, const))
     uint64_t clk_tree_systick_freq(void);
@@ -62,7 +63,8 @@ extern __attribute__((nothrow, const))
     uint64_t clk_tree_apb_freq(void);
 
 /****************************************************************************
- *  rtc clks
+ *  rtc fast/slow clks
+ *      TODO: move to RTC driver
  ****************************************************************************/
     /**
      *  configure rtc route
@@ -85,9 +87,55 @@ extern __attribute__((nothrow, const))
     uint64_t clk_tree_rtc_slow_src_freq(void);
 
 /****************************************************************************
- *  esp-idf
- *      TODO: deprecated: will remove later
+ *  clk gate, NOTE: obsolte periph_ctrl.h
  ****************************************************************************/
+extern __attribute__((nothrow))
+    void clk_tree_module_enable(periph_module_t periph);
+extern __attribute__((nothrow))
+    void clk_tree_module_disable(periph_module_t periph);
+extern __attribute__((nothrow))
+    void clk_tree_module_reset(periph_module_t periph);
+
+/****************************************************************************
+ *  esp-idf
+ *      deprecated for compatible
+ ****************************************************************************/
+static inline
+    void periph_module_enable(periph_module_t periph)
+    {
+        clk_tree_module_enable(periph);
+    }
+
+static inline
+    void periph_module_disable(periph_module_t periph)
+    {
+        clk_tree_module_disable(periph);
+    }
+
+static inline
+    void wifi_module_enable(void)
+    {
+        clk_tree_module_enable(PERIPH_WIFI_MODULE);
+    }
+
+static inline
+    void wifi_module_disable(void)
+    {
+        clk_tree_module_disable(PERIPH_WIFI_MODULE);
+    }
+
+static inline
+    void wifi_bt_common_module_enable(void)
+    {
+        clk_tree_module_enable(PERIPH_BT_MODULE);
+    }
+
+static inline
+    void wifi_bt_common_module_disable(void)
+    {
+        clk_tree_module_disable(PERIPH_BT_MODULE);
+    }
+
     /*
     enum clk_tree_src_freq_precision_t
     {

@@ -18,6 +18,7 @@ list(APPEND srcs
     "panic_handler.c"
 # compatiable
     # "bootloader_support_shim.c"
+    "esp_freertos_startup.c"
 )
 
 list(APPEND includes
@@ -30,11 +31,10 @@ list(APPEND priv_includes
     "priv_include"
 )
 
-include("${CMAKE_CURRENT_LIST_DIR}/${IDF_TARGET}/.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/driver/${IDF_TARGET}/.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/posix/.cmake")
-include("${CMAKE_CURRENT_LIST_DIR}/freertos_port/.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/ultracore/.cmake")
-include("${CMAKE_CURRENT_LIST_DIR}/shim/.cmake")
+# include("${CMAKE_CURRENT_LIST_DIR}/shim/.cmake")
 
 
 # if(CONFIG_ESP_SYSTEM_USE_EH_FRAME)
@@ -57,9 +57,7 @@ idf_component_register(
     SRCS
         ${srcs}
     PRIV_REQUIRES
-        "efuse"
-        "hal"
-        "esp_timer"
+        "soc"
         # "vfs"
     LDFRAGMENTS
         "${IDF_PATH}/components/esp_common/common.lf"
@@ -71,7 +69,7 @@ target_link_libraries(${COMPONENT_LIB} INTERFACE "-u __ubsan_include")
 # generate link scripts
 idf_build_get_property(sdkconfig_header SDKCONFIG_HEADER)
 idf_build_get_property(config_dir CONFIG_DIR)
-set(ld_input "${CMAKE_CURRENT_LIST_DIR}/${IDF_TARGET}/ld/memory.ld.in")
+set(ld_input "${CMAKE_CURRENT_LIST_DIR}/driver/${IDF_TARGET}/ld/memory.ld.in")
 set(ld_output "${config_dir}/${IDF_TARGET}_memory.ld")
 
 add_custom_command(
@@ -85,6 +83,6 @@ add_custom_target(memory_ld DEPENDS ${ld_output})
 add_dependencies(${COMPONENT_LIB} memory_ld)
 target_linker_script(${COMPONENT_LIB} INTERFACE "${ld_output}")
 
-target_linker_script(${COMPONENT_LIB} INTERFACE "${IDF_TARGET}/ld/sections.ld"
+target_linker_script(${COMPONENT_LIB} INTERFACE "driver/${IDF_TARGET}/ld/sections.ld"
     PROCESS "${config_dir}/${IDF_TARGET}_sections.ld"
 )

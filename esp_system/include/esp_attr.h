@@ -11,8 +11,6 @@
 extern "C" {
 #endif
 
-#include "sdkconfig.h"
-
 #define ROMFN_ATTR
 
 //Normally, the linker script will put all code and rodata in flash,

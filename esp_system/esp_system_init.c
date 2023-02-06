@@ -1,11 +1,11 @@
 #include <string.h>
+#include "driver/clk_tree.h"
 
 #include "sdkconfig.h"
 
 #include "esp_clk_internal.h"
 #include "esp_cpu.h"
 #include "esp_log.h"
-#include "clk_tree.h"
 
 #include "esp_rom_caps.h"
 #include "esp_rom_sys.h"

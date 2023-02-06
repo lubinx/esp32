@@ -15,6 +15,8 @@ set(srcs
     "${kernel_dir}/portable/${IDF_TARGET_ARCH}/port.c"
     "${kernel_dir}/portable/${IDF_TARGET_ARCH}/portasm.S"
     "port_common.c"
+    # esp
+    "esp_freertos_hooks.c"
 )
 set_source_files_properties(
     tasks.c
@@ -27,17 +29,18 @@ set_source_files_properties(
 )
 
 set(include_dirs
-    "esp_additions/include"             # For files with #include "freertos/FreeRTOSConfig.h"
-    "esp_additions/include/freertos"    # For files with #include "FreeRTOSConfig.h"
+    "include"             # For files with #include "freertos/FreeRTOSConfig.h"
+    "include/freertos"    # For files with #include "FreeRTOSConfig.h"
     "${kernel_dir}/include"
     "${kernel_dir}/portable/${IDF_TARGET_ARCH}/include"
 )
 
 set(private_include_dirs
+    "include"
+    "private_include"    # For include "freertos_tasks_c_additions.h"
     "${kernel_dir}/portable/${IDF_TARGET_ARCH}/include/freertos"
     "${kernel_dir}/portable/${IDF_TARGET_ARCH}"
     "${kernel_dir}/include/freertos"   # FreeRTOS headers via #include "xxx.h"
-    "esp_additions/private_include"    # For include "freertos_tasks_c_additions.h"
 )
 
 if(CONFIG_FREERTOS_SMP)

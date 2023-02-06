@@ -10,7 +10,7 @@
 
 #include "spinlock.h"
 
-#include "clk_tree.h"
+#include "driver/clk_tree.h"
 #include "esp_log.h"
 #include "esp_heap_caps.h"
 

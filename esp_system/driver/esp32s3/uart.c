@@ -1,6 +1,5 @@
-#include <string.h>
+#include <sys/types.h>
 #include <semaphore.h>
-#include <pthread.h>
 #include <sys/errno.h>
 
 #include "soc/soc_caps.h"
@@ -16,7 +15,7 @@ struct UART_context
     uart_dev_t *dev;
 
     sem_t read_rdy;
-    pthread_mutex_t write_rdy;
+    sem_t write_rdy;
 
     // tx write to ptr
     uint8_t *tx_ptr;
@@ -31,10 +30,15 @@ struct UART_context
 /****************************************************************************
  *  @internal
  ****************************************************************************/
-static void UART_init_context(struct UART_context *context, uart_dev_t *dev);
+static int UART_init_context(struct UART_context *context);
 static uint64_t UART_src_clk_freq(uart_dev_t *dev);
 static uint32_t UART_get_baudrate(uart_dev_t *dev);
 static int UART_set_baudrate(uart_dev_t *dev, uint32_t bps);
+
+// io
+static ssize_t USART_read(int fd, void *buf, size_t bufsize);
+static ssize_t USART_write(int fd, void const *buf, size_t count);
+static int USART_close(int fd);
 
 // var
 static struct UART_context uart_context[SOC_UART_NUM] = {0};
@@ -50,36 +54,45 @@ void UART_init(void)
     uart_context[2].dev = &UART2;
 }
 
-int UART_src_clk_route(uart_dev_t *dev, soc_uart_clk_src_t route)
-{
-}
-
 int UART_createfd(int nb, uint32_t bps, parity_t parity, uint8_t stop_bits)
 {
     if (SOC_UART_NUM < (unsigned)nb)
         return __set_errno_neg(EINVAL);
-    if (NULL != uart_context[nb].dev)
+
+    struct UART_context *context = &uart_context[nb];
+    if (NULL != context->rx_que)
         return __set_errno_neg(EBUSY);
 
-    uart_context[nb].dev = &UART0;
-    esp_rom_printf("uart dev: %p\n", uart_context[nb].dev);
+    int retval = UART_init_context(context);
 
-    return __set_errno_neg(ENOSYS);
+    if (0 == retval)
+    {
+        return __set_errno_neg(ENOSYS);
+    }
+    else
+        return __set_errno_neg(retval);
+}
+
+int UART_src_clk_route(uart_dev_t *dev, soc_uart_clk_src_t route)
+{
 }
 
 /****************************************************************************
  *  @internal
  ****************************************************************************/
-static void UART_init_context(struct UART_context *context, uart_dev_t *dev)
+static int UART_init_context(struct UART_context *context)
 {
-    memset(dev, 0, sizeof(*dev));
-    context->dev = dev;
-    sem_init(&context->read_rdy, 0, UART_RX_BUFFER_SIZE);
+    uint8_t *rx_buf = malloc(UART_RX_BUFFER_SIZE);
 
-    pthread_mutexattr_t attr;
-    pthread_mutexattr_init(&attr);
-    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
-    pthread_mutex_init(&context->write_rdy, &attr);
+    if (NULL != rx_buf)
+    {
+        sem_init(&context->read_rdy, 0, UART_RX_BUFFER_SIZE);
+        sem_init(&context->write_rdy, 0, 1);
+
+        return 0;
+    }
+    else
+        return ENOMEM;
 }
 
 static uint64_t UART_src_clk_freq(uart_dev_t *dev)
@@ -102,4 +115,3 @@ static uint32_t UART_get_baudrate(uart_dev_t *dev)
 static int UART_set_baudrate(uart_dev_t *dev, uint32_t bps)
 {
 }
-

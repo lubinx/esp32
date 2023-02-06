@@ -35,9 +35,9 @@ config VFS_SEMIHOSTFS_MAX_MOUNT_POINTS
     default 1
 
 menu "ESP System Settings"
-    rsource "$IDF_TARGET/Kconfig.cpu"
-    orsource "$IDF_TARGET/Kconfig.cache"
-    orsource "$IDF_TARGET/Kconfig.tracemem"
+    rsource "driver/$IDF_TARGET/Kconfig.cpu"
+    orsource "driver/$IDF_TARGET/Kconfig.cache"
+    orsource "driver/$IDF_TARGET/Kconfig.tracemem"
 
     choice ESP_SYSTEM_PANIC
         prompt "Panic handler behaviour"
