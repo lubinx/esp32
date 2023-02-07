@@ -1,5 +1,5 @@
 #include <string.h>
-#include "driver/clk_tree.h"
+#include "clk_tree.h"
 
 #include "sdkconfig.h"
 
@@ -59,8 +59,7 @@ void SystemInit(void)
         trax_start_trace(TRAX_DOWNCOUNT_WORDS);
     #endif
 
-    esp_clk_init();
-    esp_perip_clk_init();
+    clk_tree_initialize();
 
     // Clear interrupt matrix for PRO CPU core
     core_intr_matrix_clear();
@@ -68,9 +67,12 @@ void SystemInit(void)
     // TODO: on FPGA it should be possible to configure this, not currently working with APB_CLK_FREQ changed
     #ifndef CONFIG_IDF_ENV_FPGA
         #ifdef CONFIG_ESP_CONSOLE_UART
-            uint32_t clock_hz = clk_tree_apb_freq();
+            uint32_t clock_hz;
+
             #if ESP_ROM_UART_CLK_IS_XTAL
-                clock_hz = clk_tree_xtal_freq(); // From esp32-s3 on, UART clock source is selected to XTAL in ROM
+                clock_hz = clk_tree_sclk_freq(SOC_SCLK_XTAL);
+            #else
+                clock_hz = clk_tree_apb_freq();
             #endif
             // esp_rom_uart_tx_wait_idle(CONFIG_ESP_CONSOLE_UART_NUM);
             // esp_rom_uart_set_clock_baudrate(CONFIG_ESP_CONSOLE_UART_NUM, clock_hz, CONFIG_ESP_CONSOLE_UART_BAUDRATE);
@@ -146,8 +148,7 @@ ESP_SYSTEM_INIT_FN(startup_other_cores, BIT(1), 201)
     core_intr_matrix_clear();
     esp_cache_err_int_init();
 
-    #if (CONFIG_IDF_TARGET_ESP32 && CONFIG_ESP32_TRAX_TWOBANKS) || \
-        (CONFIG_IDF_TARGET_ESP32S3 && CONFIG_ESP32S3_TRAX_TWOBANKS)
+    #if (CONFIG_IDF_TARGET_ESP32 && CONFIG_ESP32_TRAX_TWOBANKS) || (CONFIG_IDF_TARGET_ESP32S3 && CONFIG_ESP32S3_TRAX_TWOBANKS)
         trax_start_trace(TRAX_DOWNCOUNT_WORDS);
     #endif
 
@@ -161,7 +162,6 @@ static void core_intr_matrix_clear(void)
 {
     uint32_t core_id = esp_cpu_get_core_id();
 
-    for (int i = 0; i < ETS_MAX_INTR_SOURCE; i++) {
+    for (int i = 0; i < ETS_MAX_INTR_SOURCE; i++)
         esp_rom_route_intr_matrix(core_id, i, ETS_INVALID_INUM);
-    }
 }

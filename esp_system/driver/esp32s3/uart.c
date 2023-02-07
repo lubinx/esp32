@@ -3,6 +3,7 @@
 #include <sys/errno.h>
 
 #include "soc/soc_caps.h"
+#include "clk_tree.h"
 #include "uart.h"
 
 /****************************************************************************
@@ -31,7 +32,7 @@ struct UART_context
  *  @internal
  ****************************************************************************/
 static int UART_init_context(struct UART_context *context);
-static uint64_t UART_src_clk_freq(uart_dev_t *dev);
+static uint64_t UART_sclk_freq(uart_dev_t *dev);
 static uint32_t UART_get_baudrate(uart_dev_t *dev);
 static int UART_set_baudrate(uart_dev_t *dev, uint32_t bps);
 
@@ -73,8 +74,9 @@ int UART_createfd(int nb, uint32_t bps, parity_t parity, uint8_t stop_bits)
         return __set_errno_neg(retval);
 }
 
-int UART_src_clk_route(uart_dev_t *dev, soc_uart_clk_src_t route)
+int UART_sclk_sel(uart_dev_t *dev, enum soc_uart_sclk_sel_t sel)
 {
+    dev->clk_conf.sclk_sel = sel;
 }
 
 /****************************************************************************
@@ -95,8 +97,17 @@ static int UART_init_context(struct UART_context *context)
         return ENOMEM;
 }
 
-static uint64_t UART_src_clk_freq(uart_dev_t *dev)
+static uint64_t UART_sclk_freq(uart_dev_t *dev)
 {
+    switch(dev->clk_conf.sclk_sel)
+    {
+    case SOC_UART_CLK_SRC_APB:
+        return clk_tree_apb_freq();
+    case SOC_UART_CLK_SRC_RC_FAST:
+        return clk_tree_sclk_freq(SOC_SCLK_INT_RC_FAST);
+    case SOC_UART_CLK_SRC_XTAL:
+        return clk_tree_sclk_freq(SOC_SCLK_XTAL);
+    }
 }
 
 static uint32_t UART_get_baudrate(uart_dev_t *dev)

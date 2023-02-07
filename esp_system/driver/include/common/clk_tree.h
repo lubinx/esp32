@@ -1,32 +1,28 @@
 #pragma once
+
 #include <features.h>
 #include <stdint.h>
-#include <sys/errno.h>
 
-#include "soc/clk_tree_defs.h"
-#include "soc/periph_defs.h"
-
-
-    typedef soc_cpu_clk_src_t       soc_cpu_clk_sel_t;
-    typedef soc_periph_systimer_clk_src_t soc_systick_clk_sel_t;
-    typedef soc_rtc_fast_clk_src_t  soc_rtc_fast_clk_sel_t;
-    typedef soc_rtc_slow_clk_src_t  soc_rtc_slow_clk_sel_t;
+#include "clk_tree_defs.h"
 
 __BEGIN_DECLS
 /****************************************************************************
- *  hw rc / external clocks
+ * clk initialization using sdkconfig, calling by SystemInit()
+ ****************************************************************************/
+extern __attribute__((nothrow))
+    void clk_tree_initialize(void);
+
+/****************************************************************************
+ * rc / external clocks, and pll configure
  ****************************************************************************/
 extern __attribute__((nothrow, const))
-    uint64_t clk_tree_rc_fast_freq(void);
-extern __attribute__((nothrow, const))
-    uint64_t clk_tree_rc_slow_freq(void);
+    uint64_t clk_tree_sclk_freq(soc_sclk_t sclk);
 
-
-extern __attribute__((nothrow, const))
-    uint64_t clk_tree_xtal_freq(void);
-
-extern __attribute__((nothrow, const))
-    uint64_t clk_tree_xtal32k_freq(void);
+    /**
+     *  pll configure
+    */
+extern __attribute__((nothrow))
+    int clk_tree_pll_conf(soc_pll_freq_sel_t sel);
 
     /**
      *  xtal ==> pll clock'frequency
@@ -44,14 +40,13 @@ extern __attribute__((nothrow, const))
      *      EINVAL
     */
 extern __attribute__((nothrow))
-    int clk_tree_cpu_conf(soc_cpu_clk_sel_t sel, uint32_t div);
+    int clk_tree_cpu_conf(soc_cpu_sclk_sel_t sel, uint32_t div);
 
     /**
      *  configure systimer(systick) clock route
     */
 extern __attribute__((nothrow))
-    int clk_tree_systick_conf(soc_systick_clk_sel_t sel, uint32_t div);
-
+    int clk_tree_systick_conf(soc_systick_sclk_sel_t sel, uint32_t div);
 
     /**
      *  cpu clock'frequency
@@ -85,18 +80,18 @@ extern __attribute__((nothrow, const))
      *      EINVAL
     */
 extern __attribute__((nothrow))
-    int clk_tree_rtc_fast_conf(soc_rtc_fast_clk_sel_t sel, uint32_t div);
+    int clk_tree_rtc_fast_conf(soc_rtc_fast_sclk_sel_t sel, uint32_t div);
 extern __attribute__((nothrow))
-    int clk_tree_rtc_slow_conf(soc_rtc_slow_clk_sel_t sel, uint32_t div);
+    int clk_tree_rtc_slow_conf(soc_rtc_slow_sclk_sel_t sel, uint32_t div);
 
     /**
      *  rtc fast source clock'frequency
      *  @return 0 if its not exists
     */
 extern __attribute__((nothrow, const))
-    uint64_t clk_tree_rtc_fast_src_freq(void);
+    uint64_t clk_tree_rtc_fast_freq(void);
 extern __attribute__((nothrow, const))
-    uint64_t clk_tree_rtc_slow_src_freq(void);
+    uint64_t clk_tree_rtc_slow_freq(void);
 
 /****************************************************************************
  *  clk gate, NOTE: obsolte periph_ctrl.h

@@ -8,8 +8,15 @@
 
 #include "soc/wdev_reg.h"
 #include "esp_attr.h"
+#include "clk_tree.h"
 
 static unsigned rand_seed = 0;
+
+__attribute__((constructor))
+void random_initialize(void)
+{
+
+}
 
 void srand(unsigned seed)
 {

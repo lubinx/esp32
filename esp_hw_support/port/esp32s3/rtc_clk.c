@@ -23,7 +23,7 @@
 #include "soc/regi2c_dig_reg.h"
 #include "sdkconfig.h"
 
-#include "driver/clk_tree.h"
+#include "clk_tree.h"
 
 static char const *TAG = "rtc_clk";
 
@@ -132,13 +132,13 @@ uint32_t rtc_clk_slow_freq_get_hz(void)
     }
 }
 
-void rtc_clk_fast_src_set(soc_rtc_fast_clk_sel_t clk_src)
+void rtc_clk_fast_src_set(soc_rtc_fast_sclk_sel_t clk_src)
 {
     clk_ll_rtc_fast_set_src(clk_src);
     esp_rom_delay_us(SOC_DELAY_RTC_FAST_CLK_SWITCH);
 }
 
-soc_rtc_fast_clk_sel_t rtc_clk_fast_src_get(void)
+soc_rtc_fast_sclk_sel_t rtc_clk_fast_src_get(void)
 {
     return clk_ll_rtc_fast_get_src();
 }

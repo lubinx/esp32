@@ -10,7 +10,7 @@
 
 #include "spinlock.h"
 
-#include "driver/clk_tree.h"
+#include "clk_tree.h"
 #include "esp_log.h"
 #include "esp_heap_caps.h"
 
@@ -32,9 +32,6 @@ extern "C" void __attribute__((weak)) app_main(void)
     esp_rom_printf("pll frequency: %llu MHz\n", clk_tree_pll_freq() / 1000000);
     esp_rom_printf("cpu frequency: %llu MHz\n", clk_tree_cpu_freq() / 1000000);
     esp_rom_printf("ahb frequency: %llu MHz\n", clk_tree_ahb_freq() / 1000000);
-
-
-    esp_rom_printf("cpu frequency: %llu Hz \n", clk_tree_rtc_slow_src_freq());
 
     esp_rom_printf("semaphore init...\n");
     sem_init(&sema, 0, 10);
