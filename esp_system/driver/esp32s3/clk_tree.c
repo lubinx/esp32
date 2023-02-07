@@ -4,6 +4,7 @@
 #include "soc/rtc_cntl_struct.h"
 #include "soc/syscon_reg.h"
 #include "soc/system_reg.h"
+#include "soc/system_struct.h"
 
 #include "driver/clk_tree.h"
 
@@ -85,19 +86,68 @@ uint64_t clk_tree_pll_freq(void)
 /****************************************************************************
  * cpu / systick / ahb / apb
  ****************************************************************************/
-int clk_tree_cpu_route(soc_cpu_clk_src_t route)
+int clk_tree_cpu_conf(soc_cpu_clk_sel_t sel, uint32_t div)
 {
-    return ENOSYS;
+    if ((SOC_CPU_CLK_SRC_XTAL == sel || SOC_CPU_CLK_SRC_RC_FAST == sel) && 0x3FF < div)
+        return EINVAL;
+    // SOC_CPU_CLK_SRC_PLL ref table 7.2
+    if (2 != div && 4 != div)
+        return EINVAL;
+
+    REG_SET_FIELD(SYSTEM_SYSCLK_CONF_REG, SYSTEM_PRE_DIV_CNT, 0);
+    REG_SET_FIELD(SYSTEM_SYSCLK_CONF_REG, SYSTEM_SOC_CLK_SEL, SOC_CPU_CLK_SRC_RC_FAST);
+
+    switch(sel)
+    {
+    case SOC_CPU_CLK_SRC_XTAL:
+    case SOC_CPU_CLK_SRC_RC_FAST:
+        REG_SET_FIELD(SYSTEM_SYSCLK_CONF_REG, SYSTEM_PRE_DIV_CNT, div - 1);
+        REG_SET_FIELD(SYSTEM_SYSCLK_CONF_REG, SYSTEM_SOC_CLK_SEL, sel);
+        break;
+
+    case SOC_CPU_CLK_SRC_PLL:
+        // only select 320M?
+        REG_SET_FIELD(SYSTEM_SYSCLK_CONF_REG, SYSTEM_PLL_FREQ_SEL, 0);
+        switch(div)
+        {
+        case 2:
+            REG_SET_FIELD(SYSTEM_CPU_PER_CONF_REG, SYSTEM_CPUPERIOD_SEL, 1);
+            break;
+        case 4:
+            REG_SET_FIELD(SYSTEM_CPU_PER_CONF_REG, SYSTEM_CPUPERIOD_SEL, 0);
+            break;
+        /*
+            this is stable?
+            // 480M / 2
+            REG_SET_FIELD(SYSTEM_CPU_PER_CONF_REG, SYSTEM_CPUPERIOD_SEL, 2);
+            // 480M / 3
+            REG_SET_FIELD(SYSTEM_CPU_PER_CONF_REG, SYSTEM_CPUPERIOD_SEL, 1);
+            // 480M / 6
+            REG_SET_FIELD(SYSTEM_CPU_PER_CONF_REG, SYSTEM_CPUPERIOD_SEL, 0);
+        */
+        }
+        REG_SET_FIELD(SYSTEM_SYSCLK_CONF_REG, SYSTEM_SOC_CLK_SEL, sel);
+        break;
+    }
 }
 
-static uint32_t clk_tree_cpu_divider(void)
+int clk_tree_systick_conf(soc_systick_clk_sel_t sel, uint32_t div)
 {
+    if (SYSTIMER_CLK_SRC_XTAL != sel)
+        return EINVAL;
+    else
+        return 0;
+}
+
+static inline uint32_t clk_tree_cpu_divider(void)
+{
+    // SYSTEM.sysclk_conf.
     return REG_GET_FIELD(SYSTEM_SYSCLK_CONF_REG, SYSTEM_PRE_DIV_CNT) + 1;
 }
 
 uint64_t clk_tree_cpu_freq(void)
 {
-    switch ((soc_cpu_clk_src_t)REG_GET_FIELD(SYSTEM_SYSCLK_CONF_REG, SYSTEM_SOC_CLK_SEL))
+    switch ((soc_cpu_clk_sel_t)REG_GET_FIELD(SYSTEM_SYSCLK_CONF_REG, SYSTEM_SOC_CLK_SEL))
     {
     //--- 40M -
     case SOC_CPU_CLK_SRC_XTAL:
@@ -113,8 +163,7 @@ uint64_t clk_tree_cpu_freq(void)
             return CLK_LL_PLL_160M_FREQ;
         case 2:
     // --- 240M
-            // When PLL frequency selection is 320MHz but CPU frequency selection is 240MHz, it is an undetermined state.
-            // It is checked in the upper layer.
+            // REVIEW: ref table 7.3 SYSTEM_PLL_FREQ_SEL == 1, otherwise is undetermined
             return CLK_LL_PLL_240M_FREQ;
         default:
             return 0;
@@ -130,14 +179,16 @@ uint64_t clk_tree_cpu_freq(void)
 
 uint64_t clk_tree_systick_freq(void)
 {
-    // fixed at 16 Mhz
+    // TODO: somehow systick has no route for it, only SYSTIMER_CLK_SRC_XTAL?
+    //  it fixed by XTAL / 2.5 in esp32s3
     return 16000000;
 }
 
 uint64_t clk_tree_ahb_freq(void)
 {
+    // ref table 7.5
     // AHB_CLK path is highly dependent on CPU_CLK path
-    switch ((soc_cpu_clk_src_t)REG_GET_FIELD(SYSTEM_SYSCLK_CONF_REG, SYSTEM_SOC_CLK_SEL))
+    switch ((soc_cpu_clk_sel_t)REG_GET_FIELD(SYSTEM_SYSCLK_CONF_REG, SYSTEM_SOC_CLK_SEL))
     {
     // --- equal to cpu
     case SOC_CPU_CLK_SRC_XTAL:
@@ -159,12 +210,12 @@ uint64_t clk_tree_apb_freq(void)
 /****************************************************************************
  *  rtc fast/slow clks
  ****************************************************************************/
-int clk_tree_rtc_fast_route(soc_rtc_fast_clk_src_t route)
+int clk_tree_rtc_fast_conf(soc_rtc_fast_clk_sel_t sel, uint32_t div)
 {
     return ENOSYS;
 }
 
-int clk_tree_rtc_slow_route(soc_rtc_slow_clk_src_t route)
+int clk_tree_rtc_slow_conf(soc_rtc_slow_clk_sel_t sel, uint32_t div)
 {
     return ENOSYS;
 }
@@ -176,7 +227,7 @@ uint64_t clk_tree_rtc_fast_src_freq(void)
 
 uint64_t clk_tree_rtc_slow_src_freq(void)
 {
-    switch ((soc_rtc_slow_clk_src_t)RTCCNTL.clk_conf.ana_clk_rtc_sel) // REG_GET_FIELD(RTC_CNTL_CLK_CONF_REG, RTC_CNTL_ANA_CLK_RTC_SEL)
+    switch ((soc_rtc_slow_clk_sel_t)RTCCNTL.clk_conf.ana_clk_rtc_sel) // REG_GET_FIELD(RTC_CNTL_CLK_CONF_REG, RTC_CNTL_ANA_CLK_RTC_SEL)
     {
     case SOC_RTC_SLOW_CLK_SRC_RC_SLOW:
         return SOC_CLK_RC_SLOW_FREQ_APPROX;

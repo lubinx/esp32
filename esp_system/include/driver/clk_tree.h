@@ -3,7 +3,14 @@
 #include <stdint.h>
 #include <sys/errno.h>
 
-#include "clk_tree_defs.h"  // driver/include
+#include "soc/clk_tree_defs.h"
+#include "soc/periph_defs.h"
+
+
+    typedef soc_cpu_clk_src_t       soc_cpu_clk_sel_t;
+    typedef soc_periph_systimer_clk_src_t soc_systick_clk_sel_t;
+    typedef soc_rtc_fast_clk_src_t  soc_rtc_fast_clk_sel_t;
+    typedef soc_rtc_slow_clk_src_t  soc_rtc_slow_clk_sel_t;
 
 __BEGIN_DECLS
 /****************************************************************************
@@ -37,7 +44,14 @@ extern __attribute__((nothrow, const))
      *      EINVAL
     */
 extern __attribute__((nothrow))
-    int clk_tree_cpu_route(soc_cpu_clk_src_t route);
+    int clk_tree_cpu_conf(soc_cpu_clk_sel_t sel, uint32_t div);
+
+    /**
+     *  configure systimer(systick) clock route
+    */
+extern __attribute__((nothrow))
+    int clk_tree_systick_conf(soc_systick_clk_sel_t sel, uint32_t div);
+
 
     /**
      *  cpu clock'frequency
@@ -47,8 +61,7 @@ extern __attribute__((nothrow, const))
 
     /**
      *  systick clock'frequency
-     *      this clock used by rtos to provide thread/time/clock precision
-     *      TODO: somehow systick has no route for it, it fixed by XTAL / 2.5 in esp32s3
+     *      this clock commonly used by rtos to provide thread/time/clock precision
     */
 extern __attribute__((nothrow, const))
     uint64_t clk_tree_systick_freq(void);
@@ -72,9 +85,9 @@ extern __attribute__((nothrow, const))
      *      EINVAL
     */
 extern __attribute__((nothrow))
-    int clk_tree_rtc_fast_route(soc_rtc_fast_clk_src_t route);
+    int clk_tree_rtc_fast_conf(soc_rtc_fast_clk_sel_t sel, uint32_t div);
 extern __attribute__((nothrow))
-    int clk_tree_rtc_slow_route(soc_rtc_slow_clk_src_t route);
+    int clk_tree_rtc_slow_conf(soc_rtc_slow_clk_sel_t sel, uint32_t div);
 
     /**
      *  rtc fast source clock'frequency
