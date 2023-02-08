@@ -32,8 +32,8 @@ extern "C" void __attribute__((weak)) app_main(void)
     if (clk_tree_module_is_enable(PERIPH_UART1_MODULE))
         esp_rom_printf("uart1: %lu bps\n", UART_get_baudrate(&UART1));
 
-    UART_configure(&UART2, SOC_UART_CLK_SRC_APB, 38400, paNone, 1);
-    
+    // UART_configure(&UART2, SOC_UART_CLK_SRC_APB, 38400, paNone, 1);
+
     if (clk_tree_module_is_enable(PERIPH_UART2_MODULE))
         esp_rom_printf("uart2: %lu bps\n", UART_get_baudrate(&UART2));
 
@@ -53,9 +53,6 @@ extern "C" void __attribute__((weak)) app_main(void)
         fflush(stdout);
     }
     printf("hello world!\n");
-
-    int fd = UART_createfd(0, 115200, paNone, 1);
-    (void)fd;
 
     FILE *f = fopen("foo", "w+");
     if (f)
@@ -91,19 +88,8 @@ static void *blink_thread1(void *arg)
 {
     ARG_UNUSED(arg);
 
-    // uint32_t irq_status = XTOS_SET_INTLEVEL(XCHAL_EXCM_LEVEL);
-    // esp_rom_printf("...............................%lu\n\n\n", irq_status);
-
     while (true)
     {
-        /*
-        for (int i = 0; i < 1000; i ++)
-            esp_rom_delay_us(1000);
-
-        esp_rom_printf("thread1: cpu: %d, val %d\n", esp_cpu_get_core_id(), val);
-
-        spinlock_acquire(&spinlock, SPINLOCK_WAIT_FOREVER);
-        */
         spinlock_acquire(&spinlock, SPINLOCK_WAIT_FOREVER);
         esp_rom_printf("thread/cpu (1 <=> %d)\n", esp_cpu_get_core_id());
 

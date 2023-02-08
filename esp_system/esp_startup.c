@@ -102,17 +102,15 @@ void Startup_Handler(void)
 
     // TODO: on FPGA it should be possible to configure this, not currently working with APB_CLK_FREQ changed
     #ifndef CONFIG_IDF_ENV_FPGA
-        #ifdef CONFIG_ESP_CONSOLE_UART
-            uint32_t clock_hz;
+        uint32_t clock_hz;
 
-            #if ESP_ROM_UART_CLK_IS_XTAL
-                clock_hz = clk_tree_sclk_freq(SOC_SCLK_XTAL);
-            #else
-                clock_hz = clk_tree_apb_freq();
-            #endif
-            // esp_rom_uart_tx_wait_idle(CONFIG_ESP_CONSOLE_UART_NUM);
-            // esp_rom_uart_set_clock_baudrate(CONFIG_ESP_CONSOLE_UART_NUM, clock_hz, CONFIG_ESP_CONSOLE_UART_BAUDRATE);
+        #if ESP_ROM_UART_CLK_IS_XTAL
+            clock_hz = clk_tree_sclk_freq(SOC_SCLK_XTAL);
+        #else
+            clock_hz = clk_tree_apb_freq();
         #endif
+        // esp_rom_uart_tx_wait_idle(0);
+        // esp_rom_uart_set_clock_baudrate(0, clock_hz, 115200);
     #endif
 
     // Need to unhold the IOs that were hold right before entering deep sleep, which are used as wakeup pins
@@ -256,7 +254,7 @@ static void do_system_init_fn(void)
 static void startup_other_cores(void)
 {
     // TODO: depend on LOG_LEVEL
-    esp_rom_uart_tx_wait_idle(CONFIG_ESP_CONSOLE_UART_NUM);
+    esp_rom_uart_tx_wait_idle(0);
 
     do_system_init_fn();
     esp_startup_start_app_other_cores();

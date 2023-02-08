@@ -46,17 +46,12 @@
 #include "esp_gdbstub.h"
 #endif
 
-#if CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG || CONFIG_ESP_CONSOLE_SECONDARY_USB_SERIAL_JTAG
-#include "hal/usb_serial_jtag_ll.h"
-#endif
-
 bool g_panic_abort = false;
 static char *s_panic_abort_details = NULL;
 
 #if !CONFIG_ESP_SYSTEM_PANIC_SILENT_REBOOT
 
-#if CONFIG_ESP_CONSOLE_UART
-static uart_hal_context_t s_panic_uart = { .dev = CONFIG_ESP_CONSOLE_UART_NUM == 0 ? &UART0 :&UART1 };
+static uart_hal_context_t s_panic_uart = { .dev = &UART0 };
 
 static void panic_print_char_uart(char const c)
 {
@@ -64,49 +59,11 @@ static void panic_print_char_uart(char const c)
     while (!uart_hal_get_txfifo_len(&s_panic_uart));
     uart_hal_write_txfifo(&s_panic_uart, (uint8_t *) &c, 1, &sz);
 }
-#endif // CONFIG_ESP_CONSOLE_UART
-
-
-#if CONFIG_ESP_CONSOLE_USB_CDC
-static void panic_print_char_usb_cdc(char const c)
-{
-    esp_usb_console_write_buf(&c, 1);
-    /* result ignored */
-}
-#endif // CONFIG_ESP_CONSOLE_USB_CDC
-
-#if CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG || CONFIG_ESP_CONSOLE_SECONDARY_USB_SERIAL_JTAG
-//Timeout; if there's no host listening, the txfifo won't ever
-//be writable after the first packet.
-
-#define USBSERIAL_TIMEOUT_MAX_US 50000
-static int s_usbserial_timeout = 0;
-
-static void panic_print_char_usb_serial_jtag(char const c)
-{
-    while (!usb_serial_jtag_ll_txfifo_writable() && s_usbserial_timeout < (USBSERIAL_TIMEOUT_MAX_US / 100)) {
-        esp_rom_delay_us(100);
-        s_usbserial_timeout++;
-    }
-    if (usb_serial_jtag_ll_txfifo_writable()) {
-        usb_serial_jtag_ll_write_txfifo((uint8_t const *)&c, 1);
-        s_usbserial_timeout = 0;
-    }
-}
-#endif //CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG || CONFIG_ESP_CONSOLE_SECONDARY_USB_SERIAL_JTAG
 
 
 void panic_print_char(char const c)
 {
-#if CONFIG_ESP_CONSOLE_UART
     panic_print_char_uart(c);
-#endif
-#if CONFIG_ESP_CONSOLE_USB_CDC
-    panic_print_char_usb_cdc(c);
-#endif
-#if CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG || CONFIG_ESP_CONSOLE_SECONDARY_USB_SERIAL_JTAG
-    panic_print_char_usb_serial_jtag(c);
-#endif
 }
 
 void panic_print_str(char const *str)

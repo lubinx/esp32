@@ -87,7 +87,7 @@ void __attribute__((noreturn)) Reset_Handler(void)
 
     #if CONFIG_BOOTLOADER_LOG_LEVEL
         esp_rom_install_uart_printf();
-        esp_rom_uart_set_as_console(CONFIG_ESP_CONSOLE_UART_NUM);
+        esp_rom_uart_set_as_console(0);
     #endif
 
     #if XCHAL_ERRATUM_572
