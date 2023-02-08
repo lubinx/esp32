@@ -37,7 +37,8 @@ void clk_tree_initialize(void)
     // Re calculate the ccount to make time calculation correct.
     // esp_cpu_set_cycle_count((uint64_t)esp_cpu_get_cycle_count() * new_freq_mhz / old_freq_mhz);
 
-    uint32_t common_perip_clk = SYSTEM_WDG_CLK_EN |
+    /* Disable some peripheral clocks. */
+    uint32_t gate = SYSTEM_WDG_CLK_EN |
         SYSTEM_I2S0_CLK_EN |
         // SYSTEM_UART_CLK_EN |
         SYSTEM_UART1_CLK_EN |
@@ -61,23 +62,20 @@ void clk_tree_initialize(void)
         SYSTEM_PWM2_CLK_EN |
         SYSTEM_PWM3_CLK_EN |
         0;
-    uint32_t common_perip_clk1 = 0;
+    CLEAR_PERI_REG_MASK(SYSTEM_PERIP_CLK_EN0_REG, gate);
+    SET_PERI_REG_MASK(SYSTEM_PERIP_RST_EN0_REG, gate);
 
-    /* Disable some peripheral clocks. */
-    CLEAR_PERI_REG_MASK(SYSTEM_PERIP_CLK_EN0_REG, common_perip_clk);
-    SET_PERI_REG_MASK(SYSTEM_PERIP_RST_EN0_REG, common_perip_clk);
-
-    CLEAR_PERI_REG_MASK(SYSTEM_PERIP_CLK_EN1_REG, common_perip_clk1);
-    SET_PERI_REG_MASK(SYSTEM_PERIP_RST_EN1_REG, common_perip_clk1);
+    gate = 0;
+    CLEAR_PERI_REG_MASK(SYSTEM_PERIP_CLK_EN1_REG, gate);
+    SET_PERI_REG_MASK(SYSTEM_PERIP_RST_EN1_REG, gate);
 
     /* Disable hardware crypto clocks. */
-    uint32_t hwcrypto_perip_clk = SYSTEM_CRYPTO_AES_CLK_EN |
+    gate = SYSTEM_CRYPTO_AES_CLK_EN |
         SYSTEM_CRYPTO_SHA_CLK_EN |
         SYSTEM_CRYPTO_RSA_CLK_EN |
         0;
-
-    CLEAR_PERI_REG_MASK(SYSTEM_PERIP_CLK_EN1_REG, hwcrypto_perip_clk);
-    SET_PERI_REG_MASK(SYSTEM_PERIP_RST_EN1_REG, hwcrypto_perip_clk);
+    CLEAR_PERI_REG_MASK(SYSTEM_PERIP_CLK_EN1_REG, gate);
+    SET_PERI_REG_MASK(SYSTEM_PERIP_RST_EN1_REG, gate);
 
     /* Force clear backup dma reset signal. This is a fix to the backup dma
      * implementation in the ROM, the reset signal was not cleared when the
@@ -85,14 +83,14 @@ void clk_tree_initialize(void)
     CLEAR_PERI_REG_MASK(SYSTEM_PERIP_RST_EN1_REG, SYSTEM_PERI_BACKUP_RST);
 
     /* Disable WiFi/BT/SDIO clocks. */
-    uint32_t wifi_bt_sdio_clk = SYSTEM_WIFI_CLK_WIFI_EN |
+    gate = SYSTEM_WIFI_CLK_WIFI_EN |
         SYSTEM_WIFI_CLK_BT_EN_M |
         SYSTEM_WIFI_CLK_I2C_CLK_EN |
         SYSTEM_WIFI_CLK_UNUSED_BIT12 |
         SYSTEM_WIFI_CLK_SDIO_HOST_EN |
         0;
 
-    CLEAR_PERI_REG_MASK(SYSTEM_WIFI_CLK_EN_REG, wifi_bt_sdio_clk);
+    CLEAR_PERI_REG_MASK(SYSTEM_WIFI_CLK_EN_REG, gate);
     SET_PERI_REG_MASK(SYSTEM_WIFI_CLK_EN_REG, SYSTEM_WIFI_CLK_EN);
 
     /* Set WiFi light sleep clock source to RTC slow clock */
