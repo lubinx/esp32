@@ -27,8 +27,8 @@ static char const *TAG = "bootloader";
 /****************************************************************************
  *  imports
 *****************************************************************************/
-extern intptr_t __bss_start__;
-extern intptr_t __bss_end__;
+extern uintptr_t __bss_start__;
+extern uintptr_t __bss_end__;
 
 /**
  *  these functions defined in esp32s3.rom.ld, but defines nowhere
@@ -103,7 +103,7 @@ void __attribute__((noreturn)) Reset_Handler(void)
     bootloader_init_mem();
     // bootloader_clock_configure();
 
-    memset(&__bss_start__, 0, (&__bss_end__ - &__bss_start__) * sizeof(__bss_start__));
+    memset(&__bss_start__, 0, (uintptr_t)(&__bss_end__ - &__bss_start__) * sizeof(__bss_start__));
 
     mmu_hal_init();
     cache_hal_init();
@@ -212,7 +212,7 @@ static kernel_entry_t KERNEL_load(uintptr_t flash_location)
                 size_t readed = 0;
 
                 while (readed < seg.data_len)
-                    readed += FLASH_read(flash_location + readed, dest + readed, seg.data_len - readed);
+                    readed += (size_t)FLASH_read(flash_location + readed, dest + readed, seg.data_len - readed);
             }
         }
 
@@ -316,20 +316,20 @@ static ssize_t FLASH_read(uintptr_t flash_location, void *buf, size_t bufsize)
     void *src = (void *)(FLASH_READ_MMU_VADDR + offset);
 
     int bytes_remain = CONFIG_MMU_PAGE_SIZE - offset;
-    bufsize = bufsize < bytes_remain ? bufsize : bytes_remain;
+    bufsize = bufsize < (size_t)bytes_remain ? bufsize : (size_t)bytes_remain;
 
     memcpy(buf, src, bufsize);
-    return bufsize;
+    return (ssize_t)bufsize;
 }
 
 static void MAP_flash_segment(struct flash_segment_t *seg)
 {
-    off_t offset = seg->location & (CONFIG_MMU_PAGE_SIZE - 1);
+    unsigned offset = seg->location & (CONFIG_MMU_PAGE_SIZE - 1);
 
-    seg->aligned_vaddr = seg->hdr.load_addr & ~(CONFIG_MMU_PAGE_SIZE - 1);
-    seg->aligned_size = (seg->hdr.data_len + offset + CONFIG_MMU_PAGE_SIZE - 1) & ~(CONFIG_MMU_PAGE_SIZE - 1);
+    seg->aligned_vaddr = seg->hdr.load_addr & ~((uintptr_t)CONFIG_MMU_PAGE_SIZE - 1);
+    seg->aligned_size = (seg->hdr.data_len + offset + CONFIG_MMU_PAGE_SIZE - 1) & ~((uintptr_t)CONFIG_MMU_PAGE_SIZE - 1);
 
-    int pages = seg->aligned_size / CONFIG_MMU_PAGE_SIZE;
+    int pages = (int)seg->aligned_size / CONFIG_MMU_PAGE_SIZE;
 
     uint32_t entry_id = mmu_ll_get_entry_id(0, seg->aligned_vaddr);
     uint32_t paddr = mmu_ll_format_paddr(0, seg->location);

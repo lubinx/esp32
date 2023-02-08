@@ -218,7 +218,8 @@ int clk_tree_cpu_conf(soc_cpu_sclk_sel_t sel, uint32_t div)
     if (SOC_CPU_CLK_SRC_PLL == sel)
     {
         // Table 7­3. CPU Clock Frequency
-        pll_freq_sel = (soc_pll_freq_sel_t)(REG_GET_FIELD(SYSTEM_SYSCLK_CONF_REG, SYSTEM_PLL_FREQ_SEL));
+        pll_freq_sel = REG_GET_FIELD(SYSTEM_SYSCLK_CONF_REG, SYSTEM_PLL_FREQ_SEL);
+
         if (SOC_PLL_320M == pll_freq_sel)
         {
             if (2 != div && 4 != div)
@@ -301,7 +302,8 @@ static inline uint32_t clk_tree_cpu_divider(void)
 
 uint64_t clk_tree_cpu_freq(void)
 {
-    switch ((soc_cpu_sclk_sel_t)REG_GET_FIELD(SYSTEM_SYSCLK_CONF_REG, SYSTEM_SOC_CLK_SEL))
+    // soc_cpu_sclk_sel_t
+    switch (REG_GET_FIELD(SYSTEM_SYSCLK_CONF_REG, SYSTEM_SOC_CLK_SEL))
     {
     default:
         return 0;
@@ -341,9 +343,8 @@ uint64_t clk_tree_systick_freq(void)
 
 uint64_t clk_tree_ahb_freq(void)
 {
-    // ref table 7.5
-    // AHB_CLK path is highly dependent on CPU_CLK path
-    switch ((soc_cpu_sclk_sel_t)REG_GET_FIELD(SYSTEM_SYSCLK_CONF_REG, SYSTEM_SOC_CLK_SEL))
+    // soc_cpu_sclk_sel_t
+    switch (REG_GET_FIELD(SYSTEM_SYSCLK_CONF_REG, SYSTEM_SOC_CLK_SEL))
     {
     // --- equal to cpu
     case SOC_CPU_CLK_SRC_XTAL:
@@ -352,6 +353,7 @@ uint64_t clk_tree_ahb_freq(void)
         return clk_tree_rc_fast_freq() / clk_tree_cpu_divider();
     // ---
 
+    // ref table 7.5
     case SOC_CPU_CLK_SRC_PLL:
         // AHB_CLK is a fixed value when CPU_CLK is clocked from PLL
         return PLL_DIV_TO_80M_FREQ;
@@ -382,7 +384,8 @@ uint64_t clk_tree_rtc_fast_freq(void)
 
 uint64_t clk_tree_rtc_slow_freq(void)
 {
-    switch ((soc_rtc_slow_sclk_sel_t)RTCCNTL.clk_conf.ana_clk_rtc_sel) // REG_GET_FIELD(RTC_CNTL_CLK_CONF_REG, RTC_CNTL_ANA_CLK_RTC_SEL)
+    // soc_rtc_slow_sclk_sel_t
+    switch (RTCCNTL.clk_conf.ana_clk_rtc_sel)
     {
     // TODO: divider
     case SOC_RTC_SLOW_CLK_SRC_RC_SLOW:

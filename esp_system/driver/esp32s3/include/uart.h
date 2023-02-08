@@ -22,12 +22,11 @@ typedef enum soc_uart_sclk_sel_t    soc_uart_sclk_sel_t;
 __BEGIN_DECLS
 
 extern __attribute__((nothrow, nonnull))
-    int UART_sclk_sel(uart_dev_t *dev, enum soc_uart_sclk_sel_t sel);
-extern __attribute__((nothrow, nonnull, const))
-    uint64_t UART_sclk_freq(uart_dev_t *dev);
+    int UART_io_mutex(int RXD, int TXD, int RTS, int CTS);
 
 extern __attribute__((nothrow, nonnull))
-    int UART_set_baudrate(uart_dev_t *dev, uint32_t bps);
+    int UART_configure(uart_dev_t *dev, soc_uart_sclk_sel_t sclk, uint32_t bps, parity_t parity, uint8_t stop_bits);
+
 extern __attribute__((nothrow, nonnull, const))
     uint32_t UART_get_baudrate(uart_dev_t *dev);
 

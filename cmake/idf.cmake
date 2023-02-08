@@ -96,11 +96,7 @@ list(APPEND IDF_COMPILE_DEFINITIONS
 list(APPEND IDF_COMPILE_OPTIONS
     "-Wno-array-bounds"         # freertos
     "-Wno-conversion"
-    "-Wno-enum-conversion"
     "-Wno-format"
-    "-Wno-shadow"
-    "-Wno-sign-compare"
-    "-Wno-undef"
     "-Wno-unused-parameter"
     # "-fno-jump-tables"
     # "-fno-tree-switch-conversion"
