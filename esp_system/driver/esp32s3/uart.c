@@ -32,10 +32,6 @@ struct UART_context
  *  @internal
  ****************************************************************************/
 static int UART_init_context(struct UART_context *context);
-static uint64_t UART_sclk_freq(uart_dev_t *dev);
-static uint32_t UART_get_baudrate(uart_dev_t *dev);
-static int UART_set_baudrate(uart_dev_t *dev, uint32_t bps);
-
 // io
 static ssize_t USART_read(int fd, void *buf, size_t bufsize);
 static ssize_t USART_write(int fd, void const *buf, size_t count);
@@ -79,6 +75,40 @@ int UART_sclk_sel(uart_dev_t *dev, enum soc_uart_sclk_sel_t sel)
     dev->clk_conf.sclk_sel = sel;
 }
 
+uint64_t UART_sclk_freq(uart_dev_t *dev)
+{
+    switch(dev->clk_conf.sclk_sel)
+    {
+    case SOC_UART_CLK_SRC_APB:
+        return clk_tree_apb_freq();
+    case SOC_UART_CLK_SRC_RC_FAST:
+        return clk_tree_sclk_freq(SOC_SCLK_INT_RC_FAST);
+    case SOC_UART_CLK_SRC_XTAL:
+        return clk_tree_sclk_freq(SOC_SCLK_XTAL);
+    }
+}
+
+int UART_set_baudrate(uart_dev_t *dev, uint32_t bps)
+{
+}
+
+uint32_t UART_get_baudrate(uart_dev_t *dev)
+{
+    return (UART_sclk_freq(dev) << 4) / (
+        ((dev->clkdiv.clkdiv << 4) | dev->clkdiv.clkdiv_frag) *  (dev->clk_conf.sclk_div_num + 1)
+    );
+    /*
+    uart_sclk_t src_clk;
+    uart_ll_get_sclk(dev, &src_clk);
+
+    uint32_t sclk_freq;
+
+    // ESP_RETURN_ON_ERROR(uart_get_sclk_freq(src_clk, &sclk_freq), UART_TAG, "Invalid src_clk");
+    return uart_ll_get_baudrate(dev, sclk_freq);
+    */
+}
+
+
 /****************************************************************************
  *  @internal
  ****************************************************************************/
@@ -95,34 +125,4 @@ static int UART_init_context(struct UART_context *context)
     }
     else
         return ENOMEM;
-}
-
-static uint64_t UART_sclk_freq(uart_dev_t *dev)
-{
-    switch(dev->clk_conf.sclk_sel)
-    {
-    case SOC_UART_CLK_SRC_APB:
-        return clk_tree_apb_freq();
-    case SOC_UART_CLK_SRC_RC_FAST:
-        return clk_tree_sclk_freq(SOC_SCLK_INT_RC_FAST);
-    case SOC_UART_CLK_SRC_XTAL:
-        return clk_tree_sclk_freq(SOC_SCLK_XTAL);
-    }
-}
-
-static uint32_t UART_get_baudrate(uart_dev_t *dev)
-{
-    /*
-    uart_sclk_t src_clk;
-    uart_ll_get_sclk(dev, &src_clk);
-
-    uint32_t sclk_freq;
-
-    // ESP_RETURN_ON_ERROR(uart_get_sclk_freq(src_clk, &sclk_freq), UART_TAG, "Invalid src_clk");
-    return uart_ll_get_baudrate(dev, sclk_freq);
-    */
-}
-
-static int UART_set_baudrate(uart_dev_t *dev, uint32_t bps)
-{
 }

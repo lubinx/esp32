@@ -1,5 +1,6 @@
 #pragma once
 
+#include <features.h>
 #include "hw/uart.h"
 #include "soc/uart_struct.h"
 
@@ -18,5 +19,16 @@ enum soc_uart_sclk_sel_t
 };
 typedef enum soc_uart_sclk_sel_t    soc_uart_sclk_sel_t;
 
+__BEGIN_DECLS
+
 extern __attribute__((nothrow, nonnull))
     int UART_sclk_sel(uart_dev_t *dev, enum soc_uart_sclk_sel_t sel);
+extern __attribute__((nothrow, nonnull, const))
+    uint64_t UART_sclk_freq(uart_dev_t *dev);
+
+extern __attribute__((nothrow, nonnull))
+    int UART_set_baudrate(uart_dev_t *dev, uint32_t bps);
+extern __attribute__((nothrow, nonnull, const))
+    uint32_t UART_get_baudrate(uart_dev_t *dev);
+
+__END_DECLS

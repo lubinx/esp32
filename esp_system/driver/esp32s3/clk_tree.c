@@ -1,11 +1,9 @@
 #include <sys/errno.h>
 #include "esp_log.h"
-#include "clk_tree.h"
 
+#include "clk_tree.h"
+#include "soc.h"
 #include "soc/dport_access.h"
-#include "soc/syscon_reg.h"
-#include "soc/system_reg.h"
-#include "soc/rtc_cntl_struct.h"
 
 #include "sdkconfig.h"
 
@@ -629,4 +627,15 @@ void clk_tree_module_disable(periph_module_t periph)
 {
     DPORT_CLEAR_PERI_REG_MASK(periph_ll_get_clk_en_reg(periph), periph_ll_get_clk_en_mask(periph));
     DPORT_SET_PERI_REG_MASK(periph_ll_get_rst_en_reg(periph), periph_ll_get_rst_en_mask(periph));
+}
+
+void clk_tree_module_reset(periph_module_t periph)
+{
+    DPORT_SET_PERI_REG_MASK(periph_ll_get_rst_en_reg(periph), periph_ll_get_rst_en_mask(periph));
+    DPORT_CLEAR_PERI_REG_MASK(periph_ll_get_rst_en_reg(periph), periph_ll_get_rst_en_mask(periph));
+}
+
+bool clk_tree_module_is_enable(periph_module_t periph)
+{
+    return 0 != DPORT_GET_PERI_REG_MASK(periph_ll_get_clk_en_reg(periph), periph_ll_get_clk_en_mask(periph));
 }

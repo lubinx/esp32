@@ -2,6 +2,7 @@
 
 #include <features.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 #include "clk_tree_defs.h"
 
@@ -102,6 +103,9 @@ extern __attribute__((nothrow))
     void clk_tree_module_disable(periph_module_t periph);
 extern __attribute__((nothrow))
     void clk_tree_module_reset(periph_module_t periph);
+
+extern __attribute__((nothrow, const))
+    bool clk_tree_module_is_enable(periph_module_t periph);
 
 /****************************************************************************
  *  esp-idf

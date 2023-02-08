@@ -32,17 +32,9 @@
 #include "esp_private/panic_internal.h"
 #include "esp_private/panic_reason.h"
 
-#include "hal/wdt_types.h"
-#include "hal/wdt_hal.h"
-
 extern int _invalid_pc_placeholder;
 
-extern void esp_panic_handler_reconfigure_wdts(uint32_t timeout_ms);
-
 extern void esp_panic_handler(panic_info_t *);
-
-static wdt_hal_context_t wdt0_context = { .inst = WDT_MWDT0, .mwdt_dev = &TIMERG0 };
-
 void *g_exc_frames[SOC_CPU_CORES_NUM] = { NULL };
 
 /*
@@ -139,10 +131,6 @@ static void panic_handler(void *frame, bool pseudo_excause)
         }
     }
 
-    // Need to reconfigure WDTs before we stall any other CPU
-    esp_panic_handler_reconfigure_wdts(1000);
-    esp_rom_delay_us(1);
-
     // Stall all other cores
     for (uint32_t i = 0; i < SOC_CPU_CORES_NUM; i++) {
         if (i != core_id) {
@@ -163,14 +151,6 @@ static void panic_handler(void *frame, bool pseudo_excause)
             panic_set_address(frame, (uint32_t)&_invalid_pc_placeholder);
         }
     #endif
-        if (panic_get_cause(frame) == PANIC_RSN_INTWDT_CPU0
-            || panic_get_cause(frame) == PANIC_RSN_INTWDT_CPU1
-            )
-        {
-            wdt_hal_write_protect_disable(&wdt0_context);
-            wdt_hal_handle_intr(&wdt0_context);
-            wdt_hal_write_protect_enable(&wdt0_context);
-        }
     }
 
     // Convert architecture exception frame into abstracted panic info
