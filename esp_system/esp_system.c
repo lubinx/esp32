@@ -1,15 +1,7 @@
 #include <signal.h>
-#include <stdlib.h>
-#include <string.h>
 
-#include "xtensa/xtensa_api.h"
 #include "soc/soc_caps.h"
-#include "hal/efuse_hal.h"
-
-#include "esp_attr.h"
-#include "esp_cpu.h"
 #include "esp_heap_caps.h"
-#include "esp_rom_sys.h"
 
 #include "esp_system.h"
 #include "esp_private/system_internal.h"

@@ -11,9 +11,8 @@ list(APPEND srcs
     "esp_crosscore_int.c"
     "esp_dbg_ubsan.c"                   # debug for undefined behavior, but not sure if its works
     "esp_log.c"
-    "esp_platform_misc.c"
     "esp_startup.c"
-    "esp_system_init.c"
+    "esp_system.c"                      # TODO: esp-idf compatiable only, plan to remove later
     "panic.c"
     "panic_handler.c"
 # compatiable
@@ -31,12 +30,6 @@ list(APPEND priv_includes
     "priv_include"
 )
 
-include("${CMAKE_CURRENT_LIST_DIR}/driver/${IDF_TARGET}/.cmake")
-include("${CMAKE_CURRENT_LIST_DIR}/posix/.cmake")
-include("${CMAKE_CURRENT_LIST_DIR}/ultracore/.cmake")
-# include("${CMAKE_CURRENT_LIST_DIR}/shim/.cmake")
-
-
 # if(CONFIG_ESP_SYSTEM_USE_EH_FRAME)
 #     list(APPEND srcs
 #         "${IDF_PATH}/components/esp_system/eh_frame_parser.c"
@@ -48,6 +41,11 @@ include("${CMAKE_CURRENT_LIST_DIR}/ultracore/.cmake")
 #         "${IDF_PATH}/components/esp_system/systick_etm.c"
 #     )
 # endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/driver/${IDF_TARGET}/.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/posix/.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/ultracore/.cmake")
+# include("${CMAKE_CURRENT_LIST_DIR}/shim/.cmake")
 
 idf_component_register(
     INCLUDE_DIRS

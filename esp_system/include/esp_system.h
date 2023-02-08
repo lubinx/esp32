@@ -40,9 +40,19 @@ extern __attribute__((nothrow, const))
 
 extern __attribute__((nothrow, const))
     uint32_t esp_get_free_heap_size(void);
-extern __attribute__((nothrow, const))
-    uint32_t esp_get_free_internal_heap_size(void);
-extern __attribute__((nothrow, const))
-    uint32_t esp_get_minimum_free_heap_size(void);
+
+struct __esp_init_fn
+{
+    esp_err_t (*fn)(void);
+    uint32_t cores;
+};
+
+#define ESP_SYSTEM_INIT_FN(f, c, priority, ...) \
+    static esp_err_t __VA_ARGS__ __esp_system_init_fn_##f(void);    \
+    static __attribute__((used, section(".esp_system_init_fn." #priority)))    \
+        struct __esp_init_fn esp_system_init_fn_##f = { .fn = ( __esp_system_init_fn_##f), .cores = (c) };  \
+    static esp_err_t __esp_system_init_fn_##f(void)
+
+#define ESP_SYSTEM_INIT_ALL_CORES ((1 << SOC_CPU_CORES_NUM) - 1)
 
 __END_DECLS

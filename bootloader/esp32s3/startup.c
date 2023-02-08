@@ -6,7 +6,7 @@
 #include "esp_rom_sys.h"
 #include "esp_rom_uart.h"
 
-#include "soc/soc.h"
+#include "soc.h"
 #include "hal/cache_hal.h"
 #include "hal/cache_ll.h"
 #include "hal/mmu_ll.h"

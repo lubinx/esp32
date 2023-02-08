@@ -120,16 +120,16 @@ list(APPEND IDF_KERNEL_COMPONENTS
     "esptool_py"
 )
 
-# OBSOLETED_COMPONENTS: autoremove from REQUIRES & PRIV_REQUIRES
+# OBSOLETED_COMPONENTS: force remove REQUIRES & PRIV_REQUIRES
 list(APPEND OBSOLETED_COMPONENTS
-    "app_update"
-    "bootloader_support"
-    "esp_app_format"
-    "esp_common"
-    "esp_partition"
-    "esp_pm"
-    "partition_table"
-    "spi_flash"
+    # "app_update"
+    # "bootloader_support"
+    # "esp_app_format"
+    # "esp_common"
+    # "esp_partition"
+    # "esp_pm"
+    # "partition_table"
+    # "spi_flash"
 )
 
 #############################################################################
