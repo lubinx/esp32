@@ -633,5 +633,5 @@ __END_DECLS
 #endif
 
 #ifndef EHWPOISON
-    #define EHWPOISON                    (133 /* Memory page has hardware error */)
+    #define EHWPOISON                   (133 /* Memory page has hardware error */)
 #endif

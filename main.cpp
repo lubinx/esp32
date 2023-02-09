@@ -27,13 +27,12 @@ extern "C" void __attribute__((weak)) app_main(void)
     esp_rom_printf("cpu frequency: %llu MHz\n", clk_tree_cpu_freq() / 1000000);
     esp_rom_printf("ahb frequency: %llu MHz\n", clk_tree_ahb_freq() / 1000000);
 
+    UART_configure(&UART1, SOC_UART_CLK_SRC_XTAL, 115200, paNone, 1);
+
     if (clk_tree_module_is_enable(PERIPH_UART0_MODULE))
         esp_rom_printf("uart0: %lu bps\n", UART_get_baudrate(&UART0));
     if (clk_tree_module_is_enable(PERIPH_UART1_MODULE))
         esp_rom_printf("uart1: %lu bps\n", UART_get_baudrate(&UART1));
-
-    // UART_configure(&UART2, SOC_UART_CLK_SRC_APB, 38400, paNone, 1);
-
     if (clk_tree_module_is_enable(PERIPH_UART2_MODULE))
         esp_rom_printf("uart2: %lu bps\n", UART_get_baudrate(&UART2));
 

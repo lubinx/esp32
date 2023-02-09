@@ -110,25 +110,25 @@ void libc_lock_acquire(_LOCK_T lock)
     if (! xPortCanYield())
     {
         BaseType_t higher_task_woken = false;
-        if (! xSemaphoreTakeFromISR((void *)lock, &higher_task_woken))
+        if (! xSemaphoreTakeFromISR((void *)&lock->__dummy, &higher_task_woken))
         {
             assert(higher_task_woken);
             portYIELD_FROM_ISR();
         }
     }
     else
-        xSemaphoreTake((void *)lock, portMAX_DELAY);
+        xSemaphoreTake((void *)&lock->__dummy, portMAX_DELAY);
 }
 
 void libc_lock_acquire_recursive(_LOCK_T lock)
 {
-    xSemaphoreTakeRecursive((void *)lock, portMAX_DELAY);
+    xSemaphoreTakeRecursive((void *)&lock->__dummy, portMAX_DELAY);
 }
 
 
 int libc_lock_try_acquire(_LOCK_T lock)
 {
-    if (pdTRUE == xSemaphoreTake((void *)lock, 0))
+    if (pdTRUE == xSemaphoreTake((void *)&lock->__dummy, 0))
         return 0;
     else
         return EBUSY;
@@ -136,7 +136,7 @@ int libc_lock_try_acquire(_LOCK_T lock)
 
 int libc_lock_try_acquire_recursive(_LOCK_T lock)
 {
-    if (pdTRUE == xSemaphoreTakeRecursive((void *)lock, 0))
+    if (pdTRUE == xSemaphoreTakeRecursive((void *)&lock->__dummy, 0))
         return 0;
     else
         return EBUSY;
@@ -147,18 +147,18 @@ void libc_lock_release(_LOCK_T lock)
     if (! xPortCanYield())
     {
         BaseType_t higher_task_woken = false;
-        xSemaphoreGiveFromISR((void *)lock, &higher_task_woken);
+        xSemaphoreGiveFromISR((void *)&lock->__dummy, &higher_task_woken);
 
         if (higher_task_woken)
             portYIELD_FROM_ISR();
     }
     else
-        xSemaphoreGive((void *)lock);
+        xSemaphoreGive((void *)&lock->__dummy);
 }
 
 void libc_lock_release_recursive(_LOCK_T lock)
 {
-    xSemaphoreGiveRecursive((void *)lock);
+    xSemaphoreGiveRecursive((void *)&lock->__dummy);
 }
 
 void __retarget_lock_init(_LOCK_T *lock)

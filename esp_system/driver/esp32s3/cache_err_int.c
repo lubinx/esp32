@@ -13,10 +13,11 @@
  */
 
 #include <stdint.h>
+
 #include "sdkconfig.h"
-#include "esp_err.h"
-#include "esp_log.h"
+
 #include "esp_attr.h"
+#include "esp_log.h"
 #include "esp_cpu.h"
 #include "esp_intr_alloc.h"
 #include "soc/soc.h"

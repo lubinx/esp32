@@ -165,49 +165,49 @@ typedef struct
     // Note: We currently only have dual core targets, so the table initializer is hard coded
     static const intr_desc_t intr_desc_table[SOC_CPU_INTR_NUM] =
     {
-        {1, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD     }}, //0
-        {1, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD     }}, //1
-        {1, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                                }}, //2
-        {1, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                                }}, //3
-        {1, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      0                                }}, //4
-        {1, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD     }}, //5
+        {1, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //0
+        {1, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //1
+        {1, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                               }}, //2
+        {1, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                               }}, //3
+        {1, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      0                               }}, //4
+        {1, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //5
     #if CONFIG_FREERTOS_CORETIMER_0
         {1, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD     }}, //6
     #else
         {1, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_SPECIAL,    ESP_CPU_INTR_DESC_FLAG_SPECIAL  }}, //6
     #endif
         {1, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_SPECIAL,    ESP_CPU_INTR_DESC_FLAG_SPECIAL  }}, //7
-        {1, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD     }}, //8
-        {1, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                                }}, //9
-        {1, ESP_CPU_INTR_TYPE_EDGE,     {0,                                 0                                }}, //10
+        {1, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //8
+        {1, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                               }}, //9
+        {1, ESP_CPU_INTR_TYPE_EDGE,     {0,                                 0                               }}, //10
         {3, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_SPECIAL,    ESP_CPU_INTR_DESC_FLAG_SPECIAL  }}, //11
         {1, ESP_CPU_INTR_TYPE_LEVEL,    {0, 0}}, //12
         {1, ESP_CPU_INTR_TYPE_LEVEL,    {0, 0}}, //13
-        {7, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD     }}, //14, NMI
+        {7, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //14, NMI
     #if CONFIG_FREERTOS_CORETIMER_1
-        {3, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD     }}, //15
+        {3, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //15
     #else
         {3, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_SPECIAL,    ESP_CPU_INTR_DESC_FLAG_SPECIAL  }}, //15
     #endif
         {5, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_SPECIAL,    ESP_CPU_INTR_DESC_FLAG_SPECIAL  }}, //16
-        {1, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                                }}, //17
-        {1, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                                }}, //18
-        {2, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                                }}, //19
-        {2, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                                }}, //20
-        {2, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                                }}, //21
-        {3, ESP_CPU_INTR_TYPE_EDGE,     {ESP_CPU_INTR_DESC_FLAG_RESVD,      0                                }}, //22
-        {3, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                                }}, //23
-        {4, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      0                                }}, //24
-        {4, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD     }}, //25
-        {5, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 ESP_CPU_INTR_DESC_FLAG_RESVD     }}, //26
-        {3, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD     }}, //27
-        {4, ESP_CPU_INTR_TYPE_EDGE,     {0,                                 0                                }}, //28
+        {1, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                               }}, //17
+        {1, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                               }}, //18
+        {2, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                               }}, //19
+        {2, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                               }}, //20
+        {2, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                               }}, //21
+        {3, ESP_CPU_INTR_TYPE_EDGE,     {ESP_CPU_INTR_DESC_FLAG_RESVD,      0                               }}, //22
+        {3, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                               }}, //23
+        {4, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      0                               }}, //24
+        {4, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //25
+        {5, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //26
+        {3, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //27
+        {4, ESP_CPU_INTR_TYPE_EDGE,     {0,                                 0                               }}, //28
         {3, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_SPECIAL,    ESP_CPU_INTR_DESC_FLAG_SPECIAL  }}, //29
-        {4, ESP_CPU_INTR_TYPE_EDGE,     {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD     }}, //30
-        {5, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD     }}, //31
+        {4, ESP_CPU_INTR_TYPE_EDGE,     {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //30
+        {5, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //31
     };
 #else
-    static const intr_desc_t intr_desc_table[SOC_CPU_intr_nb] =
+    static const intr_desc_t intr_desc_table[SOC_CPU_INTR_NUM] =
     {
         {1, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //0
         {1, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //1
@@ -250,7 +250,7 @@ typedef struct
         {4, ESP_CPU_INTR_TYPE_EDGE,     {ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //30
         {5, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //31
     };
-#endif // SOC_CPU_CORES_NUM > 1
+#endif
 
 void esp_cpu_intr_get_desc(int core_id, int intr_nb, esp_cpu_intr_desc_t *intr_desc_ret)
 {
@@ -271,40 +271,40 @@ void esp_cpu_intr_get_desc(int core_id, int intr_nb, esp_cpu_intr_desc_t *intr_d
  * ------------------------------------------------------------------------------------------------------------------ */
 
 #if SOC_CPU_HAS_PMA
-static void esp_cpu_configure_invalid_regions(void)
-{
-    const unsigned PMA_NONE    = PMA_EN;
-    __attribute__((unused)) const unsigned PMA_RW      = PMA_EN | PMA_R | PMA_W;
-    __attribute__((unused)) const unsigned PMA_RX      = PMA_EN | PMA_R | PMA_X;
-    __attribute__((unused)) const unsigned PMA_RWX     = PMA_EN | PMA_R | PMA_W | PMA_X;
+    static void esp_cpu_configure_invalid_regions(void)
+    {
+        const unsigned PMA_NONE    = PMA_EN;
+        __attribute__((unused)) const unsigned PMA_RW      = PMA_EN | PMA_R | PMA_W;
+        __attribute__((unused)) const unsigned PMA_RX      = PMA_EN | PMA_R | PMA_X;
+        __attribute__((unused)) const unsigned PMA_RWX     = PMA_EN | PMA_R | PMA_W | PMA_X;
 
-    // 1. Gap at bottom of address space
-    PMA_ENTRY_SET_TOR(0, SOC_DEBUG_LOW, PMA_TOR | PMA_NONE);
+        // 1. Gap at bottom of address space
+        PMA_ENTRY_SET_TOR(0, SOC_DEBUG_LOW, PMA_TOR | PMA_NONE);
 
-    // 2. Gap between debug region & IROM
-    PMA_ENTRY_SET_TOR(1, SOC_DEBUG_HIGH, PMA_NONE);
-    PMA_ENTRY_SET_TOR(2, SOC_IROM_MASK_LOW, PMA_TOR | PMA_NONE);
+        // 2. Gap between debug region & IROM
+        PMA_ENTRY_SET_TOR(1, SOC_DEBUG_HIGH, PMA_NONE);
+        PMA_ENTRY_SET_TOR(2, SOC_IROM_MASK_LOW, PMA_TOR | PMA_NONE);
 
-    // 3. Gap between ROM & RAM
-    PMA_ENTRY_SET_TOR(3, SOC_DROM_MASK_HIGH, PMA_NONE);
-    PMA_ENTRY_SET_TOR(4, SOC_IRAM_LOW, PMA_TOR | PMA_NONE);
+        // 3. Gap between ROM & RAM
+        PMA_ENTRY_SET_TOR(3, SOC_DROM_MASK_HIGH, PMA_NONE);
+        PMA_ENTRY_SET_TOR(4, SOC_IRAM_LOW, PMA_TOR | PMA_NONE);
 
-    // 4. Gap between DRAM and I_Cache
-    PMA_ENTRY_SET_TOR(5, SOC_IRAM_HIGH, PMA_NONE);
-    PMA_ENTRY_SET_TOR(6, SOC_IROM_LOW, PMA_TOR | PMA_NONE);
+        // 4. Gap between DRAM and I_Cache
+        PMA_ENTRY_SET_TOR(5, SOC_IRAM_HIGH, PMA_NONE);
+        PMA_ENTRY_SET_TOR(6, SOC_IROM_LOW, PMA_TOR | PMA_NONE);
 
-    // 5. Gap between D_Cache & LP_RAM
-    PMA_ENTRY_SET_TOR(7, SOC_DROM_HIGH, PMA_NONE);
-    PMA_ENTRY_SET_TOR(8, SOC_RTC_IRAM_LOW, PMA_TOR | PMA_NONE);
+        // 5. Gap between D_Cache & LP_RAM
+        PMA_ENTRY_SET_TOR(7, SOC_DROM_HIGH, PMA_NONE);
+        PMA_ENTRY_SET_TOR(8, SOC_RTC_IRAM_LOW, PMA_TOR | PMA_NONE);
 
-    // 6. Gap between LP memory & peripheral addresses
-    PMA_ENTRY_SET_TOR(9, SOC_RTC_IRAM_HIGH, PMA_NONE);
-    PMA_ENTRY_SET_TOR(10, SOC_PERIPHERAL_LOW, PMA_TOR | PMA_NONE);
+        // 6. Gap between LP memory & peripheral addresses
+        PMA_ENTRY_SET_TOR(9, SOC_RTC_IRAM_HIGH, PMA_NONE);
+        PMA_ENTRY_SET_TOR(10, SOC_PERIPHERAL_LOW, PMA_TOR | PMA_NONE);
 
-    // 7. End of address space
-    PMA_ENTRY_SET_TOR(11, SOC_PERIPHERAL_HIGH, PMA_NONE);
-    PMA_ENTRY_SET_TOR(12, UINT32_MAX, PMA_TOR | PMA_NONE);
-}
+        // 7. End of address space
+        PMA_ENTRY_SET_TOR(11, SOC_PERIPHERAL_HIGH, PMA_NONE);
+        PMA_ENTRY_SET_TOR(12, UINT32_MAX, PMA_TOR | PMA_NONE);
+    }
 #endif
 
 #if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3

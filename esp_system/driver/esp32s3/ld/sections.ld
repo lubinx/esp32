@@ -108,12 +108,6 @@ PROVIDE(_data_end = ABSOLUTE(.));
 
     .data.ro : ALIGN(0x10)
     {
-        /*
-        *(.rodata_desc .rodata_desc.*)
-        *(.rodata_custom_desc .rodata_custom_desc.*)
-        . = ALIGN(4);
-        */
-
 PROVIDE(__zero_table_start__ = ABSOLUTE(.));
         LONG (__bss_start__)
         LONG (__bss_end__ - __bss_start__)

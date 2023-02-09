@@ -9,6 +9,7 @@
 #include <features.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include "soc/soc_caps.h"
 
 #ifdef __XTENSA__
     #include "xtensa/xtensa_api.h"
@@ -189,6 +190,9 @@ extern __attribute__((nonnull, nothrow))
 
 /***************************************************************************/
 /** Debugger
+ *      esp_cpu_dbgr_is_attached()
+ *      xt_utils_dbgr_break()
+ *      esp_cpu_pc_to_addr()
 ****************************************************************************/
 #ifdef __XTENSA__
     #define esp_cpu_dbgr_is_attached()  \

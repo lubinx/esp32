@@ -29,50 +29,56 @@ struct UART_context
     uint8_t *rx_que;
 };
 
-typedef enum {
-    UART_MODE_UART = 0x00,                      /*!< mode: regular UART mode*/
-    UART_MODE_RS485_HALF_DUPLEX = 0x01,         /*!< mode: half duplex RS485 UART mode control by RTS pin */
-    UART_MODE_IRDA = 0x02,                      /*!< mode: IRDA  UART mode*/
-    UART_MODE_RS485_COLLISION_DETECT = 0x03,    /*!< mode: RS485 collision detection UART mode (used for test purposes)*/
-    UART_MODE_RS485_APP_CTRL = 0x04,            /*!< mode: application control RS485 UART mode (used for test purposes)*/
-} uart_mode_t;
+enum
+{
+    UART_MODE_UART              = 0,
+    UART_MODE_RS485_HALF_DUPLEX,
+    UART_MODE_IRDA,
+    UART_MODE_RS485_COLLISION_DETECT,
+    UART_MODE_RS485_APP_CTRL
+};
 
-/**
- * @brief UART word length constants
- */
-typedef enum {
-    UART_DATA_5_BITS   = 0x0,    /*!< word length: 5bits*/
-    UART_DATA_6_BITS   = 0x1,    /*!< word length: 6bits*/
-    UART_DATA_7_BITS   = 0x2,    /*!< word length: 7bits*/
-    UART_DATA_8_BITS   = 0x3,    /*!< word length: 8bits*/
-    UART_DATA_BITS_MAX = 0x4,
-} uart_word_length_t;
+enum
+{
+    UART_DATA_5_BITS            = 0,
+    UART_DATA_6_BITS,
+    UART_DATA_7_BITS,
+    UART_DATA_8_BITS
+};
 
-/**
- * @brief UART hardware flow control modes
- */
-typedef enum {
-    UART_HW_FLOWCTRL_DISABLE = 0x0,   /*!< disable hardware flow control*/
-    UART_HW_FLOWCTRL_RTS     = 0x1,   /*!< enable RX hardware flow control (rts)*/
-    UART_HW_FLOWCTRL_CTS     = 0x2,   /*!< enable TX hardware flow control (cts)*/
-    UART_HW_FLOWCTRL_CTS_RTS = 0x3,   /*!< enable hardware flow control*/
-    UART_HW_FLOWCTRL_MAX     = 0x4,
-} uart_hw_flowcontrol_t;
+enum
+{
+    UART_STOP_BITS_1            = 1,
+    UART_STOP_BITS_1_5,
+    UART_STOP_BITS_2
+};
 
-/**
- * @brief UART signal bit map
- */
-typedef enum {
-    UART_SIGNAL_INV_DISABLE  =  0,            /*!< Disable UART signal inverse*/
-    UART_SIGNAL_IRDA_TX_INV  = (0x1 << 0),    /*!< inverse the UART irda_tx signal*/
-    UART_SIGNAL_IRDA_RX_INV  = (0x1 << 1),    /*!< inverse the UART irda_rx signal*/
-    UART_SIGNAL_RXD_INV      = (0x1 << 2),    /*!< inverse the UART rxd signal*/
-    UART_SIGNAL_CTS_INV      = (0x1 << 3),    /*!< inverse the UART cts signal*/
-    UART_SIGNAL_DSR_INV      = (0x1 << 4),    /*!< inverse the UART dsr signal*/
-    UART_SIGNAL_TXD_INV      = (0x1 << 5),    /*!< inverse the UART txd signal*/
-    UART_SIGNAL_RTS_INV      = (0x1 << 6),    /*!< inverse the UART rts signal*/
-    UART_SIGNAL_DTR_INV      = (0x1 << 7),    /*!< inverse the UART dtr signal*/
-} uart_signal_inv_t;
+enum
+{
+    UART_PARITY_EVEN            = 0,
+    UART_PARITY_ODD
+};
+
+enum
+{
+    UART_HW_FLOWCTRL_DISABLE    = 0x0,
+    UART_HW_FLOWCTRL_RTS,
+    UART_HW_FLOWCTRL_CTS,
+    UART_HW_FLOWCTRL_CTS_RTS
+};
+
+enum
+{
+    UART_SIGNAL_INV_DISABLE     = 0,
+    UART_SIGNAL_IRDA_TX_INV,
+    UART_SIGNAL_IRDA_RX_INV,
+    UART_SIGNAL_RXD_INV,
+    UART_SIGNAL_CTS_INV,
+    UART_SIGNAL_DSR_INV,
+    UART_SIGNAL_TXD_INV,
+    UART_SIGNAL_RTS_INV,
+    UART_SIGNAL_DTR_INV
+};
 
 
 /****************************************************************************
@@ -81,7 +87,7 @@ typedef enum {
 // constructor
 static int UART_init_context(struct UART_context *context);
 // configure
-static uint64_t UART_sclk_freq(uart_dev_t *dev);
+static uint64_t UART_sclk_freq(soc_uart_sclk_sel_t sel);
 // io
 static ssize_t USART_read(int fd, void *buf, size_t bufsize);
 static ssize_t USART_write(int fd, void const *buf, size_t count);
@@ -123,14 +129,10 @@ int UART_createfd(int nb, uint32_t bps, parity_t parity, uint8_t stop_bits)
         return __set_errno_neg(retval);
 }
 
-int UART_io_mutex(int RXD, int TXD, int RTS, int CTS)
-{
-}
-
 int UART_configure(uart_dev_t *dev, soc_uart_sclk_sel_t sclk, uint32_t bps, parity_t parity, uint8_t stop_bits)
 {
-    int retval;
     periph_module_t uart_module;
+    int retval;
 
     if (&UART0 == dev)
         uart_module = PERIPH_UART0_MODULE;
@@ -141,25 +143,14 @@ int UART_configure(uart_dev_t *dev, soc_uart_sclk_sel_t sclk, uint32_t bps, pari
     else
         return ENODEV;
 
-    clk_tree_module_enable(PERIPH_UART0_MODULE);
-    clk_tree_module_reset(PERIPH_UART0_MODULE);
+    clk_tree_module_enable(uart_module);
+    clk_tree_module_reset(uart_module);
 
-    switch (stop_bits)
-    {
-    default:
-        retval = EINVAL;
-        goto uart_configure_fail_exit;
-    case 1:
-        dev->conf0.stop_bit_num = 1;
-        break;
-    case 2:
-        dev->conf0.stop_bit_num = 3;
-        break;
-    /*
-        1.5 stopbits?
-        dev->conf0.stop_bit_num = 2;
-    */
-    }
+    // uart normal
+    dev->rs485_conf.val = 0;
+    dev->conf0.irda_en = 0;
+    // 8 bits only
+    dev->conf0.bit_num = UART_DATA_8_BITS;
 
     if (paNone != parity)
     {
@@ -172,30 +163,52 @@ int UART_configure(uart_dev_t *dev, soc_uart_sclk_sel_t sclk, uint32_t bps, pari
             dev->conf0.parity_en = 0;
             break;
         case paOdd:
-            dev->conf0.parity = 1;
+            dev->conf0.parity = UART_PARITY_ODD;
             dev->conf0.parity_en = 1;
             break;
         case paEven:
-            dev->conf0.parity = 0;
+            dev->conf0.parity = UART_PARITY_EVEN;
             dev->conf0.parity_en = 1;
             break;
         }
     }
+
+    switch (stop_bits)
+    {
+    default:
+        retval = EINVAL;
+        goto uart_configure_fail_exit;
+    case 1:
+        dev->conf0.stop_bit_num = UART_STOP_BITS_1;
+        break;
+    case 2:
+        dev->conf0.stop_bit_num = UART_STOP_BITS_2;
+        break;
     /*
-        0 = 5bits
-        1 = 6bits
-        2 = 7bits
-        3 = 8bits
+        1.5 stopbits?
+        dev->conf0.stop_bit_num = 2;
     */
-    dev->conf0.bit_num = 3;
+    }
 
     dev->clk_conf.sclk_sel = sclk;
+    uint64_t sclk_freq = UART_sclk_freq(sclk);
+
+    // calucate baudrate
+    int sclk_div = (sclk_freq + 4095 * bps - 1) / (4095 * bps);
+    uint32_t clk_div = ((sclk_freq) << 4) / (bps * sclk_div);
+    // The baud rate configuration register is divided into // an integer part and a fractional part.
+    dev->clkdiv.clkdiv = clk_div >> 4;
+    dev->clkdiv.clkdiv_frag = clk_div &  0xF;
+    dev->clk_conf.sclk_div_num =  sclk_div - 1;
 
     if (false)
     {
 uart_configure_fail_exit:
         clk_tree_module_disable(uart_module);
     }
+    else
+        retval = 0;
+
     return retval;
 }
 
@@ -206,8 +219,8 @@ int UART_sclk_sel(uart_dev_t *dev, enum soc_uart_sclk_sel_t sel)
 
 uint32_t UART_get_baudrate(uart_dev_t *dev)
 {
-    return (UART_sclk_freq(dev) << 4) / (
-        ((dev->clkdiv.clkdiv << 4) | dev->clkdiv.clkdiv_frag) *  (dev->clk_conf.sclk_div_num + 1)
+    return (UART_sclk_freq(dev->clk_conf.sclk_sel) << 4) / (
+        ((dev->clkdiv.clkdiv << 4) | dev->clkdiv.clkdiv_frag) * (dev->clk_conf.sclk_div_num + 1)
     );
 }
 
@@ -230,9 +243,9 @@ static int UART_init_context(struct UART_context *context)
         return ENOMEM;
 }
 
-static uint64_t UART_sclk_freq(uart_dev_t *dev)
+static uint64_t UART_sclk_freq(soc_uart_sclk_sel_t sel)
 {
-    switch(dev->clk_conf.sclk_sel)
+    switch(sel)
     {
     case SOC_UART_CLK_SRC_APB:
         return clk_tree_apb_freq();

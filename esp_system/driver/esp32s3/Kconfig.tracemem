@@ -33,4 +33,4 @@ menu "Trace memory"
         default 0x8000 if ESP32S3_MEMMAP_TRACEMEM && ESP32S3_MEMMAP_TRACEMEM_TWOBANKS
         default 0x4000 if ESP32S3_MEMMAP_TRACEMEM && !ESP32S3_MEMMAP_TRACEMEM_TWOBANKS
         default 0x0
-endmenu  # Trace memory
+endmenu

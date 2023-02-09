@@ -7,7 +7,6 @@ else()
 endif()
 
 list(APPEND srcs
-    "esp_cpu.c"
     "esp_crosscore_int.c"
     "esp_dbg_ubsan.c"                   # debug for undefined behavior, but not sure if its works
     "esp_log.c"
@@ -42,7 +41,7 @@ list(APPEND priv_includes
 #     )
 # endif()
 
-include("${CMAKE_CURRENT_LIST_DIR}/driver/${IDF_TARGET}/.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/driver/.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/posix/.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/ultracore/.cmake")
 # include("${CMAKE_CURRENT_LIST_DIR}/shim/.cmake")
@@ -63,6 +62,8 @@ idf_component_register(
         "memap.lf"
 )
 target_link_libraries(${COMPONENT_LIB} INTERFACE "-u __ubsan_include")
+# soc peripherals.ld
+target_linker_script(${COMPONENT_LIB} INTERFACE "driver/${IDF_TARGET}/ld/peripherals.ld")
 
 # generate link scripts
 idf_build_get_property(sdkconfig_header SDKCONFIG_HEADER)

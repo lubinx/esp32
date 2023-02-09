@@ -10,7 +10,6 @@
 #include <sys/param.h>
 
 #include "esp_attr.h"
-#include "esp_sleep.h"
 #include "soc/soc_caps.h"
 #include "esp_private/sleep_mac_bb.h"
 #include "sdkconfig.h"
@@ -105,4 +104,4 @@ void IRAM_ATTR mac_bb_power_up_cb_execute(void)
     }
 }
 
-#endif ///CONFIG_MAC_BB_PD
+#endif
