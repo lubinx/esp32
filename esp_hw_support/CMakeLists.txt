@@ -17,7 +17,6 @@ list(APPEND srcs
     # "mac_addr.c"
     # "periph_ctrl.c"
     "rtc_module.c"
-    "sleep_mac_bb.c"
     "regi2c_ctrl.c"
 )
 
