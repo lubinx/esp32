@@ -184,7 +184,11 @@ extern __attribute__((nonnull, nothrow))
     #define esp_cpu_intr_clear(intr_nb) \
         rv_utils_intr_edge_ack(1 << intr_nb)
 #endif
-// remap to esp-idf function name
+
+// cmsis like
+    #define __WFI                       esp_cpu_intr_waitfor
+
+// esp-idf
     #define esp_cpu_wait_for_intr       esp_cpu_intr_waitfor
     #define esp_cpu_intr_edge_ack       esp_cpu_intr_clear
 

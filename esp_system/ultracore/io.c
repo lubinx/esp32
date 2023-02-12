@@ -8,8 +8,6 @@
 #include "ultracore/kernel.h"
 #include "esp_log.h"
 
-static char const *TAG = "io";
-
 void __IO_retarget(void)
 {
     // nothing to do but import retarget functions

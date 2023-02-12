@@ -1,7 +1,7 @@
 menu "Cache config"
     choice ESP32S3_INSTRUCTION_CACHE_SIZE
         prompt "Instruction cache size"
-        default ESP32S3_INSTRUCTION_CACHE_16KB
+        default ESP32S3_INSTRUCTION_CACHE_32KB
         help
             Instruction cache size to be set on application startup.
             If you use 16KB instruction cache rather than 32KB instruction cache,
@@ -64,7 +64,7 @@ menu "Cache config"
 
     choice ESP32S3_DATA_CACHE_SIZE
         prompt "Data cache size"
-        default ESP32S3_DATA_CACHE_32KB
+        default ESP32S3_DATA_CACHE_64KB
         help
             Data cache size to be set on application startup.
             If you use 32KB data cache rather than 64KB data cache,

@@ -145,6 +145,22 @@ int KERNEL_handle_release(handle_t hdr)
     return retval;
 }
 
+int KERNEL_createfd(uint16_t const TAG, struct FD_implement const *implement, void *ext)
+{
+    struct KERNEL_fd *fd = KERNEL_handle_get(CID_FD);
+
+    if (INVALID_HANDLE != fd)
+    {
+        fd->tag = TAG;
+        fd->implement = implement;
+        fd->ext = ext;
+
+        return (int)fd;
+    }
+    else
+        return -1;
+}
+
 void *KERNEL_malloc(uint32_t size)
 {
     return malloc(size);

@@ -112,7 +112,7 @@ endif()
 list(APPEND IDF_KERNEL_COMPONENTS
     "soc" "heap"
     "freertos" "esp_system"
-    "hal" "esp_hw_support" "esp_rom"    # planning to remove
+    "hal" "esp_rom"    # planning to remove
     "esptool_py"
 )
 

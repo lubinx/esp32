@@ -1,13 +1,8 @@
 #pragma once
 
 #include <features.h>
-#include <stdio.h>
 #include <assert.h>
-
-#include <sys/types.h>
 #include <sys/errno.h>
-
-#include "esp_compiler.h"
 
 #define ESP_ERROR_CHECK(x)              assert(ESP_OK == x)
 #define ESP_ERROR_CHECK_WITHOUT_ABORT(x)

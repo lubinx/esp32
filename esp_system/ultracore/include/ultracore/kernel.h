@@ -29,6 +29,8 @@
 // #include "ultracore.h"
 // #include "svc.h"
 
+    #define INFINITE                    (0xFFFFFFFFUL)
+
     #define INVALID_HANDLE              ((void *)0)
     typedef void *                  handle_t;
 

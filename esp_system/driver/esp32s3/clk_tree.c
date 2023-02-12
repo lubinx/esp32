@@ -1,12 +1,14 @@
 #include <sys/errno.h>
 #include "esp_log.h"
 
-#include "clk_tree.h"
-#include "soc.h"
+#include "soc/soc_caps.h"
 #include "soc/dport_access.h"
+#include "soc/system_reg.h"
+#include "soc/syscon_reg.h"
+#include "soc/rtc_cntl_struct.h"
 
+#include "clk_tree.h"
 #include "sdkconfig.h"
-
 #include "soc/rtc.h"
 
 char const *TAG = "clktree";

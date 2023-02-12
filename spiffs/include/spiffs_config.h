@@ -25,7 +25,7 @@
 #include <sdkconfig.h>
 #include <esp_log.h>
 #include <assert.h>
-#include "esp_assert.h"
+// #include "esp_assert.h"
 
 // compile time switches
 #define SPIFFS_TAG "SPIFFS"

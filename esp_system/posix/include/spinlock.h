@@ -23,7 +23,7 @@
 
     typedef struct
     {
-        uint32_t core_id;
+        uint32_t volatile core_id;
         uint32_t lock_count;
     } spinlock_t;
 
@@ -43,7 +43,7 @@ static inline __attribute__((nonnull, nothrow))
 
         #ifdef __XTENSA__
             uint32_t irq_status = XTOS_SET_INTLEVEL(XCHAL_EXCM_LEVEL);
-            uint32_t core_id = 0xFFFF ^ xt_utils_get_raw_core_id();
+            uint32_t core_id = 1U << xt_utils_get_raw_core_id();
 
             // The caller is already the owner of the lock. Simply increment the nesting count
             if (lock->core_id == core_id)
@@ -76,11 +76,11 @@ static inline __attribute__((nonnull, nothrow))
 static inline __attribute__((nonnull, nothrow))
     void spinlock_release(spinlock_t *lock)
     {
-        assert(lock->core_id == (0xFFFF ^ xt_utils_get_raw_core_id()));
-
         #ifdef __XTENSA__
             uint32_t irq_status = XTOS_SET_INTLEVEL(XCHAL_EXCM_LEVEL);
         #endif
+
+        assert(lock->core_id == (1U << xt_utils_get_raw_core_id()));
 
         if (0 == -- lock->lock_count)
             lock->core_id = 0;

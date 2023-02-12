@@ -14,7 +14,6 @@
 #include "esp_err.h"
 #include "esp_cpu.h"
 #include "esp_memory_utils.h"
-#include "esp_fault.h"
 
 #include "soc/soc.h"
 #include "soc/soc_caps.h"
@@ -116,155 +115,151 @@ void esp_cpu_reset(int core_id)
 // ---------------- Interrupt Descriptors ------------------
 
 #if SOC_CPU_HAS_FLEXIBLE_INTC
-
-static bool is_intr_nb_resv(int intr_nb)
-{
-    // Workaround to reserve interrupt number 1 for Wi-Fi, 5,8 for Bluetooth, 6 for "permanently disabled interrupt"
-    // [TODO: IDF-2465]
-    uint32_t reserved = BIT(1) | BIT(5) | BIT(6) | BIT(8);
-
-    // int_num 0,3,4,7 are inavaliable for PULP cpu
-#if CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32H2// TODO: IDF-5728 replace with a better macro name
-    reserved |= BIT(0) | BIT(3) | BIT(4) | BIT(7);
-#endif
-
-    if (reserved & BIT(intr_nb))
-        return true;
-
-    extern int _vector_table;
-    extern int _interrupt_handler;
-    intptr_t const pc = (intptr_t)(&_vector_table + intr_nb);
-
-    /* JAL instructions are relative to the PC there are executed from. */
-    intptr_t const destination = pc + riscv_decode_offset_from_jal_instruction(pc);
-
-    return destination != (intptr_t)&_interrupt_handler;
-}
-
-void esp_cpu_intr_get_desc(int core_id, int intr_nb, esp_cpu_intr_desc_t *intr_desc_ret)
-{
-    intr_desc_ret->priority = 1;    //Todo: We should make this -1
-    intr_desc_ret->type = ESP_CPU_INTR_TYPE_NA;
-#if __riscv
-    intr_desc_ret->flags = is_intr_nb_resv(intr_nb) ? ESP_CPU_INTR_DESC_FLAG_RESVD : 0;
-#else
-    intr_desc_ret->flags = 0;
-#endif
-}
-
-#else // SOC_CPU_HAS_FLEXIBLE_INTC
-
-typedef struct
-{
-    int priority;
-    esp_cpu_intr_type_t type;
-    uint32_t flags[SOC_CPU_CORES_NUM];
-} intr_desc_t;
-
-#if SOC_CPU_CORES_NUM > 1
-    // Note: We currently only have dual core targets, so the table initializer is hard coded
-    static const intr_desc_t intr_desc_table[SOC_CPU_INTR_NUM] =
+    static bool is_intr_nb_resv(int intr_nb)
     {
-        {1, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //0
-        {1, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //1
-        {1, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                               }}, //2
-        {1, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                               }}, //3
-        {1, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      0                               }}, //4
-        {1, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //5
-    #if CONFIG_FREERTOS_CORETIMER_0
-        {1, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD     }}, //6
-    #else
-        {1, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_SPECIAL,    ESP_CPU_INTR_DESC_FLAG_SPECIAL  }}, //6
-    #endif
-        {1, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_SPECIAL,    ESP_CPU_INTR_DESC_FLAG_SPECIAL  }}, //7
-        {1, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //8
-        {1, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                               }}, //9
-        {1, ESP_CPU_INTR_TYPE_EDGE,     {0,                                 0                               }}, //10
-        {3, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_SPECIAL,    ESP_CPU_INTR_DESC_FLAG_SPECIAL  }}, //11
-        {1, ESP_CPU_INTR_TYPE_LEVEL,    {0, 0}}, //12
-        {1, ESP_CPU_INTR_TYPE_LEVEL,    {0, 0}}, //13
-        {7, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //14, NMI
-    #if CONFIG_FREERTOS_CORETIMER_1
-        {3, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //15
-    #else
-        {3, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_SPECIAL,    ESP_CPU_INTR_DESC_FLAG_SPECIAL  }}, //15
-    #endif
-        {5, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_SPECIAL,    ESP_CPU_INTR_DESC_FLAG_SPECIAL  }}, //16
-        {1, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                               }}, //17
-        {1, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                               }}, //18
-        {2, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                               }}, //19
-        {2, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                               }}, //20
-        {2, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                               }}, //21
-        {3, ESP_CPU_INTR_TYPE_EDGE,     {ESP_CPU_INTR_DESC_FLAG_RESVD,      0                               }}, //22
-        {3, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                               }}, //23
-        {4, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      0                               }}, //24
-        {4, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //25
-        {5, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //26
-        {3, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //27
-        {4, ESP_CPU_INTR_TYPE_EDGE,     {0,                                 0                               }}, //28
-        {3, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_SPECIAL,    ESP_CPU_INTR_DESC_FLAG_SPECIAL  }}, //29
-        {4, ESP_CPU_INTR_TYPE_EDGE,     {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //30
-        {5, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //31
-    };
-#else
-    static const intr_desc_t intr_desc_table[SOC_CPU_INTR_NUM] =
+        // Workaround to reserve interrupt number 1 for Wi-Fi, 5,8 for Bluetooth, 6 for "permanently disabled interrupt"
+        // [TODO: IDF-2465]
+        uint32_t reserved = BIT(1) | BIT(5) | BIT(6) | BIT(8);
+
+        // int_num 0,3,4,7 are inavaliable for PULP cpu
+        #if CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32H2// TODO: IDF-5728 replace with a better macro name
+            reserved |= BIT(0) | BIT(3) | BIT(4) | BIT(7);
+        #endif
+
+        if (reserved & BIT(intr_nb))
+            return true;
+
+        extern int _vector_table;
+        extern int _interrupt_handler;
+        intptr_t const pc = (intptr_t)(&_vector_table + intr_nb);
+
+        /* JAL instructions are relative to the PC there are executed from. */
+        intptr_t const destination = pc + riscv_decode_offset_from_jal_instruction(pc);
+
+        return destination != (intptr_t)&_interrupt_handler;
+    }
+
+    void esp_cpu_intr_get_desc(int core_id, int intr_nb, esp_cpu_intr_desc_t *intr_desc_ret)
     {
-        {1, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //0
-        {1, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //1
-        {1, ESP_CPU_INTR_TYPE_LEVEL,    {0                               }}, //2
-        {1, ESP_CPU_INTR_TYPE_LEVEL,    {0                               }}, //3
-        {1, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //4
-        {1, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //5
-    #if CONFIG_FREERTOS_CORETIMER_0
-        {1, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //6
+        intr_desc_ret->priority = 1;    //Todo: We should make this -1
+        intr_desc_ret->type = ESP_CPU_INTR_TYPE_NA;
+        #if __riscv
+            intr_desc_ret->flags = is_intr_nb_resv(intr_nb) ? ESP_CPU_INTR_DESC_FLAG_RESVD : 0;
+        #else
+            intr_desc_ret->flags = 0;
+        #endif
+    }
+#else
+    typedef struct
+    {
+        int priority;
+        esp_cpu_intr_type_t type;
+        uint32_t flags[SOC_CPU_CORES_NUM];
+    } intr_desc_t;
+
+    #if SOC_CPU_CORES_NUM > 1
+        // Note: We currently only have dual core targets, so the table initializer is hard coded
+        static const intr_desc_t intr_desc_table[SOC_CPU_INTR_NUM] =
+        {
+            {1, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //0
+            {1, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //1
+            {1, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                               }}, //2
+            {1, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                               }}, //3
+            {1, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      0                               }}, //4
+            {1, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //5
+        #if CONFIG_FREERTOS_CORETIMER_0
+            {1, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD     }}, //6
+        #else
+            {1, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_SPECIAL,    ESP_CPU_INTR_DESC_FLAG_SPECIAL  }}, //6
+        #endif
+            {1, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_SPECIAL,    ESP_CPU_INTR_DESC_FLAG_SPECIAL  }}, //7
+            {1, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //8
+            {1, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                               }}, //9
+            {1, ESP_CPU_INTR_TYPE_EDGE,     {0,                                 0                               }}, //10
+            {3, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_SPECIAL,    ESP_CPU_INTR_DESC_FLAG_SPECIAL  }}, //11
+            {1, ESP_CPU_INTR_TYPE_LEVEL,    {0, 0}}, //12
+            {1, ESP_CPU_INTR_TYPE_LEVEL,    {0, 0}}, //13
+            {7, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //14, NMI
+        #if CONFIG_FREERTOS_CORETIMER_1
+            {3, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //15
+        #else
+            {3, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_SPECIAL,    ESP_CPU_INTR_DESC_FLAG_SPECIAL  }}, //15
+        #endif
+            {5, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_SPECIAL,    ESP_CPU_INTR_DESC_FLAG_SPECIAL  }}, //16
+            {1, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                               }}, //17
+            {1, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                               }}, //18
+            {2, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                               }}, //19
+            {2, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                               }}, //20
+            {2, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                               }}, //21
+            {3, ESP_CPU_INTR_TYPE_EDGE,     {ESP_CPU_INTR_DESC_FLAG_RESVD,      0                               }}, //22
+            {3, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                               }}, //23
+            {4, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      0                               }}, //24
+            {4, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //25
+            {5, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //26
+            {3, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //27
+            {4, ESP_CPU_INTR_TYPE_EDGE,     {0,                                 0                               }}, //28
+            {3, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_SPECIAL,    ESP_CPU_INTR_DESC_FLAG_SPECIAL  }}, //29
+            {4, ESP_CPU_INTR_TYPE_EDGE,     {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //30
+            {5, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //31
+        };
     #else
-        {1, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_SPECIAL }}, //6
+        static const intr_desc_t intr_desc_table[SOC_CPU_INTR_NUM] =
+        {
+            {1, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD    }},    //0
+            {1, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD    }},    //1
+            {1, ESP_CPU_INTR_TYPE_LEVEL,    {0                               }},    //2
+            {1, ESP_CPU_INTR_TYPE_LEVEL,    {0                               }},    //3
+            {1, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD    }},    //4
+            {1, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD    }},    //5
+        #if CONFIG_FREERTOS_CORETIMER_0
+            {1, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_RESVD    }},    //6
+        #else
+            {1, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_SPECIAL }},     //6
+        #endif
+            {1, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_SPECIAL }},     //7
+            {1, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD    }},    //8
+            {1, ESP_CPU_INTR_TYPE_LEVEL,    {0                               }},    //9
+            {1, ESP_CPU_INTR_TYPE_EDGE,     {0                               }},    //10
+            {3, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_SPECIAL }},     //11
+            {1, ESP_CPU_INTR_TYPE_LEVEL,    {0                               }},    //12
+            {1, ESP_CPU_INTR_TYPE_LEVEL,    {0                               }},    //13
+            {7, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD    }},    //14, NMI
+        #if CONFIG_FREERTOS_CORETIMER_1
+            {3, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_RESVD    }},    //15
+        #else
+            {3, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_SPECIAL }},     //15
+        #endif
+            {5, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_SPECIAL }},     //16
+            {1, ESP_CPU_INTR_TYPE_LEVEL,    {0                               }},    //17
+            {1, ESP_CPU_INTR_TYPE_LEVEL,    {0                               }},    //18
+            {2, ESP_CPU_INTR_TYPE_LEVEL,    {0                               }},    //19
+            {2, ESP_CPU_INTR_TYPE_LEVEL,    {0                               }},    //20
+            {2, ESP_CPU_INTR_TYPE_LEVEL,    {0                               }},    //21
+            {3, ESP_CPU_INTR_TYPE_EDGE,     {ESP_CPU_INTR_DESC_FLAG_RESVD    }},    //22
+            {3, ESP_CPU_INTR_TYPE_LEVEL,    {0                               }},    //23
+            {4, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD    }},    //24
+            {4, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD    }},    //25
+            {5, ESP_CPU_INTR_TYPE_LEVEL,    {0                               }},    //26
+            {3, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD    }},    //27
+            {4, ESP_CPU_INTR_TYPE_EDGE,     {0                               }},    //28
+            {3, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_SPECIAL }},     //29
+            {4, ESP_CPU_INTR_TYPE_EDGE,     {ESP_CPU_INTR_DESC_FLAG_RESVD    }},    //30
+            {5, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD    }},    //31
+        };
     #endif
-        {1, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_SPECIAL }}, //7
-        {1, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //8
-        {1, ESP_CPU_INTR_TYPE_LEVEL,    {0                               }}, //9
-        {1, ESP_CPU_INTR_TYPE_EDGE,     {0                               }},  //10
-        {3, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_SPECIAL }}, //11
-        {1, ESP_CPU_INTR_TYPE_LEVEL,    {0                               }}, //12
-        {1, ESP_CPU_INTR_TYPE_LEVEL,    {0                               }}, //13
-        {7, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //14, NMI
-    #if CONFIG_FREERTOS_CORETIMER_1
-        {3, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //15
-    #else
-        {3, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_SPECIAL }}, //15
+
+    void esp_cpu_intr_get_desc(int core_id, int intr_nb, esp_cpu_intr_desc_t *intr_desc_ret)
+    {
+        assert(core_id >= 0 && core_id < SOC_CPU_CORES_NUM);
+    #if SOC_CPU_CORES_NUM == 1
+        core_id = 0;    //  If this is a single core target, hard code CPU ID to 0
     #endif
-        {5, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_SPECIAL }}, //16
-        {1, ESP_CPU_INTR_TYPE_LEVEL,    {0                               }}, //17
-        {1, ESP_CPU_INTR_TYPE_LEVEL,    {0                               }}, //18
-        {2, ESP_CPU_INTR_TYPE_LEVEL,    {0                               }}, //19
-        {2, ESP_CPU_INTR_TYPE_LEVEL,    {0                               }}, //20
-        {2, ESP_CPU_INTR_TYPE_LEVEL,    {0                               }}, //21
-        {3, ESP_CPU_INTR_TYPE_EDGE,     {ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //22
-        {3, ESP_CPU_INTR_TYPE_LEVEL,    {0                               }}, //23
-        {4, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //24
-        {4, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //25
-        {5, ESP_CPU_INTR_TYPE_LEVEL,    {0                               }}, //26
-        {3, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //27
-        {4, ESP_CPU_INTR_TYPE_EDGE,     {0                               }}, //28
-        {3, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_SPECIAL }}, //29
-        {4, ESP_CPU_INTR_TYPE_EDGE,     {ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //30
-        {5, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //31
-    };
+
+        intr_desc_ret->priority = intr_desc_table[intr_nb].priority;
+        intr_desc_ret->type = intr_desc_table[intr_nb].type;
+        intr_desc_ret->flags = intr_desc_table[intr_nb].flags[core_id];
+    }
 #endif
-
-void esp_cpu_intr_get_desc(int core_id, int intr_nb, esp_cpu_intr_desc_t *intr_desc_ret)
-{
-    assert(core_id >= 0 && core_id < SOC_CPU_CORES_NUM);
-#if SOC_CPU_CORES_NUM == 1
-    core_id = 0;    //  If this is a single core target, hard code CPU ID to 0
-#endif
-
-    intr_desc_ret->priority = intr_desc_table[intr_nb].priority;
-    intr_desc_ret->type = intr_desc_table[intr_nb].type;
-    intr_desc_ret->flags = intr_desc_table[intr_nb].flags[core_id];
-}
-
-#endif // SOC_CPU_HAS_FLEXIBLE_INTC
 
 /* -------------------------------------------------- Memory Ports -----------------------------------------------------
  *
@@ -857,36 +852,32 @@ void esp_cpu_intr_get_desc(int core_id, int intr_nb, esp_cpu_intr_desc_t *intr_d
         return ESP_OK;
     }
 
-esp_err_t esp_cpu_clear_watchpoint(int wp_nb)
-{
-    /*
-    Todo:
-    - Check if the wp_nb is valid
-    */
-#if __XTENSA__
-    xt_utils_clear_watchpoint(wp_nb);
-#else
-    if (esp_cpu_dbgr_is_attached())
+    esp_err_t esp_cpu_clear_watchpoint(int wp_nb)
     {
-        // See description in esp_cpu_dbgr_is_attached()
-        long args[] = {false, wp_nb};
+        /*
+        Todo:
+        - Check if the wp_nb is valid
+        */
+    #if __XTENSA__
+        xt_utils_clear_watchpoint(wp_nb);
+    #else
+        if (esp_cpu_dbgr_is_attached())
+        {
+            // See description in esp_cpu_dbgr_is_attached()
+            long args[] = {false, wp_nb};
 
-        if (0 == semihosting_call_noerrno(ESP_SEMIHOSTING_SYS_WATCHPOINT_SET, args))
-            return ESP_ERR_INVALID_RESPONSE;
+            if (0 == semihosting_call_noerrno(ESP_SEMIHOSTING_SYS_WATCHPOINT_SET, args))
+                return ESP_ERR_INVALID_RESPONSE;
+        }
+        rv_utils_clear_watchpoint(wp_nb);
+    #endif // __XTENSA__
+        return ESP_OK;
     }
-    rv_utils_clear_watchpoint(wp_nb);
-#endif // __XTENSA__
-    return ESP_OK;
-}
-#endif // SOC_CPU_WATCHPOINTS_NUM > 0
+#endif
 
 /* ------------------------------------------------------ Misc ---------------------------------------------------------
  *
  * ------------------------------------------------------------------------------------------------------------------ */
-#if __XTENSA__ && XCHAL_HAVE_S32C1I && CONFIG_SPIRAM
-    static DRAM_ATTR uint32_t external_ram_cas_lock = 0;
-#endif
-
 bool esp_cpu_compare_and_set(volatile uint32_t *addr, uint32_t compare_value, uint32_t new_value)
 {
 #if __XTENSA__

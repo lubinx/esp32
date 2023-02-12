@@ -29,8 +29,6 @@ idf_component_register(SRCS ${srcs}
         "include/esp_private"
     REQUIRES
         ${requires}
-    LDFRAGMENTS
-        linker.lf
 )
 
 idf_build_get_property(target IDF_TARGET)
