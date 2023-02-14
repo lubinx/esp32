@@ -7,41 +7,22 @@
 #pragma once
 
 #include <features.h>
-#include <stdbool.h>
 #include <stdint.h>
+
+#include "esp_compiler.h"
 #include "soc/soc_caps.h"
 
-#ifdef __XTENSA__
-    #include "xtensa/xtensa_api.h"
-    #include "xt_utils.h"
-#elif __riscv
-    #include "riscv/rv_utils.h"
-#endif
-
-// #include "esp_intr_alloc.h"
-// #include "soc/soc_caps.h"
-
-// #include "esp_err.h"
+// avoid "esp_err.h"
 typedef int esp_err_t;
+// deprecated
+typedef uint32_t esp_cpu_cycle_count_t;
 
-    /**
-     * @brief Interrupt descriptor flags of esp_cpu_intr_desc_t
-     */
-    #define ESP_CPU_INTR_DESC_FLAG_SPECIAL      0x01    /**< The interrupt is a special interrupt (e.g., a CPU timer interrupt) */
-    #define ESP_CPU_INTR_DESC_FLAG_RESVD        0x02    /**< The interrupt is reserved for internal use */
-
-    /**
-     * @brief CPU interrupt handler type
-     */
-    typedef void (*esp_cpu_intr_handler_t)(void *arg);
+#define esp_cpu_get_core_id()           __get_CORE_ID()
+#define esp_cpu_get_cycle_count()       __get_CCOUNT()
+#define esp_cpu_set_cycle_count(CC)     __set_CCOUNT(CC)
+#define esp_cpu_wait_for_intr()         __WFI()
 
 __BEGIN_DECLS
-
-/***************************************************************************/
-/** Atomic
-****************************************************************************/
-extern __attribute__((nonnull, nothrow))
-    bool esp_cpu_compare_and_set(volatile uint32_t *addr, uint32_t compare_value, uint32_t new_value);
 
 /***************************************************************************/
 /** CPU Control
@@ -56,35 +37,10 @@ extern __attribute__((nothrow))
     void esp_cpu_reset(int core_id);
 
 /***************************************************************************/
-/** CPU Registers
-****************************************************************************/
-    typedef uint32_t esp_cpu_cycle_count_t;
-
-#ifdef __XTENSA__
-    #define esp_cpu_get_core_id()       \
-        (int)xt_utils_get_core_id()
-    #define esp_cpu_get_sp()            \
-        xt_utils_get_sp()
-
-    #define esp_cpu_get_cycle_count()   \
-        xt_utils_get_cycle_count()
-    #define esp_cpu_set_cycle_count(cycle_count)    \
-        xt_utils_set_cycle_count(cycle_count)
-#else
-    #define esp_cpu_get_core_id()       \
-        (int)rv_utils_get_core_id()
-    #define esp_cpu_get_sp()            \
-        rv_utils_get_sp()
-
-    #define esp_cpu_get_cycle_count()   \
-        rv_utils_get_cycle_count()
-    #define esp_cpu_set_cycle_count(cycle_count)    \
-        rv_utils_set_cycle_count(cycle_count)
-#endif
-
-/***************************************************************************/
 /** CPU Interrupts
 ****************************************************************************/
+    typedef void (*esp_cpu_intr_handler_t)(void *arg);
+
     enum esp_cpu_intr_type_t
     {
         ESP_CPU_INTR_TYPE_LEVEL     = 0,
@@ -92,6 +48,12 @@ extern __attribute__((nothrow))
         ESP_CPU_INTR_TYPE_NA,
     };
     typedef enum esp_cpu_intr_type_t esp_cpu_intr_type_t;
+
+    /**
+     * @brief Interrupt descriptor flags of esp_cpu_intr_desc_t
+     */
+    #define ESP_CPU_INTR_DESC_FLAG_SPECIAL      0x01    /**< The interrupt is a special interrupt (e.g., a CPU timer interrupt) */
+    #define ESP_CPU_INTR_DESC_FLAG_RESVD        0x02    /**< The interrupt is reserved for internal use */
 
     /**
      * @brief CPU interrupt descriptor
@@ -128,7 +90,7 @@ extern __attribute__((nonnull, nothrow))
         xt_utils_set_vecbase((uintptr_t)ivt)
 
     #define esp_cpu_intr_has_handler(intr_nb)   \
-        xt_int_has_handler(intr_nb, esp_cpu_get_core_id())
+        xt_int_has_handler(intr_nb, __get_CORE_ID())
     #define esp_cpu_intr_set_handler(intr_nb, hdr, arg) \
         xt_set_interrupt_handler(intr_nb, (xt_handler)hdr, arg);
     #define esp_cpu_intr_get_handler_arg(intr_nb)   \
@@ -165,23 +127,6 @@ extern __attribute__((nonnull, nothrow))
     #define esp_cpu_intr_get_enabled_mask() \
         xt_utils_intr_get_enabled_mask()
 
-    static inline bool esp_cpu_get_ps(void)
-    {
-        uint32_t ps_reg = 0;
-        //Get the current value of PS (processor status) register
-        RSR(PS, ps_reg);
-        /*
-        * intlevel = (ps_reg & 0xf);
-        * excm  = (ps_reg >> 4) & 0x1;
-        * CINTLEVEL is max(excm * EXCMLEVEL, INTLEVEL), where EXCMLEVEL is 3.
-        * However, just return true, only intlevel is zero.
-        */
-        return ps_reg & PS_INTLEVEL_MASK;
-    }
-
-    #define esp_cpu_intr_waitfor()      \
-        xt_utils_wait_for_intr()
-
     #define esp_cpu_intr_clear(intr_nb) \
         xthal_set_intclear(1 << intr_nb)
 #else
@@ -192,58 +137,19 @@ extern __attribute__((nonnull, nothrow))
     #define esp_cpu_intr_get_enabled_mask() \
         rv_utils_intr_get_enabled_mask()
 
-    #define esp_cpu_intr_waitfor()      \
-        rv_utils_wait_for_intr()
-
     #define esp_cpu_intr_clear(intr_nb) \
         rv_utils_intr_edge_ack(1 << intr_nb)
 #endif
 
-// cmsis like
-    #define __get_IPSR()                esp_cpu_get_ps()
-    #define __WFI()                     esp_cpu_intr_waitfor()
-
 // esp-idf
-    #define esp_cpu_wait_for_intr()     esp_cpu_intr_waitfor()
     #define esp_cpu_intr_edge_ack(intr_nb)  esp_cpu_intr_clear(intr_nb)
 
 /***************************************************************************/
 /** Debugger
- *      esp_cpu_dbgr_is_attached()
+ *      __dbgr_is_attached()
  *      xt_utils_dbgr_break()
  *      esp_cpu_pc_to_addr()
 ****************************************************************************/
-#ifdef __XTENSA__
-    #define esp_cpu_dbgr_is_attached()  \
-        xt_utils_dbgr_is_attached()
-
-    #define esp_cpu_dbgr_break()        \
-        xt_utils_dbgr_break()
-
-    #define esp_cpu_pc_to_addr(pc)      \
-        ((void *)((pc & 0x3fffffffU) | 0x40000000U))
-
-    /* Both Xtensa and RISC-V have 2-byte instructions, so to get this right we
-     * should decode the preceding instruction as if it is 2-byte, check if it is a call,
-     * else treat it as 3 or 4 byte one. However for the cases where this function is
-     * used, being off by one instruction is usually okay, so this is kept simple for now.
-    */
-    #define esp_cpu_get_caller_addr(return_address) \
-        (return_address - 3)
-#else
-    #define esp_cpu_dbgr_is_attached()  \
-        rv_utils_dbgr_is_attached()
-
-    #define esp_cpu_dbgr_break()        \
-        rv_utils_dbgr_break()
-
-
-    #define esp_cpu_pc_to_addr(pc)      \
-        ((void *)pc)
-    #define esp_cpu_get_caller_addr(return_address) \
-        (return_address - 4)
-#endif
-
 extern __attribute__((nonnull, nothrow))
     esp_err_t esp_cpu_set_breakpoint(int bp_nb, void const *bp_addr);
 extern __attribute__((nothrow))
@@ -261,14 +167,5 @@ extern __attribute__((nonnull, nothrow))
     esp_err_t esp_cpu_set_watchpoint(int wp_nb, void const *wp_addr, size_t size, esp_cpu_watchpoint_trigger_t trigger);
 extern __attribute__((nothrow))
     esp_err_t esp_cpu_clear_watchpoint(int wp_nb);
-
-/***************************************************************************/
-/** Memory Ports
-****************************************************************************/
-/**
- * @brief Configure the CPU to disable access to invalid memory regions
- */
-extern __attribute__((nothrow))
-    void esp_cpu_configure_region_protection(void);
 
 __END_DECLS

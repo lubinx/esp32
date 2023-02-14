@@ -145,8 +145,8 @@ void __ubsan_handle_invalid_builtin(void *data_);
 
 static void __ubsan_maybe_debugbreak(void)
 {
-    if (esp_cpu_dbgr_is_attached())
-        esp_cpu_dbgr_break();
+    if (__dbgr_is_attached())
+        __dbgr_break();
 }
 
 static void __ubsan_default_handler(struct source_location *loc, char const *func)

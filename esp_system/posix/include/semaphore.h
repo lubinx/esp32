@@ -20,7 +20,7 @@
 
     struct __semaphore
     {
-        int dummy[20];
+        int __pad[19];
     };
     typedef struct __semaphore      sem_t;
 
@@ -31,7 +31,7 @@
 
     /* Value returned if `sem_open' failed.  */
 #ifndef SEM_FAILED
-    #define SEM_FAILED                  NULL
+    #define SEM_FAILED                  ((void *)0)
 #endif
 
 __BEGIN_DECLS

@@ -6,7 +6,7 @@ typedef _LOCK_T _lock_t;
 
 struct __lock
 {
-    int __dummy[20];
+    int __pad[20];
 };
 typedef struct __lock   sys_static_lock_t;
 

@@ -60,20 +60,20 @@ extern struct __lock    __lock___arc4random_mutex       __attribute__((alias("__
 
 void __LOCK_retarget(void)
 {
-    xSemaphoreCreateRecursiveMutexStatic((void *)&__lock___sinit_recursive_mutex.__dummy);
-    xSemaphoreCreateRecursiveMutexStatic((void *)&__lock___sfp_recursive_mutex.__dummy);
-    xSemaphoreCreateRecursiveMutexStatic((void *)&__lock___env_recursive_mutex.__dummy);
-    xSemaphoreCreateRecursiveMutexStatic((void *)&__lock___malloc_recursive_mutex.__dummy);
-    xSemaphoreCreateRecursiveMutexStatic((void *)&__lock___atexit_recursive_mutex.__dummy);
+    xSemaphoreCreateRecursiveMutexStatic((void *)&__lock___sinit_recursive_mutex.__pad);
+    xSemaphoreCreateRecursiveMutexStatic((void *)&__lock___sfp_recursive_mutex.__pad);
+    xSemaphoreCreateRecursiveMutexStatic((void *)&__lock___env_recursive_mutex.__pad);
+    xSemaphoreCreateRecursiveMutexStatic((void *)&__lock___malloc_recursive_mutex.__pad);
+    xSemaphoreCreateRecursiveMutexStatic((void *)&__lock___atexit_recursive_mutex.__pad);
 
-    xSemaphoreCreateMutexStatic((void *)&__lock___at_quick_exit_mutex.__dummy);
-    xSemaphoreCreateMutexStatic((void *)&__lock___tz_mutex.__dummy);
-    xSemaphoreCreateMutexStatic((void *)&__lock___dd_hash_mutex.__dummy);
-    xSemaphoreCreateMutexStatic((void *)&__lock___arc4random_mutex.__dummy);
+    xSemaphoreCreateMutexStatic((void *)&__lock___at_quick_exit_mutex.__pad);
+    xSemaphoreCreateMutexStatic((void *)&__lock___tz_mutex.__pad);
+    xSemaphoreCreateMutexStatic((void *)&__lock___dd_hash_mutex.__pad);
+    xSemaphoreCreateMutexStatic((void *)&__lock___arc4random_mutex.__pad);
 
     #if ESP_ROM_HAS_RETARGETABLE_LOCKING
-        xSemaphoreCreateMutexStatic((void *)&s_common_mutex.__dummy);
-        xSemaphoreCreateMutexStatic((void *)&s_common_recursive_mutex.__dummy);
+        xSemaphoreCreateMutexStatic((void *)&s_common_mutex.__pad);
+        xSemaphoreCreateMutexStatic((void *)&s_common_recursive_mutex.__pad);
     #endif
 }
 
@@ -92,17 +92,17 @@ void libc_lock_init_recursive(_LOCK_T *lock)
 
 void libc_lock_sinit(_LOCK_T lock)
 {
-    xSemaphoreCreateMutexStatic((void *)&lock->__dummy);
+    xSemaphoreCreateMutexStatic((void *)&lock->__pad);
 }
 
 void libc__lock_sinit_recursive(_LOCK_T lock)
 {
-    xSemaphoreCreateRecursiveMutexStatic((void *)&lock->__dummy);
+    xSemaphoreCreateRecursiveMutexStatic((void *)&lock->__pad);
 }
 
 void libc_lock_close(_LOCK_T lock)
 {
-    vSemaphoreDelete(lock->__dummy);
+    vSemaphoreDelete(lock->__pad);
 }
 
 void libc_lock_acquire(_LOCK_T lock)
@@ -110,25 +110,25 @@ void libc_lock_acquire(_LOCK_T lock)
     if (! xPortCanYield())
     {
         BaseType_t higher_task_woken = false;
-        if (! xSemaphoreTakeFromISR((void *)&lock->__dummy, &higher_task_woken))
+        if (! xSemaphoreTakeFromISR((void *)&lock->__pad, &higher_task_woken))
         {
             assert(higher_task_woken);
             portYIELD_FROM_ISR();
         }
     }
     else
-        xSemaphoreTake((void *)&lock->__dummy, portMAX_DELAY);
+        xSemaphoreTake((void *)&lock->__pad, portMAX_DELAY);
 }
 
 void libc_lock_acquire_recursive(_LOCK_T lock)
 {
-    xSemaphoreTakeRecursive((void *)&lock->__dummy, portMAX_DELAY);
+    xSemaphoreTakeRecursive((void *)&lock->__pad, portMAX_DELAY);
 }
 
 
 int libc_lock_try_acquire(_LOCK_T lock)
 {
-    if (pdTRUE == xSemaphoreTake((void *)&lock->__dummy, 0))
+    if (pdTRUE == xSemaphoreTake((void *)&lock->__pad, 0))
         return 0;
     else
         return EBUSY;
@@ -136,7 +136,7 @@ int libc_lock_try_acquire(_LOCK_T lock)
 
 int libc_lock_try_acquire_recursive(_LOCK_T lock)
 {
-    if (pdTRUE == xSemaphoreTakeRecursive((void *)&lock->__dummy, 0))
+    if (pdTRUE == xSemaphoreTakeRecursive((void *)&lock->__pad, 0))
         return 0;
     else
         return EBUSY;
@@ -147,18 +147,18 @@ void libc_lock_release(_LOCK_T lock)
     if (! xPortCanYield())
     {
         BaseType_t higher_task_woken = false;
-        xSemaphoreGiveFromISR((void *)&lock->__dummy, &higher_task_woken);
+        xSemaphoreGiveFromISR((void *)&lock->__pad, &higher_task_woken);
 
         if (higher_task_woken)
             portYIELD_FROM_ISR();
     }
     else
-        xSemaphoreGive((void *)&lock->__dummy);
+        xSemaphoreGive((void *)&lock->__pad);
 }
 
 void libc_lock_release_recursive(_LOCK_T lock)
 {
-    xSemaphoreGiveRecursive((void *)&lock->__dummy);
+    xSemaphoreGiveRecursive((void *)&lock->__pad);
 }
 
 void __retarget_lock_init(_LOCK_T *lock)

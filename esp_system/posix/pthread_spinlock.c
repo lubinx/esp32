@@ -2,8 +2,6 @@
 #include <stdbool.h>
 #include <sys/errno.h>
 
-#include "esp_cpu.h"
-
 /***************************************************************************
  *  @implements
  ***************************************************************************/
@@ -28,7 +26,7 @@ int pthread_spin_lock(pthread_spinlock_t *lock)
     if (lock->owner == curr)
         return EDEADLK;
 
-    while (! esp_cpu_compare_and_set(&lock->owner, 0, (uint32_t)curr))
+    while (! __sync_bool_compare_and_swap(&lock->owner, 0, (uint32_t)curr))
         pthread_yield();
 
     return 0;
@@ -41,7 +39,7 @@ int pthread_spin_trylock(pthread_spinlock_t *lock)
     if (lock->owner == curr)
         return EDEADLK;
 
-    if (esp_cpu_compare_and_set((uint32_t *)&lock->owner, 0, (uint32_t)curr))
+    if (__sync_bool_compare_and_swap((uint32_t *)&lock->owner, 0, (uint32_t)curr))
         return 0;
     else
         return EBUSY;

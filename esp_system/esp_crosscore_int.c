@@ -52,7 +52,7 @@ static void IRAM_ATTR esp_crosscore_isr(void *arg) {
 
     //Clear the interrupt first.
 #if CONFIG_IDF_TARGET_ESP32
-    if (esp_cpu_get_core_id() == 0) {
+    if (0 == __get_CORE_ID()) {
         DPORT_WRITE_PERI_REG(DPORT_CPU_INTR_FROM_CPU_0_REG, 0);
     }
     else {
@@ -61,7 +61,7 @@ static void IRAM_ATTR esp_crosscore_isr(void *arg) {
 #elif CONFIG_IDF_TARGET_ESP32S2
     DPORT_WRITE_PERI_REG(DPORT_CPU_INTR_FROM_CPU_0_REG, 0);
 #elif CONFIG_IDF_TARGET_ESP32S3
-    if (esp_cpu_get_core_id() == 0) {
+    if (0 == __get_CORE_ID()) {
         WRITE_PERI_REG(SYSTEM_CPU_INTR_FROM_CPU_0_REG, 0);
     }
     else {
@@ -103,11 +103,11 @@ static void IRAM_ATTR esp_crosscore_isr(void *arg) {
 //on each active core.
 void esp_crosscore_int_init(void) {
     portENTER_CRITICAL(&reason_spinlock);
-    reason[esp_cpu_get_core_id()] = 0;
+    reason[__get_CORE_ID()] = 0;
     portEXIT_CRITICAL(&reason_spinlock);
     esp_err_t err __attribute__((unused)) = ESP_OK;
 #if portNUM_PROCESSORS > 1
-    if (esp_cpu_get_core_id() == 0) {
+    if (0 == __get_CORE_ID()) {
         err = esp_intr_alloc(ETS_FROM_CPU_INTR0_SOURCE, ESP_INTR_FLAG_IRAM, esp_crosscore_isr, (void *)&reason[0], NULL);
     }
     else {

@@ -74,7 +74,7 @@ static void print_state(const void *f)
 
 static void frame_to_panic_info(void *frame, panic_info_t * info, bool pseudo_excause)
 {
-    info->core = esp_cpu_get_core_id();
+    info->core = __get_CORE_ID();
     info->exception = PANIC_EXCEPTION_FAULT;
     info->details = NULL;
     info->reason = "Unknown";
@@ -99,7 +99,7 @@ static void panic_handler(void *frame, bool pseudo_excause)
      * Setup environment and perform necessary architecture/chip specific
      * steps here prior to the system panic handler.
      * */
-    int core_id = esp_cpu_get_core_id();
+    int core_id = __get_CORE_ID();
 
     // If multiple cores arrive at panic handler, save frames for all of them
     g_exc_frames[core_id] = frame;
@@ -130,9 +130,11 @@ static void panic_handler(void *frame, bool pseudo_excause)
 
     esp_ipc_isr_stall_abort();
 
-    if (esp_cpu_dbgr_is_attached())
+    if (__dbgr_is_attached())
     {
     #if __XTENSA__
+        #define esp_cpu_pc_to_addr(pc)  ((void *)((pc & 0x3fffffffU) | 0x40000000U))
+
         if (!(esp_ptr_executable(esp_cpu_pc_to_addr(panic_get_address(frame))) && (panic_get_address(frame) & 0xC0000000U))) {
             /* Xtensa ABI sets the 2 MSBs of the PC according to the windowed call size
              * Incase the PC is invalid, GDB will fail to translate addresses to function names

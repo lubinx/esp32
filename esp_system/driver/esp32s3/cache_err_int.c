@@ -29,7 +29,7 @@ static char const *TAG = "CACHE_ERR";
 
 void esp_cache_err_int_init(void)
 {
-    uint32_t core_id = esp_cpu_get_core_id();
+    uint32_t core_id = __get_CORE_ID();
     ESP_INTR_DISABLE(ETS_CACHEERR_INUM);
 
     // We do not register a handler for the interrupt because it is interrupt

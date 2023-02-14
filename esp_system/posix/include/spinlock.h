@@ -57,11 +57,11 @@ static inline __attribute__((nonnull, nothrow))
         // lock / trylock will be only 0 or FOREVER
         if (0 != timeout)
         {
-            while (! esp_cpu_compare_and_set(&lock->core_id, 0, core_id));
+            while (! __sync_bool_compare_and_swap(&lock->core_id, 0, core_id));
             lock_set = true;
         }
         else
-            lock_set = esp_cpu_compare_and_set(&lock->core_id, 0, core_id);
+            lock_set = __sync_bool_compare_and_swap(&lock->core_id, 0, core_id);
 
         if (lock_set)
             lock->lock_count ++;

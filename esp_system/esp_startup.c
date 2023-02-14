@@ -210,7 +210,7 @@ ESP_SYSTEM_INIT_FN(startup_other_cores, BIT(1), 201)
 *****************************************************************************/
 static void core_intr_matrix_clear(void)
 {
-    uint32_t core_id = esp_cpu_get_core_id();
+    uint32_t core_id = __get_CORE_ID();
 
     for (int i = 0; i < ETS_MAX_INTR_SOURCE; i++)
         esp_rom_route_intr_matrix(core_id, i, ETS_INVALID_INUM);
@@ -237,7 +237,7 @@ static void do_global_ctors(void)
 
 static void do_system_init_fn(void)
 {
-    int core_id = esp_cpu_get_core_id();
+    int core_id = __get_CORE_ID();
 
     for (struct __esp_init_fn *p = &_esp_system_init_fn_array_start;
         p < &_esp_system_init_fn_array_end;

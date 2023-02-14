@@ -435,7 +435,7 @@ static void IRAM_ATTR shared_intr_isr(void *arg)
                 traceISR_ENTER(sh_vec->source + ETS_INTERNAL_INTR_SOURCE_OFF);
                 sh_vec->isr(sh_vec->arg);
                 // check if we will return to scheduler or to interrupted task after ISR
-                if (!os_task_switch_is_pended(esp_cpu_get_core_id())) {
+                if (!os_task_switch_is_pended(__get_CORE_ID())) {
                     traceISR_EXIT();
                 }
             }
@@ -456,7 +456,7 @@ static void IRAM_ATTR non_shared_intr_isr(void *arg)
     // when CONFIG_APPTRACE_SV_ENABLE = 0 ISRs for non-shared IRQs are called without spinlock
     ns_isr_arg->isr(ns_isr_arg->isr_arg);
     // check if we will return to scheduler or to interrupted task after ISR
-    if (!os_task_switch_is_pended(esp_cpu_get_core_id())) {
+    if (!os_task_switch_is_pended(__get_CORE_ID())) {
         traceISR_EXIT();
     }
     portEXIT_CRITICAL_ISR(&spinlock);
@@ -469,7 +469,7 @@ esp_err_t esp_intr_alloc_intrstatus(int source, int flags, uint32_t intrstatusre
 {
     intr_handle_data_t *ret=NULL;
     int force = -1;
-    ESP_EARLY_LOGV(TAG, "esp_intr_alloc_intrstatus (cpu %u): checking args", esp_cpu_get_core_id());
+    ESP_EARLY_LOGV(TAG, "esp_intr_alloc_intrstatus (cpu %u): checking args", __get_CORE_ID());
     //Shared interrupts should be level-triggered.
     if ((flags & ESP_INTR_FLAG_SHARED) && (flags & ESP_INTR_FLAG_EDGE)) {
         return ESP_ERR_INVALID_ARG;
@@ -509,7 +509,7 @@ esp_err_t esp_intr_alloc_intrstatus(int source, int flags, uint32_t intrstatusre
             flags |= ESP_INTR_FLAG_LOWMED;
         }
     }
-    ESP_EARLY_LOGV(TAG, "esp_intr_alloc_intrstatus (cpu %u): Args okay. Resulting flags 0x%X", esp_cpu_get_core_id(), flags);
+    ESP_EARLY_LOGV(TAG, "esp_intr_alloc_intrstatus (cpu %u): Args okay. Resulting flags 0x%X", __get_CORE_ID(), flags);
 
     //Check 'special' interrupt sources. These are tied to one specific interrupt, so we
     //have to force get_free_int to only look at that.
@@ -539,7 +539,7 @@ esp_err_t esp_intr_alloc_intrstatus(int source, int flags, uint32_t intrstatusre
     }
 
     portENTER_CRITICAL(&spinlock);
-    uint32_t cpu = esp_cpu_get_core_id();
+    uint32_t cpu = __get_CORE_ID();
     //See if we can find an interrupt that matches the flags.
     int intr = get_available_int(flags, cpu, force, source);
     if (intr == -1) {
@@ -700,7 +700,7 @@ esp_err_t esp_intr_free(intr_handle_t handle)
 
 #if !CONFIG_FREERTOS_UNICORE
     //Assign this routine to the core where this interrupt is allocated on.
-    if (handle->vector_desc->cpu != esp_cpu_get_core_id()) {
+    if (handle->vector_desc->cpu != __get_CORE_ID()) {
         esp_err_t ret = esp_ipc_call_blocking(handle->vector_desc->cpu, &esp_intr_free_cb, (void *)handle);
         return ret == ESP_OK ? ESP_OK : ESP_FAIL;
     }
@@ -802,7 +802,7 @@ esp_err_t IRAM_ATTR esp_intr_enable(intr_handle_t handle)
         esp_rom_route_intr_matrix(handle->vector_desc->cpu, source, handle->vector_desc->intno);
     } else {
         //Re-enable using cpu int ena reg
-        if (handle->vector_desc->cpu != esp_cpu_get_core_id()) {
+        if (handle->vector_desc->cpu != __get_CORE_ID()) {
             portEXIT_CRITICAL_SAFE(&spinlock);
             return ESP_ERR_INVALID_ARG; //Can only enable these ints on this cpu
         }
@@ -844,7 +844,7 @@ esp_err_t IRAM_ATTR esp_intr_disable(intr_handle_t handle)
         }
     } else {
         //Disable using per-cpu regs
-        if (handle->vector_desc->cpu != esp_cpu_get_core_id()) {
+        if (handle->vector_desc->cpu != __get_CORE_ID()) {
             portEXIT_CRITICAL_SAFE(&spinlock);
             return ESP_ERR_INVALID_ARG; //Can only enable these ints on this cpu
         }
@@ -858,7 +858,7 @@ void IRAM_ATTR esp_intr_noniram_disable(void)
 {
     portENTER_CRITICAL_SAFE(&spinlock);
     uint32_t oldint;
-    uint32_t cpu = esp_cpu_get_core_id();
+    uint32_t cpu = __get_CORE_ID();
     uint32_t non_iram_ints = non_iram_int_mask[cpu];
     if (non_iram_int_disabled_flag[cpu]) {
         abort();
@@ -876,7 +876,7 @@ void IRAM_ATTR esp_intr_noniram_disable(void)
 void IRAM_ATTR esp_intr_noniram_enable(void)
 {
     portENTER_CRITICAL_SAFE(&spinlock);
-    uint32_t cpu = esp_cpu_get_core_id();
+    uint32_t cpu = __get_CORE_ID();
     int non_iram_ints = non_iram_int_disabled[cpu];
     if (!non_iram_int_disabled_flag[cpu]) {
         abort();

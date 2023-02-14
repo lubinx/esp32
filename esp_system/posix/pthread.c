@@ -479,7 +479,7 @@ int pthread_once(pthread_once_t *once_control, void (*init_routine)(void))
     }
 
     // Check if compare and set was successful
-    if (esp_cpu_compare_and_set((volatile uint32_t *)&once_control->init_executed, 0, 1)) {
+    if (__sync_bool_compare_and_swap((volatile uint32_t *)&once_control->init_executed, 0, 1)) {
         init_routine();
     }
 
