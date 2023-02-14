@@ -13,26 +13,24 @@
   the specific language governing rights and limitations under the License.
 ****************************************************************************/
 #include <sys/errno.h>
+#include "semaphore.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 
-#include "semaphore.h"
-
 static_assert(sizeof(struct __semaphore) != sizeof(StaticSemaphore_t), "sizeof(struct __semaphore) != sizeof(StaticSemaphore_t)");
-
 
 /***************************************************************************
  *  @implements
  ***************************************************************************/
 int sem_init(sem_t *sema, int pshared, unsigned int value)
 {
-    if (SEM_VALUE_MAX < value)
-        return __set_errno_neg(EINVAL);
     if (pshared)
         return __set_errno_neg(ENOSYS);
+    if (SEM_VALUE_MAX < value)
+        return __set_errno_neg(EINVAL);
 
-    if (NULL == xSemaphoreCreateCountingStatic(value, 0, (void *)sema))
+    if (NULL == xSemaphoreCreateCountingStatic(value, 0, (void *)&sema->dummy))
         return __set_errno_neg(ENOMEM);
     else
         return 0;
@@ -40,7 +38,7 @@ int sem_init(sem_t *sema, int pshared, unsigned int value)
 
 int sem_destroy(sem_t *sema)
 {
-    vSemaphoreDelete((void *)sema);
+    vSemaphoreDelete((void *)&sema->dummy);
     return 0;
 }
 
@@ -64,18 +62,20 @@ int sem_unlink(char const *name)
 
 int sem_wait(sem_t *sema)
 {
-    xSemaphoreTake((void *)sema, portMAX_DELAY);
-    return 0;
+    if (pdTRUE == xSemaphoreTake((void *)&sema->dummy, portMAX_DELAY))
+        return 0;
+    else
+        return __set_errno_neg(EINTR);  // REVIEW: EINTR?
 }
 
 int sem_timedwait(sem_t *sema, struct timespec const *spec)
 {
-    return sem_timedwait_ms((void *)sema, (spec->tv_sec * 1000 + spec->tv_nsec / 1000000) / portTICK_PERIOD_MS);
+    return sem_timedwait_ms(sema, (spec->tv_sec * 1000 + spec->tv_nsec / 1000000) / portTICK_PERIOD_MS);
 }
 
 int sem_timedwait_ms(sem_t *sema, unsigned int millisecond)
 {
-    if (pdTRUE == xSemaphoreTake((void *)sema, millisecond / portTICK_PERIOD_MS))
+    if (pdTRUE == xSemaphoreTake((void *)&sema->dummy, millisecond / portTICK_PERIOD_MS))
         return 0;
     else
         return __set_errno_neg(EAGAIN);
@@ -83,7 +83,7 @@ int sem_timedwait_ms(sem_t *sema, unsigned int millisecond)
 
 int sem_post(sem_t *sema)
 {
-    if (pdTRUE == xSemaphoreGive((void *)sema))
+    if (pdTRUE == xSemaphoreGive(&sema->dummy))
         return 0;
     else
         return __set_errno_neg(EOVERFLOW);
@@ -91,6 +91,6 @@ int sem_post(sem_t *sema)
 
 int sem_getvalue(sem_t *sema, int *val)
 {
-    *val = uxSemaphoreGetCount((void *)sema);
+    *val = uxSemaphoreGetCount(&sema->dummy);
     return 0;
 }

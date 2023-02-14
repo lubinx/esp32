@@ -57,8 +57,6 @@ static struct _reent __reent = {0};
 void __libc_retarget_init(void)
 {
     heap_caps_init();
-    // esp_timer_early_init();
-
     __LOCK_retarget();
 
     #if CONFIG_IDF_TARGET_ESP32

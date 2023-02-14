@@ -15,9 +15,11 @@ __BEGIN_DECLS
 static inline
     void esp_reent_init(struct _reent *r)
     {
-        /**
-         *  REVIEW: SOO..hardcoded esp_reent_init() instead of __sinit()?
-        */
+        // soo..stupid.. this will only need to tell newlib reent is not initialized
+        r->__sdidinit = 0;
+
+        /*
+        //  REVIEW: SOO..hardcoded esp_reent_init() instead of __sinit()?
         memset(r, 0, sizeof(*r));
 
         r->_stdout = _GLOBAL_REENT->_stdout;
@@ -26,12 +28,8 @@ static inline
 
         extern void _cleanup_r(struct _reent *r); // REVIEW: import from where?
         r->__cleanup = &_cleanup_r;
-        /*
-        r->__sglue._next = NULL;
-        r->__sglue._niobs = 0;
-        r->__sglue._iobs = NULL;
-        */
         r->__sdidinit = 1;
+        */
     }
 
 __END_DECLS

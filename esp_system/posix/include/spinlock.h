@@ -90,4 +90,14 @@ static inline __attribute__((nonnull, nothrow))
         #endif
     }
 
+static inline
+    void spin_lock(spinlock_t *lock)
+    {
+        spinlock_acquire(lock, SPINLOCK_WAIT_FOREVER);
+    }
+
+static inline
+    void spin_unlock(spinlock_t *lock) __attribute__((alias("spinlock_release")));
+
+
 __END_DECLS

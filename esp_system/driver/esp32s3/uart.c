@@ -391,7 +391,6 @@ static ssize_t UART_write(int fd, void const *buf, size_t count)
         else
             retval = written;
 
-        // esp_rom_printf("\n%lu\n", written);
         sem_post(&context->write_rdy);
     }
     return retval;
@@ -439,8 +438,8 @@ static void UART_IntrHandler(struct UART_context *context)
 
     if (UART_INTR_RXFIFO_FULL & flags)
     {
-        sem_post(&context->read_rdy);
         dev->int_ena.rxfifo_full_int_ena = 0;
+        sem_post(&context->read_rdy);
     }
 
     if (UART_INTR_TX_DONE & flags)

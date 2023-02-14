@@ -165,6 +165,20 @@ extern __attribute__((nonnull, nothrow))
     #define esp_cpu_intr_get_enabled_mask() \
         xt_utils_intr_get_enabled_mask()
 
+    static inline bool esp_cpu_get_ps(void)
+    {
+        uint32_t ps_reg = 0;
+        //Get the current value of PS (processor status) register
+        RSR(PS, ps_reg);
+        /*
+        * intlevel = (ps_reg & 0xf);
+        * excm  = (ps_reg >> 4) & 0x1;
+        * CINTLEVEL is max(excm * EXCMLEVEL, INTLEVEL), where EXCMLEVEL is 3.
+        * However, just return true, only intlevel is zero.
+        */
+        return ps_reg & PS_INTLEVEL_MASK;
+    }
+
     #define esp_cpu_intr_waitfor()      \
         xt_utils_wait_for_intr()
 
@@ -186,11 +200,12 @@ extern __attribute__((nonnull, nothrow))
 #endif
 
 // cmsis like
-    #define __WFI                       esp_cpu_intr_waitfor
+    #define __get_IPSR()                esp_cpu_get_ps()
+    #define __WFI()                     esp_cpu_intr_waitfor()
 
 // esp-idf
-    #define esp_cpu_wait_for_intr       esp_cpu_intr_waitfor
-    #define esp_cpu_intr_edge_ack       esp_cpu_intr_clear
+    #define esp_cpu_wait_for_intr()     esp_cpu_intr_waitfor()
+    #define esp_cpu_intr_edge_ack(intr_nb)  esp_cpu_intr_clear(intr_nb)
 
 /***************************************************************************/
 /** Debugger

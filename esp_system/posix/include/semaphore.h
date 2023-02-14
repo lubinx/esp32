@@ -34,7 +34,6 @@
     #define SEM_FAILED                  NULL
 #endif
 
-
 __BEGIN_DECLS
 
     /**
