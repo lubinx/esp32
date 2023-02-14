@@ -1,15 +1,17 @@
 #include <unistd.h>
-#include <string.h>
 #include <stdio.h>
+#include <string.h>
 #include <pthread.h>
 #include <semaphore.h>
 
-#include "spinlock.h"
 #include "clk_tree.h"
+#include "esp_cpu.h"
 #include "esp_log.h"
 #include "esp_heap_caps.h"
 
 #include "uart.h"
+
+#pragma GCC diagnostic ignored "-Wunused-function"
 
 static void *blink_thread1(void *arg);
 static void *blink_thread2(void *arg);
@@ -22,7 +24,8 @@ static sem_t sema;
 
 extern "C" void __attribute__((weak)) app_main(void)
 {
-    int fd = UART_createfd(0, 115200, paNone, 1);;
+    int fd = UART_createfd(0, 115200, paNone, 1);
+    (void)fd;
 
     printf("Minimum free heap size: %d bytes\n", heap_caps_get_minimum_free_size(MALLOC_CAP_DEFAULT));
     printf("pll frequency: %llu MHz\n", clk_tree_pll_freq() / 1000000);
@@ -36,13 +39,11 @@ extern "C" void __attribute__((weak)) app_main(void)
     if (clk_tree_module_is_enable(PERIPH_UART2_MODULE))
         printf("uart2: %lu bps\n", UART_get_baudrate(&UART2));
 
-    if (0 > fd)
-    {
-        printf("err: %d\n", errno);
-    }
-
     // printf("uart1: %lu bps\n", UART_get_baudrate(&UART1));
     // printf("uart2: %lu bps\n", UART_get_baudrate(&UART2));
+
+    fflush(stdout);
+
     printf("semaphore init...\n");
     sem_init(&sema, 0, 10);
 
@@ -53,33 +54,20 @@ extern "C" void __attribute__((weak)) app_main(void)
     catch(char const *e)
     {
         printf("catched c++ exception: %s\n", e);
-        fflush(stdout);
-    }
-    printf("hello world!\n");
-    msleep(100);
-
-    char const *ff = "int UART_fifo_write(uart_dev_t *dev, void const *buf, unsigned count)\n\
-int UART_fifo_write(uart_dev_t *dev, void const *buf, unsigned count)\n\
-int UART_fifo_write(uart_dev_t *dev, void const *buf, unsigned count)\n";
-
-    write(fd, ff, strlen(ff));
-    printf(ff);
-    while (0 != UART0.status.txfifo_cnt);
-    printf(ff);
-    while (0 != UART0.status.txfifo_cnt);
-
-    FILE *f = fopen("foo", "w+");
-    if (f)
-    {
     }
 
-    while (1)
-    {
-        uint8_t ch;
+    char const *long_text =
+"1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890\n\
+1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890\n\
+1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890\n\
+1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890\n\n\n";
 
-        read(fd, &ch, sizeof(ch));
-        write(fd, &ch, sizeof(ch));
-    }
+    printf(long_text);
+    printf(long_text);
+    fflush(stdout);
+
+    // direct io
+    writebuf(fd, long_text, strlen(long_text));
 
     /*
     pthread_mutexattr_t attr;
@@ -97,7 +85,7 @@ int UART_fifo_write(uart_dev_t *dev, void const *buf, unsigned count)\n";
     {
         sem_post(&sema);
 
-        printf("thread/cpu (0 <=> %d)\n", esp_cpu_get_core_id());
+        printf("thread/cpu (0 <=> %d)\n", __get_CORE_ID());
         fflush(stdout);
 
         msleep(500);
@@ -110,8 +98,10 @@ static void *blink_thread1(void *arg)
 
     while (true)
     {
-        printf("thread/cpu (1 <=> %d)\n", esp_cpu_get_core_id());
-        // fflush(stdout);
+        sem_post(&sema);
+
+        printf("thread/cpu (1 <=> %d)\n", __get_CORE_ID());
+        fflush(stdout);
 
         msleep(600);
         /*
@@ -128,8 +118,8 @@ static void *blink_thread2(void *arg)
 
     while (true)
     {
-        printf("thread/cpu (2 <=> %d)\n", esp_cpu_get_core_id());
-        // fflush(stdout);
+        printf("thread/cpu (2 <=> %d)\n", __get_CORE_ID());
+        fflush(stdout);
 
         sem_timedwait_ms(&sema, 600);
     }
@@ -141,7 +131,7 @@ static void *blink_thread3(void *arg)
 
     while (true)
     {
-        printf("thread/cpu (3 <=> %d)\n", esp_cpu_get_core_id());
+        printf("thread/cpu (3 <=> %d)\n", __get_CORE_ID());
         fflush(stdout);
 
         msleep(800);
