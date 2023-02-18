@@ -34,10 +34,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 )
 target_sources(${PROJECT_NAME} PRIVATE
     "${IDF_PATH}/components/hal/cache_hal.c"
-    "${IDF_PATH}/components/hal/mmu_hal.c"
-    "${IDF_PATH}/components/hal/mpu_hal.c"
     "${IDF_PATH}/components/esp_rom/patches/esp_rom_sys.c"
-    "${IDF_PATH}/components/bootloader_support/src/bootloader_mem.c"
     "${IDF_PATH}/components/bootloader_support/src/${IDF_TARGET}/bootloader_soc.c"
 )
 target_link_options(${PROJECT_NAME} PRIVATE ${LINK_OPTIONS})

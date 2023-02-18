@@ -16,9 +16,10 @@
     SRAM_TEXT_OVERLAPPED_START =    0x40378000;
     SRAM_ESP_SYSTEM_START =         0x3FCE9710;     /* see appendix */
 
-    MMU_PAGE_SIZE =                 CONFIG_MMU_PAGE_SIZE;
     ICACHE_SIZE =                   CONFIG_ESP32S3_INSTRUCTION_CACHE_SIZE;
     DCACHE_SIZE =                   CONFIG_ESP32S3_DATA_CACHE_SIZE;
+
+    MMU_PAGE_SIZE =                 0x10000;        /* this is fixed */
 
 #ifdef CONFIG_ULP_COPROC_RESERVE_MEM
     ULP_RESERVED_RTC_SLOW_SIZE =    CONFIG_ULP_COPROC_RESERVE_MEM;

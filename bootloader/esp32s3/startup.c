@@ -2,22 +2,18 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "esp_attr.h"
+#include "soc.h"
+
+#include "esp_app_format.h"
 #include "esp_rom_sys.h"
 #include "esp_rom_uart.h"
+#include "esp_log.h"
 
-#include "soc.h"
+#include "bootloader_soc.h"
+
 #include "hal/cache_hal.h"
 #include "hal/cache_ll.h"
 #include "hal/mmu_ll.h"
-#include "hal/mmu_hal.h"
-#include "hal/wdt_hal.h"
-
-#include "bootloader_soc.h"
-#include "bootloader_mem.h"
-
-#include "esp_app_format.h"
-#include "esp_log.h"
 
 static char const *TAG = "bootloader";
 
@@ -40,7 +36,7 @@ extern void rom_config_data_cache_mode(uint32_t cfg_cache_size, uint8_t cfg_cach
 /****************************************************************************
  *  consts
 *****************************************************************************/
-#define FLASH_READ_MMU_VADDR            (SOC_DROM_HIGH - CONFIG_MMU_PAGE_SIZE)
+#define FLASH_READ_MMU_VADDR            (SOC_DROM_HIGH - MMU_PAGE_SIZE)
 
 #define MEMORY_REGION_TAG(ADDR)         (\
     (SOC_IRAM_HIGH >= ADDR && SOC_IRAM_LOW <= ADDR) ? "IRAM" :  \
@@ -64,7 +60,6 @@ struct flash_segment_t
  *  local
 *****************************************************************************/
 static kernel_entry_t KERNEL_load(uintptr_t flash_location);
-
 static ssize_t FLASH_read(uintptr_t flash_location, void *buf, size_t bufsize);
 static void MAP_flash_segment(struct flash_segment_t *seg);
 
@@ -100,12 +95,11 @@ void __attribute__((noreturn)) Reset_Handler(void)
     bootloader_ana_bod_reset_config(true);
     bootloader_ana_clock_glitch_reset_config(false);
 
-    bootloader_init_mem();
-    // bootloader_clock_configure();
-
     memset(&__bss_start__, 0, (uintptr_t)(&__bss_end__ - &__bss_start__) * sizeof(__bss_start__));
 
-    mmu_hal_init();
+    mmu_ll_unmap_all(0);
+    mmu_ll_unmap_all(1);
+
     cache_hal_init();
 
     #if CONFIG_ESP32S2_INSTRUCTION_CACHE_WRAP || CONFIG_ESP32S2_DATA_CACHE_WRAP || \
@@ -130,21 +124,14 @@ void __attribute__((noreturn)) Reset_Handler(void)
     ESP_LOGI(TAG, "entry => %p\n", entry);
 
     // disable RWDT flashboot protection.
-    wdt_hal_context_t rwdt_ctx =
-        #if CONFIG_IDF_TARGET_ESP32C6 // TODO: IDF-5653
-            {.inst = WDT_RWDT, .rwdt_dev = &LP_WDT};
-        #else
-            {.inst = WDT_RWDT, .rwdt_dev = &RTCCNTL};
-        #endif
-    wdt_hal_write_protect_disable(&rwdt_ctx);
-    wdt_hal_set_flashboot_en(&rwdt_ctx, false);
-    wdt_hal_write_protect_enable(&rwdt_ctx);
+    RTCCNTL.wdt_wprotect = WDT_UNLOCK_VALUE;
+    RTCCNTL.wdt_config0.flashboot_mod_en = 0;
+    RTCCNTL.wdt_wprotect = WDT_LOCK_VALUE;
 
     // disable MWDT0 flashboot protection. But only after we've enabled the RWDT first so that there's not gap in WDT protection.
-    wdt_hal_context_t mwdt_ctx = {.inst = WDT_MWDT0, .mwdt_dev = &TIMERG0};
-    wdt_hal_write_protect_disable(&mwdt_ctx);
-    wdt_hal_set_flashboot_en(&mwdt_ctx, false);
-    wdt_hal_write_protect_enable(&mwdt_ctx);
+    TIMERG0.wdtwprotect.wdt_wkey = WDT_UNLOCK_VALUE;
+    TIMERG0.wdtconfig0.wdt_flashboot_mod_en = 0;
+    TIMERG0.wdtwprotect.wdt_wkey = WDT_LOCK_VALUE;
 
     entry();
 }
@@ -254,7 +241,7 @@ static kernel_entry_t KERNEL_load(uintptr_t flash_location)
     /*
     extern uint32_t Cache_Set_IDROM_MMU_Size(uint32_t irom_size, uint32_t drom_size);
     {
-        uint32_t cache_mmu_irom_size = text_seg.aligned_size / CONFIG_MMU_PAGE_SIZE * sizeof(uint32_t);
+        uint32_t cache_mmu_irom_size = text_seg.aligned_size / MMU_PAGE_SIZE * sizeof(uint32_t);
         Cache_Set_IDROM_MMU_Size(cache_mmu_irom_size, CACHE_DROM_MMU_MAX_END - cache_mmu_irom_size);
     }
 
@@ -273,8 +260,8 @@ static kernel_entry_t KERNEL_load(uintptr_t flash_location)
         #endif
 
         Cache_Set_IDROM_MMU_Info(
-            text_seg.aligned_size / CONFIG_MMU_PAGE_SIZE,
-            ro_seg.aligned_size / CONFIG_MMU_PAGE_SIZE,
+            text_seg.aligned_size / MMU_PAGE_SIZE,
+            ro_seg.aligned_size / MMU_PAGE_SIZE,
             ro_seg.hdr.load_addr, ro_seg.hdr.load_addr + ro_seg.hdr.data_len,
             s_instr_flash2spiram_off,
             s_rodata_flash2spiram_off
@@ -300,7 +287,7 @@ kernel_load_error:
 static ssize_t FLASH_read(uintptr_t flash_location, void *buf, size_t bufsize)
 {
     static uintptr_t current_paddr = (uintptr_t)-1;
-    uint32_t paddr = mmu_ll_format_paddr(0, flash_location);
+    uint32_t paddr = mmu_ll_format_paddr(0, flash_location, 0);
 
     if (current_paddr != paddr)
     {
@@ -312,10 +299,10 @@ static ssize_t FLASH_read(uintptr_t flash_location, void *buf, size_t bufsize)
         cache_hal_enable(CACHE_TYPE_DATA);
     }
 
-    off_t offset = flash_location & (CONFIG_MMU_PAGE_SIZE - 1);
+    off_t offset = flash_location & (MMU_PAGE_SIZE - 1);
     void *src = (void *)(FLASH_READ_MMU_VADDR + offset);
 
-    int bytes_remain = CONFIG_MMU_PAGE_SIZE - offset;
+    int bytes_remain = MMU_PAGE_SIZE - offset;
     bufsize = bufsize < (size_t)bytes_remain ? bufsize : (size_t)bytes_remain;
 
     memcpy(buf, src, bufsize);
@@ -324,15 +311,15 @@ static ssize_t FLASH_read(uintptr_t flash_location, void *buf, size_t bufsize)
 
 static void MAP_flash_segment(struct flash_segment_t *seg)
 {
-    unsigned offset = seg->location & (CONFIG_MMU_PAGE_SIZE - 1);
+    unsigned offset = seg->location & (MMU_PAGE_SIZE - 1);
 
-    seg->aligned_vaddr = seg->hdr.load_addr & ~((uintptr_t)CONFIG_MMU_PAGE_SIZE - 1);
-    seg->aligned_size = (seg->hdr.data_len + offset + CONFIG_MMU_PAGE_SIZE - 1) & ~((uintptr_t)CONFIG_MMU_PAGE_SIZE - 1);
+    seg->aligned_vaddr = seg->hdr.load_addr & ~((uintptr_t)MMU_PAGE_SIZE - 1);
+    seg->aligned_size = (seg->hdr.data_len + offset + MMU_PAGE_SIZE - 1) & ~((uintptr_t)MMU_PAGE_SIZE - 1);
 
-    int pages = (int)seg->aligned_size / CONFIG_MMU_PAGE_SIZE;
+    int pages = (int)seg->aligned_size / MMU_PAGE_SIZE;
 
     uint32_t entry_id = mmu_ll_get_entry_id(0, seg->aligned_vaddr);
-    uint32_t paddr = mmu_ll_format_paddr(0, seg->location);
+    uint32_t paddr = mmu_ll_format_paddr(0, seg->location, 0);
 
     while (pages)
     {
