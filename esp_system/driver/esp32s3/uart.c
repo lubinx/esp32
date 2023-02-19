@@ -140,7 +140,7 @@ void UART_initialize(void)
     esp_intr_alloc(ETS_UART2_INTR_SOURCE, 0, UART2_IntrHandler, &uart_context[2], &uart_context[2].intr_hdl);
 }
 
-int UART_createfd(int nb, uint32_t bps, parity_t parity, uint8_t stop_bits)
+int UART_createfd(int nb, uint32_t bps, enum UART_parity_t parity, enum UART_stopbits_t stopbits)
 {
     if (SOC_UART_NUM < (unsigned)nb)
         return __set_errno_neg(EINVAL);
@@ -219,21 +219,21 @@ int UART_configure(uart_dev_t *dev, uart_sclk_sel_t sclk, uint32_t bps, parity_t
     // 8 bits only
     dev->conf0.bit_num = UART_DATA_8_BITS;
 
-    if (paNone != parity)
+    if (UART_PARITY_NONE != parity)
     {
         switch ((parity))
         {
         default:
             retval = EINVAL;
             goto uart_configure_fail_exit;
-        case paNone:
+        case UART_PARITY_NONE:
             dev->conf0.parity_en = 0;
             break;
-        case paOdd:
+        case UART_PARITY_ODD:
             dev->conf0.parity = UART_PARITY_ODD;
             dev->conf0.parity_en = 1;
             break;
-        case paEven:
+        case UART_PARITY_EVEN:
             dev->conf0.parity = UART_PARITY_EVEN;
             dev->conf0.parity_en = 1;
             break;

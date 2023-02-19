@@ -1,12 +1,16 @@
+#ifndef __ESP32S3_SOC_H
+#define __ESP32S3_SOC_H                 1
+
 #include "soc/soc_caps.h"
 
-// wdt lock/unlock values
-#define WDT_LOCK_VALUE                  (0)
-#define WDT_UNLOCK_VALUE                (0x50D83AA1)
+// wdt
+    // wdt lock/unlock values
+    #define WDT_LOCK_VALUE                  (0)
+    #define WDT_UNLOCK_VALUE                (0x50D83AA1)
 
 #include "soc/ext_mem_defs.h"
-// mmu page size is fixed 64k, not depends sdkconfig.h
-#define MMU_PAGE_SIZE                   (0x10000)
+    // mmu page size is fixed 64k, not depends sdkconfig.h
+    #define MMU_PAGE_SIZE               (0x10000)
 
 // struct
 #include "soc/apb_ctrl_struct.h"
@@ -98,5 +102,5 @@
 #include "soc/uart_pins.h"
 #include "soc/usb_pins.h"
 
-
+#endif
 

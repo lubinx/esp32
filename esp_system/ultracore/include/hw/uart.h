@@ -19,7 +19,7 @@
 #include <stdint.h>
 
 __BEGIN_DECLS
-    typedef enum {paNone, paOdd, paEven} parity_t;
+    typedef enum {UART_PARITY_NONE, UART_PARITY_ODD, UART_PARITY_EVEN} parity_t;
 
     /**
      *  create uart fd
@@ -28,7 +28,7 @@ __BEGIN_DECLS
      *      0, 1... must select by PIN configuration, its depends on driver implementation
      */
 extern __attribute__((nothrow))
-    int UART_createfd(int nb, uint32_t bps, parity_t parity, uint8_t stop_bits);
+    int UART_createfd(int nb, uint32_t bps, enum UART_parity_t parity, enum UART_stopbits_t stopbits);
 
 __END_DECLS
 #endif

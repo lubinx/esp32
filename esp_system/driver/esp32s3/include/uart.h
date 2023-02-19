@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __ESP32S3_UART_H
+#define __ESP32S3_UART_H                1
 
 #include <features.h>
 
@@ -91,3 +92,4 @@ static inline
     }
 
 __END_DECLS
+#endif

@@ -5,6 +5,7 @@
 #include <semaphore.h>
 
 #include "clk_tree.h"
+#include "gpio.h"
 #include "esp_cpu.h"
 #include "esp_log.h"
 #include "esp_heap_caps.h"
@@ -24,7 +25,7 @@ static sem_t sema;
 
 extern "C" void __attribute__((weak)) app_main(void)
 {
-    int fd = UART_createfd(0, 115200, paNone, 1);
+    int fd = UART_createfd(0, 115200, UART_PARITY_NONE, UART_STOP_BITS_ONE);
     (void)fd;
 
     printf("Minimum free heap size: %d bytes\n", heap_caps_get_minimum_free_size(MALLOC_CAP_DEFAULT));
