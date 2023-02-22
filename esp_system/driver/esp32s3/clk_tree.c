@@ -37,7 +37,7 @@ void clk_tree_initialize(void)
         rtc_clk_cpu_freq_set_config(&new_config);
 
     // Re calculate the ccount to make time calculation correct.
-    // esp_cpu_set_cycle_count((uint64_t)esp_cpu_get_cycle_count() * new_freq_mhz / old_freq_mhz);
+    // __set_CCOUNT((uint64_t)__get_CCOUNT() * new_freq_mhz / old_freq_mhz);
 
     /* Disable some peripheral clocks. */
     uint32_t gate = SYSTEM_WDG_CLK_EN |

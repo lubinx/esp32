@@ -6,7 +6,6 @@
 
 #include "sdkconfig.h"
 #include "esp_err.h"
-#include "eri.h"
 #include "xtensa-debug-module.h"
 #include "xt_trax.h"
 

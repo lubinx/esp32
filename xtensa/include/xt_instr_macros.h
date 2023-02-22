@@ -13,14 +13,121 @@
 #define SAVE_AREA_OFFSET                (EXTRA_SAVE_AREA_SIZE + BASE_SAVE_AREA_SIZE)
 #define BASE_AREA_SP_OFFSET             12
 
-#define RSR(reg, at)                    asm volatile ("rsr %0, %1" : "=r" (at) : "i" (reg))
-#define WSR(reg, at)                    asm volatile ("wsr %0, %1" : : "r" (at), "i" (reg))
-#define XSR(reg, at)                    asm volatile ("xsr %0, %1" : "+r" (at) : "i" (reg))
+static inline __attribute__((always_inline))
+    unsigned __RSR(unsigned reg)
+    {
+        unsigned ret;
+        asm volatile ("rsr %0, %1" : "=r" (ret) : "i" (reg));
+        return ret;
+    }
 
-#define RER(reg, at)                    asm volatile ("rer %0, %1" : "=r" (at) : "r" (reg))
+static inline __attribute__((always_inline))
+    void __WSR(unsigned reg, unsigned val)
+    {
+        asm volatile ("wsr %0, %1" : : "r" (val), "i" (reg));
+    }
+
+
+static inline __attribute__((always_inline))
+    unsigned __RER(unsigned reg)
+    {
+        unsigned ret;
+        asm volatile ("rer %0, %1" : "=r" (ret) : "r" (reg));
+        return ret;
+    }
+
+// TODO: deprecated these.. or move to freertos private include?
+#define RSR(reg, at)                    (at = __RSR(reg))
+#define WSR(reg, val)                    __WSR(reg, val)
+
+#define RER(reg, at)                    (at = __RER(reg))
+#define XSR(reg, at)                    asm volatile ("xsr %0, %1" : "+r" (at) : "i" (reg))
 
 #define WITLB(at, as)                   asm volatile ("witlb  %0, %1; \n isync \n " : : "r" (at), "r" (as))
 #define WDTLB(at, as)                   asm volatile ("wdtlb  %0, %1; \n dsync \n " : : "r" (at), "r" (as))
+// -----------------------------------------------
+
+static inline __attribute__((always_inline))
+    void __set_VECBASE(void *vecbase)
+    {
+        asm volatile ("wsr %0, vecbase" :: "r" (vecbase));
+    }
+
+    /**
+     *  get CCOUNT, this is esp32 special REG?
+    */
+static inline __attribute__((always_inline))
+    unsigned __get_CCOUNT(void)
+    {
+        return __RSR(CCOUNT);
+    }
+
+    /**
+     *  set CCOUNT
+    */
+static inline __attribute__((always_inline))
+    void __set_CCOUNT(unsigned ccount)
+    {
+        __WSR(CCOUNT, ccount);
+    }
+
+
+static inline __attribute__((always_inline, pure))
+    unsigned __get_CORE_ID(void)
+    {
+    #if XCHAL_HAVE_PRID
+        unsigned id;
+        asm volatile (
+            "rsr.prid %0\n"
+            "extui %0,%0,13,1":"=r"(id)
+        );
+        return id;
+    #else
+        return 0;
+    #endif
+    }
+
+static inline __attribute__((always_inline, pure))
+    unsigned __get_RAW_CORE_ID(void)
+    {
+    #if XCHAL_HAVE_PRID
+        // Read the raw value of special register PRID
+        unsigned id;
+        asm volatile ("rsr.prid %0\n":"=r"(id));
+        return id;
+    #else
+        return 0;
+    #endif
+    }
+
+    /**
+     *  waitfor interrupt
+    */
+static inline __attribute__((always_inline))
+    void __WFI(void)
+    {
+        asm volatile ("waiti 0\n");
+    }
+
+    /**
+     *  get interrupt processor status
+    */
+static inline __attribute__((always_inline))
+    unsigned __get_IPSR(void)
+    {
+        return __RSR(PS) & PS_INTLEVEL_MASK;
+    }
+
+    /**
+     *  get stack-top
+    */
+static inline __attribute__((always_inline))
+    void *__get_SP(void)
+    {
+        void *sp;
+        asm volatile ("mov %0, sp;" : "=r" (sp));
+        return sp;
+    }
 
 /* The SET_STACK implements a setting a new stack pointer (sp or a1).
  * to do this the need reset PS_WOE, reset WINDOWSTART, update SP, and return PS_WOE.

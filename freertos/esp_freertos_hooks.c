@@ -50,7 +50,7 @@ void esp_vApplicationIdleHook(void)
     esp_pm_impl_idle_hook();
     esp_pm_impl_waiti();
 #else
-    esp_cpu_wait_for_intr();
+    __WFI();
 #endif
 }
 

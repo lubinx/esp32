@@ -2,6 +2,8 @@
 
 #include "soc.h"
 #include "clk_tree.h"
+
+#include "esp_compiler.h"
 #include "esp_cpu.h"
 #include "esp_private/cache_err_int.h"
 
@@ -16,7 +18,7 @@ static char const *TAG = "startup";
 /****************************************************************************
  *  imports
 *****************************************************************************/
-extern int _vector_table;
+extern void *_vector_table;
 extern uint32_t __zero_table_start__;
 extern uint32_t __zero_table_end__;
 
@@ -79,7 +81,7 @@ void Startup_Handler(void)
     }
 
     // Move exception vectors to IRAM
-    esp_cpu_intr_set_ivt_addr(&_vector_table);
+    __set_VECBASE(&_vector_table);
 
     // Enable trace memory and immediately start trace.
     #if CONFIG_ESP32_TRAX || CONFIG_ESP32S2_TRAX || CONFIG_ESP32S3_TRAX
@@ -190,7 +192,7 @@ ESP_SYSTEM_INIT_FN(init_components0, BIT(0), 200)
 ESP_SYSTEM_INIT_FN(startup_other_cores, BIT(1), 201)
 {
     ets_set_appcpu_boot_addr(0);
-    esp_cpu_intr_set_ivt_addr(&_vector_table);
+    __set_VECBASE(&_vector_table);
 
     REG_WRITE(ASSIST_DEBUG_CORE_1_RCD_PDEBUGENABLE_REG, 1);
     REG_WRITE(ASSIST_DEBUG_CORE_1_RCD_RECORDING_REG, 1);

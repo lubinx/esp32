@@ -8,15 +8,7 @@
 #include <features.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include "esp_cpu.h"
-
-#if defined(__XTENSA__)
-    #include "xtensa/xtruntime.h"
-    #include "xt_utils.h"
-#elif defined(__riscv)
-#else
-    #pragma GCC error "pthread: unsupported arch"
-#endif
+#include "esp_compiler.h"
 
     #define SPINLOCK_INITIALIZER        {.core_id = 0, .lock_count = 0}
     #define SPINLOCK_WAIT_FOREVER       ((uint32_t)(-1))
@@ -43,7 +35,7 @@ static inline __attribute__((nonnull, nothrow))
 
         #ifdef __XTENSA__
             uint32_t irq_status = XTOS_SET_INTLEVEL(XCHAL_EXCM_LEVEL);
-            uint32_t core_id = 1U << xt_utils_get_raw_core_id();
+            uint32_t core_id = 1U << __get_CORE_ID();
 
             // The caller is already the owner of the lock. Simply increment the nesting count
             if (lock->core_id == core_id)
@@ -80,7 +72,7 @@ static inline __attribute__((nonnull, nothrow))
             uint32_t irq_status = XTOS_SET_INTLEVEL(XCHAL_EXCM_LEVEL);
         #endif
 
-        assert(lock->core_id == (1U << xt_utils_get_raw_core_id()));
+        assert(lock->core_id == (1U << __get_CORE_ID()));
 
         if (0 == -- lock->lock_count)
             lock->core_id = 0;

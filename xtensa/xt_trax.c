@@ -11,18 +11,20 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-#include <stdio.h>
+#include <stdint.h>
 #include <stdbool.h>
 
-#include "esp_err.h"
-
+#include "xt_instr_macros.h"
 #include "xtensa-debug-module.h"
-#include "eri.h"
+
+void eri_write(int addr, uint32_t data)
+{
+    asm volatile ( "wer %0,%1"::"r"(data),"r"(addr));
+}
 
 bool xt_trax_trace_is_active(void)
 {
-    return eri_read(ERI_TRAX_TRAXSTAT)&TRAXSTAT_TRACT;
+    return __RER(ERI_TRAX_TRAXSTAT) & TRAXSTAT_TRACT;
 }
 
 static void _xt_trax_start_trace(bool instructions)
@@ -50,7 +52,7 @@ void xt_trax_start_trace_words(void)
 void xt_trax_trigger_traceend_after_delay(int delay)
 {
     eri_write(ERI_TRAX_DELAYCNT, delay);
-    eri_write(ERI_TRAX_TRAXCTRL, eri_read(ERI_TRAX_TRAXCTRL)|TRAXCTRL_TRSTP);
+    eri_write(ERI_TRAX_TRAXCTRL, __RER(ERI_TRAX_TRAXCTRL) | TRAXCTRL_TRSTP);
     //ToDo: This will probably trigger a trace done interrupt. ToDo: Fix, but how? -JD
     eri_write(ERI_TRAX_TRAXCTRL, 0);
 }

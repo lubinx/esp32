@@ -11,7 +11,7 @@
 
 #include "esp_compiler.h"
 #include "soc/soc_caps.h"
-#include "esp_attr.h"
+#include "esp_attr.h"           // for freertos detail see portmacro.h...has no wahre to put this
 
 // avoid "esp_err.h"
 typedef int esp_err_t;
@@ -19,9 +19,6 @@ typedef int esp_err_t;
 typedef uint32_t esp_cpu_cycle_count_t;
 
 #define esp_cpu_get_core_id()           __get_CORE_ID()
-#define esp_cpu_get_cycle_count()       __get_CCOUNT()
-#define esp_cpu_set_cycle_count(CC)     __set_CCOUNT(CC)
-#define esp_cpu_wait_for_intr()         __WFI()
 
 __BEGIN_DECLS
 
@@ -87,9 +84,6 @@ extern __attribute__((nonnull, nothrow))
 
 // ---- Interrupt Configuration
 #ifdef __XTENSA__
-    #define esp_cpu_intr_set_ivt_addr(ivt)  \
-        xt_utils_set_vecbase((uintptr_t)ivt)
-
     #define esp_cpu_intr_has_handler(intr_nb)   \
         xt_int_has_handler(intr_nb, __get_CORE_ID())
     #define esp_cpu_intr_set_handler(intr_nb, hdr, arg) \
@@ -97,9 +91,6 @@ extern __attribute__((nonnull, nothrow))
     #define esp_cpu_intr_get_handler_arg(intr_nb)   \
         xt_get_interrupt_handler_arg(intr_nb)
 #else
-    #define esp_cpu_intr_set_ivt_addr(ivt)  \
-        rv_utils_set_mtvec((uintptr_t)ivt)
-
     #define esp_cpu_intr_has_handler(intr_nb)   \
         intr_handler_get(intr_nb)
     #define esp_cpu_intr_set_handler(intr_nb, hdr, arg) \

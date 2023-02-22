@@ -304,8 +304,8 @@ esp_err_t esp_cpu_set_watchpoint(int wp_nb, const void *wp_addr, size_t size, es
     if (size < 1 || size > 64 || (size & (size - 1)) != 0) {
         return ESP_ERR_INVALID_ARG;
     }
-    bool on_read = (trigger == ESP_CPU_WATCHPOINT_LOAD || trigger == ESP_CPU_WATCHPOINT_ACCESS);
-    bool on_write = (trigger == ESP_CPU_WATCHPOINT_STORE || trigger == ESP_CPU_WATCHPOINT_ACCESS);
+    int on_read = (trigger == ESP_CPU_WATCHPOINT_LOAD || trigger == ESP_CPU_WATCHPOINT_ACCESS);
+    int on_write = (trigger == ESP_CPU_WATCHPOINT_STORE || trigger == ESP_CPU_WATCHPOINT_ACCESS);
 #if __XTENSA__
     xt_utils_set_watchpoint(wp_nb, (uint32_t)wp_addr, size, on_read, on_write);
 #else

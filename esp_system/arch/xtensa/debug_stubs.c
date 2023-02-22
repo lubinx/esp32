@@ -8,7 +8,6 @@
 // Currently one stub is used for GCOV functionality
 //
 
-#include "eri.h"
 #include "xtensa-debug-module.h"
 
 #include "esp_log.h"

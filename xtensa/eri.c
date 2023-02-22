@@ -23,9 +23,13 @@ uint32_t eri_read(int addr) {
     return ret;
 }
 
-void eri_write(int addr, uint32_t data) {
+void eri_write(int addr, uint32_t data)
+{
+    WSR(addr, data);
     asm volatile (
         "WER %0,%1"
         ::"r"(data),"r"(addr)
     );
 }
+
+#define WSR(reg, at)                    asm volatile ("wsr %0, %1" : : "r" (at), "i" (reg))

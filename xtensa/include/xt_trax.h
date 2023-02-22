@@ -16,7 +16,6 @@
 
 #include <stdbool.h>
 
-#include "eri.h"
 #include "xtensa-debug-module.h"
 
 // Low-level Xtensa TRAX utils
