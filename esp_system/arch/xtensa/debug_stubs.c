@@ -9,14 +9,15 @@
 //
 
 #include "xtensa-debug-module.h"
-
+#include "esp_compiler.h"
 #include "esp_log.h"
+
 const static char *TAG = "esp_dbg_stubs";
 
 #define ESP_DBG_STUBS_TRAX_REG              ERI_TRAX_TRIGGERPC
 
 void esp_dbg_stubs_ll_init(void *stub_table)
 {
-    eri_write(ESP_DBG_STUBS_TRAX_REG, (uint32_t)stub_table);
-    ESP_LOGV(TAG, "%s stubs %x", __func__, eri_read(ESP_DBG_STUBS_TRAX_REG));
+    __WER(ESP_DBG_STUBS_TRAX_REG, (unsigned)stub_table);
+    ESP_LOGV(TAG, "%s stubs %x", __func__, __RER(ESP_DBG_STUBS_TRAX_REG));
 }

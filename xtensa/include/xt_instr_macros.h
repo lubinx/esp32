@@ -36,6 +36,13 @@ static inline __attribute__((always_inline))
         return ret;
     }
 
+static inline __attribute__((always_inline))
+    void __WER(unsigned reg, unsigned val)
+    {
+        asm volatile ("WER %0,%1"::"r"(val),"r"(reg));
+    }
+
+
 // TODO: deprecated these.. or move to freertos private include?
 #define RSR(reg, at)                    (at = __RSR(reg))
 #define WSR(reg, val)                    __WSR(reg, val)
