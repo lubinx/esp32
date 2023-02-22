@@ -18,9 +18,22 @@
 #include <features.h>
 #include <stdint.h>
 
-__BEGIN_DECLS
-    typedef enum {UART_PARITY_NONE, UART_PARITY_ODD, UART_PARITY_EVEN} parity_t;
+    enum UART_parity_t
+    {
+        UART_PARITY_NONE,
+        UART_PARITY_ODD,
+        UART_PARITY_EVEN,
+    };
 
+    enum UART_stopbits_t
+    {
+        UART_STOP_BITS_HALF,
+        UART_STOP_BITS_ONE,
+        UART_STOP_BITS_ONE_HALF,
+        UART_STOP_BITS_TWO,
+    };
+
+__BEGIN_DECLS
     /**
      *  create uart fd
      *

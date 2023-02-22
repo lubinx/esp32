@@ -12,7 +12,7 @@
 
 __BEGIN_DECLS
 
-extern __attribute__((nothrow))
+extern __attribute__((nothrow, nonnull))
     ssize_t getrandom(void *buf, size_t buflen, unsigned int flags);
 
 __END_DECLS

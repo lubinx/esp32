@@ -24,7 +24,7 @@
 __BEGIN_DECLS
 
 extern __attribute__((nothrow, nonnull))
-    int UART_configure(uart_dev_t *dev, uart_sclk_sel_t sclk, uint32_t bps, parity_t parity, uint8_t stop_bits);
+    int UART_configure(uart_dev_t *dev, uart_sclk_sel_t sclk, uint32_t bps, enum UART_parity_t parity, enum UART_stopbits_t stopbits);
 extern __attribute__((nothrow, nonnull))
     int UART_deconfigure(uart_dev_t *dev);
 

@@ -56,17 +56,6 @@ enum
 };
 enum
 {
-    UART_STOP_BITS_1                = 1,
-    UART_STOP_BITS_1_5,
-    UART_STOP_BITS_2
-};
-enum
-{
-    UART_PARITY_EVEN                = 0,
-    UART_PARITY_ODD
-};
-enum
-{
     UART_HW_FLOWCTRL_DISABLE        = 0,
     UART_HW_FLOWCTRL_RTS,
     UART_HW_FLOWCTRL_CTS,
@@ -173,7 +162,7 @@ int UART_createfd(int nb, uint32_t bps, enum UART_parity_t parity, enum UART_sto
     sem_init(&context->read_rdy, 0, 1);
     sem_init(&context->write_rdy, 0, 1);
 
-    int retval = UART_configure(dev, sclk, bps, parity, stop_bits);
+    int retval = UART_configure(dev, sclk, bps, parity, stopbits);
 
     if (0 == retval)
     {
@@ -190,7 +179,7 @@ int UART_createfd(int nb, uint32_t bps, enum UART_parity_t parity, enum UART_sto
     return retval;
 }
 
-int UART_configure(uart_dev_t *dev, uart_sclk_sel_t sclk, uint32_t bps, parity_t parity, uint8_t stop_bits)
+int UART_configure(uart_dev_t *dev, uart_sclk_sel_t sclk, uint32_t bps, enum UART_parity_t parity, enum UART_stopbits_t stopbits)
 {
     periph_module_t uart_module;
     int retval;
@@ -230,26 +219,30 @@ int UART_configure(uart_dev_t *dev, uart_sclk_sel_t sclk, uint32_t bps, parity_t
             dev->conf0.parity_en = 0;
             break;
         case UART_PARITY_ODD:
-            dev->conf0.parity = UART_PARITY_ODD;
+            dev->conf0.parity = 1;
             dev->conf0.parity_en = 1;
             break;
         case UART_PARITY_EVEN:
-            dev->conf0.parity = UART_PARITY_EVEN;
+            dev->conf0.parity = 0;
             dev->conf0.parity_en = 1;
             break;
         }
     }
 
-    switch (stop_bits)
+    switch (stopbits)
     {
     default:
         retval = EINVAL;
         goto uart_configure_fail_exit;
-    case 1:
-        dev->conf0.stop_bit_num = UART_STOP_BITS_1;
+
+    case UART_STOP_BITS_ONE:
+        dev->conf0.stop_bit_num = 1;
         break;
-    case 2:
-        dev->conf0.stop_bit_num = UART_STOP_BITS_2;
+    case UART_STOP_BITS_ONE_HALF:
+        dev->conf0.stop_bit_num = 2;
+        break;
+    case UART_STOP_BITS_TWO:
+        dev->conf0.stop_bit_num = 3;
         break;
     /*
         1.5 stopbits?
