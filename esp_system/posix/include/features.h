@@ -128,7 +128,7 @@
     #endif
 
     #ifndef ABS
-        #define ABS(n)                  ((n) > 0 ? (n) : (-n))
+        #define ABS(n)                  ((n) > 0 ? (n) : -(n))
     #endif
 
 /* helper to get array element count */
