@@ -37,8 +37,7 @@ if (NOT IDF_ENV_PATH)
     message("❓ variable IDF_ENV_PATH is not set, default set to ${IDF_ENV_PATH}")
 endif()
 
-# set(IDF_CMAKE_PATH ${IDF_PATH}/tools/cmake)
-set(IDF_CMAKE_PATH "${CMAKE_CURRENT_LIST_DIR}/../cmake_idf/")
+set(IDF_CMAKE_PATH ${IDF_PATH}/tools/cmake)
 
 #############################################################################
 # 💡 compiler toolchain variables
