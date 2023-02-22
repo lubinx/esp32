@@ -39,7 +39,7 @@ static inline __attribute__((always_inline))
 static inline __attribute__((always_inline))
     void __WER(unsigned reg, unsigned val)
     {
-        asm volatile ("WER %0,%1"::"r"(val),"r"(reg));
+        asm volatile ("wer %0, %1" :: "r" (val), "r" (reg));
     }
 
 
@@ -84,9 +84,10 @@ static inline __attribute__((always_inline, pure))
     {
     #if XCHAL_HAVE_PRID
         unsigned id;
-        asm volatile (
+        asm volatile
+        (
             "rsr.prid %0\n"
-            "extui %0,%0,13,1":"=r"(id)
+            "extui %0, %0, 13, 1" : "=r" (id)
         );
         return id;
     #else
@@ -100,7 +101,7 @@ static inline __attribute__((always_inline, pure))
     #if XCHAL_HAVE_PRID
         // Read the raw value of special register PRID
         unsigned id;
-        asm volatile ("rsr.prid %0\n":"=r"(id));
+        asm volatile ("rsr.prid %0" : "=r" (id));
         return id;
     #else
         return 0;
@@ -113,7 +114,7 @@ static inline __attribute__((always_inline, pure))
 static inline __attribute__((always_inline))
     void __WFI(void)
     {
-        asm volatile ("waiti 0\n");
+        asm volatile ("waiti 0");
     }
 
     /**
