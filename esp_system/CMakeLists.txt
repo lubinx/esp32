@@ -8,7 +8,9 @@ endif()
 
 list(APPEND srcs
     "esp_crosscore_int.c"
+    "esp_cpu.c"
     "esp_dbg_ubsan.c"                   # debug for undefined behavior, but not sure if its works
+    "esp_intr.c"
     "esp_log.c"
     "esp_startup.c"
     "esp_system.c"                      # TODO: esp-idf compatiable only, plan to remove later

@@ -4,8 +4,6 @@ list(APPEND includes
 )
 
 list(APPEND srcs
-    "${CMAKE_CURRENT_LIST_DIR}/esp_cpu.c"
-    "${CMAKE_CURRENT_LIST_DIR}/esp_intr.c"
     "${CMAKE_CURRENT_LIST_DIR}/${IDF_TARGET}/cache_err_int.c"
     "${CMAKE_CURRENT_LIST_DIR}/${IDF_TARGET}/clk_tree.c"
     "${CMAKE_CURRENT_LIST_DIR}/${IDF_TARGET}/io_mux.c"

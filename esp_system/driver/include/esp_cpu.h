@@ -11,6 +11,7 @@
 
 #include "esp_compiler.h"
 #include "soc/soc_caps.h"
+#include "esp_attr.h"
 
 // avoid "esp_err.h"
 typedef int esp_err_t;

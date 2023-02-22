@@ -3,7 +3,6 @@
 
 #include "esp_private/panic_internal.h"
 #include "esp_private/panic_reason.h"
-#include "soc/soc.h"
 
 #include "esp_private/cache_err_int.h"
 

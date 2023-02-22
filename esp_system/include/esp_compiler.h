@@ -6,10 +6,6 @@
 
 #pragma once
 
-#ifndef __FORCE_INLINE
-    #define __FORCE_INLINE          static inline __attribute__((always_inline))
-#endif
-
 /*
  * The likely and unlikely macro pairs:
  * These macros are useful to place when application
@@ -57,14 +53,14 @@
 #endif
 
 #ifdef __XTENSA__
-    __FORCE_INLINE uint32_t xt_utils_get_processor_status(void)
+    static inline __attribute__((always_inline)) uint32_t xt_utils_get_processor_status(void)
     {
         uint32_t ps = 0;
         RSR(PS, ps);
         return PS_INTLEVEL_MASK & ps;
     }
 #else
-    __FORCE_INLINE uint32_t rv_utils_get_processor_status(void)
+    static inline __attribute__((always_inline)) uint32_t rv_utils_get_processor_status(void)
     {
         #pragma GCC error "rv_utils_get_processor_status() no implemented yet."
     }

@@ -12,7 +12,6 @@
 #include "esp_err.h"
 #include "esp_debug_helpers.h"
 #include "soc/soc_memory_layout.h"
-#include "esp_cpu_utils.h"
 #include "esp_private/panic_internal.h"
 
 #include "xtensa/xtensa_context.h"
@@ -30,7 +29,7 @@ bool IRAM_ATTR esp_backtrace_get_next_frame(esp_backtrace_frame_t *frame)
     frame->sp =  *((uint32_t *)(base_save - 12));
 
     //Return true if both sp and pc of frame(i-1) are sane, false otherwise
-    return (esp_stack_ptr_is_sane(frame->sp) && esp_ptr_executable((void*)esp_cpu_process_stack_pc(frame->pc)));
+    return (esp_stack_ptr_is_sane(frame->sp) && esp_ptr_executable((void*)frame->pc));
 }
 
 static void IRAM_ATTR print_entry(uint32_t pc, uint32_t sp, bool panic)
@@ -66,11 +65,11 @@ esp_err_t IRAM_ATTR esp_backtrace_print_from_frame(int depth, const esp_backtrac
     memcpy(&stk_frame, frame, sizeof(esp_backtrace_frame_t));
 
     print_str("\r\n\r\nBacktrace:", panic);
-    print_entry(esp_cpu_process_stack_pc(stk_frame.pc), stk_frame.sp, panic);
+    print_entry(stk_frame.pc, stk_frame.sp, panic);
 
     //Check if first frame is valid
     bool corrupted = !(esp_stack_ptr_is_sane(stk_frame.sp) &&
-                       (esp_ptr_executable((void *)esp_cpu_process_stack_pc(stk_frame.pc)) ||
+                       (esp_ptr_executable((void *)stk_frame.pc) ||
                         /* Ignore the first corrupted PC in case of InstrFetchProhibited */
                         (stk_frame.exc_frame && ((XtExcFrame *)stk_frame.exc_frame)->exccause == EXCCAUSE_INSTR_PROHIBITED)));
 
@@ -79,7 +78,7 @@ esp_err_t IRAM_ATTR esp_backtrace_print_from_frame(int depth, const esp_backtrac
         if (!esp_backtrace_get_next_frame(&stk_frame)) {    //Get previous stack frame
             corrupted = true;
         }
-        print_entry(esp_cpu_process_stack_pc(stk_frame.pc), stk_frame.sp, panic);
+        print_entry(stk_frame.pc, stk_frame.sp, panic);
     }
 
     //Print backtrace termination marker
