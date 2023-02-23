@@ -24,29 +24,11 @@ void *__dbg_set_errno_r_nullptr(struct _reent *r, int err, char const *__functio
 
 char *strerror(int err)
 {
-    // do not change order
-    // TODO: use linkscript mapping table to lookup error messages
-    if (err >= ESP_ERR_USER_BASE)
-        return "esp user error";
-    if (err >= ESP_ERR_MEMPROT_BASE)
-        return "esp memory protect error";
-    if (err >= ESP_ERR_HW_CRYPTO_BASE)
-        return "esp crypto error";
-    if (err >= ESP_ERR_FLASH_BASE)
-        return "esp flash error";
-    if (err >= ESP_ERR_MESH_BASE)
-        return "esp mesh error";
-    if (err >= ESP_ERR_WIFI_BASE)
-        return "esp wifi error";
+    if (err >= ESP_ERR_BASE)
+        return (char *)esp_err_to_name((esp_err_t)err);
 
     switch (err)
     {
-    default:
-        if (err < ESP_ERR_BASE)
-            return "Unknown error";
-        else
-            return "esp error";
-
 /* esp error base */
     case ESP_ERR_INVALID_STATE:
         return "esp error invalid state";
@@ -330,6 +312,3 @@ char *strerror(int err)
         return "Memory page has hardware error";
     }
 }
-
-char const *esp_err_to_name(esp_err_t code)
-    __attribute__((alias("strerror")));

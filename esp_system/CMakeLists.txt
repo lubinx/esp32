@@ -46,8 +46,6 @@ idf_component_register(
         "soc"
         "esp_hw_support"                                # remove later: should merge into driver
     LDFRAGMENTS
-        "${IDF_PATH}/components/esp_common/soc.lf"
-        "${IDF_PATH}/components/esp_common/common.lf"
         "memap.lf"
 )
 target_link_libraries(${COMPONENT_LIB} INTERFACE "-u __ubsan_include")

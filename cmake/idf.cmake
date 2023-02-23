@@ -109,7 +109,7 @@ if (NOT IDF_TARGET_ARCH STREQUAL "")
     list(APPEND IDF_KERNEL_COMPONENTS ${IDF_TARGET_ARCH})
 endif()
 list(APPEND IDF_KERNEL_COMPONENTS
-    "soc" "heap"
+    "soc" "heap" "esp_common"
     "freertos" "esp_system"
     "hal" "esp_rom"    # planning to remove
     "esptool_py"

@@ -5,10 +5,7 @@ entries:
     data -> dram0_data
     bss -> dram0_bss
     common -> dram0_bss
-    if ESP_ALLOW_BSS_SEG_EXTERNAL_MEMORY = y:
-        extram_bss -> extern_ram
-    else:
-        extram_bss -> dram0_bss
+    extram_bss -> dram0_bss
     legacy_bss -> dram0_bss
     iram -> iram0_text
     iram_data -> iram0_data
