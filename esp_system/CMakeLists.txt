@@ -31,22 +31,9 @@ list(APPEND priv_includes
     "priv_include"
 )
 
-# if(CONFIG_ESP_SYSTEM_USE_EH_FRAME)
-#     list(APPEND srcs
-#         "${IDF_PATH}/components/esp_system/eh_frame_parser.c"
-#     )
-# endif()
-
-# if(CONFIG_SOC_SYSTIMER_SUPPORT_ETM)
-#     list(APPEND srcs
-#         "${IDF_PATH}/components/esp_system/systick_etm.c"
-#     )
-# endif()
-
 include("${CMAKE_CURRENT_LIST_DIR}/driver/.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/posix/.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/ultracore/.cmake")
-# include("${CMAKE_CURRENT_LIST_DIR}/shim/.cmake")
 
 idf_component_register(
     INCLUDE_DIRS

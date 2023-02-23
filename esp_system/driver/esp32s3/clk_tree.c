@@ -4,11 +4,13 @@
 #include "soc/soc_caps.h"
 #include "soc/dport_access.h"
 #include "soc/system_reg.h"
+#include "soc/system_struct.h"
 #include "soc/syscon_reg.h"
 #include "soc/rtc_cntl_struct.h"
 
 #include "clk_tree.h"
 #include "sdkconfig.h"
+
 #include "soc/rtc.h"
 
 char const *TAG = "clktree";
@@ -26,20 +28,6 @@ char const *TAG = "clktree";
  ****************************************************************************/
 void clk_tree_initialize(void)
 {
-    // TODO: set CPU clocks by sdkconfig.h
-    //  WTF, why this is about RTC?
-    rtc_cpu_freq_config_t old_config, new_config;
-    rtc_clk_cpu_freq_get_config(&old_config);
-    uint32_t const old_freq_mhz = old_config.freq_mhz;
-    uint32_t const new_freq_mhz = CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ;
-
-    if (rtc_clk_cpu_freq_mhz_to_config(new_freq_mhz, &new_config))
-        rtc_clk_cpu_freq_set_config(&new_config);
-
-    // Re calculate the ccount to make time calculation correct.
-    // __set_CCOUNT((uint64_t)__get_CCOUNT() * new_freq_mhz / old_freq_mhz);
-
-    /* Disable some peripheral clocks. */
     uint32_t gate = SYSTEM_WDG_CLK_EN |
         SYSTEM_I2S0_CLK_EN |
         // SYSTEM_UART_CLK_EN |
@@ -66,10 +54,12 @@ void clk_tree_initialize(void)
         0;
     CLEAR_PERI_REG_MASK(SYSTEM_PERIP_CLK_EN0_REG, gate);
     SET_PERI_REG_MASK(SYSTEM_PERIP_RST_EN0_REG, gate);
+    // SYSTEM.perip_clk_en0.val
 
     gate = 0;
     CLEAR_PERI_REG_MASK(SYSTEM_PERIP_CLK_EN1_REG, gate);
     SET_PERI_REG_MASK(SYSTEM_PERIP_RST_EN1_REG, gate);
+    // SYSTEM.perip_clk_en1.val
 
     /* Disable hardware crypto clocks. */
     gate = SYSTEM_CRYPTO_AES_CLK_EN |
@@ -100,8 +90,19 @@ void clk_tree_initialize(void)
     CLEAR_PERI_REG_MASK(SYSTEM_BT_LPCK_DIV_FRAC_REG, SYSTEM_LPCLK_SEL_8M);
     SET_PERI_REG_MASK(SYSTEM_BT_LPCK_DIV_FRAC_REG, SYSTEM_LPCLK_SEL_RTC_SLOW);
 
-    /* Enable RNG clock. */
-    periph_module_enable(PERIPH_RNG_MODULE);
+    // TODO: set CPU clocks by sdkconfig.h
+    //  WTF, why this is about RTC?
+    rtc_cpu_freq_config_t old_config, new_config;
+    rtc_clk_cpu_freq_get_config(&old_config);
+
+    uint32_t const old_freq_mhz = old_config.freq_mhz;
+    uint32_t const new_freq_mhz = CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ;
+
+    if (rtc_clk_cpu_freq_mhz_to_config(new_freq_mhz, &new_config))
+        rtc_clk_cpu_freq_set_config(&new_config);
+
+    // Re calculate the ccount to make time calculation correct.
+    // __set_CCOUNT((uint64_t)__get_CCOUNT() * new_freq_mhz / old_freq_mhz);
 }
 
 /****************************************************************************

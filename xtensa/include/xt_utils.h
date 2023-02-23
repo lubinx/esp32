@@ -110,6 +110,7 @@ static inline __attribute__((always_inline))
     }
 
 /*
+    use gcc buildin __sync_bool_compare_and_swap instead?
 static inline __attribute__((always_inline)) bool xt_utils_compare_and_set(volatile unsigned *addr, unsigned compare_value, unsigned new_value)
 {
 #if XCHAL_HAVE_S32C1I

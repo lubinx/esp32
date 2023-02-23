@@ -29,18 +29,18 @@ set_source_files_properties(
 )
 
 set(include_dirs
-    "include"             # For files with #include "freertos/FreeRTOSConfig.h"
-    "include/freertos"    # For files with #include "FreeRTOSConfig.h"
+    "include"                           # For files with #include "freertos/FreeRTOSConfig.h"
+    "include/freertos"                  # For files with #include "FreeRTOSConfig.h"
     "${kernel_dir}/include"
     "${kernel_dir}/portable/${IDF_TARGET_ARCH}/include"
 )
 
 set(private_include_dirs
     "include"
-    "private_include"    # For include "freertos_tasks_c_additions.h"
+    "private_include"                   # For include "freertos_tasks_c_additions.h"
     "${kernel_dir}/portable/${IDF_TARGET_ARCH}/include/freertos"
     "${kernel_dir}/portable/${IDF_TARGET_ARCH}"
-    "${kernel_dir}/include/freertos"   # FreeRTOS headers via #include "xxx.h"
+    "${kernel_dir}/include/freertos"    # FreeRTOS headers via #include "xxx.h"
 )
 
 if(CONFIG_FREERTOS_SMP)
@@ -59,7 +59,7 @@ if(CONFIG_IDF_TARGET_ARCH_XTENSA)
         "${kernel_dir}/portable/xtensa/xtensa_overlay_os_hook.c"
         "${kernel_dir}/portable/xtensa/xtensa_vector_defaults.S"
         "${kernel_dir}/portable/xtensa/xtensa_vectors.S"
-        "${kernel_dir}/portable/xtensa/xtensa_loadstore_handler.S"  # CONFIG_ESP32_IRAM_AS_8BIT_ACCESSIBLE_MEMORY
+        "${kernel_dir}/portable/xtensa/xtensa_loadstore_handler.S"                          # CONFIG_ESP32_IRAM_AS_8BIT_ACCESSIBLE_MEMORY
     )
 endif()
 

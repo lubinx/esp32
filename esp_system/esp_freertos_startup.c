@@ -4,26 +4,19 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "sdkconfig.h"
 #include <stddef.h>
 #include <assert.h>
+
 #include "esp_task.h"
 #include "esp_log.h"
+#include "esp_freertos_hooks.h"
+#include "esp_private/crosscore_int.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/portmacro.h"
 
-#include "esp_private/crosscore_int.h"
-#include "esp_freertos_hooks.h"
-#include "esp_heap_caps_init.h"
-
-#ifdef CONFIG_APPTRACE_ENABLE
-    #include "esp_app_trace.h"                  /* Required for esp_apptrace_init. [refactor-todo] */
-#endif
-#ifdef CONFIG_ESP_SYSTEM_GDBSTUB_RUNTIME
-    #include "esp_gdbstub.h"                    /* Required by esp_gdbstub_init() */
-#endif
+#include "sdkconfig.h"
 
 /* ------------------------------------------------- App/OS Startup ----------------------------------------------------
  * - Functions related to application and FreeRTOS startup

@@ -5,8 +5,8 @@
 
 // wdt
     // wdt lock/unlock values
-    #define WDT_LOCK_VALUE                  (0)
-    #define WDT_UNLOCK_VALUE                (0x50D83AA1)
+    #define WDT_LOCK_VALUE              (0)
+    #define WDT_UNLOCK_VALUE            (0x50D83AA1)
 
 #include "soc/ext_mem_defs.h"
     // mmu page size is fixed 64k, not depends sdkconfig.h
