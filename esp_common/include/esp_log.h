@@ -12,8 +12,6 @@
 #include <inttypes.h>
 #include <stdarg.h>
 
-__BEGIN_DECLS
-
     enum esp_log_level_t
     {
         ESP_LOG_NONE,
@@ -98,9 +96,9 @@ __BEGIN_DECLS
 
 // to be back compatible
     #define LOG_LOCAL_LEVEL             ESP_LOG_INFO
-
     #define esp_log_buffer_hex(tag, buffer, buff_len)
-    // #define esp_log_buffer_char                 ESP_LOG_BUFFER_CHAR
+
+__BEGIN_DECLS
 
 static inline
     void esp_log_set_level(enum esp_log_level_t level)

@@ -28,11 +28,6 @@ esp_err_t esp_register_shutdown_handler(void (*function)(void))
     return atexit(function);
 }
 
-const char *esp_get_idf_version(void)
-{
-    return IDF_VER;
-}
-
 uint32_t esp_get_free_heap_size(void)
 {
     return heap_caps_get_free_size(MALLOC_CAP_DEFAULT);
