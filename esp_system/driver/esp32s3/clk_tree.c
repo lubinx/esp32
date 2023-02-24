@@ -39,10 +39,10 @@ void clk_tree_initialize(void)
         // SYSTEM_PWM2_CLK_EN |
         // SYSTEM_PWM3_CLK_EN |
     // I2C
-        SYSTEM_I2C_EXT0_CLK_EN |
-        SYSTEM_I2C_EXT1_CLK_EN |
+        // SYSTEM_I2C_EXT0_CLK_EN |
+        // SYSTEM_I2C_EXT1_CLK_EN |
     // SPI
-        SYSTEM_SPI01_CLK_EN |       // SPI0 is required by flash
+        SYSTEM_SPI01_CLK_EN |       // SPI0 is required by internal-flash
         // SYSTEM_SPI2_CLK_EN |
         // SYSTEM_SPI3_CLK_EN |
         // SYSTEM_SPI4_CLK_EN |
@@ -75,7 +75,7 @@ void clk_tree_initialize(void)
         // SYSTEM_CRYPTO_RSA_CLK_EN |
         // SYSTEM_CRYPTO_SHA_CLK_EN |
         // SYSTEM_CRYPTO_AES_CLK_EN |
-        // SYSTEM_PERI_BACKUP_CLK_EN |
+        SYSTEM_PERI_BACKUP_CLK_EN |
         0;
 
     SYSTEM.perip_clk_en0.val = clk_en0, SYSTEM.perip_rst_en0.val = ~clk_en0;
@@ -90,10 +90,6 @@ void clk_tree_initialize(void)
         0;
     SYSCON.wifi_clk_en &= ~wifi_bt_clkl_dis;
     SYSCON.wifi_clk_en |= SYSTEM_WIFI_CLK_EN;
-
-    // CLEAR_PERI_REG_MASK(SYSTEM_WIFI_CLK_EN_REG, gate);
-    // SET_PERI_REG_MASK(SYSTEM_WIFI_CLK_EN_REG, SYSTEM_WIFI_CLK_EN);
-
 
     /* Set WiFi light sleep clock source to RTC slow clock */
     REG_SET_FIELD(SYSTEM_BT_LPCK_DIV_INT_REG, SYSTEM_BT_LPCK_DIV_NUM, 0);

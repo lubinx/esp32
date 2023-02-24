@@ -1,4 +1,5 @@
 #include <unistd.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <stdbool.h>
@@ -13,10 +14,10 @@
 #include "esp_cpu.h"
 #include "esp_log.h"
 
-#include "esp_rom_caps.h"
 #include "esp_rom_sys.h"
 #include "esp_heap_caps_init.h"
 
+/*
 #if CONFIG_IDF_TARGET_ESP32
     #include "esp32/rom/libc_stubs.h"
 #elif CONFIG_IDF_TARGET_ESP32S2
@@ -32,6 +33,7 @@
 #elif CONFIG_IDF_TARGET_ESP32C6
     #include "esp32c6/rom/libc_stubs.h"
 #endif
+*/
 
 /****************************************************************************
  * @imports
@@ -40,14 +42,13 @@ extern void __LOCK_retarget(void);
 extern void __FILESYSTEM_init(void);
 extern void __IO_retarget(void);
 
+struct _reent *_global_impure_ptr;
 extern struct _reent *__getreent(void);     // freertos_tasks_c_additions.h linked by freertos
 
 /****************************************************************************
  *  @internal
 *****************************************************************************/
-static void raise_r_stub(struct _reent *rptr);
-
-static const struct syscall_stub_table __stub_table;
+// static const struct syscall_stub_table __stub_table;
 static struct _reent __reent = {0};
 
 /****************************************************************************
@@ -58,6 +59,7 @@ void __libc_retarget_init(void)
     heap_caps_init();
     __LOCK_retarget();
 
+    /*
     #if CONFIG_IDF_TARGET_ESP32
         syscall_table_ptr_pro = syscall_table_ptr_app = &__stub_table;
     #elif CONFIG_IDF_TARGET_ESP32S2
@@ -66,6 +68,7 @@ void __libc_retarget_init(void)
         || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C6
         syscall_table_ptr = (void *)&__stub_table;
     #endif
+    */
 
     _GLOBAL_REENT = &__reent;
     __sinit(&__reent);
@@ -151,11 +154,17 @@ __WEAK off_t _lseek_r(struct _reent *r, int fd, off_t offset, int origin)       
 /****************************************************************************
  *  @internal
 *****************************************************************************/
+/*
 extern void _cleanup_r(struct _reent *r);
 
 extern int _printf_float(struct _reent *rptr, void *pdata,
     FILE * fp, int (*pfunc) (struct _reent *, FILE *, char const *, size_t len), va_list * ap);
 extern int _scanf_float(struct _reent *rptr, void *pdata, FILE *fp, va_list *ap);
+
+static void raise_r_stub(struct _reent *rptr)
+{
+    _raise_r(rptr, 0);
+}
 
 static const struct syscall_stub_table __stub_table =
 {
@@ -206,10 +215,8 @@ static const struct syscall_stub_table __stub_table =
     ._lock_release = &_lock_release,
     ._lock_release_recursive = &_lock_release_recursive,
 #endif
-/* REVIEW: link with stdandard-newlib is hardcoded inside esp-idf
-    SOO...wtf is nano printf format?
-*/
-/*
+// REVIEW: link with stdandard-newlib is hardcoded inside esp-idf
+//  SOO...wtf is nano printf format?
 #ifdef CONFIG_NEWLIB_NANO_FORMAT
     ._printf_float = &_printf_float,
     ._scanf_float = &_scanf_float,
@@ -217,26 +224,14 @@ static const struct syscall_stub_table __stub_table =
     ._printf_float = NULL,
     ._scanf_float = NULL,
 #endif
-*/
-/* REVIEW: why they make these simply things so confuse? */
+// REVIEW: why they make these simply things so confuse?
 #if CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32H4 \
     || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C6
-    /*
-        TODO IDF-2570 : mark that this assert failed in ROM, to avoid confusion between IDF & ROM
-            assertion failures (as function names & source file names will be similar)
-    */
+    // TODO IDF-2570 : mark that this assert failed in ROM, to avoid confusion between IDF & ROM
+        // assertion failures (as function names & source file names will be similar)
     .__assert_func = __assert_func,
-    /*
-        We don't expect either ROM code or IDF to ever call __sinit, so it's implemented as abort() for now.
-            esp_reent_init() does this job inside IDF.
-        Kept in the syscall table in case we find a need for it later.
-    */
-    .__sinit = (void *)abort,   // &__sinit,
+    .__sinit = &__sinit,
     ._cleanup_r = &_cleanup_r,
 #endif
 };
-
-static void raise_r_stub(struct _reent *rptr)
-{
-    _raise_r(rptr, 0);
-}
+*/

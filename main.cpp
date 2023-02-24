@@ -15,14 +15,12 @@
 
 #pragma GCC diagnostic ignored "-Wunused-function"
 
-static void *blink_thread1(void *arg);
-static void *blink_thread2(void *arg);
-static void *blink_thread3(void *arg);
-
-
 // pthread_mutex_t mutex;
 static sem_t sema;
 
+static void *blink_thread1(void *arg);
+static void *blink_thread2(void *arg);
+static void *blink_thread3(void *arg);
 
 extern "C" void __attribute__((weak)) app_main(void)
 {
@@ -40,6 +38,7 @@ extern "C" void __attribute__((weak)) app_main(void)
         printf("uart1: %lu bps\n", UART_get_baudrate(&UART1));
     if (clk_tree_module_is_enable(PERIPH_UART2_MODULE))
         printf("uart2: %lu bps\n", UART_get_baudrate(&UART2));
+
 
     for (int i = 0; i < 100; i ++)
     {
@@ -83,6 +82,8 @@ extern "C" void __attribute__((weak)) app_main(void)
     pthread_create(&id, NULL, blink_thread3, NULL);
 
     printf("infinite loop...\n");
+    fflush(stdout);
+
     while (1)
     {
         sem_post(&sema);

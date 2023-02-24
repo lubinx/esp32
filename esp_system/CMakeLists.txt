@@ -30,6 +30,10 @@ list(APPEND priv_includes
     "priv_include"
 )
 
+list(APPEND errata_link_scripts
+    ""
+)
+
 include("${CMAKE_CURRENT_LIST_DIR}/driver/.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/posix/.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/ultracore/.cmake")
@@ -49,12 +53,11 @@ idf_component_register(
         "memap.lf"
 )
 target_link_libraries(${COMPONENT_LIB} INTERFACE "-u __ubsan_include")
-# soc peripherals.ld
-target_linker_script(${COMPONENT_LIB} INTERFACE "driver/${IDF_TARGET}/ld/peripherals.ld")
 
 # generate link scripts
 idf_build_get_property(sdkconfig_header SDKCONFIG_HEADER)
 idf_build_get_property(config_dir CONFIG_DIR)
+
 set(ld_input "${CMAKE_CURRENT_LIST_DIR}/driver/${IDF_TARGET}/ld/memory.ld.in")
 set(ld_output "${config_dir}/${IDF_TARGET}_memory.ld")
 
@@ -66,9 +69,13 @@ add_custom_command(
     VERBATIM
 )
 add_custom_target(memory_ld DEPENDS ${ld_output})
-add_dependencies(${COMPONENT_LIB} memory_ld)
+# add_dependencies(${COMPONENT_LIB} memory_ld)
 target_linker_script(${COMPONENT_LIB} INTERFACE "${ld_output}")
 
 target_linker_script(${COMPONENT_LIB} INTERFACE "driver/${IDF_TARGET}/ld/sections.ld"
     PROCESS "${config_dir}/${IDF_TARGET}_sections.ld"
 )
+
+foreach(ld ${errata_link_scripts})
+    target_linker_script(${COMPONENT_LIB} INTERFACE "${ld}")
+endforeach()

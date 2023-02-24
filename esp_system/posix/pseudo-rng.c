@@ -11,7 +11,7 @@ struct PRNG_ctx
 static struct PRNG_ctx ctx;
 
 __attribute__((weak))
-void srand(unsigned __seed)
+void __srand(unsigned __seed)
 {
     uint32_t i;
     ctx.a = 0xf1ea5eed;

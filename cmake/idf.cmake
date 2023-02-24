@@ -109,15 +109,15 @@ if (NOT IDF_TARGET_ARCH STREQUAL "")
     list(APPEND IDF_KERNEL_COMPONENTS ${IDF_TARGET_ARCH})
 endif()
 list(APPEND IDF_KERNEL_COMPONENTS
-    "esp_rom"
     "esp_common" "soc" "heap"
-    "freertos" "esp_system"
+    "freertos" "esp_system" # "esp_rom"
     "hal"
     "esptool_py"
 )
 
 # OBSOLETED_COMPONENTS: force remove REQUIRES & PRIV_REQUIRES
 list(APPEND OBSOLETED_COMPONENTS
+    "esp_rom"
 )
 
 #############################################################################
@@ -734,7 +734,6 @@ function(idf_build)
 
     target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE ${COMPILE_OPTIONS})
     target_link_options(${PROJECT_NAME} PRIVATE ${LINK_OPTIONS})
-
 
     # show size after build
     # add_custom_command(
