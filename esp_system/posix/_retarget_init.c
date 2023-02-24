@@ -8,13 +8,14 @@
 #include <sys/reent.h>
 #include <sys/stat.h>
 
+#include "soc/soc_caps.h"
+
 #include "esp_cpu.h"
 #include "esp_log.h"
+
 #include "esp_rom_caps.h"
 #include "esp_rom_sys.h"
-
 #include "esp_heap_caps_init.h"
-// #include "esp_timer.h"
 
 #if CONFIG_IDF_TARGET_ESP32
     #include "esp32/rom/libc_stubs.h"
@@ -31,8 +32,6 @@
 #elif CONFIG_IDF_TARGET_ESP32C6
     #include "esp32c6/rom/libc_stubs.h"
 #endif
-
-// #include "freertos/FreeRTOS.h"
 
 /****************************************************************************
  * @imports
@@ -76,6 +75,12 @@ void __libc_retarget_init(void)
 
     extern void esp_pthread_init(void);
     esp_pthread_init();
+}
+
+int setvbuf(FILE *fp, char *buffer, int mode, size_t size)
+{
+    ARG_UNUSED(fp, buffer, mode, size);
+    return ENOSYS;
 }
 
 int _getpid_r(struct _reent *r)

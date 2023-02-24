@@ -12,8 +12,6 @@
 #include <inttypes.h>
 #include <stdarg.h>
 
-#include "sdkconfig.h"
-
 __BEGIN_DECLS
 
     enum esp_log_level_t
@@ -25,7 +23,7 @@ __BEGIN_DECLS
         ESP_LOG_DEBUG,
         ESP_LOG_VERBOSE
     };
-    typedef enum esp_log_level_t esp_log_level_t;
+    extern enum esp_log_level_t __log_level;
 
     #define ESP_LOGE(tag, format, ...)  \
         ESP_LOG_LEVEL(ESP_LOG_ERROR,    tag, format, ##__VA_ARGS__)
@@ -60,23 +58,11 @@ __BEGIN_DECLS
     #define ESP_DRAM_LOGV(tag, format, ...)     \
         ESP_LOG_LEVEL(ESP_LOG_VERBOSE,  tag, format, ##__VA_ARGS__)
 
-    #define ESP_EARLY_LOG(level, tag, format, ...)  (\
-        CONFIG_BOOTLOADER_LOG_LEVEL < level ? ((void)level, (void)tag, (void)format) :  \
-            esp_rom_printf(LOG_FORMAT(level, format), esp_log_timestamp(), tag, ##__VA_ARGS__)  \
-    )
+    #define ESP_LOG_LEVEL(level, tag, format, ...)  \
+        (level <= __log_level ? esp_log_printf(LOG_FORMAT(level, format), esp_log_timestamp(), tag, ##__VA_ARGS__) : (void)0)
+    #define ESP_EARLY_LOG               ESP_LOG_LEVEL
 
-#if BOOTLOADER_BUILD
-    #define ESP_LOG_LEVEL(level, tag, format, ...)  (\
-        CONFIG_BOOTLOADER_LOG_LEVEL < level ? ((void)level, (void)tag, (void)format) :  \
-            esp_rom_printf(LOG_FORMAT(level, format), esp_log_timestamp(), tag, ##__VA_ARGS__)  \
-    )
-#else
-    #define ESP_LOG_LEVEL(level, tag, format, ...)  (\
-        esp_rom_printf(LOG_FORMAT(level, format), esp_log_timestamp(), tag, ##__VA_ARGS__)  \
-    )
-#endif
-
-    #define LOG_FORMAT(level, format)  \
+    #define LOG_FORMAT(level, format)   \
         level##_COLOR "%-6" PRIu32 level##_LETTER" %s: " format LOG_END "\n"
 
     #define LOG_COLOR_BLACK             "30"
@@ -111,33 +97,32 @@ __BEGIN_DECLS
     #define ESP_HW_LOGV(tag, fmt, ...)  ESP_EARLY_LOGV(tag, fmt, ##__VA_ARGS__)
 
 // to be back compatible
-    #ifndef LOG_LOCAL_LEVEL
-        #ifndef BOOTLOADER_BUILD
-            #define LOG_LOCAL_LEVEL     ESP_LOG_INFO
-        #else
-            #define LOG_LOCAL_LEVEL     CONFIG_BOOTLOADER_LOG_LEVEL
-        #endif
-    #endif
+    #define LOG_LOCAL_LEVEL             ESP_LOG_INFO
 
     #define esp_log_buffer_hex(tag, buffer, buff_len)
     // #define esp_log_buffer_char                 ESP_LOG_BUFFER_CHAR
 
+static inline
+    void esp_log_set_level(enum esp_log_level_t level)
+    {
+        __log_level = level;
+    }
+
 extern __attribute__((nothrow))
     uint32_t esp_log_timestamp(void);
 
-extern __attribute__((nothrow))
-    uint32_t esp_log_early_timestamp(void);
+static inline
+    uint32_t esp_log_early_timestamp(void) { return esp_log_timestamp(); }
 
-extern  __attribute__ ((nothrow, format (printf, 3, 4)))
-    void esp_log_write(esp_log_level_t level, char const *tag, char const *format, ...);
+extern __attribute__ ((nothrow, format(printf, 1, 2)))
+    int esp_log_printf(char const *format, ...);
 
-// avoid to #include "esp_rom_sys.h" in some esp-idf components
-//  "esp_rom_sys.h" introduced in "esp_rom", but here we really don't know where is
-extern
-    void esp_rom_delay_us(uint32_t us);
+extern  __attribute__ ((nothrow))
+    void esp_log_vprintf(char const *format, va_list arg);
 
-extern __attribute__ ((nothrow, format (printf, 1, 2)))
-    int esp_rom_printf(char const *fmt, ...);
+// avoid esp_rom_sys.h
+extern __attribute__ ((nothrow, format(printf, 1, 2)))
+    int esp_rom_printf(char const *format, ...);
 
 __END_DECLS
 #endif

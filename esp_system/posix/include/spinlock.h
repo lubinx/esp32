@@ -8,7 +8,8 @@
 #include <features.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include "esp_compiler.h"
+
+#include "esp_arch.h"
 
     #define SPINLOCK_INITIALIZER        {.core_id = 0, .lock_count = 0}
     #define SPINLOCK_WAIT_FOREVER       ((uint32_t)(-1))

@@ -44,6 +44,9 @@ MEMORY
     BOOT_text_seg (RWX) :       org = 0x403C7E00 + 32K, len = 32K
 }
 
+/* alias */
+PROVIDE(esp_log_printf = ets_printf);
+
 SECTIONS
 {
     .data :

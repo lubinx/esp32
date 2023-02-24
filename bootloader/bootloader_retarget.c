@@ -34,3 +34,13 @@ int _kill_r(struct _reent *r, int pid, int sig)
 
 ssize_t _write_r(struct _reent *r, int fd, void const *buf, size_t count)
     __attribute__((weak, alias("syscall_not_implemented")));
+
+struct _reent *__getreent(void)
+{
+    return _GLOBAL_REENT;
+}
+
+int pthread_setcancelstate(int state, int *oldstate)
+{
+    return 0;
+}

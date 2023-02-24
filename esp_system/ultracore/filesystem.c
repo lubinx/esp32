@@ -20,7 +20,6 @@ void __FILESYSTEM_init(void)
 
 int _open_r(struct _reent *r, char const *path, int flags, int mode)
 {
-    esp_rom_printf("open path: %s\n", path);
     return __set_errno_r_neg(r, ENOSYS);
 }
 

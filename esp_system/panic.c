@@ -6,8 +6,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "esp_err.h"
 #include "esp_attr.h"
+#include "esp_err.h"
+#include "esp_compiler.h"
 
 #include "esp_private/system_internal.h"
 

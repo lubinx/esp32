@@ -9,9 +9,9 @@
 #include <features.h>
 #include <stdint.h>
 
-#include "esp_compiler.h"
-#include "soc/soc_caps.h"
+#include "esp_arch.h"
 #include "esp_attr.h"           // for freertos detail see portmacro.h...has no wahre to put this
+#include "soc/soc_caps.h"
 
 // avoid "esp_err.h"
 typedef int esp_err_t;

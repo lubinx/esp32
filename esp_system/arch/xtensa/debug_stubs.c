@@ -9,7 +9,7 @@
 //
 
 #include "xtensa-debug-module.h"
-#include "esp_compiler.h"
+#include "esp_arch.h"
 #include "esp_log.h"
 
 const static char *TAG = "esp_dbg_stubs";

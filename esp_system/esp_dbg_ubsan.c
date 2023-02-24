@@ -25,7 +25,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 #include <string.h>
 
-#include "esp_cpu.h"
+#include "esp_compiler.h"
 #include "esp_system.h"
 
 struct source_location

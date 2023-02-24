@@ -8,6 +8,21 @@
 #include "esp_err.h"
 #include "esp_log.h"
 
+/*
+ * The likely and unlikely macro pairs:
+ * These macros are useful to place when application
+ * knows the majority ocurrence of a decision paths,
+ * placing one of these macros can hint the compiler
+ * to reorder instructions producing more optimized
+ * code.
+ */
+#ifndef likely
+    #define likely(x)                   __builtin_expect(!!(x), 1)
+#endif
+#ifndef unlikely
+    #define unlikely(x)                 __builtin_expect(!!(x), 0)
+#endif
+
 /**
  * Macro which can be used to check the error code. If the code is not ESP_OK, it prints the message and returns.
  */

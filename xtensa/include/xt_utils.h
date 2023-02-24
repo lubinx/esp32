@@ -5,16 +5,13 @@
  */
 #pragma once
 
-#include "xtensa/config/extreg.h"
+#include <sys/cdefs.h>
 
+#include "xtensa/config/extreg.h"
 #include "xtensa/xtruntime.h"
 #include "xt_instr_macros.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-// ------------------ Interrupt Control --------------------
+__BEGIN_DECLS
 
 static inline __attribute__((always_inline))
     unsigned xt_utils_intr_get_enabled_mask(void)
@@ -92,8 +89,6 @@ static inline __attribute__((always_inline))
         }
     }
 
-// ---------------------- Debugger -------------------------
-
 static inline __attribute__((always_inline))
     int xt_utils_dbgr_is_attached(void)
     {
@@ -108,6 +103,10 @@ static inline __attribute__((always_inline))
     {
         __asm__ ("break 1,15");
     }
+
+#define __dbgr_is_attached()            xt_utils_dbgr_is_attached()
+#define __dbgr_break()                  xt_utils_dbgr_break()
+#define __BKPT(value)                   (__dbgr_is_attached() ? __dbgr_break(): (void)value)
 
 /*
     use gcc buildin __sync_bool_compare_and_swap instead?
@@ -150,6 +149,4 @@ static inline __attribute__((always_inline)) bool xt_utils_compare_and_set(volat
 }
 */
 
-#ifdef __cplusplus
-}
-#endif
+__END_DECLS

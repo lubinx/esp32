@@ -10,12 +10,11 @@
 This header contains various general purpose helper macros used across ESP-IDF
 */
 #include <assert.h>
+#include <sys/cdefs.h>
+
 #include "esp_assert.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
+__BEGIN_DECLS
 /**
  * @brief Macro to select different versions of other macros based on whether VA_ARGS has an argument or no argument
  *
@@ -38,12 +37,17 @@ extern "C" {
  * enabled instead of the GNU extension. Below C++20, we haven't found any good alternative to using ##__VA_ARGS__.
  */
 #if defined(__cplusplus) && (__cplusplus >  201703L)
-#define CHOOSE_MACRO_VA_ARG_INN_IMPL(...) __VA_OPT__(0)
-#define CHOOSE_MACRO_VA_ARG_INN(one, MACRO1, MACRO2, ...) MACRO1
-#define CHOOSE_MACRO_VA_ARG(MACRO_WITH_ARGS, MACRO_WITH_NO_ARGS, ...) CHOOSE_MACRO_VA_ARG_INN(CHOOSE_MACRO_VA_ARG_INN_IMPL(__VA_ARGS__) __VA_OPT__(,) MACRO_WITH_ARGS, MACRO_WITH_NO_ARGS, 0)
+    #define CHOOSE_MACRO_VA_ARG_INN_IMPL(...)   \
+        __VA_OPT__(0)
+    #define CHOOSE_MACRO_VA_ARG_INN(one, MACRO1, MACRO2, ...)   \
+        MACRO1
+    #define CHOOSE_MACRO_VA_ARG(MACRO_WITH_ARGS, MACRO_WITH_NO_ARGS, ...)   \
+        CHOOSE_MACRO_VA_ARG_INN(CHOOSE_MACRO_VA_ARG_INN_IMPL(__VA_ARGS__) __VA_OPT__(,) MACRO_WITH_ARGS, MACRO_WITH_NO_ARGS, 0)
 #else
-#define CHOOSE_MACRO_VA_ARG_INN(one, two, MACRO1, MACRO2, ...) MACRO1
-#define CHOOSE_MACRO_VA_ARG(MACRO_WITH_ARGS, MACRO_WITH_NO_ARGS, ...) CHOOSE_MACRO_VA_ARG_INN(0, ##__VA_ARGS__, MACRO_WITH_ARGS, MACRO_WITH_NO_ARGS, 0)
+    #define CHOOSE_MACRO_VA_ARG_INN(one, two, MACRO1, MACRO2, ...)  \
+        MACRO1
+    #define CHOOSE_MACRO_VA_ARG(MACRO_WITH_ARGS, MACRO_WITH_NO_ARGS, ...)   \
+        CHOOSE_MACRO_VA_ARG_INN(0, ##__VA_ARGS__, MACRO_WITH_ARGS, MACRO_WITH_NO_ARGS, 0)
 #endif
 
 /* test macros */
@@ -65,6 +69,4 @@ ESP_STATIC_ASSERT(foo(42, 87) == 1, "CHOOSE_MACRO_VA_ARG() result does not match
 #undef foo_args
 #undef foo_no_args
 
-#ifdef __cplusplus
-}
-#endif
+__END_DECLS

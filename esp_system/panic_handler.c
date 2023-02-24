@@ -6,11 +6,13 @@
 
 #include <stdlib.h>
 
+#include "esp_compiler.h"
+#include "esp_cpu.h"
+
 #include "esp_ipc_isr.h"
 #include "esp_private/system_internal.h"
 
 #include "soc/soc_memory_layout.h"
-#include "esp_cpu.h"
 #include "soc/soc_caps.h"
 #include "soc/rtc.h"
 

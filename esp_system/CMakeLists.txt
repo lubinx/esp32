@@ -11,7 +11,6 @@ list(APPEND srcs
     "esp_cpu.c"
     "esp_dbg_ubsan.c"                   # debug for undefined behavior, but not sure if its works
     "esp_intr.c"
-    "esp_log.c"
     "esp_startup.c"
     "esp_system.c"                      # TODO: esp-idf compatiable only, plan to remove later
     "panic.c"
@@ -43,6 +42,7 @@ idf_component_register(
     SRCS
         ${srcs}
     PRIV_REQUIRES
+        "esp_common"
         "soc"
         "esp_hw_support"                                # remove later: should merge into driver
     LDFRAGMENTS

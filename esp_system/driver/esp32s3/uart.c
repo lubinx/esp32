@@ -16,16 +16,14 @@ static char const *RS485_TAG = "rs485";
 static char const *IRDA_TAG = "rs485";
 
 /****************************************************************************
- *  @declaration
+ *  @def
  ****************************************************************************/
 extern int __stdout_fd;
+
 void UART0_IntrHandler(void *arg);
 void UART2_IntrHandler(void *arg);
 void UART1_IntrHandler(void *arg);
 
-/****************************************************************************
- *  @declaration
- ****************************************************************************/
 struct UART_context
 {
     uart_dev_t *dev;

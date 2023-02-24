@@ -1,24 +1,12 @@
 #include <stdint.h>
 #include <assert.h>
 
-#include "esp_err.h"
 #include "esp_cpu.h"
+#include "esp_err.h"
 
 #include "soc/soc.h"
 #include "soc/soc_caps.h"
 #include "soc/rtc_cntl_reg.h"
-
-#if   defined(__XTENSA__)
-    // #include "xtensa/config/core-isa.h"
-#elif defined(__riscv)
-    #include "riscv/semihosting.h"
-
-    #if SOC_CPU_HAS_FLEXIBLE_INTC
-        #include "riscv/instruction_decode.h"
-    #endif
-#else
-    #pragma GCC error "unknown arch"
-#endif
 
 /* --------------------------------------------------- CPU Control -----------------------------------------------------
  *

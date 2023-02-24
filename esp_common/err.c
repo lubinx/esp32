@@ -22,6 +22,24 @@ void *__dbg_set_errno_r_nullptr(struct _reent *r, int err, char const *__functio
     return NULL;
 }
 
+char const *esp_err_to_name(esp_err_t code)
+{
+    if (code >= ESP_ERR_USER_BASE)
+        return "esp user error";
+    if (code >= ESP_ERR_MEMPROT_BASE)
+        return "esp memory protect error";
+    if (code >= ESP_ERR_HW_CRYPTO_BASE)
+        return "esp crypto error";
+    if (code >= ESP_ERR_FLASH_BASE)
+        return "esp flash error";
+    if (code >= ESP_ERR_MESH_BASE)
+        return "esp mesh error";
+    if (code >= ESP_ERR_WIFI_BASE)
+        return "esp wifi error";
+    if (code >= ESP_ERR_BASE)
+        return "esp error";
+}
+
 char *strerror(int err)
 {
     if (err >= ESP_ERR_BASE)

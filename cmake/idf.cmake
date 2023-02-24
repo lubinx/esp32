@@ -109,22 +109,15 @@ if (NOT IDF_TARGET_ARCH STREQUAL "")
     list(APPEND IDF_KERNEL_COMPONENTS ${IDF_TARGET_ARCH})
 endif()
 list(APPEND IDF_KERNEL_COMPONENTS
-    "soc" "heap" "esp_common"
+    "esp_rom"
+    "esp_common" "soc" "heap"
     "freertos" "esp_system"
-    "hal" "esp_rom"    # planning to remove
+    "hal"
     "esptool_py"
 )
 
 # OBSOLETED_COMPONENTS: force remove REQUIRES & PRIV_REQUIRES
 list(APPEND OBSOLETED_COMPONENTS
-    # "app_update"
-    # "bootloader_support"
-    # "esp_app_format"
-    # "esp_common"
-    # "esp_partition"
-    # "esp_pm"
-    # "partition_table"
-    # "spi_flash"
 )
 
 #############################################################################
