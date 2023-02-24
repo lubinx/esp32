@@ -227,57 +227,6 @@ void esp_cpu_reset(int core_id)
 /* ---------------------------------------------------- Debugging ------------------------------------------------------
  *
  * ------------------------------------------------------------------------------------------------------------------ */
-esp_err_t esp_cpu_set_breakpoint(int bp_nb, const void *bp_addr)
-{
-    assert(SOC_CPU_BREAKPOINTS_NUM > 0);
-
-    /*
-    Todo:
-    - Check that bp_nb is in range
-    */
-#if __XTENSA__
-    xt_utils_set_breakpoint(bp_nb, (uint32_t)bp_addr);
-#else
-    if (__dbgr_is_attached())
-    {
-        /* If we want to set breakpoint which when hit transfers control to debugger
-        * we need to set `action` in `mcontrol` to 1 (Enter Debug Mode).
-        * That `action` value is supported only when `dmode` of `tdata1` is set.
-        * But `dmode` can be modified by debugger only (from Debug Mode).
-        *
-        * So when debugger is connected we use special syscall to ask it to set breakpoint for us.
-        */
-        long args[] = {true, bp_nb, (long)bp_addr};
-
-        if (0 == semihosting_call_noerrno(ESP_SEMIHOSTING_SYS_BREAKPOINT_SET, args))
-            return ESP_ERR_INVALID_RESPONSE;
-    }
-    rv_utils_set_breakpoint(bp_nb, (uint32_t)bp_addr);
-#endif
-    return ESP_OK;
-}
-
-esp_err_t esp_cpu_clear_breakpoint(int bp_nb)
-{
-    /*
-    Todo:
-    - Check if the bp_nb is valid
-    */
-#if __XTENSA__
-    xt_utils_clear_breakpoint(bp_nb);
-#else
-    if (__dbgr_is_attached())
-    {
-        // See description in esp_cpu_set_breakpoint()
-        long args[] = {false, bp_nb};
-
-        if (0 == semihosting_call_noerrno(ESP_SEMIHOSTING_SYS_BREAKPOINT_SET, args);)
-            return ESP_ERR_INVALID_RESPONSE;
-    }
-    rv_utils_clear_breakpoint(bp_nb);
-#endif
-    return ESP_OK;
-}
 
 esp_err_t esp_cpu_set_watchpoint(int wp_nb, const void *wp_addr, size_t size, esp_cpu_watchpoint_trigger_t trigger)
 {

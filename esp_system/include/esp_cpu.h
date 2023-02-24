@@ -138,15 +138,7 @@ extern __attribute__((nonnull, nothrow))
 
 /***************************************************************************/
 /** Debugger
- *      __dbgr_is_attached()
- *      xt_utils_dbgr_break()
- *      esp_cpu_pc_to_addr()
 ****************************************************************************/
-extern __attribute__((nonnull, nothrow))
-    esp_err_t esp_cpu_set_breakpoint(int bp_nb, void const *bp_addr);
-extern __attribute__((nothrow))
-    esp_err_t esp_cpu_clear_breakpoint(int bp_nb);
-
     enum esp_cpu_watchpoint_trigger_t
     {
         ESP_CPU_WATCHPOINT_LOAD,

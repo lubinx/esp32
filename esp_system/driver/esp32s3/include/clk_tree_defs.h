@@ -19,8 +19,8 @@
 
     enum soc_pll_freq_sel_t
     {
-        SOC_PLL_320M                    = 0,
-        SOC_PLL_480M
+        SOC_PLL_SEL_320M                = 0,
+        SOC_PLL_SEL_480M
     };
     typedef enum soc_pll_freq_sel_t     soc_pll_freq_sel_t;
 

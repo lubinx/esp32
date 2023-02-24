@@ -164,25 +164,6 @@ void esp_panic_handler(panic_info_t *info)
 
     panic_print_str("\r\n");
 
-    // If on-chip-debugger is attached, and system is configured to be aware of this,
-    // then only print up to details. Users should be able to probe for the other information
-    // in debug mode.
-    if (__dbgr_is_attached()) {
-        panic_print_str("Setting breakpoint at 0x");
-        panic_print_hex((uint32_t)info->addr);
-        panic_print_str(" and returning...\r\n");
-#if CONFIG_APPTRACE_ENABLE
-#if CONFIG_APPTRACE_SV_ENABLE
-        SEGGER_RTT_ESP_FlushNoLock(CONFIG_APPTRACE_POSTMORTEM_FLUSH_THRESH, APPTRACE_ONPANIC_HOST_FLUSH_TMO);
-#else
-        esp_apptrace_flush_nolock(ESP_APPTRACE_DEST_TRAX, CONFIG_APPTRACE_POSTMORTEM_FLUSH_THRESH,
-                                  APPTRACE_ONPANIC_HOST_FLUSH_TMO);
-#endif
-#endif
-
-        esp_cpu_set_breakpoint(0, info->addr); // use breakpoint 0
-        return;
-    }
 
     PANIC_INFO_DUMP(info, state);
     panic_print_str("\r\n");

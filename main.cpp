@@ -11,6 +11,7 @@
 #include "esp_heap_caps.h"
 
 #include "uart.h"
+#include "sys/random.h"
 
 #pragma GCC diagnostic ignored "-Wunused-function"
 
@@ -40,10 +41,10 @@ extern "C" void __attribute__((weak)) app_main(void)
     if (clk_tree_module_is_enable(PERIPH_UART2_MODULE))
         printf("uart2: %lu bps\n", UART_get_baudrate(&UART2));
 
-    // printf("uart1: %lu bps\n", UART_get_baudrate(&UART1));
-    // printf("uart2: %lu bps\n", UART_get_baudrate(&UART2));
-
-    fflush(stdout);
+    for (int i = 0; i < 100; i ++)
+    {
+        printf("%x\n", rand());
+    }
 
     printf("semaphore init...\n");
     sem_init(&sema, 0, 10);

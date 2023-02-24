@@ -14,7 +14,7 @@ ssize_t getrandom(void *buf, size_t buflen, unsigned int flags)
         return __set_errno_neg(EFAULT);
 
     size_t len = buflen;
-    int align_offset = (uintptr_t)buf & ~(sizeof(int) - 1);
+    int align_offset = (uintptr_t)buf & (sizeof(int) - 1);
 
     if (align_offset)
     {

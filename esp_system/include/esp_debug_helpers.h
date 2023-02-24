@@ -109,23 +109,6 @@ esp_err_t esp_backtrace_print_from_frame(int depth, const esp_backtrace_frame_t*
  */
 esp_err_t esp_backtrace_print(int depth);
 
-/**
- * @brief Set a watchpoint to break/panic when a certain memory range is accessed.
- * Superseded by esp_cpu_set_watchpoint in esp_cpu.h.
- */
-static inline __attribute__((deprecated)) esp_err_t esp_set_watchpoint(int no, void *adr, int size, int flags)
-{
-    return esp_cpu_set_watchpoint(no, adr, size, (esp_cpu_watchpoint_trigger_t)flags);
-}
-
-/**
- * @brief Set a watchpoint to break/panic when a certain memory range is accessed.
- * Superseded by esp_cpu_clear_watchpoint in esp_cpu.h.
- */
-static inline __attribute__((deprecated)) void esp_clear_watchpoint(int no)
-{
-    esp_cpu_clear_watchpoint(no);
-}
 
 #endif
 #ifdef __cplusplus

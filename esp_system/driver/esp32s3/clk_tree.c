@@ -1,13 +1,8 @@
 #include <sys/errno.h>
 #include "esp_log.h"
 
-#include "soc/soc_caps.h"
+#include "soc.h"
 #include "soc/dport_access.h"
-#include "soc/system_reg.h"
-#include "soc/system_struct.h"
-#include "soc/syscon_reg.h"
-#include "soc/rtc_cntl_struct.h"
-
 #include "clk_tree.h"
 #include "sdkconfig.h"
 
@@ -28,62 +23,77 @@ char const *TAG = "clktree";
  ****************************************************************************/
 void clk_tree_initialize(void)
 {
-    uint32_t gate = SYSTEM_WDG_CLK_EN |
-        SYSTEM_I2S0_CLK_EN |
-        // SYSTEM_UART_CLK_EN |
-        SYSTEM_UART1_CLK_EN |
-        SYSTEM_UART2_CLK_EN |
-        SYSTEM_USB_CLK_EN |
-        SYSTEM_SPI2_CLK_EN |
+    uint32_t clk_en0 =
+        SYSTEM_EFUSE_CLK_EN |
+        // SYSTEM_LEDC_CLK_EN |
+        // SYSTEM_TWAI_CLK_EN |
+    // ADC
+        // SYSTEM_APB_SARADC_CLK_EN |
+        // SYSTEM_ADC2_ARB_CLK_EN |
+    // I2S
+        // SYSTEM_I2S0_CLK_EN |
+        // SYSTEM_I2S1_CLK_EN |
+    // PWM
+        // SYSTEM_PWM0_CLK_EN |
+        // SYSTEM_PWM1_CLK_EN |
+        // SYSTEM_PWM2_CLK_EN |
+        // SYSTEM_PWM3_CLK_EN |
+    // I2C
         SYSTEM_I2C_EXT0_CLK_EN |
-        SYSTEM_UHCI0_CLK_EN |
-        SYSTEM_RMT_CLK_EN |
-        SYSTEM_PCNT_CLK_EN |
-        SYSTEM_LEDC_CLK_EN |
-        SYSTEM_TIMERGROUP1_CLK_EN |
-        SYSTEM_SPI3_CLK_EN |
-        SYSTEM_SPI4_CLK_EN |
-        SYSTEM_PWM0_CLK_EN |
-        SYSTEM_TWAI_CLK_EN |
-        SYSTEM_PWM1_CLK_EN |
-        SYSTEM_I2S1_CLK_EN |
-        SYSTEM_SPI2_DMA_CLK_EN |
-        SYSTEM_SPI3_DMA_CLK_EN |
-        SYSTEM_PWM2_CLK_EN |
-        SYSTEM_PWM3_CLK_EN |
+        SYSTEM_I2C_EXT1_CLK_EN |
+    // SPI
+        SYSTEM_SPI01_CLK_EN |       // SPI0 is required by flash
+        // SYSTEM_SPI2_CLK_EN |
+        // SYSTEM_SPI3_CLK_EN |
+        // SYSTEM_SPI4_CLK_EN |
+        // SYSTEM_SPI2_DMA_CLK_EN |
+        // SYSTEM_SPI3_DMA_CLK_EN |
+    // UART
+        SYSTEM_UART_MEM_CLK_EN |
+        SYSTEM_UART_CLK_EN |
+        // SYSTEM_UART1_CLK_EN |
+    // USB
+        // SYSTEM_USB_CLK_EN |
+        // SYSTEM_UHCI0_CLK_EN |
+        // SYSTEM_UHCI1_CLK_EN |
+    // TIMERS
+        // SYSTEM_SYSTIMER_CLK_EN |
+        // SYSTEM_TIMERS_CLK_EN |
+        // SYSTEM_TIMERGROUP1_CLK_EN |
+        // SYSTEM_TIMERGROUP_CLK_EN |
+        // SYSTEM_RMT_CLK_EN |
+        // SYSTEM_WDG_CLK_EN |
         0;
-    CLEAR_PERI_REG_MASK(SYSTEM_PERIP_CLK_EN0_REG, gate);
-    SET_PERI_REG_MASK(SYSTEM_PERIP_RST_EN0_REG, gate);
-    // SYSTEM.perip_clk_en0.val
-
-    gate = 0;
-    CLEAR_PERI_REG_MASK(SYSTEM_PERIP_CLK_EN1_REG, gate);
-    SET_PERI_REG_MASK(SYSTEM_PERIP_RST_EN1_REG, gate);
-    // SYSTEM.perip_clk_en1.val
-
-    /* Disable hardware crypto clocks. */
-    gate = SYSTEM_CRYPTO_AES_CLK_EN |
-        SYSTEM_CRYPTO_SHA_CLK_EN |
-        SYSTEM_CRYPTO_RSA_CLK_EN |
+    uint32_t clk_en1 =
+        // SYSTEM_USB_DEVICE_CLK_EN |
+        // SYSTEM_UART2_CLK_EN |
+        // SYSTEM_LCD_CAM_CLK_EN |
+        // SYSTEM_SDIO_HOST_CLK_EN |
+        // SYSTEM_DMA_CLK_EN |
+        // SYSTEM_CRYPTO_HMAC_CLK_EN |
+        // SYSTEM_CRYPTO_DS_CLK_EN |
+        // SYSTEM_CRYPTO_RSA_CLK_EN |
+        // SYSTEM_CRYPTO_SHA_CLK_EN |
+        // SYSTEM_CRYPTO_AES_CLK_EN |
+        // SYSTEM_PERI_BACKUP_CLK_EN |
         0;
-    CLEAR_PERI_REG_MASK(SYSTEM_PERIP_CLK_EN1_REG, gate);
-    SET_PERI_REG_MASK(SYSTEM_PERIP_RST_EN1_REG, gate);
 
-    /* Force clear backup dma reset signal. This is a fix to the backup dma
-     * implementation in the ROM, the reset signal was not cleared when the
-     * backup dma was started, which caused the backup dma operation to fail. */
-    CLEAR_PERI_REG_MASK(SYSTEM_PERIP_RST_EN1_REG, SYSTEM_PERI_BACKUP_RST);
+    SYSTEM.perip_clk_en0.val = clk_en0, SYSTEM.perip_rst_en0.val = ~clk_en0;
+    SYSTEM.perip_clk_en1.val = clk_en1, SYSTEM.perip_rst_en1.val = ~clk_en1;
 
-    /* Disable WiFi/BT/SDIO clocks. */
-    gate = SYSTEM_WIFI_CLK_WIFI_EN |
-        SYSTEM_WIFI_CLK_BT_EN_M |
+    // WiFi/BT/SDIO clocks
+    uint32_t wifi_bt_clkl_dis = SYSTEM_WIFI_CLK_WIFI_EN |
+        SYSTEM_WIFI_CLK_BT_EN |
         SYSTEM_WIFI_CLK_I2C_CLK_EN |
         SYSTEM_WIFI_CLK_UNUSED_BIT12 |
         SYSTEM_WIFI_CLK_SDIO_HOST_EN |
         0;
+    SYSCON.wifi_clk_en &= ~wifi_bt_clkl_dis;
+    SYSCON.wifi_clk_en |= SYSTEM_WIFI_CLK_EN;
 
-    CLEAR_PERI_REG_MASK(SYSTEM_WIFI_CLK_EN_REG, gate);
-    SET_PERI_REG_MASK(SYSTEM_WIFI_CLK_EN_REG, SYSTEM_WIFI_CLK_EN);
+    // CLEAR_PERI_REG_MASK(SYSTEM_WIFI_CLK_EN_REG, gate);
+    // SET_PERI_REG_MASK(SYSTEM_WIFI_CLK_EN_REG, SYSTEM_WIFI_CLK_EN);
+
 
     /* Set WiFi light sleep clock source to RTC slow clock */
     REG_SET_FIELD(SYSTEM_BT_LPCK_DIV_INT_REG, SYSTEM_BT_LPCK_DIV_NUM, 0);
@@ -161,7 +171,7 @@ int clk_tree_pll_conf(soc_pll_freq_sel_t sel)
     if (1 < (unsigned)sel)
         return EINVAL;
 
-    REG_SET_FIELD(SYSTEM_CPU_PER_CONF_REG, SYSTEM_PLL_FREQ_SEL, sel);
+    SYSTEM.cpu_per_conf.pll_freq_sel = sel;
     return 0;
 }
 
@@ -190,9 +200,10 @@ int clk_tree_cpu_conf(soc_cpu_sclk_sel_t sel, uint32_t div)
     soc_pll_freq_sel_t pll_freq_sel;
     if (SOC_CPU_CLK_SRC_PLL == sel)
     {
+        pll_freq_sel = SYSTEM.cpu_per_conf.pll_freq_sel;
+
         // Table 7­3. CPU Clock Frequency
-        pll_freq_sel = (soc_pll_freq_sel_t)(REG_GET_FIELD(SYSTEM_SYSCLK_CONF_REG, SYSTEM_PLL_FREQ_SEL));
-        if (SOC_PLL_320M == pll_freq_sel)
+        if (SOC_PLL_SEL_320M == pll_freq_sel)
         {
             if (2 != div && 4 != div)
             {
@@ -213,28 +224,29 @@ int clk_tree_cpu_conf(soc_cpu_sclk_sel_t sel, uint32_t div)
         }
     }
 
-    REG_SET_FIELD(SYSTEM_SYSCLK_CONF_REG, SYSTEM_PRE_DIV_CNT, 0);
-    REG_SET_FIELD(SYSTEM_SYSCLK_CONF_REG, SYSTEM_SOC_CLK_SEL, SOC_CPU_CLK_SRC_RC_FAST);
+    // temporay select RC_FAST as cpu clock
+    SYSTEM.sysclk_conf.pre_div_cnt = 0;
+    SYSTEM.sysclk_conf.soc_clk_sel = SOC_CPU_CLK_SRC_RC_FAST;
 
     switch(sel)
     {
     case SOC_CPU_CLK_SRC_XTAL:
     case SOC_CPU_CLK_SRC_RC_FAST:
-        REG_SET_FIELD(SYSTEM_SYSCLK_CONF_REG, SYSTEM_PRE_DIV_CNT, div - 1);
-        REG_SET_FIELD(SYSTEM_SYSCLK_CONF_REG, SYSTEM_SOC_CLK_SEL, sel);
+        SYSTEM.sysclk_conf.pre_div_cnt = div - 1;
+        SYSTEM.sysclk_conf.soc_clk_sel = sel;
         break;
 
     case SOC_CPU_CLK_SRC_PLL:
         // Table 7­3. CPU Clock Frequency
-        if(SOC_PLL_320M == pll_freq_sel)
+        if(SOC_PLL_SEL_320M == pll_freq_sel)
         {
             switch(div)
             {
             case 2:
-                REG_SET_FIELD(SYSTEM_CPU_PER_CONF_REG, SYSTEM_CPUPERIOD_SEL, 1);
+                SYSTEM.cpu_per_conf.cpuperiod_sel = 1;
                 break;
             case 4:
-                REG_SET_FIELD(SYSTEM_CPU_PER_CONF_REG, SYSTEM_CPUPERIOD_SEL, 0);
+                SYSTEM.cpu_per_conf.cpuperiod_sel = 0;
                 break;
             }
         }
@@ -243,13 +255,13 @@ int clk_tree_cpu_conf(soc_cpu_sclk_sel_t sel, uint32_t div)
             switch(div)
             {
             case 2:
-                REG_SET_FIELD(SYSTEM_CPU_PER_CONF_REG, SYSTEM_CPUPERIOD_SEL, 2);
+                SYSTEM.cpu_per_conf.cpuperiod_sel = 2;
                 break;
             case 3:
-                REG_SET_FIELD(SYSTEM_CPU_PER_CONF_REG, SYSTEM_CPUPERIOD_SEL, 1);
+                SYSTEM.cpu_per_conf.cpuperiod_sel = 1;
                 break;
             case 6:
-                REG_SET_FIELD(SYSTEM_CPU_PER_CONF_REG, SYSTEM_CPUPERIOD_SEL, 0);
+                SYSTEM.cpu_per_conf.cpuperiod_sel = 0;
                 break;
             }
         }
@@ -266,12 +278,6 @@ int clk_tree_systick_conf(soc_systick_sclk_sel_t sel, uint32_t div)
         return 0;
 }
 
-static inline uint32_t clk_tree_cpu_divider(void)
-{
-    // SYSTEM.sysclk_conf.
-    return REG_GET_FIELD(SYSTEM_SYSCLK_CONF_REG, SYSTEM_PRE_DIV_CNT) + 1;
-}
-
 uint64_t clk_tree_cpu_freq(void)
 {
     switch ((soc_cpu_sclk_sel_t)REG_GET_FIELD(SYSTEM_SYSCLK_CONF_REG, SYSTEM_SOC_CLK_SEL))
@@ -281,8 +287,8 @@ uint64_t clk_tree_cpu_freq(void)
 
     //--- 40M -
     case SOC_CPU_CLK_SRC_XTAL:
-        ESP_LOGW(TAG, "cpu %llu, div %lu", clk_tree_xtal_freq(), clk_tree_cpu_divider());
-        return clk_tree_xtal_freq() / clk_tree_cpu_divider();
+        return clk_tree_xtal_freq() / (SYSTEM.sysclk_conf.pre_div_cnt + 1);
+
     case SOC_CPU_CLK_SRC_PLL:
         switch (REG_GET_FIELD(SYSTEM_CPU_PER_CONF_REG, SYSTEM_CPUPERIOD_SEL))
         {
@@ -301,7 +307,7 @@ uint64_t clk_tree_cpu_freq(void)
 
     // --- should be power up default
     case SOC_CPU_CLK_SRC_RC_FAST:
-        return clk_tree_rc_fast_freq() / clk_tree_cpu_divider();
+        return clk_tree_rc_fast_freq() / (SYSTEM.sysclk_conf.pre_div_cnt + 1);
     }
 }
 
@@ -320,9 +326,9 @@ uint64_t clk_tree_ahb_freq(void)
     {
     // --- equal to cpu
     case SOC_CPU_CLK_SRC_XTAL:
-        return clk_tree_xtal_freq() / clk_tree_cpu_divider();
+        return clk_tree_xtal_freq() / (SYSTEM.sysclk_conf.pre_div_cnt + 1);
     case SOC_CPU_CLK_SRC_RC_FAST:
-        return clk_tree_rc_fast_freq() / clk_tree_cpu_divider();
+        return clk_tree_rc_fast_freq() / (SYSTEM.sysclk_conf.pre_div_cnt + 1);
     // ---
 
     case SOC_CPU_CLK_SRC_PLL:
@@ -427,9 +433,9 @@ static inline uint32_t periph_ll_get_clk_en_mask(periph_module_t periph)
     case PERIPH_RNG_MODULE:
         return SYSTEM_WIFI_CLK_RNG_EN;
     case PERIPH_WIFI_MODULE:
-        return SYSTEM_WIFI_CLK_WIFI_EN_M;
+        return SYSTEM_WIFI_CLK_WIFI_EN;
     case PERIPH_BT_MODULE:
-        return SYSTEM_WIFI_CLK_BT_EN_M;
+        return SYSTEM_WIFI_CLK_BT_EN;
     case PERIPH_WIFI_BT_COMMON_MODULE:
         return SYSTEM_WIFI_CLK_WIFI_BT_COMMON_M;
     case PERIPH_BT_BASEBAND_MODULE:

@@ -44,16 +44,16 @@ extern __attribute__((nothrow))
     int clk_tree_cpu_conf(soc_cpu_sclk_sel_t sel, uint32_t div);
 
     /**
-     *  configure systimer(systick) clock route
-    */
-extern __attribute__((nothrow))
-    int clk_tree_systick_conf(soc_systick_sclk_sel_t sel, uint32_t div);
-
-    /**
      *  cpu clock'frequency
     */
 extern __attribute__((nothrow, const))
     uint64_t clk_tree_cpu_freq(void);
+
+    /**
+     *  configure systimer(systick) clock route
+    */
+extern __attribute__((nothrow))
+    int clk_tree_systick_conf(soc_systick_sclk_sel_t sel, uint32_t div);
 
     /**
      *  systick clock'frequency
