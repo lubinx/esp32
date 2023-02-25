@@ -98,8 +98,6 @@ enum
 /****************************************************************************
  *  @internal
  ****************************************************************************/
-// configure
-static uint64_t UART_sclk_freq(UART_sclk_sel_t sel);
 // io
 static ssize_t UART_read(int fd, void *buf, size_t bufsize);
 static ssize_t UART_write(int fd, void const *buf, size_t count);
@@ -137,30 +135,24 @@ int UART_createfd(int nb, uint32_t bps, enum UART_parity_t parity, enum UART_sto
         return __set_errno_neg(EBUSY);
 
     uart_dev_t *dev;
-    UART_sclk_sel_t sclk;
 
     switch (nb)
     {
     case 0:
         dev = &UART0;
-        sclk = UART_SCLK_SEL_XTAL;  // TODO: configure this by KCONFIG
         break;
     case 1:
         dev = &UART1;
-        sclk = UART_SCLK_SEL_XTAL;
         break;
     case 2:
         dev = &UART2;
-        sclk = UART_SCLK_SEL_XTAL;
         break;
     }
-    context->dev = dev;
-    dev->clk_conf.sclk_sel = sclk;
 
     sem_init(&context->read_rdy, 0, 1);
     sem_init(&context->write_rdy, 0, 1);
 
-    int retval = UART_configure(dev, sclk, bps, parity, stopbits);
+    int retval = UART_configure(dev, bps, parity, stopbits);
 
     if (0 == retval)
     {
@@ -174,10 +166,11 @@ int UART_createfd(int nb, uint32_t bps, enum UART_parity_t parity, enum UART_sto
     else
         retval = __set_errno_neg(retval);
 
+    context->dev = dev;
     return retval;
 }
 
-int UART_configure(uart_dev_t *dev, UART_sclk_sel_t sclk, uint32_t bps, enum UART_parity_t parity, enum UART_stopbits_t stopbits)
+int UART_configure(uart_dev_t *dev, uint32_t bps, enum UART_parity_t parity, enum UART_stopbits_t stopbits)
 {
     PERIPH_module_t uart_module;
     int retval;
@@ -247,9 +240,7 @@ int UART_configure(uart_dev_t *dev, UART_sclk_sel_t sclk, uint32_t bps, enum UAR
         dev->conf0.stop_bit_num = 2;
     */
     }
-
-    dev->clk_conf.sclk_sel = sclk;
-    uint64_t sclk_freq = UART_sclk_freq(sclk);
+    uint64_t sclk_freq = CLK_TREE_uart_sclk_freq(dev);
 
     // calucate baudrate
     int sclk_div = (sclk_freq + 4095 * bps - 1) / (4095 * bps);
@@ -295,27 +286,55 @@ int UART_deconfigure(uart_dev_t *dev)
 
 uint32_t UART_get_baudrate(uart_dev_t *dev)
 {
-    return (UART_sclk_freq(dev->clk_conf.sclk_sel) << 4) / (
+    return (CLK_TREE_uart_sclk_freq(dev) << 4) / (
         ((dev->clkdiv.clkdiv << 4) | dev->clkdiv.clkdiv_frag) * (dev->clk_conf.sclk_div_num + 1)
     );
 }
 
 /****************************************************************************
- *  @internal
+ *  @implements: direct write UART through fifo
  ****************************************************************************/
-static uint64_t UART_sclk_freq(UART_sclk_sel_t sel)
+void UART_fifo_tx(uart_dev_t *dev, uint8_t ch)
 {
-    switch(sel)
-    {
-    case UART_SCLK_SEL_APB:
-        return CLK_TREE_apb_freq();
-    case UART_SCLK_SEL_INT_RC_FAST:
-        return CLK_TREE_RC_FAST_FREQ;
-    case UART_SCLK_SEL_XTAL:
-        return CLK_TREE_XTAL_FREQ;
-    }
+    while (SOC_UART_FIFO_LEN == dev->status.txfifo_cnt);
+    dev->fifo.rxfifo_rd_byte = ch;
 }
 
+uint8_t UART_fifo_rx(uart_dev_t *dev)
+{
+    while (0 == dev->status.rxfifo_cnt);
+    return (uint8_t)dev->fifo.rxfifo_rd_byte;
+}
+
+int UART_fifo_write(uart_dev_t *dev, void const *buf, unsigned count)
+{
+    unsigned written = 0;
+    while (written < count)
+    {
+            if (SOC_UART_FIFO_LEN == dev->status.txfifo_cnt)
+            break;
+            dev->fifo.rxfifo_rd_byte = *((uint8_t *)buf + written);
+            written ++;
+    }
+    return written;
+}
+
+int UART_fifo_read(uart_dev_t *dev, void *buf, unsigned bufsize)
+{
+    unsigned readed = 0;
+    while (readed < bufsize)
+    {
+        if (0 == dev->status.rxfifo_cnt)
+            break;
+        *((uint8_t *)buf + readed) = (uint8_t)dev->fifo.rxfifo_rd_byte;
+        readed ++;
+    }
+    return readed;
+}
+
+/****************************************************************************
+ *  @internal
+ ****************************************************************************/
 static ssize_t UART_read(int fd, void *buf, size_t bufsize)
 {
     struct UART_context *context = AsFD(fd)->ext;

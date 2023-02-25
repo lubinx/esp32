@@ -8,10 +8,16 @@
 #include "clk_tree_defs.h"
 
 __BEGIN_DECLS
+/****************************************************************************
+ *  initialization
+ ****************************************************************************/
     // init
 extern __attribute__((nothrow))
     void CLK_TREE_initialize(void);
 
+/****************************************************************************
+ *  main clock and configure
+ ****************************************************************************/
     // PLL
 extern __attribute__((nothrow))
     int CLK_TREE_pll_conf(PLL_freq_sel_t sel);
@@ -26,7 +32,7 @@ extern __attribute__((nothrow, const))
 
     // SysTimer
 extern __attribute__((nothrow))
-    int CLK_TREE_systimer_conf(SYSTIMER_sclk_sel_t sel, uint32_t div);
+    int CLK_TREE_systimer_conf(SYSTIMER_sclk_sel_t sel);
 extern __attribute__((nothrow, const))
     uint64_t CLK_TREE_systimer_freq(void);
 
@@ -38,12 +44,12 @@ extern __attribute__((nothrow, const))
 
     // RTC
 extern __attribute__((nothrow))
-    int CLK_TREE_rtc_conf(RTC_sclk_sel_t sel, uint32_t div);
+    int CLK_TREE_rtc_conf(RTC_sclk_sel_t sel);
 extern __attribute__((nothrow, const))
-    uint64_t CLK_TREE_rtc_freq(void);
+    uint64_t CLK_TREE_rtc_sclk_freq(void);
 
 /****************************************************************************
- *  peripheral module control: *mapping* to clk-tree
+ *  peripheral module gating control
  ****************************************************************************/
 extern __attribute__((nothrow, const))
     bool CLK_TREE_periph_is_enable(PERIPH_module_t periph);

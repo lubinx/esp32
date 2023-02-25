@@ -113,18 +113,16 @@ void CLK_TREE_initialize(void)
     CLEAR_PERI_REG_MASK(SYSTEM_BT_LPCK_DIV_FRAC_REG, SYSTEM_LPCLK_SEL_8M);
     SET_PERI_REG_MASK(SYSTEM_BT_LPCK_DIV_FRAC_REG, SYSTEM_LPCLK_SEL_RTC_SLOW);
 
-    // uint32_t old_freq_mhz = CLK_TREE_cpu_freq() / 1000000;
-    if (CLK_TREE_XTAL_FREQ < CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ)
+    // uint32_t old_freq_mhz = CLK_TREE_cpu_freq();
+    if (CLK_TREE_XTAL_FREQ < CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ * MHZ)
     {
         switch (CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ)
         {
         default:
         case PLL_DIV_TO_80M_FREQ:
             break;
-
         case PLL_DIV_TO_160M_FREQ:
             break;
-
         case PLL_DIV_TO_240M_FREQ:
             break;
     };
@@ -258,7 +256,7 @@ uint64_t CLK_TREE_cpu_freq(void)
     return 0;
 }
 
-int CLK_TREE_systimer_conf(SYSTIMER_sclk_sel_t sel, uint32_t div)
+int CLK_TREE_systimer_conf(SYSTIMER_sclk_sel_t sel)
 {
     if (SYSTIMER_SCLK_SEL_XTAL != sel)
         return EINVAL;
@@ -291,42 +289,69 @@ uint64_t CLK_TREE_ahb_freq(void)
 uint64_t CLK_TREE_apb_freq(void)
     __attribute__((alias(("CLK_TREE_ahb_freq"))));
 
-/****************************************************************************
- *  rtc fast/slow clks
- ****************************************************************************/
-int CLK_TREE_rtc_fast_conf(RTC_FAST_sclk_sel_t sel, uint32_t div)
+int CLK_TREE_rtc_conf(RTC_sclk_sel_t sel)
 {
-    return ENOSYS;
+    RTCCNTL.clk_conf.ana_clk_rtc_sel = sel;
+    return 0;
 }
 
-int CLK_TREE_rtc_conf(RTC_sclk_sel_t sel, uint32_t div)
-{
-    return ENOSYS;
-}
-
-uint64_t CLK_TREE_rtc_fast_freq(void)
-{
-    return 0; // CLK_TREE_lp_fast_get_freq_hz(precision);
-}
-
-uint64_t CLK_TREE_rtc_freq(void)
+uint64_t CLK_TREE_rtc_sclk_freq(void)
 {
     switch (RTCCNTL.clk_conf.ana_clk_rtc_sel)
     {
-    // TODO: divider
     case RTC_SCLK_SEL_RC_SLOW:
         return CLK_TREE_RC_SLOW_FREQ;
     case RTC_SCLK_SEL_XTAL:
         return CLK_TREE_XTAL32K_FREQ;
     case RTC_SLOW_SCLK_SEL_RC_FAST_D256:
-        return SOC_CLK_RC_FAST_D256_FREQ_APPROX;
+        return CLK_TREE_RC_FAST_D256_FREQ;
     default:
         return 0;
     }
 }
 
 /****************************************************************************
- *  @implements: module enable / disable
+ * @implements esp32s3/clk_tree.h
+ ****************************************************************************/
+int CLK_TREE_fast_rtc_conf(RTC_FAST_sclk_sel_t sel, uint32_t div)
+{
+    RTCCNTL.clk_conf.fast_clk_rtc_sel = sel;
+    return 0;
+}
+
+uint64_t CLK_TREE_fast_rtc_sclk_freq(void)
+{
+    switch (RTCCNTL.clk_conf.fast_clk_rtc_sel)
+    {
+    case RTC_FAST_SCLK_SEL_XTAL_D2:
+        return CLK_TREE_XTAL_D2_FREQ;
+    case RTC_FAST_SCLK_SEL_RC_FAST:
+        return CLK_TREE_RC_FAST_FREQ;
+    default:
+        return 0;
+    }
+}
+
+int CLK_TREE_uart_conf(uart_dev_t *dev, UART_sclk_sel_t sel)
+{
+    return ENOSYS;
+}
+
+uint64_t CLK_TREE_uart_sclk_freq(uart_dev_t *dev)
+{
+    switch(dev->clk_conf.sclk_sel)
+    {
+    case UART_SCLK_SEL_APB:
+        return CLK_TREE_apb_freq();
+    case UART_SCLK_SEL_INT_RC_FAST:
+        return CLK_TREE_RC_FAST_FREQ;
+    case UART_SCLK_SEL_XTAL:
+        return CLK_TREE_XTAL_FREQ;
+    }
+}
+
+/****************************************************************************
+ *  @implements: peripheral module gating control
  ****************************************************************************/
 static uint32_t periph_clk_en_reg(PERIPH_module_t periph)
 {

@@ -5,12 +5,15 @@
     // alias
     typedef periph_module_t         PERIPH_module_t;
 
-    #define CLK_TREE_XTAL_FREQ          (40000000)
-    #define CLK_TREE_XTAL32K_FREQ       (32768)
-    #define CLK_TREE_RC_FAST_FREQ       (17500000)
-    #define CLK_TREE_RC_SLOW_FREQ       (136000)
+// provided source clocks
+    #define CLK_TREE_XTAL_FREQ          (40000000U)
+    #define CLK_TREE_XTAL32K_FREQ       (32768U)
+    #define CLK_TREE_RC_FAST_FREQ       (17500000U)
+    #define CLK_TREE_RC_SLOW_FREQ       (136000U)
 
-    #define CLK_TREE_RC_FAST_D256       (CLK_TREE_RC_FAST_FREQ / 256)
+// fixed div
+    #define CLK_TREE_XTAL_D2_FREQ       (CLK_TREE_XTAL_FREQ / 2)
+    #define CLK_TREE_RC_FAST_D256_FREQ  (CLK_TREE_RC_FAST_FREQ / 256)
 
     enum PLL_freq_sel_t
     {
@@ -47,5 +50,13 @@
         RTC_FAST_SCLK_SEL_RC_FAST
     };
     typedef enum RTC_FAST_sclk_sel_t    RTC_FAST_sclk_sel_t;
+
+    enum UART_sclk_sel_t
+    {
+        UART_SCLK_SEL_APB           = 1,
+        UART_SCLK_SEL_INT_RC_FAST,
+        UART_SCLK_SEL_XTAL
+    };
+    typedef enum UART_sclk_sel_t    UART_sclk_sel_t;
 
 #endif
