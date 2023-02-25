@@ -28,22 +28,21 @@ extern "C" void __attribute__((weak)) app_main(void)
     (void)fd;
 
     printf("Minimum free heap size: %d bytes\n", heap_caps_get_minimum_free_size(MALLOC_CAP_DEFAULT));
-    printf("pll frequency: %llu MHz\n", clk_tree_pll_freq() / 1000000);
-    printf("cpu frequency: %llu MHz\n", clk_tree_cpu_freq() / 1000000);
-    printf("ahb frequency: %llu MHz\n", clk_tree_ahb_freq() / 1000000);
+    printf("pll frequency: %llu MHz\n", CLK_TREE_pll_freq() / 1000000);
+    printf("cpu frequency: %llu MHz\n", CLK_TREE_cpu_freq() / 1000000);
+    printf("ahb frequency: %llu MHz\n", CLK_TREE_ahb_freq() / 1000000);
 
-    if (clk_tree_module_is_enable(PERIPH_UART0_MODULE))
+    if (CLK_TREE_periph_is_enable(PERIPH_UART0_MODULE))
         printf("uart0: %lu bps\n", UART_get_baudrate(&UART0));
-    if (clk_tree_module_is_enable(PERIPH_UART1_MODULE))
+    if (CLK_TREE_periph_is_enable(PERIPH_UART1_MODULE))
         printf("uart1: %lu bps\n", UART_get_baudrate(&UART1));
-    if (clk_tree_module_is_enable(PERIPH_UART2_MODULE))
+    if (CLK_TREE_periph_is_enable(PERIPH_UART2_MODULE))
         printf("uart2: %lu bps\n", UART_get_baudrate(&UART2));
 
 
     for (int i = 0; i < 100; i ++)
-    {
-        printf("%x\n", rand());
-    }
+        printf("0x%x,\t", rand());
+    printf("\n");
 
     printf("semaphore init...\n");
     sem_init(&sema, 0, 10);

@@ -12,8 +12,8 @@
   WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
   the specific language governing rights and limitations under the License.
 ****************************************************************************/
-#ifndef __ADC_H
-#define __ADC_H                         1
+#ifndef __HW_ADC_H
+#define __HW_ADC_H                      1
 
 #include <features.h>
 #include <stdint.h>

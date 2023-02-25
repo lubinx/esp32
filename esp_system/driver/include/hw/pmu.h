@@ -1,5 +1,5 @@
-#ifndef __PMU_H
-#define __PMU_H                     1
+#ifndef __HW_PMU_H
+#define __HW_PMU_H                  1
 
 #include <features.h>
 

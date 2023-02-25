@@ -38,9 +38,9 @@ uint32_t rtc_clk_cal_internal(rtc_cal_sel_t cal_clk, uint32_t slowclk_cycles)
      */
     if (cal_clk == RTC_CAL_RTC_MUX) {
         soc_rtc_slow_clk_src_t slow_clk_src = rtc_clk_slow_src_get();
-        if (slow_clk_src == SOC_RTC_SLOW_CLK_SRC_XTAL32K) {
+        if (slow_clk_src == RTC_SCLK_SEL_XTAL) {
             cal_clk = RTC_CAL_32K_XTAL;
-        } else if (slow_clk_src == SOC_RTC_SLOW_CLK_SRC_RC_FAST_D256) {
+        } else if (slow_clk_src == RTC_SLOW_SCLK_SEL_RC_FAST_D256) {
             cal_clk = RTC_CAL_8MD256;
         }
     } else if (cal_clk == RTC_CAL_INTERNAL_OSC) {
@@ -82,13 +82,13 @@ uint32_t rtc_clk_cal_internal(rtc_cal_sel_t cal_clk, uint32_t slowclk_cycles)
     uint32_t expected_freq;
     if (cal_clk == RTC_CAL_32K_XTAL) {
         REG_SET_FIELD(TIMG_RTCCALICFG2_REG(0), TIMG_RTC_CALI_TIMEOUT_THRES, RTC_SLOW_CLK_X32K_CAL_TIMEOUT_THRES(slowclk_cycles));
-        expected_freq = SOC_CLK_XTAL32K_FREQ_APPROX;
+        expected_freq = CLK_TREE_XTAL32K_FREQ;
     } else if (cal_clk == RTC_CAL_8MD256) {
         REG_SET_FIELD(TIMG_RTCCALICFG2_REG(0), TIMG_RTC_CALI_TIMEOUT_THRES, RTC_SLOW_CLK_8MD256_CAL_TIMEOUT_THRES(slowclk_cycles));
         expected_freq = SOC_CLK_RC_FAST_D256_FREQ_APPROX;
     } else {
         REG_SET_FIELD(TIMG_RTCCALICFG2_REG(0), TIMG_RTC_CALI_TIMEOUT_THRES, RTC_SLOW_CLK_150K_CAL_TIMEOUT_THRES(slowclk_cycles));
-        expected_freq = SOC_CLK_RC_SLOW_FREQ_APPROX;
+        expected_freq = CLK_TREE_RC_SLOW_FREQ;
     }
     uint32_t us_time_estimate = (uint32_t) (((uint64_t) slowclk_cycles) * MHZ / expected_freq);
     /* Start calibration */

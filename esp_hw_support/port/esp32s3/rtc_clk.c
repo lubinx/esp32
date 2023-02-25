@@ -10,6 +10,8 @@
 #include <assert.h>
 #include <stdlib.h>
 #include "sdkconfig.h"
+
+#include "soc/clk_tree_defs.h"
 #include "esp32s3/rom/ets_sys.h"
 #include "esp32s3/rom/rtc.h"
 #include "soc/rtc.h"
@@ -132,13 +134,13 @@ uint32_t rtc_clk_slow_freq_get_hz(void)
     }
 }
 
-void rtc_clk_fast_src_set(soc_rtc_fast_sclk_sel_t clk_src)
+void rtc_clk_fast_src_set(soc_rtc_fast_clk_src_t clk_src)
 {
     clk_ll_rtc_fast_set_src(clk_src);
     esp_rom_delay_us(SOC_DELAY_RTC_FAST_CLK_SWITCH);
 }
 
-soc_rtc_fast_sclk_sel_t rtc_clk_fast_src_get(void)
+soc_rtc_fast_clk_src_t rtc_clk_fast_src_get(void)
 {
     return clk_ll_rtc_fast_get_src();
 }
@@ -226,6 +228,7 @@ bool rtc_clk_cpu_freq_mhz_to_config(uint32_t freq_mhz, rtc_cpu_freq_config_t *ou
     uint32_t real_freq_mhz;
 
     uint32_t xtal_freq = (uint32_t)rtc_clk_xtal_freq_get();
+
     if (freq_mhz <= xtal_freq && freq_mhz != 0) {
         divider = xtal_freq / freq_mhz;
         real_freq_mhz = (xtal_freq + divider / 2) / divider; /* round */
@@ -267,21 +270,31 @@ bool rtc_clk_cpu_freq_mhz_to_config(uint32_t freq_mhz, rtc_cpu_freq_config_t *ou
 void rtc_clk_cpu_freq_set_config(const rtc_cpu_freq_config_t *config)
 {
     soc_cpu_clk_src_t old_cpu_clk_src = clk_ll_cpu_get_src();
-    if (config->source == SOC_CPU_CLK_SRC_XTAL) {
+
+    if (config->source == SOC_CPU_CLK_SRC_XTAL)
+    {
         rtc_clk_cpu_freq_to_xtal(config->freq_mhz, config->div);
-        if ((old_cpu_clk_src == SOC_CPU_CLK_SRC_PLL) && !rtc_clk_set_bbpll_always_on()) {
+        if ((old_cpu_clk_src == SOC_CPU_CLK_SRC_PLL) && !rtc_clk_set_bbpll_always_on())
+        {
             // We don't turn off the bbpll if some consumers only depends on bbpll
             rtc_clk_bbpll_disable();
         }
-    } else if (config->source == SOC_CPU_CLK_SRC_PLL) {
-        if (old_cpu_clk_src != SOC_CPU_CLK_SRC_PLL) {
+    }
+    else if (config->source == SOC_CPU_CLK_SRC_PLL)
+    {
+        if (old_cpu_clk_src != SOC_CPU_CLK_SRC_PLL)
+        {
             rtc_clk_bbpll_enable();
             rtc_clk_bbpll_configure(rtc_clk_xtal_freq_get(), config->source_freq_mhz);
         }
         rtc_clk_cpu_freq_to_pll_mhz(config->freq_mhz);
-    } else if (config->source == SOC_CPU_CLK_SRC_RC_FAST) {
+    }
+    else if (config->source == SOC_CPU_CLK_SRC_RC_FAST)
+    {
         rtc_clk_cpu_freq_to_8m();
-        if ((old_cpu_clk_src == SOC_CPU_CLK_SRC_PLL) && !rtc_clk_set_bbpll_always_on()) {
+
+        if ((old_cpu_clk_src == SOC_CPU_CLK_SRC_PLL) && !rtc_clk_set_bbpll_always_on())
+        {
             // We don't turn off the bbpll if some consumers only depends on bbpll
             rtc_clk_bbpll_disable();
         }

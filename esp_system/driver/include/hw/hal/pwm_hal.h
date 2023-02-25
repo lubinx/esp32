@@ -12,8 +12,8 @@
   WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
   the specific language governing rights and limitations under the License.
 ****************************************************************************/
-#ifndef __PWM_HAL_H
-#define __PWM_HAL_H                     1
+#ifndef __HW_PWM_HAL_H
+#define __HW_PWM_HAL_H                  1
 
 #include "../gpio.h"
 #include "../pwm.h"

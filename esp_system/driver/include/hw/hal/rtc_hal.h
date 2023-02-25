@@ -1,5 +1,5 @@
-#ifndef __RTC_HAL_H
-#define __RTC_HAL_H                     1
+#ifndef __HW_RTC_HAL_H
+#define __HW_RTC_HAL_H                  1
 
 #include <features.h>
 #include <time.h>

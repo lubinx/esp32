@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __HW_CLK_TREE_H
+#define __HW_CLK_TREE_H                 1
 
 #include <features.h>
 #include <stdint.h>
@@ -7,158 +8,91 @@
 #include "clk_tree_defs.h"
 
 __BEGIN_DECLS
-/****************************************************************************
- * clk initialization using sdkconfig, calling by SystemInit()
- ****************************************************************************/
+    // init
 extern __attribute__((nothrow))
-    void clk_tree_initialize(void);
+    void CLK_TREE_initialize(void);
 
-/****************************************************************************
- * rc / external clocks, and pll configure
- ****************************************************************************/
-extern __attribute__((nothrow, const))
-    uint64_t clk_tree_sclk_freq(soc_sclk_t sclk);
-
-    /**
-     *  pll configure
-    */
+    // PLL
 extern __attribute__((nothrow))
-    int clk_tree_pll_conf(soc_pll_freq_sel_t sel);
-
-    /**
-     *  xtal ==> pll clock'frequency
-    */
+    int CLK_TREE_pll_conf(PLL_freq_sel_t sel);
 extern __attribute__((nothrow, const))
-    uint64_t clk_tree_pll_freq(void);
+    uint64_t CLK_TREE_pll_freq(void);
 
-/****************************************************************************
- * cpu / systick / ahb / apb
- ****************************************************************************/
-    /**
-     *  configure cpu clock route
-     *  @returns
-     *      0 if successful
-     *      EINVAL
-    */
+    // CPU
 extern __attribute__((nothrow))
-    int clk_tree_cpu_conf(soc_cpu_sclk_sel_t sel, uint32_t div);
-
-    /**
-     *  cpu clock'frequency
-    */
+    int CLK_TREE_cpu_conf(CPU_sclk_sel_t sel, uint32_t div);
 extern __attribute__((nothrow, const))
-    uint64_t clk_tree_cpu_freq(void);
+    uint64_t CLK_TREE_cpu_freq(void);
 
-    /**
-     *  configure systimer(systick) clock route
-    */
+    // SysTimer
 extern __attribute__((nothrow))
-    int clk_tree_systick_conf(soc_systick_sclk_sel_t sel, uint32_t div);
+    int CLK_TREE_systimer_conf(SYSTIMER_sclk_sel_t sel, uint32_t div);
+extern __attribute__((nothrow, const))
+    uint64_t CLK_TREE_systimer_freq(void);
 
-    /**
-     *  systick clock'frequency
-     *      this clock commonly used by rtos to provide thread/time/clock precision
-    */
+    // AHB/APB
 extern __attribute__((nothrow, const))
-    uint64_t clk_tree_systick_freq(void);
+    uint64_t CLK_TREE_ahb_freq(void);
+extern __attribute__((nothrow, const))
+    uint64_t CLK_TREE_apb_freq(void);
 
-    /**
-     *  ahb / apb clock'frequency
-    */
+    // RTC
+extern __attribute__((nothrow))
+    int CLK_TREE_rtc_conf(RTC_sclk_sel_t sel, uint32_t div);
 extern __attribute__((nothrow, const))
-    uint64_t clk_tree_ahb_freq(void);
-extern __attribute__((nothrow, const))
-    uint64_t clk_tree_apb_freq(void);
+    uint64_t CLK_TREE_rtc_freq(void);
 
 /****************************************************************************
- *  rtc fast/slow clks
- *      TODO: move to RTC driver
+ *  peripheral module control: *mapping* to clk-tree
  ****************************************************************************/
-    /**
-     *  configure rtc route
-     *  @returns
-     *      0 if successful
-     *      EINVAL
-    */
-extern __attribute__((nothrow))
-    int clk_tree_rtc_fast_conf(soc_rtc_fast_sclk_sel_t sel, uint32_t div);
-extern __attribute__((nothrow))
-    int clk_tree_rtc_slow_conf(soc_rtc_slow_sclk_sel_t sel, uint32_t div);
-
-    /**
-     *  rtc fast source clock'frequency
-     *  @return 0 if its not exists
-    */
 extern __attribute__((nothrow, const))
-    uint64_t clk_tree_rtc_fast_freq(void);
-extern __attribute__((nothrow, const))
-    uint64_t clk_tree_rtc_slow_freq(void);
-
-/****************************************************************************
- *  clk gate, NOTE: obsolte periph_ctrl.h
- ****************************************************************************/
+    bool CLK_TREE_periph_is_enable(PERIPH_module_t periph);
 extern __attribute__((nothrow))
-    void clk_tree_module_enable(periph_module_t periph);
+    void CLK_TREE_periph_enable(PERIPH_module_t periph);
 extern __attribute__((nothrow))
-    void clk_tree_module_disable(periph_module_t periph);
+    void CLK_TREE_periph_disable(PERIPH_module_t periph);
 extern __attribute__((nothrow))
-    void clk_tree_module_reset(periph_module_t periph);
-
-extern __attribute__((nothrow, const))
-    bool clk_tree_module_is_enable(periph_module_t periph);
+    void CLK_TREE_periph_reset(PERIPH_module_t periph);
 
 /****************************************************************************
  *  esp-idf
  *      deprecated for compatible
  ****************************************************************************/
 static inline
-    void periph_module_enable(periph_module_t periph)
+    void periph_module_enable(PERIPH_module_t periph)
     {
-        clk_tree_module_enable(periph);
+        CLK_TREE_periph_enable(periph);
     }
 
 static inline
-    void periph_module_disable(periph_module_t periph)
+    void periph_module_disable(PERIPH_module_t periph)
     {
-        clk_tree_module_disable(periph);
+        CLK_TREE_periph_disable(periph);
     }
 
 static inline
     void wifi_module_enable(void)
     {
-        clk_tree_module_enable(PERIPH_WIFI_MODULE);
+        CLK_TREE_periph_enable(PERIPH_WIFI_MODULE);
     }
 
 static inline
     void wifi_module_disable(void)
     {
-        clk_tree_module_disable(PERIPH_WIFI_MODULE);
+        CLK_TREE_periph_disable(PERIPH_WIFI_MODULE);
     }
 
 static inline
     void wifi_bt_common_module_enable(void)
     {
-        clk_tree_module_enable(PERIPH_BT_MODULE);
+        CLK_TREE_periph_enable(PERIPH_BT_MODULE);
     }
 
 static inline
     void wifi_bt_common_module_disable(void)
     {
-        clk_tree_module_disable(PERIPH_BT_MODULE);
+        CLK_TREE_periph_disable(PERIPH_BT_MODULE);
     }
 
-    /*
-    enum clk_tree_src_freq_precision_t
-    {
-        CLK_TREE_SRC_FREQ_PRECISION_CACHED,   // Get value from the data cached by the driver; If the data is 0, then a calibration will be performed
-        CLK_TREE_SRC_FREQ_PRECISION_APPROX,   // Get its approxiamte frequency value
-        CLK_TREE_SRC_FREQ_PRECISION_EXACT,    // Always perform a calibration
-        CLK_TREE_SRC_FREQ_PRECISION_INVALID,  // Invalid degree of precision
-    };
-    typedef enum clk_tree_src_freq_precision_t clk_tree_src_freq_precision_t;
-
-extern __attribute__((nothrow, nonnull, const))
-    esp_err_t clk_tree_src_get_freq_hz(soc_module_clk_t clk_src, enum clk_tree_src_freq_precision_t precision, uint64_t *freq_value);
-    */
-
 __END_DECLS
+#endif

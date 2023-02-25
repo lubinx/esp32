@@ -12,8 +12,8 @@
   WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for
   the specific language governing rights and limitations under the License.
 ****************************************************************************/
-#ifndef __UART_H
-#define __UART_H
+#ifndef __HW_UART_H
+#define __HW_UART_H                     1
 
 #include <features.h>
 #include <stdint.h>

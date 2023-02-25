@@ -1,5 +1,5 @@
-#ifndef __ADC_HAL_H
-#define __ADC_HAL_H                     1
+#ifndef __HW_ADC_HAL_H
+#define __HW_ADC_HAL_H                  1
 
 #include <features.h>
 #include <stdbool.h>

@@ -7,24 +7,19 @@
 #include "soc/soc_caps.h"
 #include "soc/uart_struct.h"
 
-    // ref 26.3
-    /* REVIEW: esp-idf driver UART_SCLK_RTC = RTC_CLK_FREQ which is 20M
-        but...find nowwhere of this clock
-        in reference document:
-            1：APB_CLK 2：FOSC_CLK 3：XTAL_CLK, FOSC is INT_RC_FAST? which is 17.5M
-    */
-    enum uart_sclk_sel_t
+    /// @ref 26.3
+    enum UART_sclk_sel_t
     {
         UART_SCLK_SEL_APB           = 1,
         UART_SCLK_SEL_INT_RC_FAST,
         UART_SCLK_SEL_XTAL
     };
-    typedef enum uart_sclk_sel_t    uart_sclk_sel_t;
+    typedef enum UART_sclk_sel_t    UART_sclk_sel_t;
 
 __BEGIN_DECLS
 
 extern __attribute__((nothrow, nonnull))
-    int UART_configure(uart_dev_t *dev, uart_sclk_sel_t sclk, uint32_t bps, enum UART_parity_t parity, enum UART_stopbits_t stopbits);
+    int UART_configure(uart_dev_t *dev, UART_sclk_sel_t sclk, uint32_t bps, enum UART_parity_t parity, enum UART_stopbits_t stopbits);
 extern __attribute__((nothrow, nonnull))
     int UART_deconfigure(uart_dev_t *dev);
 

@@ -97,7 +97,7 @@ void Startup_Handler(void)
         trax_start_trace(TRAX_DOWNCOUNT_WORDS);
     #endif
 
-    clk_tree_initialize();
+    CLK_TREE_initialize();
 
     // Clear interrupt matrix for PRO CPU core
     core_intr_matrix_clear();
@@ -107,9 +107,9 @@ void Startup_Handler(void)
         uint32_t clock_hz;
 
         #if ESP_ROM_UART_CLK_IS_XTAL
-            clock_hz = clk_tree_sclk_freq(SOC_SCLK_XTAL);
+            clock_hz = CLK_TREE_sclk_freq(SOC_SCLK_XTAL);
         #else
-            clock_hz = clk_tree_apb_freq();
+            clock_hz = CLK_TREE_apb_freq();
         #endif
         // esp_rom_uart_tx_wait_idle(0);
         // esp_rom_uart_set_clock_baudrate(0, clock_hz, 115200);

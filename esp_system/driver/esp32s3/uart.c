@@ -99,7 +99,7 @@ enum
  *  @internal
  ****************************************************************************/
 // configure
-static uint64_t UART_sclk_freq(uart_sclk_sel_t sel);
+static uint64_t UART_sclk_freq(UART_sclk_sel_t sel);
 // io
 static ssize_t UART_read(int fd, void *buf, size_t bufsize);
 static ssize_t UART_write(int fd, void const *buf, size_t count);
@@ -137,7 +137,7 @@ int UART_createfd(int nb, uint32_t bps, enum UART_parity_t parity, enum UART_sto
         return __set_errno_neg(EBUSY);
 
     uart_dev_t *dev;
-    uart_sclk_sel_t sclk;
+    UART_sclk_sel_t sclk;
 
     switch (nb)
     {
@@ -177,9 +177,9 @@ int UART_createfd(int nb, uint32_t bps, enum UART_parity_t parity, enum UART_sto
     return retval;
 }
 
-int UART_configure(uart_dev_t *dev, uart_sclk_sel_t sclk, uint32_t bps, enum UART_parity_t parity, enum UART_stopbits_t stopbits)
+int UART_configure(uart_dev_t *dev, UART_sclk_sel_t sclk, uint32_t bps, enum UART_parity_t parity, enum UART_stopbits_t stopbits)
 {
-    periph_module_t uart_module;
+    PERIPH_module_t uart_module;
     int retval;
 
     if (&UART0 == dev)
@@ -191,14 +191,14 @@ int UART_configure(uart_dev_t *dev, uart_sclk_sel_t sclk, uint32_t bps, enum UAR
     else
         return ENODEV;
 
-    if (clk_tree_module_is_enable(uart_module))
+    if (CLK_TREE_periph_is_enable(uart_module))
     {
         dev->int_ena.val = 0;
         while (0 != dev->status.txfifo_cnt) sched_yield();
     }
 
-    clk_tree_module_enable(uart_module);
-    clk_tree_module_reset(uart_module);
+    CLK_TREE_periph_enable(uart_module);
+    CLK_TREE_periph_reset(uart_module);
 
     // uart normal
     dev->rs485_conf.val = 0;
@@ -268,7 +268,7 @@ int UART_configure(uart_dev_t *dev, uart_sclk_sel_t sclk, uint32_t bps, enum UAR
     if (false)
     {
 uart_configure_fail_exit:
-        clk_tree_module_disable(uart_module);
+        CLK_TREE_periph_disable(uart_module);
     }
     else
         retval = 0;
@@ -278,7 +278,7 @@ uart_configure_fail_exit:
 
 int UART_deconfigure(uart_dev_t *dev)
 {
-    periph_module_t uart_module;
+    PERIPH_module_t uart_module;
 
     if (&UART0 == dev)
         uart_module = PERIPH_UART0_MODULE;
@@ -289,7 +289,7 @@ int UART_deconfigure(uart_dev_t *dev)
     else
         return ENODEV;
 
-    clk_tree_module_disable(uart_module);
+    CLK_TREE_periph_disable(uart_module);
     return 0;
 }
 
@@ -303,16 +303,16 @@ uint32_t UART_get_baudrate(uart_dev_t *dev)
 /****************************************************************************
  *  @internal
  ****************************************************************************/
-static uint64_t UART_sclk_freq(uart_sclk_sel_t sel)
+static uint64_t UART_sclk_freq(UART_sclk_sel_t sel)
 {
     switch(sel)
     {
     case UART_SCLK_SEL_APB:
-        return clk_tree_apb_freq();
+        return CLK_TREE_apb_freq();
     case UART_SCLK_SEL_INT_RC_FAST:
-        return clk_tree_sclk_freq(SOC_SCLK_INT_RC_FAST);
+        return CLK_TREE_RC_FAST_FREQ;
     case UART_SCLK_SEL_XTAL:
-        return clk_tree_sclk_freq(SOC_SCLK_XTAL);
+        return CLK_TREE_XTAL_FREQ;
     }
 }
 
