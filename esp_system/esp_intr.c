@@ -21,7 +21,8 @@
 #include "esp_intr_alloc.h"
 #include "esp_attr.h"
 #include "esp_cpu.h"
-#include "esp_private/rtc_ctrl.h"
+
+// #include "esp_private/rtc_ctrl.h"
 
 #if !CONFIG_FREERTOS_UNICORE
 #include "esp_ipc.h"
@@ -854,6 +855,7 @@ esp_err_t IRAM_ATTR esp_intr_disable(intr_handle_t handle)
     return ESP_OK;
 }
 
+/*
 void IRAM_ATTR esp_intr_noniram_disable(void)
 {
     portENTER_CRITICAL_SAFE(&spinlock);
@@ -886,6 +888,7 @@ void IRAM_ATTR esp_intr_noniram_enable(void)
     rtc_isr_noniram_enable(cpu);
     portEXIT_CRITICAL_SAFE(&spinlock);
 }
+*/
 
 //These functions are provided in ROM, but the ROM-based functions use non-multicore-capable
 //virtualized interrupt levels. Thus, we disable them in the ld file and provide working

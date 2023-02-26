@@ -3,6 +3,8 @@
 
 #include "soc.h"
 #include "clk_tree.h"
+#include "regi2c_ctrl.h"
+
 #include "soc/dport_access.h"
 
 #include "sdkconfig.h"
@@ -13,6 +15,9 @@ char const *TAG = "clktree";
 /****************************************************************************
  * @def
  ****************************************************************************/
+// default xtal is 40M, using sdkconfig?
+#define XTAL_FREQ                       XTAL_40M
+
 #define PLL_320M_FREQ                   (320000000ULL)
 #define PLL_480M_FREQ                   (480000000ULL)
 
@@ -20,16 +25,33 @@ char const *TAG = "clktree";
 #define PLL_DIV_TO_160M_FREQ            (160000000ULL)
 #define PLL_DIV_TO_240M_FREQ            (240000000ULL)
 
+struct CLK_TREE_context
+{
+    unsigned RC_FAST_refcount;          // RC_FAST sclk is used by multi-peripherals, and its optional powered
+};
+
+/****************************************************************************
+ *  @internal
+ ****************************************************************************/
+static uint32_t periph_clk_en_reg(PERIPH_module_t periph);
+static uint32_t periph_rst_en_reg(PERIPH_module_t periph);
+static uint32_t periph_clk_en_mask(PERIPH_module_t periph);
+static uint32_t periph_rst_en_mask(PERIPH_module_t periph);
+
+struct CLK_TREE_context CLK_TREE_context = {0};
+
 /****************************************************************************
  *  @implements: freertos/systimer.h
  ****************************************************************************/
 uint64_t systimer_ticks_to_us(uint64_t ticks)
 {
+    // see CLK_TREE_systimer_freq()
     return ticks / 16;
 }
 
 uint64_t systimer_us_to_ticks(uint64_t us)
 {
+    // see CLK_TREE_systimer_freq()
     return us * 16;
 }
 
@@ -109,44 +131,146 @@ void CLK_TREE_initialize(void)
     SYSCON.wifi_clk_en |= SYSTEM_WIFI_CLK_EN;
 
     /* Set WiFi light sleep clock source to RTC slow clock */
-    REG_SET_FIELD(SYSTEM_BT_LPCK_DIV_INT_REG, SYSTEM_BT_LPCK_DIV_NUM, 0);
-    CLEAR_PERI_REG_MASK(SYSTEM_BT_LPCK_DIV_FRAC_REG, SYSTEM_LPCLK_SEL_8M);
-    SET_PERI_REG_MASK(SYSTEM_BT_LPCK_DIV_FRAC_REG, SYSTEM_LPCLK_SEL_RTC_SLOW);
+    SYSTEM.bt_lpck_div_int.bt_lpck_div_num = 0;
+    SYSTEM.bt_lpck_div_frac.lpclk_sel_8m = 0;
+    SYSTEM.bt_lpck_div_frac.lpclk_sel_rtc_slow = 1;
 
-    // uint32_t old_freq_mhz = CLK_TREE_cpu_freq();
-    if (CLK_TREE_XTAL_FREQ < CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ * MHZ)
+    uint32_t old_freq_mhz = CLK_TREE_cpu_freq() / MHZ;
+
+    if (XTAL_FREQ < CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ * MHZ)
     {
         switch (CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ)
         {
         default:
-        case PLL_DIV_TO_80M_FREQ:
+        case PLL_DIV_TO_80M_FREQ / MHZ:
+            CLK_TREE_pll_conf(PLL_FREQ_SEL_320M);
+            CLK_TREE_cpu_conf(CPU_SCLK_SEL_PLL, 4);
             break;
-        case PLL_DIV_TO_160M_FREQ:
+        case PLL_DIV_TO_160M_FREQ / MHZ:
+            CLK_TREE_pll_conf(PLL_FREQ_SEL_320M);
+            CLK_TREE_cpu_conf(CPU_SCLK_SEL_PLL, 2);
             break;
-        case PLL_DIV_TO_240M_FREQ:
+        case PLL_DIV_TO_240M_FREQ / MHZ:
+            CLK_TREE_pll_conf(PLL_FREQ_SEL_480M);
+            CLK_TREE_cpu_conf(CPU_SCLK_SEL_PLL, 2);
             break;
-    };
+        };
     }
     else
         CLK_TREE_cpu_conf(CPU_SCLK_SEL_XTAL, 1);
 
-    // TODO: set CPU clocks by sdkconfig.h
-    //  WTF, why this is about RTC?
-    rtc_cpu_freq_config_t new_config;
+    if (old_freq_mhz != CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ)
+    {
+        // Re calculate the ccount to make time calculation correct.
+        __set_CCOUNT((uint64_t)__get_CCOUNT() * CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ / old_freq_mhz);
+    }
 
-    if (rtc_clk_cpu_freq_mhz_to_config(40, &new_config))
-        rtc_clk_cpu_freq_set_config(&new_config);
-
-    // Re calculate the ccount to make time calculation correct.
-    // __set_CCOUNT((uint64_t)__get_CCOUNT() * new_freq_mhz / old_freq_mhz);
+    // peripheral sclk default, ...make sure of it
+    RTCCNTL.clk_conf.fast_clk_rtc_sel = RTC_FAST_SCLK_SEL_XTAL_D2;
+    RTCCNTL.clk_conf.ana_clk_rtc_sel = RTC_SCLK_SEL_RC_SLOW;
+    UART0.clk_conf.sclk_sel = UART_SCLK_SEL_XTAL;
+    UART1.clk_conf.sclk_sel = UART_SCLK_SEL_XTAL;
+    UART2.clk_conf.sclk_sel = UART_SCLK_SEL_XTAL;
 }
 
 int CLK_TREE_pll_conf(PLL_freq_sel_t sel)
 {
-    if (1 < (unsigned)sel)
-        return EINVAL;
+    RTCCNTL.options0.val = RTCCNTL.options0.val & ~(
+        RTC_CNTL_BB_I2C_FORCE_PD |
+        RTC_CNTL_BBPLL_FORCE_PD |
+        RTC_CNTL_BBPLL_I2C_FORCE_PD |
+        0);
+    // force power up
+    RTCCNTL.options0.val = RTCCNTL.options0.val | (
+        RTC_CNTL_BBPLL_FORCE_PU |
+        RTC_CNTL_BBPLL_I2C_FORCE_PU |
+        RTC_CNTL_BB_I2C_FORCE_PU
+    );
 
+    REGI2C_bbpll_enable();
+    REGI2C_bbpll_calibration_start();
+
+    uint8_t div_ref;
+    uint8_t div7_0;
+    uint8_t dr1;
+    uint8_t dr3;
+    uint8_t dchgp;
+    uint8_t dcur;
+    uint8_t dbias;
+
+    if (PLL_FREQ_SEL_480M == sel)
+    {
+        switch (XTAL_FREQ)
+        {
+        default:
+            ESP_LOGW(TAG, "unkonwn XTAL frequency: %u, assume is 40M", XTAL_FREQ);
+        case XTAL_40M:
+            div_ref = 0;
+            div7_0 = 8;
+            dr1 = 0;
+            dr3 = 0;
+            dchgp = 5;
+            dcur = 3;
+            dbias = 2;
+            break;
+        case XTAL_32M:
+            div_ref = 1;
+            div7_0 = 26;
+            dr1 = 1;
+            dr3 = 1;
+            dchgp = 4;
+            dcur = 0;
+            dbias = 2;
+            break;
+        }
+        REGI2C_WRITE(I2C_BBPLL, I2C_BBPLL_MODE_HF, 0x6B);
+    }
+    else    // PLL_FREQ_SEL_320M
+    {
+        switch (XTAL_FREQ)
+        {
+        default:
+            ESP_LOGW(TAG, "unkonwn XTAL frequency: %u, assume is 40M", XTAL_FREQ);
+        case XTAL_40M:
+            div_ref = 0;
+            div7_0 = 4;
+            dr1 = 0;
+            dr3 = 0;
+            dchgp = 5;
+            dcur = 3;
+            dbias = 2;
+            break;
+        case XTAL_32M:
+            div_ref = 1;
+            div7_0 = 6;
+            dr1 = 0;
+            dr3 = 0;
+            dchgp = 5;
+            dcur = 3;
+            dbias = 2;
+            break;
+        }
+        REGI2C_WRITE(I2C_BBPLL, I2C_BBPLL_MODE_HF, 0x69);
+    }
+    uint8_t i2c_bbpll_lref  = (dchgp << I2C_BBPLL_OC_DCHGP_LSB) | (div_ref);
+    uint8_t i2c_bbpll_div_7_0 = div7_0;
+    uint8_t i2c_bbpll_dcur = (1 << I2C_BBPLL_OC_DLREF_SEL_LSB ) | (3 << I2C_BBPLL_OC_DHREF_SEL_LSB) | dcur;
+
+    REGI2C_WRITE(I2C_BBPLL, I2C_BBPLL_OC_REF_DIV, i2c_bbpll_lref);
+    REGI2C_WRITE(I2C_BBPLL, I2C_BBPLL_OC_DIV_7_0, i2c_bbpll_div_7_0);
+    REGI2C_WRITE_MASK(I2C_BBPLL, I2C_BBPLL_OC_DR1, dr1);
+    REGI2C_WRITE_MASK(I2C_BBPLL, I2C_BBPLL_OC_DR3, dr3);
+    REGI2C_WRITE(I2C_BBPLL, I2C_BBPLL_OC_DCUR, i2c_bbpll_dcur);
+    REGI2C_WRITE_MASK(I2C_BBPLL, I2C_BBPLL_OC_VCO_DBIAS, dbias);
+
+    REGI2C_bbpll_calibration_end();
     SYSTEM.cpu_per_conf.pll_freq_sel = sel;
+
+    RTCCNTL.options0.val = RTCCNTL.options0.val & ~(
+        RTC_CNTL_BBPLL_FORCE_PU |
+        RTC_CNTL_BBPLL_I2C_FORCE_PU |
+        RTC_CNTL_BB_I2C_FORCE_PU
+    );
     return 0;
 }
 
@@ -164,31 +288,24 @@ uint64_t CLK_TREE_pll_freq(void)
     }
 }
 
-static void CLK_TREE_pll_acquire(void)
-{
-    RTCCNTL.options0.val = RTCCNTL.options0.val & ~(
-        RTC_CNTL_BB_I2C_FORCE_PD |
-        RTC_CNTL_BBPLL_FORCE_PD | RTC_CNTL_BBPLL_I2C_FORCE_PD |
-        0);
-}
-
-static void CLK_TREE_pll_release(void)
-{
-    RTCCNTL.options0.val = RTCCNTL.options0.val | (
-        RTC_CNTL_BB_I2C_FORCE_PD |
-        RTC_CNTL_BBPLL_FORCE_PD |
-        RTC_CNTL_BBPLL_I2C_FORCE_PD |
-        0);
-}
-
 int CLK_TREE_cpu_conf(CPU_sclk_sel_t sel, uint32_t div)
 {
-    if ((CPU_SCLK_SEL_XTAL == sel || CPU_SCLK_SEL_RC_FAST == sel) && 0x3FF < div)
+    if (CPU_SCLK_SEL_XTAL == sel && MINIAL_CPU_WORK_FREQ > XTAL_FREQ / div)
+        return EINVAL;
+    if (CPU_SCLK_SEL_RC_FAST == sel && MINIAL_CPU_WORK_FREQ > RC_FAST_FREQ < div)
         return EINVAL;
 
     /// @ref Table 7-2 / Table 7-3
-    if (CPU_SCLK_SEL_PLL == sel)
+    switch (sel)
     {
+    case CPU_SCLK_SEL_PLL:
+        // temporay switch back to XTAL (power up default)
+        if (CPU_SCLK_SEL_PLL == SYSTEM.sysclk_conf.pre_div_cnt)
+        {
+            SYSTEM.sysclk_conf.pre_div_cnt = 1;
+            SYSTEM.sysclk_conf.soc_clk_sel = CPU_SCLK_SEL_XTAL;
+        }
+
         if (PLL_FREQ_SEL_320M == SYSTEM.cpu_per_conf.pll_freq_sel)
         {
             switch(div)
@@ -223,11 +340,14 @@ int CLK_TREE_cpu_conf(CPU_sclk_sel_t sel, uint32_t div)
             }
         }
         SYSTEM.sysclk_conf.soc_clk_sel = CPU_SCLK_SEL_PLL;
-    }
-    else
-    {
+        break;
+
+    default:
+    case CPU_SCLK_SEL_RC_FAST:
+    case CPU_SCLK_SEL_XTAL:
         SYSTEM.sysclk_conf.pre_div_cnt = div - 1;
         SYSTEM.sysclk_conf.soc_clk_sel = sel;
+        break;
     }
     return 0;
 }
@@ -238,9 +358,9 @@ uint64_t CLK_TREE_cpu_freq(void)
     switch (SYSTEM.sysclk_conf.soc_clk_sel)
     {
     case CPU_SCLK_SEL_RC_FAST:
-        return CLK_TREE_RC_FAST_FREQ / (SYSTEM.sysclk_conf.pre_div_cnt + 1);
+        return RC_FAST_FREQ / (SYSTEM.sysclk_conf.pre_div_cnt + 1);
     case CPU_SCLK_SEL_XTAL:
-        return CLK_TREE_XTAL_FREQ / (SYSTEM.sysclk_conf.pre_div_cnt + 1);
+        return XTAL_FREQ / (SYSTEM.sysclk_conf.pre_div_cnt + 1);
     case CPU_SCLK_SEL_PLL:
         switch (SYSTEM.cpu_per_conf.cpuperiod_sel)
         {
@@ -266,7 +386,7 @@ int CLK_TREE_systimer_conf(SYSTIMER_sclk_sel_t sel)
 
 uint64_t CLK_TREE_systimer_freq(void)
 {
-    //  somehow it fixed by CLK_TREE_XTAL_FREQ / 2.5 in esp32s3
+    //  somehow it fixed by XTAL_FREQ / 2.5 in esp32s3
     return 16000000;
 }
 
@@ -276,9 +396,9 @@ uint64_t CLK_TREE_ahb_freq(void)
     {
     // AHB_CLK path is highly dependent on CPU_CLK path
     case CPU_SCLK_SEL_XTAL:
-        return CLK_TREE_XTAL_FREQ / (SYSTEM.sysclk_conf.pre_div_cnt + 1);
+        return XTAL_FREQ / (SYSTEM.sysclk_conf.pre_div_cnt + 1);
     case CPU_SCLK_SEL_RC_FAST:
-        return CLK_TREE_RC_FAST_FREQ / (SYSTEM.sysclk_conf.pre_div_cnt + 1);
+        return RC_FAST_FREQ / (SYSTEM.sysclk_conf.pre_div_cnt + 1);
     // AHB_CLK is a fixed value when CPU_CLK is clocked from PLL
     case CPU_SCLK_SEL_PLL:
         return PLL_DIV_TO_80M_FREQ;
@@ -291,6 +411,11 @@ uint64_t CLK_TREE_apb_freq(void)
 
 int CLK_TREE_rtc_conf(RTC_sclk_sel_t sel)
 {
+    if (RTC_SLOW_SCLK_SEL_RC_FAST_D256 == sel)
+        RC_FAST_SCLK_ref();
+    if (RTC_SLOW_SCLK_SEL_RC_FAST_D256 == RTCCNTL.clk_conf.ana_clk_rtc_sel)
+        RC_FAST_SCLK_release();
+
     RTCCNTL.clk_conf.ana_clk_rtc_sel = sel;
     return 0;
 }
@@ -300,9 +425,9 @@ uint64_t CLK_TREE_rtc_sclk_freq(void)
     switch (RTCCNTL.clk_conf.ana_clk_rtc_sel)
     {
     case RTC_SCLK_SEL_RC_SLOW:
-        return CLK_TREE_RC_SLOW_FREQ;
+        return RC_SLOW_FREQ;
     case RTC_SCLK_SEL_XTAL:
-        return CLK_TREE_XTAL32K_FREQ;
+        return XTAL32K_FREQ;
     case RTC_SLOW_SCLK_SEL_RC_FAST_D256:
         return CLK_TREE_RC_FAST_D256_FREQ;
     default:
@@ -313,8 +438,33 @@ uint64_t CLK_TREE_rtc_sclk_freq(void)
 /****************************************************************************
  * @implements esp32s3/clk_tree.h
  ****************************************************************************/
+unsigned RC_FAST_SCLK_ref(void)
+{
+    unsigned retval = __sync_add_and_fetch(&CLK_TREE_context.RC_FAST_refcount, 1);
+
+    if (1 == retval)
+    {
+        RTCCNTL.clk_conf.enb_ck8m = 0;
+        RTCCNTL.clk_conf.dig_clk8m_en = 1;
+        RTCCNTL.timer1.ck8m_wait = 5;
+    }
+}
+
+unsigned RC_FAST_SCLK_release(void)
+{
+    unsigned retval = __sync_sub_and_fetch(&CLK_TREE_context.RC_FAST_refcount, 1);
+
+    if (0 == retval)
+        RTCCNTL.clk_conf.enb_ck8m = 1;
+}
+
 int CLK_TREE_fast_rtc_conf(RTC_FAST_sclk_sel_t sel, uint32_t div)
 {
+    if (RTC_FAST_SCLK_SEL_RC_FAST == sel)
+        RC_FAST_SCLK_ref();
+    if (RTC_FAST_SCLK_SEL_RC_FAST == RTCCNTL.clk_conf.fast_clk_rtc_sel)
+        RC_FAST_SCLK_release();
+
     RTCCNTL.clk_conf.fast_clk_rtc_sel = sel;
     return 0;
 }
@@ -326,7 +476,7 @@ uint64_t CLK_TREE_fast_rtc_sclk_freq(void)
     case RTC_FAST_SCLK_SEL_XTAL_D2:
         return CLK_TREE_XTAL_D2_FREQ;
     case RTC_FAST_SCLK_SEL_RC_FAST:
-        return CLK_TREE_RC_FAST_FREQ;
+        return RC_FAST_FREQ;
     default:
         return 0;
     }
@@ -334,7 +484,13 @@ uint64_t CLK_TREE_fast_rtc_sclk_freq(void)
 
 int CLK_TREE_uart_conf(uart_dev_t *dev, UART_sclk_sel_t sel)
 {
-    return ENOSYS;
+    if (UART_SCLK_SEL_RC_FAST == sel)
+        RC_FAST_SCLK_ref();
+    if (UART_SCLK_SEL_RC_FAST == dev->clk_conf.sclk_sel)
+        RC_FAST_SCLK_release();
+
+    dev->clk_conf.sclk_sel = sel;
+    return 0;
 }
 
 uint64_t CLK_TREE_uart_sclk_freq(uart_dev_t *dev)
@@ -343,15 +499,41 @@ uint64_t CLK_TREE_uart_sclk_freq(uart_dev_t *dev)
     {
     case UART_SCLK_SEL_APB:
         return CLK_TREE_apb_freq();
-    case UART_SCLK_SEL_INT_RC_FAST:
-        return CLK_TREE_RC_FAST_FREQ;
+    case UART_SCLK_SEL_RC_FAST:
+        return RC_FAST_FREQ;
     case UART_SCLK_SEL_XTAL:
-        return CLK_TREE_XTAL_FREQ;
+        return XTAL_FREQ;
     }
 }
 
 /****************************************************************************
  *  @implements: peripheral module gating control
+ ****************************************************************************/
+bool CLK_TREE_periph_is_enable(PERIPH_module_t periph)
+{
+    return 0 != DPORT_GET_PERI_REG_MASK(periph_clk_en_reg(periph), periph_clk_en_mask(periph));
+}
+
+void CLK_TREE_periph_enable(PERIPH_module_t periph)
+{
+    DPORT_SET_PERI_REG_MASK(periph_clk_en_reg(periph), periph_clk_en_mask(periph));
+    DPORT_CLEAR_PERI_REG_MASK(periph_rst_en_reg(periph), periph_rst_en_mask(periph));
+}
+
+void CLK_TREE_periph_disable(PERIPH_module_t periph)
+{
+    DPORT_CLEAR_PERI_REG_MASK(periph_clk_en_reg(periph), periph_clk_en_mask(periph));
+    DPORT_SET_PERI_REG_MASK(periph_rst_en_reg(periph), periph_rst_en_mask(periph));
+}
+
+void CLK_TREE_periph_reset(PERIPH_module_t periph)
+{
+    DPORT_SET_PERI_REG_MASK(periph_rst_en_reg(periph), periph_rst_en_mask(periph));
+    DPORT_CLEAR_PERI_REG_MASK(periph_rst_en_reg(periph), periph_rst_en_mask(periph));
+}
+
+/****************************************************************************
+ *  @internal
  ****************************************************************************/
 static uint32_t periph_clk_en_reg(PERIPH_module_t periph)
 {
@@ -408,7 +590,7 @@ static uint32_t periph_rst_en_reg(PERIPH_module_t periph)
         return SYSTEM_PERIP_RST_EN0_REG;
     }
 }
-static inline uint32_t periph_clk_en_mask(PERIPH_module_t periph)
+static uint32_t periph_clk_en_mask(PERIPH_module_t periph)
 {
     switch (periph)
     {
@@ -493,7 +675,7 @@ static inline uint32_t periph_clk_en_mask(PERIPH_module_t periph)
     }
 }
 
-static inline uint32_t periph_rst_en_mask(PERIPH_module_t periph)
+static uint32_t periph_rst_en_mask(PERIPH_module_t periph)
 {
     switch (periph)
     {
@@ -568,27 +750,4 @@ static inline uint32_t periph_rst_en_mask(PERIPH_module_t periph)
     default:
         return 0;
     }
-}
-
-bool CLK_TREE_periph_is_enable(PERIPH_module_t periph)
-{
-    return 0 != DPORT_GET_PERI_REG_MASK(periph_clk_en_reg(periph), periph_clk_en_mask(periph));
-}
-
-void CLK_TREE_periph_enable(PERIPH_module_t periph)
-{
-    DPORT_SET_PERI_REG_MASK(periph_clk_en_reg(periph), periph_clk_en_mask(periph));
-    DPORT_CLEAR_PERI_REG_MASK(periph_rst_en_reg(periph), periph_rst_en_mask(periph));
-}
-
-void CLK_TREE_periph_disable(PERIPH_module_t periph)
-{
-    DPORT_CLEAR_PERI_REG_MASK(periph_clk_en_reg(periph), periph_clk_en_mask(periph));
-    DPORT_SET_PERI_REG_MASK(periph_rst_en_reg(periph), periph_rst_en_mask(periph));
-}
-
-void CLK_TREE_periph_reset(PERIPH_module_t periph)
-{
-    DPORT_SET_PERI_REG_MASK(periph_rst_en_reg(periph), periph_rst_en_mask(periph));
-    DPORT_CLEAR_PERI_REG_MASK(periph_rst_en_reg(periph), periph_rst_en_mask(periph));
 }

@@ -24,6 +24,8 @@ static void *blink_thread3(void *arg);
 
 extern "C" void __attribute__((weak)) app_main(void)
 {
+    CLK_TREE_uart_conf(&UART0, UART_SCLK_SEL_RC_FAST);
+
     int fd = UART_createfd(0, 115200, UART_PARITY_NONE, UART_STOP_BITS_ONE);
     (void)fd;
 
@@ -33,16 +35,15 @@ extern "C" void __attribute__((weak)) app_main(void)
     printf("ahb frequency: %llu MHz\n", CLK_TREE_ahb_freq() / 1000000);
 
     if (CLK_TREE_periph_is_enable(PERIPH_UART0_MODULE))
-        printf("uart0: %lu bps\n", UART_get_baudrate(&UART0));
+        printf("uart0: %lu bps sclk: %llu\n", UART_get_baudrate(&UART0), CLK_TREE_uart_sclk_freq(&UART0));
     if (CLK_TREE_periph_is_enable(PERIPH_UART1_MODULE))
-        printf("uart1: %lu bps\n", UART_get_baudrate(&UART1));
+        printf("uart1: %lu bps sclk: %llu\n", UART_get_baudrate(&UART1), CLK_TREE_uart_sclk_freq(&UART1));
     if (CLK_TREE_periph_is_enable(PERIPH_UART2_MODULE))
-        printf("uart2: %lu bps\n", UART_get_baudrate(&UART2));
+        printf("uart2: %lu bps sclk: %llu\n", UART_get_baudrate(&UART2), CLK_TREE_uart_sclk_freq(&UART2));
 
 
-    for (int i = 0; i < 100; i ++)
-        printf("0x%x,\t", rand());
-    printf("\n");
+    for (int i = 0; i < 10; i ++)
+        printf("0x%x, 0x%x, 0x%x, 0x%x\n", rand(), rand(), rand(), rand());
 
     printf("semaphore init...\n");
     sem_init(&sema, 0, 10);
@@ -108,7 +109,7 @@ static void *blink_thread1(void *arg)
         msleep(600);
         /*
         for (int i = 0; i < 1000; i ++)
-            esp_rom_delay_us(800);
+            usleep(800);
         */
     }
 

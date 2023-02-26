@@ -110,7 +110,7 @@ if (NOT IDF_TARGET_ARCH STREQUAL "")
 endif()
 list(APPEND IDF_KERNEL_COMPONENTS
     "esp_system" "esp_common" "soc" "heap"
-    "freertos"  # "esp_rom"
+    "freertos"
     "hal"
     "esptool_py"
 )

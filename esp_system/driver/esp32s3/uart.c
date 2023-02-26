@@ -190,8 +190,10 @@ int UART_configure(uart_dev_t *dev, uint32_t bps, enum UART_parity_t parity, enu
         while (0 != dev->status.txfifo_cnt) sched_yield();
     }
 
+    /*
     CLK_TREE_periph_enable(uart_module);
     CLK_TREE_periph_reset(uart_module);
+    */
 
     // uart normal
     dev->rs485_conf.val = 0;
@@ -311,10 +313,10 @@ int UART_fifo_write(uart_dev_t *dev, void const *buf, unsigned count)
     unsigned written = 0;
     while (written < count)
     {
-            if (SOC_UART_FIFO_LEN == dev->status.txfifo_cnt)
+        if (SOC_UART_FIFO_LEN == dev->status.txfifo_cnt)
             break;
-            dev->fifo.rxfifo_rd_byte = *((uint8_t *)buf + written);
-            written ++;
+        dev->fifo.rxfifo_rd_byte = *((uint8_t *)buf + written);
+        written ++;
     }
     return written;
 }

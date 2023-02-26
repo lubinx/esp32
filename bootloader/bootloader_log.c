@@ -1,5 +1,7 @@
 #include "esp_arch.h"
 #include "esp_log.h"
+
+#include "uart.h"
 #include "sdkconfig.h"
 
 /****************************************************************************

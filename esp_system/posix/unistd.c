@@ -4,17 +4,21 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
+#include "esp_rom_sys.h"
+
 int usleep(useconds_t us)
 {
-    if (us)
-    {
-        uint32_t us_per_tick = portTICK_PERIOD_MS * 1000;
+    if (! us)
+        return 0;
 
-        if (us > us_per_tick)
-            vTaskDelay((us + us_per_tick - 1) / us_per_tick);
-        else
-            esp_rom_delay_us(us);
+    uint32_t us_per_tick = portTICK_PERIOD_MS * 1000;
+    if (us > us_per_tick)
+    {
+        vTaskDelay((us + us_per_tick - 1) / us_per_tick);
+        return 0;
     }
+
+    esp_rom_delay_us(us);
     return 0;
 }
 

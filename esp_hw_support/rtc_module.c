@@ -18,7 +18,7 @@
 #include "freertos/timers.h"
 #include "esp_intr_alloc.h"
 #include "sys/lock.h"
-#include "esp_private/rtc_ctrl.h"
+#include "_rtc_ctrl.h"
 #include "esp_attr.h"
 
 #ifndef NDEBUG

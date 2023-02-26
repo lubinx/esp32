@@ -277,16 +277,6 @@ esp_err_t esp_intr_enable(intr_handle_t handle);
 esp_err_t esp_intr_set_in_iram(intr_handle_t handle, bool is_in_iram);
 
 /**
- * @brief Disable interrupts that aren't specifically marked as running from IRAM
- */
-void esp_intr_noniram_disable(void);
-
-/**
- * @brief Re-enable interrupts disabled by esp_intr_noniram_disable
- */
-void esp_intr_noniram_enable(void);
-
-/**
  * @brief enable the interrupt source based on its number
  * @param inum interrupt number from 0 to 31
  */

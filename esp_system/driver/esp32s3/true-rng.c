@@ -1,3 +1,5 @@
+#include <unistd.h>
+
 #include "soc/wdev_reg.h"
 #include "clk_tree.h"
 
@@ -10,8 +12,9 @@ void TRNG_initialize(void)
         High Speed ADC
     */
     periph_module_enable(PERIPH_RNG_MODULE);
+    RC_FAST_SCLK_ref();
 
-    /// TODO: rnd still ...pseudo...
+    // what aobut SAR ADC?
 }
 
 static unsigned rand_seed = 0;

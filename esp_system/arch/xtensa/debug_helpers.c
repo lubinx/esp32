@@ -15,9 +15,6 @@
 #include "esp_private/panic_internal.h"
 
 #include "xtensa/xtensa_context.h"
-
-#include "sdkconfig.h"
-
 #include "esp_rom_sys.h"
 
 bool IRAM_ATTR esp_backtrace_get_next_frame(esp_backtrace_frame_t *frame)

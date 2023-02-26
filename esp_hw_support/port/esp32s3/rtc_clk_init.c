@@ -40,9 +40,9 @@ void rtc_clk_init(rtc_clk_config_t cfg)
     rtc_clk_8m_divider_set(cfg.clk_8m_clk_div);
 
     /* Reset (disable) i2c internal bus for all regi2c registers */
-    regi2c_ctrl_ll_i2c_reset(); // TODO: This should be move out from rtc_clk_init
+    REGI2C_reset(); // TODO: This should be move out from rtc_clk_init
     /* Enable the internal bus used to configure BBPLL */
-    regi2c_ctrl_ll_i2c_bbpll_enable(); // TODO: This should be moved to bbpll_set_config
+    REGI2C_bbpll_enable(); // TODO: This should be moved to bbpll_set_config
 
     rtc_xtal_freq_t xtal_freq = cfg.xtal_freq;
     esp_rom_uart_tx_wait_idle(0);

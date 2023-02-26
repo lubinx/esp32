@@ -36,7 +36,6 @@ config VFS_SEMIHOSTFS_MAX_MOUNT_POINTS
 
 menu "ESP System Settings"
     rsource "driver/$IDF_TARGET/Kconfig.cpu"
-    orsource "driver/$IDF_TARGET/Kconfig.cache"
 
     choice ESP_SYSTEM_PANIC
         prompt "Panic handler behaviour"
@@ -76,15 +75,6 @@ menu "ESP System Settings"
             help
                 Invoke gdbstub on the serial port, allowing for gdb to attach to it and to do a debug on runtime.
     endchoice
-
-    config ESP_SYSTEM_PANIC_REBOOT_DELAY_SECONDS
-        int "Panic reboot delay (Seconds)"
-        default 0
-        range 0 99
-        depends on ESP_SYSTEM_PANIC_PRINT_REBOOT
-        help
-            After the panic handler executes, you can specify a number of seconds to
-            wait before the device reboots.
 
     config ESP_SYSTEM_RTC_EXT_XTAL_BOOTSTRAP_CYCLES
         int "Bootstrap cycles for external 32kHz crystal"
@@ -212,13 +202,6 @@ menu "ESP System Settings"
         default 0x0 if ESP_MAIN_TASK_AFFINITY_CPU0
         default 0x1 if ESP_MAIN_TASK_AFFINITY_CPU1
         default FREERTOS_NO_AFFINITY if ESP_MAIN_TASK_AFFINITY_NO_AFFINITY
-
-    config ESP_MINIMAL_SHARED_STACK_SIZE
-        int "Minimal allowed size for shared stack"
-        default 2048
-        help
-            Minimal value of size, in bytes, accepted to execute a expression
-            with shared stack.
 
     config ESP_PANIC_HANDLER_IRAM
         bool "Place panic handler code in IRAM"

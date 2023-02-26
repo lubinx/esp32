@@ -1,19 +1,64 @@
 #ifndef __ESP32S3_CLKTREE_DEFS_H
 #define __ESP32S3_CLKTREE_DEFS_H        1
 
+/*
++----------+            +--------------+
+| XTAL HF  +-----+----->| PLL 320/480M |
++----------+     |      +----+---------+
+    40M          |           |     +----------+                     +--\
+                 |           +---->| PLL 80M  +--------------+----->|   \
+                 |           |     +----------+              |      |   |
+                 |           |     +----------+              |      |   |
+                 |           +---->| PLL 160M |---------+----#----->| M |                +-----+
+                 |           |     +----------+         |    |      | U |--------------->| CPU |
+                 |           |     +----------+         |    |      | X |                +-----+
+                 |           +---->| PLL 240M +----+----#----#----->|   |
+                 |                 +----------+    |    |    |      |   |
+                 +---------------->+-----+         |    |    |      |   |
++----------+     |                 | DIV +----+----#----#----#----->|   /
+| RC FAST  +-----#----+----------->+-----+    |    |    |    |      +--/
++----------+     |    |                       |    |    |    |
+    20M          |    |                       |    |    |    |      +--\
+                 |    |                       |    |    |    +----->| M \                +---------+
+                 |    |                       |    |    |           | U |----+---------->| AHB/APB |
+                 |    |                       +----#----#---------->| X /    |           +---------+
+                 |    |                            |    |           +--/     |
+                 |    |                            |    |                    |  +--\
+                 |    |                            |    |                    +->| M \    +--------+
+                 |    +----------------------------#----#---------------------->| U |--->| UART X |
+                 +---------------------------------#----#---------------------->| X /    +--------+
+                                                   |    |                       +--/
+                                                   |    |
++---------+
+| XTAL32K |
++---------+
+    32K
+
++---------+
+| RC SLOW |
++---------+
+    136K
+
+. AHB/APB is a fixed "PLL 80M" when CPU is clocked by PLL, otherwise is equal to CPU (XTAL)
+*/
+
 #include "soc/periph_defs.h"
     // alias
     typedef periph_module_t         PERIPH_module_t;
 
 // provided source clocks
-    #define CLK_TREE_XTAL_FREQ          (40000000U)
-    #define CLK_TREE_XTAL32K_FREQ       (32768U)
-    #define CLK_TREE_RC_FAST_FREQ       (17500000U)
-    #define CLK_TREE_RC_SLOW_FREQ       (136000U)
+    #define XTAL_32M                    (32000000U)
+    #define XTAL_40M                    (40000000U)
+    #define XTAL32K_FREQ                (32768U)
+    #define RC_FAST_FREQ                (20000000U)         // SOO..RC_FAST_FREQ is 20M, not documented 17.5M
+    #define RC_SLOW_FREQ                (136000U)
+
+    // this is tested minimal CPU working freq, maybe caused by freertos
+    #define MINIAL_CPU_WORK_FREQ        (4000000U)
 
 // fixed div
-    #define CLK_TREE_XTAL_D2_FREQ       (CLK_TREE_XTAL_FREQ / 2)
-    #define CLK_TREE_RC_FAST_D256_FREQ  (CLK_TREE_RC_FAST_FREQ / 256)
+    #define CLK_TREE_XTAL_D2_FREQ       (XTAL_FREQ / 2)
+    #define CLK_TREE_RC_FAST_D256_FREQ  (RC_FAST_FREQ / 256)
 
     enum PLL_freq_sel_t
     {
@@ -46,7 +91,7 @@
 
     enum RTC_FAST_sclk_sel_t
     {
-        RTC_FAST_SCLK_SEL_XTAL_D2 = 0,
+        RTC_FAST_SCLK_SEL_XTAL_D2   = 0,
         RTC_FAST_SCLK_SEL_RC_FAST
     };
     typedef enum RTC_FAST_sclk_sel_t    RTC_FAST_sclk_sel_t;
@@ -54,7 +99,7 @@
     enum UART_sclk_sel_t
     {
         UART_SCLK_SEL_APB           = 1,
-        UART_SCLK_SEL_INT_RC_FAST,
+        UART_SCLK_SEL_RC_FAST,
         UART_SCLK_SEL_XTAL
     };
     typedef enum UART_sclk_sel_t    UART_sclk_sel_t;

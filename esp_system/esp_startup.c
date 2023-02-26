@@ -8,7 +8,6 @@
 #include "esp_private/cache_err_int.h"
 
 #include "esp_rom_sys.h"
-#include "esp_rom_uart.h"
 #include "esp32s3/rom/ets_sys.h"
 
 #include "sdkconfig.h"
@@ -111,8 +110,6 @@ void Startup_Handler(void)
         #else
             clock_hz = CLK_TREE_apb_freq();
         #endif
-        // esp_rom_uart_tx_wait_idle(0);
-        // esp_rom_uart_set_clock_baudrate(0, clock_hz, 115200);
     #endif
 
     // Need to unhold the IOs that were hold right before entering deep sleep, which are used as wakeup pins
@@ -255,15 +252,11 @@ static void do_system_init_fn(void)
 
 static void startup_other_cores(void)
 {
-    // TODO: depend on LOG_LEVEL
-    esp_rom_uart_tx_wait_idle(0);
-
     do_system_init_fn();
     esp_startup_start_app_other_cores();
 }
 
 void __attribute__((weak)) esp_startup_start_app_other_cores(void)
 {
-    while (1)
-        esp_rom_delay_us(UINT32_MAX);
+    while (1);
 }

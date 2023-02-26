@@ -31,7 +31,6 @@ list(APPEND priv_includes
 )
 
 list(APPEND errata_link_scripts
-    ""
 )
 
 include("${CMAKE_CURRENT_LIST_DIR}/driver/.cmake")

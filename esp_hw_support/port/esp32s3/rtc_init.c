@@ -86,7 +86,7 @@ void rtc_init(rtc_config_t cfg)
         if (ocode_efuse_cali) {
             set_ocode_by_efuse(blk_ver_major);
         } else {
-            calibrate_ocode();
+            // calibrate_ocode();
         }
     }
 
@@ -152,8 +152,8 @@ void rtc_init(rtc_config_t cfg)
         CLEAR_PERI_REG_MASK(SYSTEM_MEM_PD_MASK_REG, SYSTEM_LSLP_MEM_PD_MASK);
         /* If this pd_cfg is set to 1, all memory won't enter low power mode during light sleep */
         /* If this pd_cfg is set to 0, all memory will enter low power mode during light sleep */
-        rtc_sleep_pu_config_t pu_cfg = RTC_SLEEP_PU_CONFIG_ALL(0);
-        rtc_sleep_pu(pu_cfg);
+        // rtc_sleep_pu_config_t pu_cfg = RTC_SLEEP_PU_CONFIG_ALL(0);
+        // rtc_sleep_pu(pu_cfg);
 
         REG_CLR_BIT(RTC_CNTL_DIG_PWC_REG, RTC_CNTL_DG_WRAP_FORCE_PU);
         REG_CLR_BIT(RTC_CNTL_DIG_ISO_REG, RTC_CNTL_DG_WRAP_FORCE_NOISO | RTC_CNTL_DG_WRAP_FORCE_ISO);
@@ -191,7 +191,7 @@ void rtc_init(rtc_config_t cfg)
     REG_WRITE(RTC_CNTL_INT_ENA_REG, 0);
     REG_WRITE(RTC_CNTL_INT_CLR_REG, UINT32_MAX);
 
-    sar_periph_ctrl_init();
+    // sar_periph_ctrl_init();
 }
 
 rtc_vddsdio_config_t rtc_vddsdio_get_config(void)

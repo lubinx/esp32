@@ -134,6 +134,8 @@ void __attribute__((noreturn)) Reset_Handler(void)
     TIMERG0.wdtconfig0.wdt_flashboot_mod_en = 0;
     TIMERG0.wdtwprotect.wdt_wkey = WDT_LOCK_VALUE;
 
+    // flash log
+    while (UART0.status.txfifo_cnt);
     entry();
 }
 
@@ -258,7 +260,6 @@ static kernel_entry_t KERNEL_load(uintptr_t flash_location)
         );
     }
     */
-
     // REVIEW: unknown purpuse
     /*
     #if CONFIG_ESP32S3_DATA_CACHE_16KB

@@ -1,6 +1,7 @@
 #ifndef __ESP32S3_SOC_H
 #define __ESP32S3_SOC_H                 1
 
+#include "esp_arch.h"
 #include "soc/soc_caps.h"
 
 // wdt
@@ -27,7 +28,6 @@
 #include "soc/i2s_struct.h"
 #include "soc/interrupt_core0_struct.h"
 #include "soc/interrupt_core1_struct.h"
-#include "soc/interrupt_struct.h"
 #include "soc/lcd_cam_struct.h"
 #include "soc/ledc_struct.h"
 #include "soc/mcpwm_struct.h"
@@ -69,7 +69,6 @@
 #include "soc/i2s_reg.h"
 #include "soc/interrupt_core0_reg.h"
 #include "soc/interrupt_core1_reg.h"
-#include "soc/interrupt_reg.h"
 #include "soc/lcd_cam_reg.h"
 #include "soc/ledc_reg.h"
 #include "soc/mcpwm_reg.h"
