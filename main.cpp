@@ -24,7 +24,7 @@ static void *blink_thread3(void *arg);
 
 extern "C" void __attribute__((weak)) app_main(void)
 {
-    CLK_TREE_uart_conf(&UART0, UART_SCLK_SEL_RC_FAST);
+    sem_init(&sema, 0, 10);
 
     int fd = UART_createfd(0, 115200, UART_PARITY_NONE, UART_STOP_BITS_ONE);
     (void)fd;
@@ -41,20 +41,18 @@ extern "C" void __attribute__((weak)) app_main(void)
     if (CLK_TREE_periph_is_enable(PERIPH_UART2_MODULE))
         printf("uart2: %lu bps sclk: %llu\n", UART_get_baudrate(&UART2), CLK_TREE_uart_sclk_freq(&UART2));
 
-
+    printf("\nrandom generator test...\n");
     for (int i = 0; i < 10; i ++)
-        printf("0x%x, 0x%x, 0x%x, 0x%x\n", rand(), rand(), rand(), rand());
+        printf("\t0x%08x, 0x%08x, 0x%08x, 0x%08x\n", rand(), rand(), rand(), rand());
 
-    printf("semaphore init...\n");
-    sem_init(&sema, 0, 10);
-
+    printf("\nc++ exception test...\n");
     try
     {
         throw "foobar";
     }
     catch(char const *e)
     {
-        printf("catched c++ exception: %s\n", e);
+        printf("catched c++ exception: %s\n\n", e);
     }
 
     char const *long_text =

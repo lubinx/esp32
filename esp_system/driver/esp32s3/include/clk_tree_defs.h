@@ -56,7 +56,7 @@
     // this is tested minimal CPU working freq, maybe caused by freertos
     #define MINIAL_CPU_WORK_FREQ        (4000000U)
 
-// fixed div
+// fixed divider
     #define CLK_TREE_XTAL_D2_FREQ       (XTAL_FREQ / 2)
     #define CLK_TREE_RC_FAST_D256_FREQ  (RC_FAST_FREQ / 256)
 
