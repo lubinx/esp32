@@ -7,10 +7,6 @@ idf_component_register(SRCS ${srcs}
         "include/soc"
     PRIV_INCLUDE_DIRS
         "include"
-        "include/esp_private"
-        "include/soc/${target}"
     REQUIRES
         "soc"
 )
-
-add_subdirectory(port/${IDF_TARGET})

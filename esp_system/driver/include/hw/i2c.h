@@ -20,19 +20,8 @@
 
 __BEGIN_DECLS
 
-    #define HW_I2C0                     (0)
-    #define HW_I2C1                     (1)
-    #define HW_I2C2                     (2)
-    #define HW_I2C3                     (3)
-    #define HW_I2C4                     (4)
-    #define HW_I2C5                     (5)
-    #define HW_I2C6                     (6)
-    #define HW_I2C7                     (7)
-    #define HW_I2C8                     (8)
-    #define HW_I2C9                     (9)
-
 /****************************************************************************
- *  i2c fd
+ *  create i2c-mst control fd
  ****************************************************************************/
 extern __attribute__((nothrow))
     int I2C_createfd(int nb, uint8_t da, uint16_t kbps, uint8_t page_size, uint32_t highest_addr);

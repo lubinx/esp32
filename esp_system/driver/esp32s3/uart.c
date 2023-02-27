@@ -189,11 +189,8 @@ int UART_configure(uart_dev_t *dev, uint32_t bps, enum UART_parity_t parity, enu
         dev->int_ena.val = 0;
         while (0 != dev->status.txfifo_cnt) sched_yield();
     }
-
-    /*
-    CLK_TREE_periph_enable(uart_module);
-    CLK_TREE_periph_reset(uart_module);
-    */
+    else
+        CLK_TREE_periph_enable(uart_module);
 
     // uart normal
     dev->rs485_conf.val = 0;

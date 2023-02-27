@@ -57,8 +57,8 @@
     #define MINIAL_CPU_WORK_FREQ        (4000000U)
 
 // fixed divider
-    #define CLK_TREE_XTAL_D2_FREQ       (XTAL_FREQ / 2)
-    #define CLK_TREE_RC_FAST_D256_FREQ  (RC_FAST_FREQ / 256)
+    #define XTAL_D2_FREQ                (XTAL_FREQ / 2)
+    #define RC_FAST_D256_FREQ           (RC_FAST_FREQ / 256)
 
     enum PLL_freq_sel_t
     {
@@ -92,7 +92,9 @@
     enum RTC_FAST_sclk_sel_t
     {
         RTC_FAST_SCLK_SEL_XTAL_D2   = 0,
-        RTC_FAST_SCLK_SEL_RC_FAST
+        RTC_FAST_SCLK_SEL_RC_FAST,
+        // alias
+        RTC_FAST_sCLK_SEL_XTAL_DIV = RTC_FAST_SCLK_SEL_XTAL_D2
     };
     typedef enum RTC_FAST_sclk_sel_t    RTC_FAST_sclk_sel_t;
 
@@ -103,5 +105,20 @@
         UART_SCLK_SEL_XTAL
     };
     typedef enum UART_sclk_sel_t    UART_sclk_sel_t;
+
+    enum I2C_sclk_sel_t
+    {
+        I2C_SCLK_SEL_XTAL           = 0,
+        I2C_SCLK_SEL_RC_FAST
+    };
+    typedef enum I2C_sclk_sel_t     I2C_sclk_sel_t;
+
+    enum I2S_sclk_sel_t
+    {
+        I2S_SCLK_SEL_XTAL           = 0,
+        I2S_SCLK_SEL_PLL_D2,
+        I2S_SCLK_SEL_PLL_F160M
+    };
+    typedef enum I2S_sclk_sel_t     I2S_sclk_sel_t;
 
 #endif

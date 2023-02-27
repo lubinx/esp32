@@ -130,10 +130,14 @@ void CLK_TREE_initialize(void)
     SYSCON.wifi_clk_en &= ~wifi_bt_clkl_dis;
     SYSCON.wifi_clk_en |= SYSTEM_WIFI_CLK_EN;
 
-    /* Set WiFi light sleep clock source to RTC slow clock */
+    /* reset WiFi low-power clock  to RTC slow clock */
     SYSTEM.bt_lpck_div_int.bt_lpck_div_num = 0;
     SYSTEM.bt_lpck_div_frac.lpclk_sel_8m = 0;
     SYSTEM.bt_lpck_div_frac.lpclk_sel_rtc_slow = 1;
+
+    // reset RTC source clocks, ...make sure of it
+    RTCCNTL.clk_conf.fast_clk_rtc_sel = RTC_FAST_SCLK_SEL_XTAL_D2;
+    RTCCNTL.clk_conf.ana_clk_rtc_sel = RTC_SCLK_SEL_RC_SLOW;
 
     uint32_t old_freq_mhz = CLK_TREE_cpu_freq() / MHZ;
 
@@ -164,13 +168,6 @@ void CLK_TREE_initialize(void)
         // Re calculate the ccount to make time calculation correct.
         __set_CCOUNT((uint64_t)__get_CCOUNT() * CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ / old_freq_mhz);
     }
-
-    // peripheral sclk default, ...make sure of it
-    RTCCNTL.clk_conf.fast_clk_rtc_sel = RTC_FAST_SCLK_SEL_XTAL_D2;
-    RTCCNTL.clk_conf.ana_clk_rtc_sel = RTC_SCLK_SEL_RC_SLOW;
-    UART0.clk_conf.sclk_sel = UART_SCLK_SEL_XTAL;
-    UART1.clk_conf.sclk_sel = UART_SCLK_SEL_XTAL;
-    UART2.clk_conf.sclk_sel = UART_SCLK_SEL_XTAL;
 }
 
 int CLK_TREE_pll_conf(PLL_freq_sel_t sel)
@@ -279,8 +276,6 @@ uint64_t CLK_TREE_pll_freq(void)
     // SYSTEM.cpu_per_conf.pll_freq_sel
     switch (SYSTEM.cpu_per_conf.pll_freq_sel)
     {
-    default:
-        return 0;
     case 0:
         return PLL_320M_FREQ;
     case 1:
@@ -429,7 +424,7 @@ uint64_t CLK_TREE_rtc_sclk_freq(void)
     case RTC_SCLK_SEL_XTAL:
         return XTAL32K_FREQ;
     case RTC_SLOW_SCLK_SEL_RC_FAST_D256:
-        return CLK_TREE_RC_FAST_D256_FREQ;
+        return RC_FAST_D256_FREQ;
     default:
         return 0;
     }
@@ -474,7 +469,7 @@ uint64_t CLK_TREE_fast_rtc_sclk_freq(void)
     switch (RTCCNTL.clk_conf.fast_clk_rtc_sel)
     {
     case RTC_FAST_SCLK_SEL_XTAL_D2:
-        return CLK_TREE_XTAL_D2_FREQ;
+        return XTAL_D2_FREQ;
     case RTC_FAST_SCLK_SEL_RC_FAST:
         return RC_FAST_FREQ;
     default:
@@ -503,6 +498,65 @@ uint64_t CLK_TREE_uart_sclk_freq(uart_dev_t *dev)
         return RC_FAST_FREQ;
     case UART_SCLK_SEL_XTAL:
         return XTAL_FREQ;
+    }
+}
+
+int CLK_TREE_i2c_conf(i2c_dev_t *dev, I2C_sclk_sel_t sel)
+{
+    if (I2C_SCLK_SEL_RC_FAST == sel)
+        RC_FAST_SCLK_ref();
+    if (I2C_SCLK_SEL_RC_FAST == dev->clk_conf.sclk_sel)
+        RC_FAST_SCLK_release();
+
+    dev->clk_conf.sclk_sel = sel;
+}
+
+uint64_t CLK_TREE_i2c_sclk_freq(i2c_dev_t *dev)
+{
+    switch (dev->clk_conf.sclk_sel)
+    {
+    case I2C_SCLK_SEL_XTAL:
+        return XTAL_FREQ;
+    case I2C_SCLK_SEL_RC_FAST:
+        return RC_FAST_FREQ;
+    }
+}
+
+int CLK_TREE_i2s_rx_conf(i2s_dev_t *dev, I2S_sclk_sel_t sel)
+{
+    dev->rx_clkm_conf.rx_clk_sel = sel;
+    return 0;
+}
+
+uint64_t CLK_TREE_i2s_rx_sclk_freq(i2s_dev_t *dev)
+{
+    switch (dev->rx_clkm_conf.rx_clk_sel)
+    {
+    case I2S_SCLK_SEL_XTAL:
+        return XTAL_FREQ;
+    case I2S_SCLK_SEL_PLL_D2:
+        return CLK_TREE_pll_freq() / 2;
+    case I2S_SCLK_SEL_PLL_F160M:
+        return PLL_DIV_TO_160M_FREQ;
+    }
+}
+
+int CLK_TREE_i2s_tx_conf(i2s_dev_t *dev, I2S_sclk_sel_t sel)
+{
+    dev->tx_clkm_conf.tx_clk_sel = sel;
+    return 0;
+}
+
+uint64_t CLK_TREE_i2s_tx_sclk_freq(i2s_dev_t *dev)
+{
+    switch (dev->tx_clkm_conf.tx_clk_sel)
+    {
+    case I2S_SCLK_SEL_XTAL:
+        return XTAL_FREQ;
+    case I2S_SCLK_SEL_PLL_D2:
+        return CLK_TREE_pll_freq() / 2;
+    case I2S_SCLK_SEL_PLL_F160M:
+        return PLL_DIV_TO_160M_FREQ;
     }
 }
 
