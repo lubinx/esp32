@@ -103,15 +103,12 @@ list(APPEND IDF_COMPILE_OPTIONS
     "$<$<COMPILE_LANGUAGE:C>:-Wno-old-style-declaration>"
 )
 
-# IDF_KERNEL_COMPONENTS
-#   TODO: components listed in here will generate solo sdkconfig
-if (NOT IDF_TARGET_ARCH STREQUAL "")
-    list(APPEND IDF_KERNEL_COMPONENTS ${IDF_TARGET_ARCH})
-endif()
+# idf kernel components that
 list(APPEND IDF_KERNEL_COMPONENTS
-    "esp_system" "esp_common" "soc" "heap"
+    "esp_system"
+    "esp_common" "soc" "heap"
     "freertos"
-    "hal"
+    # "hal"
     "esptool_py"
 )
 
@@ -408,12 +405,6 @@ macro(idf_component_register)
     cmake_parse_arguments(_ "WHOLE_ARCHIVE" "${single_value}" "${multi_value}" ${ARGN})
 
     if(NOT __idf_component_context)
-        if(__REQUIRED_IDF_TARGETS)
-            if(NOT IDF_TARGET IN_LIST __REQUIRED_IDF_TARGETS)
-                message(FATAL_ERROR "Component ${component_name} only supports targets: ${__REQUIRED_IDF_TARGETS}")
-            endif()
-        endif()
-
         get_property(depends GLOBAL PROPERTY DEPENDED_COMPONENTS)
         foreach(iter ${__REQUIRES} ${__PRIV_REQUIRES})
             if (NOT iter IN_LIST OBSOLETED_COMPONENTS)
@@ -584,8 +575,10 @@ function(idf_build)
     idf_build_set_property(COMPILE_OPTIONS "${IDF_COMPILE_OPTIONS}" APPEND)
 
     message("💡 Resolve dependencies")
+    list(INSERT IDF_KERNEL_COMPONENTS 0 ${IDF_TARGET_ARCH})
+
     function(__resove_deps)
-        foreach(iter ${IDF_KERNEL_COMPONENTS})
+        foreach(iter ${IDF_KERNEL_COMPONENTS} ${__COMPONENTS})
             idf_build_get_property(component_targets __COMPONENT_TARGETS)
             idf_get_component_target(req_target ${iter})
 
@@ -611,12 +604,6 @@ function(idf_build)
         endwhile()
     endfunction()
     __resove_deps()
-
-    if (__COMPONENTS)
-        foreach(iter ${__COMPONENTS})
-            idf_component_add(${iter})
-        endforeach()
-    endif()
 
     message("💡 Kconfig")
     macro(__generate_import_kconfig)
@@ -651,10 +638,6 @@ function(idf_build)
             add_compile_options("-fstack-protector-strong")
         elseif(CONFIG_COMPILER_STACK_CHECK_MODE_ALL)
             add_compile_options("-fstack-protector-all")
-        endif()
-
-        if(CONFIG_COMPILER_DUMP_RTL_FILES)
-            add_compile_options("-fdump-rtl-expand")
         endif()
 
         if(CONFIG_ESP_SYSTEM_USE_EH_FRAME)

@@ -12,9 +12,9 @@
 
 #include "bootloader_soc.h"
 
-#include "hal/cache_hal.h"
-#include "hal/cache_ll.h"
-#include "hal/mmu_ll.h"
+#include "cache_ll.h"
+#include "mmu_ll.h"
+#include "esp32s3/rom/cache.h"
 
 static char const *TAG = "bootloader";
 
@@ -60,6 +60,10 @@ struct flash_segment_t
 /****************************************************************************
  *  @internal
 *****************************************************************************/
+static void cache_hal_init(void);
+static void cache_hal_enable(enum cache_type_t type);
+static void cache_hal_disable(enum cache_type_t type);
+
 static kernel_entry_t KERNEL_load(uintptr_t flash_location);
 static ssize_t FLASH_read(uintptr_t flash_location, void *buf, size_t bufsize);
 static void MAP_flash_segment(struct flash_segment_t *seg);
@@ -142,6 +146,50 @@ void __attribute__((noreturn)) Reset_Handler(void)
 /****************************************************************************
  *  @internal
 *****************************************************************************/
+struct {
+    uint32_t data_autoload_flag;
+    uint32_t inst_autoload_flag;
+} cache_ctx;
+
+static void cache_hal_init(void)
+{
+    cache_ctx.data_autoload_flag = Cache_Disable_DCache();
+    Cache_Enable_DCache(cache_ctx.data_autoload_flag);
+
+    cache_ctx.inst_autoload_flag = Cache_Disable_ICache();
+    Cache_Enable_ICache(cache_ctx.inst_autoload_flag);
+
+    cache_ll_l1_enable_bus(0, CACHE_BUS_DBUS0);
+    cache_ll_l1_enable_bus(0, CACHE_BUS_IBUS0);
+
+    cache_ll_l1_enable_bus(1, CACHE_BUS_DBUS0);
+    cache_ll_l1_enable_bus(1, CACHE_BUS_IBUS0);
+}
+
+static void cache_hal_enable(enum cache_type_t type)
+{
+    if (type == CACHE_TYPE_DATA) {
+        Cache_Enable_DCache(cache_ctx.data_autoload_flag);
+    } else if (type == CACHE_TYPE_INSTRUCTION) {
+        Cache_Enable_ICache(cache_ctx.inst_autoload_flag);
+    } else {
+        Cache_Enable_ICache(cache_ctx.inst_autoload_flag);
+        Cache_Enable_DCache(cache_ctx.data_autoload_flag);
+    }
+}
+
+static void cache_hal_disable(enum cache_type_t type)
+{
+    if (type == CACHE_TYPE_DATA) {
+        Cache_Disable_DCache();
+    } else if (type == CACHE_TYPE_INSTRUCTION) {
+        Cache_Disable_ICache();
+    } else {
+        Cache_Disable_ICache();
+        Cache_Disable_DCache();
+    }
+}
+
 static kernel_entry_t KERNEL_load(uintptr_t flash_location)
 {
     esp_image_header_t hdr;
@@ -229,45 +277,6 @@ static kernel_entry_t KERNEL_load(uintptr_t flash_location)
         CONFIG_ESP32S3_DATA_CACHE_LINE_SIZE
     );
 
-    // REVIEW: unknown purpuse
-    /*
-    extern uint32_t Cache_Set_IDROM_MMU_Size(uint32_t irom_size, uint32_t drom_size);
-    {
-        uint32_t cache_mmu_irom_size = text_seg.aligned_size / MMU_PAGE_SIZE * sizeof(uint32_t);
-        Cache_Set_IDROM_MMU_Size(cache_mmu_irom_size, CACHE_DROM_MMU_MAX_END - cache_mmu_irom_size);
-    }
-
-    extern void Cache_Set_IDROM_MMU_Info(uint32_t instr_page_num, uint32_t rodata_page_num,
-        uint32_t rodata_start, uint32_t rodata_end, int i_off, int ro_off);
-    {
-        int s_instr_flash2spiram_off = 0;
-        int s_rodata_flash2spiram_off = 0;
-        #if CONFIG_SPIRAM_FETCH_INSTRUCTIONS
-            extern int instruction_flash2spiram_offset(void);
-            s_instr_flash2spiram_off = instruction_flash2spiram_offset();
-        #endif
-        #if CONFIG_SPIRAM_RODATA
-            extern int rodata_flash2spiram_offset(void);
-            s_rodata_flash2spiram_off = rodata_flash2spiram_offset();
-        #endif
-
-        Cache_Set_IDROM_MMU_Info(
-            text_seg.aligned_size / MMU_PAGE_SIZE,
-            ro_seg.aligned_size / MMU_PAGE_SIZE,
-            ro_seg.hdr.load_addr, ro_seg.hdr.load_addr + ro_seg.hdr.data_len,
-            s_instr_flash2spiram_off,
-            s_rodata_flash2spiram_off
-        );
-    }
-    */
-    // REVIEW: unknown purpuse
-    /*
-    #if CONFIG_ESP32S3_DATA_CACHE_16KB
-        Cache_Invalidate_DCache_All();
-        Cache_Occupy_Addr(SOC_DROM_LOW, CONFIG_ESP32S3_DATA_CACHE_SIZE);
-    #endif
-    */
-
     cache_hal_enable(CACHE_TYPE_ALL);
     return (kernel_entry_t)hdr.entry_addr;
 
@@ -278,15 +287,15 @@ kernel_load_error:
 static ssize_t FLASH_read(uintptr_t flash_location, void *buf, size_t bufsize)
 {
     static uintptr_t current_paddr = (uintptr_t)-1;
-    uint32_t paddr = mmu_ll_format_paddr(0, flash_location, 0);
+    uint32_t paddr = mmu_ll_format_paddr(flash_location, 0);
 
     if (current_paddr != paddr)
     {
         current_paddr = paddr;
         cache_hal_disable(CACHE_TYPE_DATA);
 
-        uint32_t entry_id = mmu_ll_get_entry_id(0, FLASH_READ_MMU_VADDR);
-        mmu_ll_write_entry(0, entry_id, paddr, MMU_TARGET_FLASH0);
+        uint32_t entry_id = mmu_ll_get_entry_id(FLASH_READ_MMU_VADDR);
+        mmu_ll_write_entry(entry_id, paddr, MMU_TARGET_FLASH0);
         cache_hal_enable(CACHE_TYPE_DATA);
     }
 
@@ -309,15 +318,16 @@ static void MAP_flash_segment(struct flash_segment_t *seg)
 
     int pages = (int)seg->aligned_size / MMU_PAGE_SIZE;
 
-    uint32_t entry_id = mmu_ll_get_entry_id(0, seg->aligned_vaddr);
-    uint32_t paddr = mmu_ll_format_paddr(0, seg->location, 0);
+    uint32_t entry_id = mmu_ll_get_entry_id(seg->aligned_vaddr);
+    uint32_t paddr = mmu_ll_format_paddr(seg->location, 0);
 
     while (pages)
     {
-        mmu_ll_write_entry(0, entry_id, paddr, MMU_TARGET_FLASH0);
+        mmu_ll_write_entry(entry_id, paddr, MMU_TARGET_FLASH0);
 
         entry_id ++;
         paddr ++;
         pages --;
     }
 }
+

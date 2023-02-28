@@ -112,6 +112,7 @@ PROVIDE(__bss_start__ = ABSOLUTE(.));
 
         . = ALIGN (8);
 PROVIDE(__bss_end__ = ABSOLUTE(.));
+PROVIDE(end = ABSOLUTE(.));
     } > BOOT_data_seg
 
     .text :

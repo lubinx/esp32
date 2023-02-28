@@ -14,7 +14,7 @@
 
 #include "esp_cpu.h"
 #include "soc/rtc.h"
-#include "hal/timer_hal.h"
+#include "uart.h"
 
 #include "esp_private/panic_internal.h"
 #include "port/panic_funcs.h"
@@ -26,23 +26,6 @@
 #include "esp_core_dump.h"
 #endif
 
-#if CONFIG_APPTRACE_ENABLE
-#include "esp_app_trace.h"
-#if CONFIG_APPTRACE_SV_ENABLE
-#include "SEGGER_RTT.h"
-#endif
-
-#if CONFIG_APPTRACE_ONPANIC_HOST_FLUSH_TMO == -1
-#define APPTRACE_ONPANIC_HOST_FLUSH_TMO   ESP_APPTRACE_TMO_INFINITE
-#else
-#define APPTRACE_ONPANIC_HOST_FLUSH_TMO   (1000*CONFIG_APPTRACE_ONPANIC_HOST_FLUSH_TMO)
-#endif
-#endif // CONFIG_APPTRACE_ENABLE
-
-#if !CONFIG_ESP_SYSTEM_PANIC_SILENT_REBOOT
-#include "hal/uart_hal.h"
-#endif
-
 #if CONFIG_ESP_SYSTEM_PANIC_GDBSTUB
 #include "esp_gdbstub.h"
 #endif
@@ -52,19 +35,9 @@ static char *s_panic_abort_details = NULL;
 
 #if !CONFIG_ESP_SYSTEM_PANIC_SILENT_REBOOT
 
-static uart_hal_context_t s_panic_uart = { .dev = &UART0 };
-
-static void panic_print_char_uart(char const c)
-{
-    uint32_t sz = 0;
-    while (!uart_hal_get_txfifo_len(&s_panic_uart));
-    uart_hal_write_txfifo(&s_panic_uart, (uint8_t *) &c, 1, &sz);
-}
-
-
 void panic_print_char(char const c)
 {
-    panic_print_char_uart(c);
+    UART_fifo_tx(&UART0, c);
 }
 
 void panic_print_str(char const *str)
@@ -178,17 +151,6 @@ void esp_panic_handler(panic_info_t *info)
 
     panic_print_str("\r\n");
 
-#if CONFIG_APPTRACE_ENABLE
-    // disable_all_wdts();
-#if CONFIG_APPTRACE_SV_ENABLE
-    SEGGER_RTT_ESP_FlushNoLock(CONFIG_APPTRACE_POSTMORTEM_FLUSH_THRESH, APPTRACE_ONPANIC_HOST_FLUSH_TMO);
-#else
-    esp_apptrace_flush_nolock(ESP_APPTRACE_DEST_TRAX, CONFIG_APPTRACE_POSTMORTEM_FLUSH_THRESH,
-                              APPTRACE_ONPANIC_HOST_FLUSH_TMO);
-#endif
-
-#endif // CONFIG_APPTRACE_ENABLE
-
 #if CONFIG_ESP_SYSTEM_PANIC_GDBSTUB
     panic_print_str("Entering gdb stub now.\r\n");
     esp_gdbstub_panic_handler((void *)info->frame);
@@ -244,15 +206,6 @@ void IRAM_ATTR __attribute__((noreturn, no_sanitize_undefined)) panic_abort(char
 {
     g_panic_abort = true;
     s_panic_abort_details = (char *) details;
-
-#if CONFIG_APPTRACE_ENABLE
-#if CONFIG_APPTRACE_SV_ENABLE
-    SEGGER_RTT_ESP_FlushNoLock(CONFIG_APPTRACE_POSTMORTEM_FLUSH_THRESH, APPTRACE_ONPANIC_HOST_FLUSH_TMO);
-#else
-    esp_apptrace_flush_nolock(ESP_APPTRACE_DEST_TRAX, CONFIG_APPTRACE_POSTMORTEM_FLUSH_THRESH,
-                              APPTRACE_ONPANIC_HOST_FLUSH_TMO);
-#endif
-#endif
 
     *((volatile int *) 0) = 0; // NOLINT(clang-analyzer-core.NullDereference) should be an invalid operation on targets
     while (1);

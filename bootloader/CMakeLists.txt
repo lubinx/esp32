@@ -33,7 +33,6 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     "${IDF_PATH}/components/bootloader_support/private_include"
 )
 target_sources(${PROJECT_NAME} PRIVATE
-    "${IDF_PATH}/components/hal/cache_hal.c"
     "${IDF_PATH}/components/esp_rom/patches/esp_rom_sys.c"
     "${IDF_PATH}/components/bootloader_support/src/${IDF_TARGET}/bootloader_soc.c"
 )

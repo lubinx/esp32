@@ -123,32 +123,6 @@ void Startup_Handler(void)
     extern void __libc_retarget_init(void); //  _retarget_init.c
     __libc_retarget_init();
 
-    /* TODO: enablie it somehow conflict with vfs => uart driver, somehting outside the memory protect area
-    #if CONFIG_ESP_SYSTEM_MEMPROT_FEATURE && !CONFIG_ESP_SYSTEM_MEMPROT_TEST
-        // Memprot cannot be locked during OS startup as the lock-on prevents any PMS changes until a next reboot
-        // If such a situation appears, it is likely an malicious attempt to bypass the system safety setup -> print error & reset
-
-        bool is_locked = false;
-        if (esp_mprot_is_conf_locked_any(&is_locked) != ESP_OK || is_locked)
-        {
-            ESP_EARLY_LOGE(TAG, "Memprot feature locked after the system reset! Potential safety corruption, rebooting.");
-            esp_restart_noos_dig();
-        }
-
-        esp_memp_config_t memp_cfg = ESP_MEMPROT_DEFAULT_CONFIG();
-        #if ! CONFIG_ESP_SYSTEM_MEMPROT_FEATURE_LOCK
-            memp_cfg.lock_feature = false;
-        #endif
-
-        esp_err_t memp_err = esp_mprot_set_prot(&memp_cfg);
-        if (memp_err != ESP_OK)
-        {
-            ESP_EARLY_LOGE(TAG, "Failed to set Memprot feature (0x%08X: %s), rebooting.", memp_err, esp_err_to_name(memp_err));
-            esp_restart_noos_dig();
-        }
-    #endif
-    */
-
     do_global_ctors();
     do_system_init_fn();
 

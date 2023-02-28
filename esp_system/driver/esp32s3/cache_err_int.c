@@ -14,16 +14,16 @@
 
 #include <stdint.h>
 
-#include "sdkconfig.h"
-
 #include "esp_attr.h"
 #include "esp_log.h"
 #include "esp_cpu.h"
 #include "esp_intr_alloc.h"
+
 #include "soc/soc.h"
 #include "soc/periph_defs.h"
+
+#include "cache_ll.h"
 #include "esp_rom_sys.h"
-#include "hal/cache_ll.h"
 
 static char const *TAG = "CACHE_ERR";
 
