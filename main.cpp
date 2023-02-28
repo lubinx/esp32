@@ -41,6 +41,11 @@ extern "C" void __attribute__((weak)) app_main(void)
     if (CLK_TREE_periph_is_enable(PERIPH_UART2_MODULE))
         printf("uart2: %lu bps sclk: %llu\n", UART_get_baudrate(&UART2), CLK_TREE_uart_sclk_freq(&UART2));
 
+    printf("\nmalloc 32k test...\n");
+    void *ptr = malloc(32768);
+    printf("\t%p\n", ptr);
+    free(ptr);
+
     printf("\nrandom generator test...\n");
     for (int i = 0; i < 10; i ++)
         printf("\t0x%08x, 0x%08x, 0x%08x, 0x%08x\n", rand(), rand(), rand(), rand());

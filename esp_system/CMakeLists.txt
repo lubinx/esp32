@@ -47,7 +47,7 @@ idf_component_register(
     PRIV_REQUIRES
         "esp_common"
         "soc"
-        "esp_hw_support"                                # remove later: should merge into driver
+        # "esp_hw_support"                                # remove later: should merge into driver
     LDFRAGMENTS
         "memap.lf"
 )
