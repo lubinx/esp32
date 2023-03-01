@@ -21,19 +21,6 @@ typedef uint32_t esp_cpu_cycle_count_t;
 #define esp_cpu_get_core_id()           __get_CORE_ID()
 
 __BEGIN_DECLS
-
-/***************************************************************************/
-/** CPU Control
-****************************************************************************/
-extern __attribute__((nothrow))
-    void esp_cpu_stall(int core_id);
-
-extern __attribute__((nothrow))
-    void esp_cpu_unstall(int core_id);
-
-extern __attribute__((nothrow))
-    void esp_cpu_reset(int core_id);
-
 /***************************************************************************/
 /** CPU Interrupts
 ****************************************************************************/

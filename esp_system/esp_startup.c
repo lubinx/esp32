@@ -1,12 +1,10 @@
-#include "esp_system.h"
-
 #include "soc.h"
 #include "clk_tree.h"
 
-#include "esp_compiler.h"
-#include "esp_cpu.h"
+#include "esp_system.h"
 #include "esp_private/cache_err_int.h"
 
+// TODO: remove these reqiured by ets_set_appcpu_boot_addr()
 #include "esp_rom_sys.h"
 #include "esp32s3/rom/ets_sys.h"
 
@@ -98,50 +96,14 @@ void Startup_Handler(void)
 
     CLK_TREE_initialize();
 
-    // Clear interrupt matrix for PRO CPU core
     core_intr_matrix_clear();
-
-    // TODO: on FPGA it should be possible to configure this, not currently working with APB_CLK_FREQ changed
-    #ifndef CONFIG_IDF_ENV_FPGA
-        uint32_t clock_hz;
-
-        #if ESP_ROM_UART_CLK_IS_XTAL
-            clock_hz = CLK_TREE_sclk_freq(SOC_SCLK_XTAL);
-        #else
-            clock_hz = CLK_TREE_apb_freq();
-        #endif
-    #endif
-
-    // Need to unhold the IOs that were hold right before entering deep sleep, which are used as wakeup pins
-    /*
-    if (RESET_REASON_CORE_DEEP_SLEEP == esp_rom_get_reset_reason(0))
-        esp_deep_sleep_wakeup_io_reset();
-    */
-
     esp_cache_err_int_init();
 
     extern void __libc_retarget_init(void); //  _retarget_init.c
     __libc_retarget_init();
 
     do_global_ctors();
-    do_system_init_fn();
 
-    esp_cpu_unstall(1);
-    if (! REG_GET_BIT(SYSTEM_CORE_1_CONTROL_0_REG, SYSTEM_CONTROL_CORE_1_CLKGATE_EN))
-    {
-        REG_SET_BIT(SYSTEM_CORE_1_CONTROL_0_REG, SYSTEM_CONTROL_CORE_1_CLKGATE_EN);
-        REG_CLR_BIT(SYSTEM_CORE_1_CONTROL_0_REG, SYSTEM_CONTROL_CORE_1_RUNSTALL);
-
-        REG_SET_BIT(SYSTEM_CORE_1_CONTROL_0_REG, SYSTEM_CONTROL_CORE_1_RESETING);
-        REG_CLR_BIT(SYSTEM_CORE_1_CONTROL_0_REG, SYSTEM_CONTROL_CORE_1_RESETING);
-    }
-
-    ets_set_appcpu_boot_addr((uint32_t)startup_other_cores);
-    esp_startup_start_app();
-}
-
-ESP_SYSTEM_INIT_FN(init_components0, BIT(0), 200)
-{
     #if CONFIG_ESP_DEBUG_STUBS_ENABLE
         extern void esp_dbg_stubs_init(void);
         esp_dbg_stubs_init();
@@ -157,25 +119,20 @@ ESP_SYSTEM_INIT_FN(init_components0, BIT(0), 200)
         coex_pre_init();
     #endif
 
-    return ESP_OK;
-}
+    do_system_init_fn();
 
-ESP_SYSTEM_INIT_FN(startup_other_cores, BIT(1), 201)
-{
-    ets_set_appcpu_boot_addr(0);
-    __set_VECBASE(&_vector_table);
+    SOC_core_unstall(1);
+    if (! REG_GET_BIT(SYSTEM_CORE_1_CONTROL_0_REG, SYSTEM_CONTROL_CORE_1_CLKGATE_EN))
+    {
+        REG_SET_BIT(SYSTEM_CORE_1_CONTROL_0_REG, SYSTEM_CONTROL_CORE_1_CLKGATE_EN);
+        REG_CLR_BIT(SYSTEM_CORE_1_CONTROL_0_REG, SYSTEM_CONTROL_CORE_1_RUNSTALL);
 
-    REG_WRITE(ASSIST_DEBUG_CORE_1_RCD_PDEBUGENABLE_REG, 1);
-    REG_WRITE(ASSIST_DEBUG_CORE_1_RCD_RECORDING_REG, 1);
+        REG_SET_BIT(SYSTEM_CORE_1_CONTROL_0_REG, SYSTEM_CONTROL_CORE_1_RESETING);
+        REG_CLR_BIT(SYSTEM_CORE_1_CONTROL_0_REG, SYSTEM_CONTROL_CORE_1_RESETING);
+    }
 
-    core_intr_matrix_clear();
-    esp_cache_err_int_init();
-
-    #if (CONFIG_IDF_TARGET_ESP32 && CONFIG_ESP32_TRAX_TWOBANKS) || (CONFIG_IDF_TARGET_ESP32S3 && CONFIG_ESP32S3_TRAX_TWOBANKS)
-        trax_start_trace(TRAX_DOWNCOUNT_WORDS);
-    #endif
-
-    return ESP_OK;
+    ets_set_appcpu_boot_addr((uint32_t)startup_other_cores);
+    esp_startup_start_app();
 }
 
 /****************************************************************************
@@ -226,6 +183,19 @@ static void do_system_init_fn(void)
 
 static void startup_other_cores(void)
 {
+    ets_set_appcpu_boot_addr(0);
+    __set_VECBASE(&_vector_table);
+
+    REG_WRITE(ASSIST_DEBUG_CORE_1_RCD_PDEBUGENABLE_REG, 1);
+    REG_WRITE(ASSIST_DEBUG_CORE_1_RCD_RECORDING_REG, 1);
+
+    core_intr_matrix_clear();
+    esp_cache_err_int_init();
+
+    #if (CONFIG_IDF_TARGET_ESP32 && CONFIG_ESP32_TRAX_TWOBANKS) || (CONFIG_IDF_TARGET_ESP32S3 && CONFIG_ESP32S3_TRAX_TWOBANKS)
+        trax_start_trace(TRAX_DOWNCOUNT_WORDS);
+    #endif
+
     do_system_init_fn();
     esp_startup_start_app_other_cores();
 }

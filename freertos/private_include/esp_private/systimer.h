@@ -6,12 +6,15 @@
 
 #pragma once
 
-#include <features.h>
+#include <sys/cdefs.h>
 #include <stdint.h>
 
-#define SYSTIMER_COUNTER_OS_TICK     1 // Counter used by RTOS porting layer, to generate the OS tick
-#define SYSTIMER_ALARM_OS_TICK_CORE0 0 // Alarm used by OS tick, dedicated for core 0
-#define SYSTIMER_ALARM_OS_TICK_CORE1 1 // Alarm used by OS tick, dedicated for core 1
+// we assign the systimer resources statically
+#define SYSTIMER_COUNTER_ESPTIMER       0 // Counter used by esptimer, to generate the system level wall clock
+#define SYSTIMER_COUNTER_OS_TICK        1 // Counter used by RTOS porting layer, to generate the OS tick
+#define SYSTIMER_ALARM_OS_TICK_CORE0    0 // Alarm used by OS tick, dedicated for core 0
+#define SYSTIMER_ALARM_OS_TICK_CORE1    1 // Alarm used by OS tick, dedicated for core 1
+#define SYSTIMER_ALARM_ESPTIMER         2 // Alarm used by esptimer
 
 __BEGIN_DECLS
 

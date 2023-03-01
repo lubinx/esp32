@@ -12,12 +12,9 @@ list(APPEND srcs
     "esp_dbg_ubsan.c"                   # debug for undefined behavior, but not sure if its works
     "esp_intr.c"
     "esp_startup.c"
-    "esp_system.c"                      # TODO: esp-idf compatiable only, plan to remove later
     "panic.c"
     "panic_handler.c"
-# compatiable
-    # "bootloader_support_shim.c"
-    "esp_freertos_startup.c"
+    "esp_freertos_impl.c"               # implements freertos/hal
 )
 
 list(APPEND includes

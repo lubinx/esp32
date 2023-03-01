@@ -103,11 +103,6 @@ static inline __attribute__((always_inline))
     {
         __asm__ ("break 1,15");
     }
-
-#define __dbgr_is_attached()            xt_utils_dbgr_is_attached()
-#define __dbgr_break()                  xt_utils_dbgr_break()
-#define __BKPT(value)                   (__dbgr_is_attached() ? __dbgr_break(): (void)value)
-
 /*
     use gcc buildin __sync_bool_compare_and_swap instead?
 static inline __attribute__((always_inline)) bool xt_utils_compare_and_set(volatile unsigned *addr, unsigned compare_value, unsigned new_value)

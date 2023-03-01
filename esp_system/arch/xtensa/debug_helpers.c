@@ -7,7 +7,6 @@
 #include <string.h>
 
 #include "sdkconfig.h"
-#include "esp_types.h"
 #include "esp_attr.h"
 #include "esp_err.h"
 #include "esp_debug_helpers.h"

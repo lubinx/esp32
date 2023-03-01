@@ -6,34 +6,18 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "soc.h"
 #include "esp_attr.h"
 #include "esp_err.h"
-#include "esp_compiler.h"
 
-#include "esp_private/system_internal.h"
-
-#include "esp_cpu.h"
-#include "soc/rtc.h"
 #include "uart.h"
 
 #include "esp_private/panic_internal.h"
 #include "port/panic_funcs.h"
 #include "esp_rom_sys.h"
 
-#include "sdkconfig.h"
-
-#if CONFIG_ESP_COREDUMP_ENABLE
-#include "esp_core_dump.h"
-#endif
-
-#if CONFIG_ESP_SYSTEM_PANIC_GDBSTUB
-#include "esp_gdbstub.h"
-#endif
-
 bool g_panic_abort = false;
 static char *s_panic_abort_details = NULL;
-
-#if !CONFIG_ESP_SYSTEM_PANIC_SILENT_REBOOT
 
 void panic_print_char(char const c)
 {
@@ -76,7 +60,6 @@ void panic_print_dec(int d)
     }
     panic_print_char(n1 + '0');
 }
-#endif  // CONFIG_ESP_SYSTEM_PANIC_SILENT_REBOOT
 
 static void print_abort_details(const void *f)
 {
@@ -150,55 +133,6 @@ void esp_panic_handler(panic_info_t *info)
     g_panic_abort = false;
 
     panic_print_str("\r\n");
-
-#if CONFIG_ESP_SYSTEM_PANIC_GDBSTUB
-    panic_print_str("Entering gdb stub now.\r\n");
-    esp_gdbstub_panic_handler((void *)info->frame);
-#else
-#if CONFIG_ESP_COREDUMP_ENABLE
-    static bool s_dumping_core;
-    if (s_dumping_core)
-    {
-        panic_print_str("Re-entered core dump! Exception happened during core dump!\r\n");
-    }
-    else
-    {
-        s_dumping_core = true;
-#if CONFIG_ESP_COREDUMP_ENABLE_TO_FLASH
-        esp_core_dump_to_flash(info);
-#endif
-#if CONFIG_ESP_COREDUMP_ENABLE_TO_UART && !CONFIG_ESP_SYSTEM_PANIC_SILENT_REBOOT
-        esp_core_dump_to_uart(info);
-#endif
-        s_dumping_core = false;
-    }
-#endif /* CONFIG_ESP_COREDUMP_ENABLE */
-
-#if CONFIG_ESP_SYSTEM_PANIC_PRINT_REBOOT || CONFIG_ESP_SYSTEM_PANIC_SILENT_REBOOT
-
-    if (esp_reset_reason_get_hint() == ESP_RST_UNKNOWN) {
-        switch (info->exception) {
-        case PANIC_EXCEPTION_IWDT:
-            esp_reset_reason_set_hint(ESP_RST_INT_WDT);
-            break;
-        case PANIC_EXCEPTION_TWDT:
-            esp_reset_reason_set_hint(ESP_RST_TASK_WDT);
-            break;
-        case PANIC_EXCEPTION_ABORT:
-        case PANIC_EXCEPTION_FAULT:
-        default:
-            esp_reset_reason_set_hint(ESP_RST_PANIC);
-            break; // do not touch the previously set reset reason hint
-        }
-    }
-
-    panic_print_str("Rebooting...\r\n");
-    panic_restart();
-#else /* CONFIG_ESP_SYSTEM_PANIC_PRINT_REBOOT || CONFIG_ESP_SYSTEM_PANIC_SILENT_REBOOT */
-    panic_print_str("CPU halted.\r\n");
-    while (1);
-#endif /* CONFIG_ESP_SYSTEM_PANIC_PRINT_REBOOT || CONFIG_ESP_SYSTEM_PANIC_SILENT_REBOOT */
-#endif /* CONFIG_ESP_SYSTEM_PANIC_GDBSTUB */
 }
 
 
@@ -209,17 +143,4 @@ void IRAM_ATTR __attribute__((noreturn, no_sanitize_undefined)) panic_abort(char
 
     *((volatile int *) 0) = 0; // NOLINT(clang-analyzer-core.NullDereference) should be an invalid operation on targets
     while (1);
-}
-
-/* Weak versions of reset reason hint functions.
- * If these weren't provided, reset reason code would be linked into the app
- * even if the app never called esp_reset_reason().
- */
-void IRAM_ATTR __attribute__((weak)) esp_reset_reason_set_hint(esp_reset_reason_t hint)
-{
-}
-
-esp_reset_reason_t IRAM_ATTR  __attribute__((weak)) esp_reset_reason_get_hint(void)
-{
-    return ESP_RST_UNKNOWN;
 }

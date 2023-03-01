@@ -8,7 +8,6 @@
 
 #pragma once
 
-#include "esp_types.h"
 #include "soc/extmem_reg.h"
 #include "soc/ext_mem_defs.h"
 #include "mmu_types.h"

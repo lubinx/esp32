@@ -14,18 +14,6 @@ static inline
         dev->conf.clk_en = en;
     }
 
-static inline
-    void systimer_ll_set_clock_source(soc_periph_systimer_clk_src_t clk_src)
-    {
-        (void)clk_src;
-    }
-
-static inline
-    soc_periph_systimer_clk_src_t systimer_ll_get_clock_source(void)
-    {
-        return SYSTIMER_CLK_SRC_XTAL;
-    }
-
 /******************* Counter *************************/
 
 static inline

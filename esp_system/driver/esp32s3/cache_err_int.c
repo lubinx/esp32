@@ -73,13 +73,11 @@ void esp_cache_err_int_init(void)
 
 int IRAM_ATTR esp_cache_err_get_cpuid(void)
 {
-    if (cache_ll_l1_get_access_error_intr_status(0, CACHE_LL_L1_ACCESS_EVENT_MASK)) {
+    if (cache_ll_l1_get_access_error_intr_status(0, CACHE_LL_L1_ACCESS_EVENT_MASK))
         return PRO_CPU_NUM;
-    }
 
-    if (cache_ll_l1_get_access_error_intr_status(1, CACHE_LL_L1_ACCESS_EVENT_MASK)) {
+    if (cache_ll_l1_get_access_error_intr_status(1, CACHE_LL_L1_ACCESS_EVENT_MASK))
         return APP_CPU_NUM;
-    }
 
     return -1;
 }

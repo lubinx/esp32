@@ -24,9 +24,7 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 #include <string.h>
-
-#include "esp_compiler.h"
-#include "esp_system.h"
+#include "soc.h"
 
 struct source_location
 {
@@ -170,7 +168,9 @@ static void __ubsan_default_handler(struct source_location *loc, char const *fun
     (void)strlcat(msg, "Undefined behavior of type ", sizeof(msg));
     (void)strlcat(msg, func + strlen("__ubsan_handle_"), sizeof(msg));
 
-    esp_system_abort(msg);
+    // log messages?
+    SOC_reset();
+    // esp_system_abort(msg);
 }
 
 void __ubsan_handle_type_mismatch(void *data_, void *ptr_)

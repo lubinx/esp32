@@ -9,9 +9,7 @@
 #include <sys/reent.h>
 #include <sys/stat.h>
 
-#include "soc/soc_caps.h"
-
-#include "esp_cpu.h"
+#include "soc.h"
 #include "esp_log.h"
 
 #include "esp_rom_sys.h"
@@ -107,10 +105,10 @@ void _exit(int status)
     for (uint32_t i = 0; i < SOC_CPU_CORES_NUM; i ++)
     {
         if (i != core_id)
-            esp_cpu_unstall(i);
+            SOC_core_unstall(i);
     }
 
-    esp_rom_software_reset_system();
+    SOC_reset();
     while (1);
 }
 

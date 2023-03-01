@@ -23,10 +23,18 @@ typedef void (*esp_ipc_func_t)(void *arg);
 
 __BEGIN_DECLS
 
-extern __attribute__((nothrow))
-    esp_err_t esp_ipc_call(uint32_t cpu_id, esp_ipc_func_t func, void *arg);
+static inline
+    esp_err_t esp_ipc_call(uint32_t cpu_id, esp_ipc_func_t func, void *arg)
+    {
+        func(arg);
+        return ESP_OK;
+    }
 
-extern __attribute__((nothrow))
-    esp_err_t esp_ipc_call_blocking(uint32_t cpu_id, esp_ipc_func_t func, void *arg);
+static inline
+    esp_err_t esp_ipc_call_blocking(uint32_t cpu_id, esp_ipc_func_t func, void *arg)
+    {
+        func(arg);
+        return ESP_OK;
+    }
 
 __END_DECLS

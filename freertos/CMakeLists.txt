@@ -74,6 +74,7 @@ idf_component_register(
     #     ${ldfragments}
     PRIV_REQUIRES
         "soc"
+        "esp_common"
 )
 
 if(CONFIG_FREERTOS_DEBUG_OCDAWARE)

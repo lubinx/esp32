@@ -6,11 +6,10 @@
 
 #include <stdlib.h>
 
-#include "esp_compiler.h"
-#include "esp_cpu.h"
+#include "soc.h"
+#include "esp_attr.h"
 
 #include "esp_ipc_isr.h"
-#include "esp_private/system_internal.h"
 
 #include "soc/soc_memory_layout.h"
 #include "soc/soc_caps.h"
@@ -126,7 +125,7 @@ static void panic_handler(void *frame, bool pseudo_excause)
     // Stall all other cores
     for (uint32_t i = 0; i < SOC_CPU_CORES_NUM; i++) {
         if (i != core_id) {
-            esp_cpu_stall(i);
+            SOC_core_stall(i);
         }
     }
 
@@ -170,6 +169,7 @@ void IRAM_ATTR xt_unhandled_exception(void *frame)
 
 void __attribute__((noreturn)) panic_restart(void)
 {
+    /*
     bool digital_reset_needed = false;
 
 #ifdef CONFIG_IDF_TARGET_ESP32
@@ -183,4 +183,6 @@ void __attribute__((noreturn)) panic_restart(void)
         esp_restart_noos_dig();
     else
         esp_restart_noos();
+    */
+    SOC_reset();
 }
