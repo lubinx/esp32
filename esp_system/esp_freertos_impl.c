@@ -8,6 +8,7 @@
 #include <assert.h>
 
 #include "esp_task.h"
+#include "esp_attr.h"
 #include "esp_log.h"
 #include "esp_freertos_hooks.h"
 #include "esp_private/crosscore_int.h"
@@ -19,17 +20,24 @@
 /****************************************************************************
  *  @implements: freertos tick & idle
 *****************************************************************************/
-__attribute__((weak))
-void esp_vApplicationTickHook(void)
+void IRAM_ATTR vApplicationTickHook(void)
 {
-    // nothing todo
+    // nothing to do
 }
 
-__attribute__((weak))
-void esp_vApplicationIdleHook(void)
+void IRAM_ATTR vApplicationIdleHook(void)
 {
-    // TODO: implement power manager should override this function
     __WFI();
+}
+
+void IRAM_ATTR esp_vApplicationTickHook(void)
+{
+    // override to remove
+}
+
+void IRAM_ATTR esp_vApplicationIdleHook(void)
+{
+    // override to remove
 }
 
 /****************************************************************************

@@ -1,11 +1,16 @@
 config FREERTOS_SMP
-    # TODO: using CONFIG_NUM_CORES to decide FREERTOS_SMP / FREERTOS_UNICORE
     bool
     default "y"
 
 config FREERTOS_UNICORE
     bool
     default "n"
+
+config FREERTOS_USE_MINIMAL_IDLE_HOOK
+    # TODO: in freertos/portable/port.c they hardcoded esp_vApplicationIdleHook() what both minimal/normal, make this options menanless
+    bool
+    default n
+
 
 config FREERTOS_NO_AFFINITY
     # This invisible config value sets the value of tskNO_AFFINITY in task.h.
@@ -89,7 +94,7 @@ menu "FreeRTOS"
 
     config FREERTOS_USE_IDLE_HOOK
         bool "configUSE_IDLE_HOOK"
-        default n
+        default y
         help
             Enables the idle task application hook (see configUSE_IDLE_HOOK documentation for more details).
             Note:
@@ -97,17 +102,6 @@ menu "FreeRTOS"
             - ``vApplicationIdleHook()`` is called from FreeRTOS idle task(s)
             - The FreeRTOS idle hook is NOT the same as the ESP-IDF Idle Hook, but both can be enabled
                 simultaneously.
-
-    config FREERTOS_USE_MINIMAL_IDLE_HOOK
-        bool "Use FreeRTOS minimal idle hook"
-        depends on FREERTOS_SMP
-        default n
-        help
-            Enables the minimal idle task application hook (see configUSE_IDLE_HOOK documentation for more
-            details).
-            Note:
-            - The application must provide the hook function ``void vApplicationMinimalIdleHook( void );``
-            - ``vApplicationMinimalIdleHook()`` is called from FreeRTOS minimal idle task(s)
 
     config FREERTOS_USE_TICK_HOOK
         bool "configUSE_TICK_HOOK"
@@ -417,21 +411,6 @@ menu "FreeRTOS"
                     time each task runs for (as CPU clock frequency can change). If the CPU clock consistently runs at
                     the maximum frequency of 240MHz, it will overflow in approximately 17 seconds.
         endchoice # FREERTOS_RUN_TIME_STATS_CLK
-
-        config FREERTOS_PLACE_FUNCTIONS_INTO_FLASH
-            bool "Place FreeRTOS functions into Flash"
-            default y
-            help
-                When enabled the selected Non-ISR FreeRTOS functions will be placed into Flash memory instead of IRAM.
-                This saves up to 8KB of IRAM depending on which functions are used.
-
-        config FREERTOS_PLACE_SNAPSHOT_FUNS_INTO_FLASH
-            bool "Place task snapshot functions into flash"
-            default n
-            depends on FREERTOS_ENABLE_TASK_SNAPSHOT && !ESP_PANIC_HANDLER_IRAM
-            help
-                When enabled, the functions related to snapshots, such as vTaskGetSnapshot or uxTaskGetSnapshotAll,
-                will be placed in flash. Note that if enabled, these functions cannot be called when cache is disabled.
 
         config FREERTOS_CHECK_PORT_CRITICAL_COMPLIANCE
             # Todo: Check if we still need this (IDF-4986)
