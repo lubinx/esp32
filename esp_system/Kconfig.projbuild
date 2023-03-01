@@ -105,7 +105,7 @@ menu "ESP System Settings"
         default 3584
         help
             Configure the "main task" stack size. This is the stack of the task
-            which calls app_main(). If app_main() returns then this task is deleted
+            which calls main(). If main() returns then this task is deleted
             and its stack memory is freed.
 
     choice ESP_MAIN_TASK_AFFINITY
@@ -113,7 +113,7 @@ menu "ESP System Settings"
         default ESP_MAIN_TASK_AFFINITY_NO_AFFINITY
         help
             Configure the "main task" core affinity. This is the used core of the task
-            which calls app_main(). If app_main() returns then this task is deleted.
+            which calls main(). If main() returns then this task is deleted.
 
         config ESP_MAIN_TASK_AFFINITY_CPU0
             bool "CPU0"

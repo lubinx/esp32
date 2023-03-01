@@ -8,6 +8,8 @@
 #include "soc/soc_caps.h"
 #include "soc/rtc_cntl_reg.h"
 
+#include "sdkconfig.h"
+
 typedef struct
 {
     int priority;
@@ -34,8 +36,8 @@ static intr_desc_t const intr_desc_table[SOC_CPU_INTR_NUM] =
     {1, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                               }}, //9
     {1, ESP_CPU_INTR_TYPE_EDGE,     {0,                                 0                               }}, //10
     {3, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_SPECIAL,    ESP_CPU_INTR_DESC_FLAG_SPECIAL  }}, //11
-    {1, ESP_CPU_INTR_TYPE_LEVEL,    {0, 0}}, //12
-    {1, ESP_CPU_INTR_TYPE_LEVEL,    {0, 0}}, //13
+    {1, ESP_CPU_INTR_TYPE_LEVEL,    {0, 0}},                                                                //12
+    {1, ESP_CPU_INTR_TYPE_LEVEL,    {0, 0}},                                                                //13
     {7, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //14, NMI
 #if CONFIG_FREERTOS_CORETIMER_1
     {3, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //15
@@ -62,10 +64,7 @@ static intr_desc_t const intr_desc_table[SOC_CPU_INTR_NUM] =
 
 void esp_cpu_intr_get_desc(int core_id, int intr_nb, esp_cpu_intr_desc_t *intr_desc_ret)
 {
-    assert(core_id >= 0 && core_id < SOC_CPU_CORES_NUM);
-#if SOC_CPU_CORES_NUM == 1
-    core_id = 0;    //  If this is a single core target, hard code CPU ID to 0
-#endif
+    assert((unsigned)core_id < SOC_CPU_CORES_NUM);
 
     intr_desc_ret->priority = intr_desc_table[intr_nb].priority;
     intr_desc_ret->type = intr_desc_table[intr_nb].type;

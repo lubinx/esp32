@@ -22,7 +22,7 @@ static void *blink_thread1(void *arg);
 static void *blink_thread2(void *arg);
 static void *blink_thread3(void *arg);
 
-extern "C" void __attribute__((weak)) app_main(void)
+int main(void)
 {
     sem_init(&sema, 0, 10);
 

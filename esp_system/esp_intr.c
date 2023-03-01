@@ -11,7 +11,6 @@
 #include <string.h>
 #include <assert.h>
 
-#include "sdkconfig.h"
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_intr_alloc.h"
@@ -444,24 +443,6 @@ static void shared_intr_isr(void *arg)
     portEXIT_CRITICAL_ISR(&spinlock);
 }
 
-#if CONFIG_APPTRACE_SV_ENABLE
-//Common non-shared isr handler wrapper.
-static void non_shared_intr_isr(void *arg)
-{
-    non_shared_isr_arg_t *ns_isr_arg = (non_shared_isr_arg_t*)arg;
-    portENTER_CRITICAL_ISR(&spinlock);
-    traceISR_ENTER(ns_isr_arg->source + ETS_INTERNAL_INTR_SOURCE_OFF);
-    // FIXME: can we call ISR and check os_task_switch_is_pended() after releasing spinlock?
-    // when CONFIG_APPTRACE_SV_ENABLE = 0 ISRs for non-shared IRQs are called without spinlock
-    ns_isr_arg->isr(ns_isr_arg->isr_arg);
-    // check if we will return to scheduler or to interrupted task after ISR
-    if (!os_task_switch_is_pended(__get_CORE_ID())) {
-        traceISR_EXIT();
-    }
-    portEXIT_CRITICAL_ISR(&spinlock);
-}
-#endif
-
 //We use ESP_EARLY_LOG* here because this can be called before the scheduler is running.
 esp_err_t esp_intr_alloc_intrstatus(int source, int flags, uint32_t intrstatusreg, uint32_t intrstatusmask, intr_handler_t handler,
                                         void *arg, intr_handle_t *ret_handle)
@@ -618,7 +599,7 @@ esp_err_t esp_intr_alloc_intrstatus(int source, int flags, uint32_t intrstatusre
     ret->shared_vector_desc = vd->shared_vec_info;
 
     //Enable int at CPU-level;
-    ESP_INTR_ENABLE(intr);
+    esp_cpu_intr_enable(1 << intr);
 
     //If interrupt has to be started disabled, do that now; ints won't be enabled for real until the end
     //of the critical section.
@@ -659,28 +640,6 @@ esp_err_t esp_intr_alloc(int source, int flags, intr_handler_t handler, void *ar
       esp_intr_alloc_intrstatus function.
     */
     return esp_intr_alloc_intrstatus(source, flags, 0, 0, handler, arg, ret_handle);
-}
-
-esp_err_t esp_intr_set_in_iram(intr_handle_t handle, bool is_in_iram)
-{
-    if (!handle) {
-        return ESP_ERR_INVALID_ARG;
-    }
-    vector_desc_t *vd = handle->vector_desc;
-    if (vd->flags & VECDESC_FL_SHARED) {
-      return ESP_ERR_INVALID_ARG;
-    }
-    portENTER_CRITICAL(&spinlock);
-    uint32_t mask = (1 << vd->intno);
-    if (is_in_iram) {
-        vd->flags |= VECDESC_FL_INIRAM;
-        non_iram_int_mask[vd->cpu] &= ~mask;
-    } else {
-        vd->flags &= ~VECDESC_FL_INIRAM;
-        non_iram_int_mask[vd->cpu] |= mask;
-    }
-    portEXIT_CRITICAL(&spinlock);
-    return ESP_OK;
 }
 
 #if !CONFIG_FREERTOS_UNICORE
@@ -775,7 +734,7 @@ int esp_intr_get_cpu(intr_handle_t handle)
 /*
  Interrupt disabling strategy:
  If the source is >=0 (meaning a muxed interrupt), we disable it by muxing the interrupt to a non-connected
- interrupt. If the source is <0 (meaning an internal, per-cpu interrupt), we disable it using ESP_INTR_DISABLE.
+ interrupt. If the source is <0 (meaning an internal, per-cpu interrupt), we disable it using esp_cpu_intr_disable.
  This allows us to, for the muxed CPUs, disable an int from the other core. It also allows disabling shared
  interrupts.
  */
@@ -805,7 +764,7 @@ esp_err_t esp_intr_enable(intr_handle_t handle)
             portEXIT_CRITICAL_SAFE(&spinlock);
             return ESP_ERR_INVALID_ARG; //Can only enable these ints on this cpu
         }
-        ESP_INTR_ENABLE(handle->vector_desc->intno);
+        esp_cpu_intr_enable(1 << handle->vector_desc->intno);
     }
     portEXIT_CRITICAL_SAFE(&spinlock);
     return ESP_OK;
@@ -847,66 +806,8 @@ esp_err_t esp_intr_disable(intr_handle_t handle)
             portEXIT_CRITICAL_SAFE(&spinlock);
             return ESP_ERR_INVALID_ARG; //Can only enable these ints on this cpu
         }
-        ESP_INTR_DISABLE(handle->vector_desc->intno);
+        esp_cpu_intr_disable(1 << handle->vector_desc->intno);
     }
     portEXIT_CRITICAL_SAFE(&spinlock);
     return ESP_OK;
-}
-
-/*
-void esp_intr_noniram_disable(void)
-{
-    portENTER_CRITICAL_SAFE(&spinlock);
-    uint32_t oldint;
-    uint32_t cpu = __get_CORE_ID();
-    uint32_t non_iram_ints = non_iram_int_mask[cpu];
-    if (non_iram_int_disabled_flag[cpu]) {
-        abort();
-    }
-    non_iram_int_disabled_flag[cpu] = true;
-    oldint = esp_cpu_intr_get_enabled_mask();
-    esp_cpu_intr_disable(non_iram_ints);
-    // Disable the RTC bit which don't want to be put in IRAM.
-    rtc_isr_noniram_disable(cpu);
-    // Save disabled ints
-    non_iram_int_disabled[cpu] = oldint & non_iram_ints;
-    portEXIT_CRITICAL_SAFE(&spinlock);
-}
-
-void esp_intr_noniram_enable(void)
-{
-    portENTER_CRITICAL_SAFE(&spinlock);
-    uint32_t cpu = __get_CORE_ID();
-    int non_iram_ints = non_iram_int_disabled[cpu];
-    if (!non_iram_int_disabled_flag[cpu]) {
-        abort();
-    }
-    non_iram_int_disabled_flag[cpu] = false;
-    esp_cpu_intr_enable(non_iram_ints);
-    rtc_isr_noniram_enable(cpu);
-    portEXIT_CRITICAL_SAFE(&spinlock);
-}
-*/
-
-//These functions are provided in ROM, but the ROM-based functions use non-multicore-capable
-//virtualized interrupt levels. Thus, we disable them in the ld file and provide working
-//equivalents here.
-
-
-void ets_isr_unmask(uint32_t mask) {
-    esp_cpu_intr_enable(mask);
-}
-
-void ets_isr_mask(uint32_t mask) {
-    esp_cpu_intr_disable(mask);
-}
-
-void esp_intr_enable_source(int inum)
-{
-    esp_cpu_intr_enable(1 << inum);
-}
-
-void esp_intr_disable_source(int inum)
-{
-    esp_cpu_intr_disable(1 << inum);
 }

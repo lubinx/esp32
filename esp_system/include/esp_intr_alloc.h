@@ -72,12 +72,6 @@ extern "C" {
  */
 #define ETS_INTERNAL_INTR_SOURCE_OFF        (-ETS_INTERNAL_PROFILING_INTR_SOURCE)
 
-/** Enable interrupt by interrupt number */
-#define ESP_INTR_ENABLE(inum)  esp_intr_enable_source(inum)
-
-/** Disable interrupt by interrupt number */
-#define ESP_INTR_DISABLE(inum) esp_intr_disable_source(inum)
-
 /** Function prototype for interrupt handler function */
 typedef void (*intr_handler_t)(void *arg);
 
@@ -263,32 +257,6 @@ esp_err_t esp_intr_disable(intr_handle_t handle);
 esp_err_t esp_intr_enable(intr_handle_t handle);
 
 /**
- * @brief Set the "in IRAM" status of the handler.
- *
- * @note Does not work on shared interrupts.
- *
- * @param handle The handle, as obtained by esp_intr_alloc or esp_intr_alloc_intrstatus
- * @param is_in_iram Whether the handler associated with this handle resides in IRAM.
- *                   Handlers residing in IRAM can be called when cache is disabled.
- *
- * @return ESP_ERR_INVALID_ARG if the combination of arguments is invalid.
- *         ESP_OK otherwise
- */
-esp_err_t esp_intr_set_in_iram(intr_handle_t handle, bool is_in_iram);
-
-/**
- * @brief enable the interrupt source based on its number
- * @param inum interrupt number from 0 to 31
- */
-void esp_intr_enable_source(int inum);
-
-/**
- * @brief disable the interrupt source based on its number
- * @param inum interrupt number from 0 to 31
- */
-void esp_intr_disable_source(int inum);
-
-/**
  * @brief Get the lowest interrupt level from the flags
  * @param flags The same flags that pass to `esp_intr_alloc_intrstatus` API
  */
@@ -296,8 +264,6 @@ static inline int esp_intr_flags_to_level(int flags)
 {
     return __builtin_ffs((flags & ESP_INTR_FLAG_LEVELMASK) >> 1) + 1;
 }
-
-/**@}*/
 
 
 #ifdef __cplusplus

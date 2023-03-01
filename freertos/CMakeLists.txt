@@ -16,16 +16,15 @@ set(srcs
     "${kernel_dir}/portable/${IDF_TARGET_ARCH}/portasm.S"
     "port_common.c"
     # esp
-    "esp_freertos_hooks.c"
+    # "esp_freertos_hooks.c"
 )
 set_source_files_properties(
-    tasks.c
-    event_groups.c
-    timers.c
-    queue.c
-    stream_buffer.c
-    PROPERTIES COMPILE_DEFINITIONS
-    _ESP_FREERTOS_INTERNAL
+    "tasks.c"
+    "event_groups.c"
+    "timers.c"
+    "queue.c"
+    "stream_buffer.c"
+    PROPERTIES COMPILE_DEFINITIONS _ESP_FREERTOS_INTERNAL
 )
 
 set(include_dirs
