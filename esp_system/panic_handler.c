@@ -15,8 +15,6 @@
 #include "soc/soc_caps.h"
 #include "soc/rtc.h"
 
-#include "esp_private/cache_err_int.h"
-
 #include "sdkconfig.h"
 #include "esp_rom_sys.h"
 
@@ -114,7 +112,7 @@ static void panic_handler(void *frame, bool pseudo_excause)
         );
 
         // For cache error, pause the non-offending core - offending core handles panic
-        if (panic_get_cause(frame) == PANIC_RSN_CACHEERR && core_id != esp_cache_err_get_cpuid())
+        if (panic_get_cause(frame) == PANIC_RSN_CACHEERR && core_id != SOC_cache_err_core_id())
         {
             // Only print the backtrace for the offending core in case of the cache error
             g_exc_frames[core_id] = NULL;
@@ -174,7 +172,7 @@ void __attribute__((noreturn)) panic_restart(void)
 
 #ifdef CONFIG_IDF_TARGET_ESP32
     // On the ESP32, cache error status can only be cleared by system reset
-    if (esp_cache_err_get_cpuid() != -1) {
+    if (SOC_cache_err_core_id() != -1) {
         digital_reset_needed = true;
     }
 #endif

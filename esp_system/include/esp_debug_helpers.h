@@ -15,7 +15,6 @@ extern "C" {
 #include <stdbool.h>
 #include "esp_err.h"
 #include "soc/soc.h"  // [refactor-todo] IDF-2297
-#include "esp_cpu.h"
 
 /*
  * @brief   Structure used for backtracing

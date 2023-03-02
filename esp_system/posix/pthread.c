@@ -6,7 +6,6 @@
 #include <sys/errno.h>
 
 #include "esp_attr.h"
-#include "esp_cpu.h"
 #include "sys/queue.h"
 
 #include "freertos/FreeRTOS.h"

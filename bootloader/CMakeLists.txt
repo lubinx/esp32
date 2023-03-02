@@ -10,8 +10,8 @@ project (bootloader LANGUAGES C)
 
 add_executable(${PROJECT_NAME}
     "${IDF_TARGET}/startup.c"
-    "bootloader_log.c"
-    "bootloader_retarget.c"
+    "log.c"
+    "retarget.c"
 )
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${PROJECT_NAME}.elf")
 
@@ -28,9 +28,7 @@ idf_build_get_property(compile_definitions COMPILE_DEFINITIONS GENERATOR_EXPRESS
 target_compile_definitions(${PROJECT_NAME} PRIVATE "BOOTLOADER_BUILD=1" ${compile_definitions})
 
 target_include_directories(${PROJECT_NAME} PRIVATE
-    "${IDF_PATH}/components/xtensa/include"
-    "${IDF_PATH}/components/bootloader_support/include"
-    "${IDF_PATH}/components/bootloader_support/private_include"
+    "include"
 )
 target_sources(${PROJECT_NAME} PRIVATE
     "${IDF_PATH}/components/esp_rom/patches/esp_rom_sys.c"
@@ -42,7 +40,10 @@ target_link_options(${PROJECT_NAME} PRIVATE ${LINK_OPTIONS})
 list(APPEND link_scripts
     "${CMAKE_CURRENT_LIST_DIR}/${IDF_TARGET}/bootloader.ld"
     "${IDF_PATH}/components/esp_rom/esp32s3/ld/esp32s3.rom.ld"
-    "${IDF_PATH}/components/esp_rom/esp32s3/ld/esp32s3.rom.api.ld"
     "${IDF_PATH}/components/soc/esp32s3/ld/esp32s3.peripherals.ld"
 )
 target_linker_script(${PROJECT_NAME} PRIVATE "${link_scripts}")
+
+# map
+target_link_options(${PROJECT_NAME} PRIVATE "-Wl,--cref")
+target_link_options(${PROJECT_NAME} PRIVATE "-Wl,--Map=${CMAKE_BINARY_DIR}/${PROJECT_NAME}.map")

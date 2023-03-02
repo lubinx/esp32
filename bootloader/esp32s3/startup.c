@@ -3,14 +3,11 @@
 #include <string.h>
 
 #include "soc.h"
-#include "esp_arch.h"
 
 #include "esp_app_format.h"
 #include "esp_rom_sys.h"
 #include "esp_rom_uart.h"
 #include "esp_log.h"
-
-#include "bootloader_soc.h"
 
 #include "cache_ll.h"
 #include "mmu_ll.h"
@@ -73,6 +70,8 @@ static void MAP_flash_segment(struct flash_segment_t *seg);
 *****************************************************************************/
 void __attribute__((noreturn)) Reset_Handler(void)
 {
+    memset(&__bss_start__, 0, (uintptr_t)(&__bss_end__ - &__bss_start__) * sizeof(__bss_start__));
+
     // efuse esp_efuse_set_rom_log_scheme(): this will permanently disable logs before enter bootloader
     #if CONFIG_BOOT_ROM_LOG_ALWAYS_OFF
         #define ROM_LOG_MODE                ESP_EFUSE_ROM_LOG_ALWAYS_OFF
@@ -95,12 +94,11 @@ void __attribute__((noreturn)) Reset_Handler(void)
         WSR(MEMCTL, memctl);
     #endif
 
-    // Enable WDT, BOR
-    bootloader_ana_super_wdt_reset_config(true);
-    bootloader_ana_bod_reset_config(true);
-    bootloader_ana_clock_glitch_reset_config(false);
-
-    memset(&__bss_start__, 0, (uintptr_t)(&__bss_end__ - &__bss_start__) * sizeof(__bss_start__));
+    // WDT, BOR
+    RTCCNTL.fib_sel.rtc_fib_sel = 0;
+    RTCCNTL.ana_conf.glitch_rst_en = 0;
+    RTCCNTL.swd_conf.swd_bypass_rst = 1;
+    RTCCNTL.brown_out.ana_rst_en = 1;
 
     mmu_ll_unmap_all(0);
     mmu_ll_unmap_all(1);

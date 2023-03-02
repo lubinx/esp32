@@ -1,10 +1,9 @@
 #include <xtensa/xtensa_context.h>
-#include "esp_debug_helpers.h"
 
+#include "soc.h"
+#include "esp_debug_helpers.h"
 #include "esp_private/panic_internal.h"
 #include "esp_private/panic_reason.h"
-
-#include "esp_private/cache_err_int.h"
 
 #include "sdkconfig.h"
 
@@ -347,7 +346,7 @@ void panic_soc_fill_info(void *f, panic_info_t *info)
         info->core = 1;
         info->exception = PANIC_EXCEPTION_IWDT;
     } else if (frame->exccause == PANIC_RSN_CACHEERR) {
-        info->core =  esp_cache_err_get_cpuid();
+        info->core =  SOC_cache_err_core_id();
     } else {}
 
     //Please keep in sync with PANIC_RSN_* defines

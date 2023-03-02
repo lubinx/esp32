@@ -8,7 +8,6 @@
 // Currently one stub is used for GCOV functionality
 //
 
-#include "esp_cpu.h"
 #include "esp_log.h"
 #include "riscv/semihosting.h"
 

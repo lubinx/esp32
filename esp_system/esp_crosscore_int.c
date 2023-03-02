@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include "esp_attr.h"
 #include "esp_err.h"
-#include "esp_cpu.h"
+#include "esp_arch.h"
 #include "esp_intr_alloc.h"
 #include "esp_debug_helpers.h"
 #include "soc/periph_defs.h"

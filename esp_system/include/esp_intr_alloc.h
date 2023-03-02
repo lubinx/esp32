@@ -15,6 +15,52 @@ extern "C" {
 #endif
 
 
+    typedef void (*esp_cpu_intr_handler_t)(void *arg);
+
+    enum esp_cpu_intr_type_t
+    {
+        ESP_CPU_INTR_TYPE_LEVEL     = 0,
+        ESP_CPU_INTR_TYPE_EDGE,
+        ESP_CPU_INTR_TYPE_NA,
+    };
+    typedef enum esp_cpu_intr_type_t esp_cpu_intr_type_t;
+
+    /**
+     * @brief Interrupt descriptor flags of esp_cpu_intr_desc_t
+     */
+    #define ESP_CPU_INTR_DESC_FLAG_SPECIAL      0x01    /**< The interrupt is a special interrupt (e.g., a CPU timer interrupt) */
+    #define ESP_CPU_INTR_DESC_FLAG_RESVD        0x02    /**< The interrupt is reserved for internal use */
+
+    /**
+     * @brief CPU interrupt descriptor
+     *
+     * Each particular CPU interrupt has an associated descriptor describing that
+     * particular interrupt's characteristics. Call esp_cpu_intr_get_desc() to get
+     * the descriptors of a particular interrupt.
+     */
+    struct esp_cpu_intr_desc_t
+    {
+        int priority;               /**< Priority of the interrupt if it has a fixed priority, (-1) if the priority is configurable. */
+        esp_cpu_intr_type_t type;   /**< Whether the interrupt is an edge or level type interrupt, ESP_CPU_INTR_TYPE_NA if the type is configurable. */
+        uint32_t flags;             /**< Flags indicating extra details. */
+    };
+    typedef struct esp_cpu_intr_desc_t esp_cpu_intr_desc_t;
+
+    /**
+     * @brief Get a CPU interrupt's descriptor
+     *
+     * Each CPU interrupt has a descriptor describing the interrupt's capabilities
+     * and restrictions. This function gets the descriptor of a particular interrupt
+     * on a particular CPU.
+     *
+     * @param[in] core_id The core's ID
+     * @param[in] intr_nb Interrupt number
+     * @param[out] intr_desc_ret The interrupt's descriptor
+     */
+extern __attribute__((nonnull, nothrow))
+    void esp_cpu_intr_get_desc(int core_id, int intr_nb, esp_cpu_intr_desc_t *intr_desc_ret);
+
+
 /** @addtogroup Intr_Alloc
   * @{
   */

@@ -1,12 +1,8 @@
-#include <stdint.h>
 #include <assert.h>
 
-#include "esp_cpu.h"
-#include "esp_err.h"
-
 #include "soc/soc.h"
-#include "soc/soc_caps.h"
-#include "soc/rtc_cntl_reg.h"
+#include "esp_cpu.h"
+#include "esp_intr_alloc.h"
 
 #include "sdkconfig.h"
 

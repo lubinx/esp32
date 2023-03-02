@@ -1,6 +1,5 @@
 #include <sys/lock.h>
 
-#include "esp_cpu.h"
 #include "esp_log.h"
 #include "ultracore/atomic.h"
 

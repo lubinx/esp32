@@ -1,5 +1,8 @@
 ENTRY(Reset_Handler);
 
+/* alias */
+PROVIDE(esp_log_printf = ets_printf);
+PROVIDE (esp_rom_uart_set_as_console = uart_tx_switch);
 /**
  *  Appendix: Memory Usage of ROM bootloader
  *
@@ -43,9 +46,6 @@ MEMORY
     BOOT_data_seg (RW) :        org = 0x3FCD7E00, len = 32K
     BOOT_text_seg (RWX) :       org = 0x403C7E00 + 32K, len = 32K
 }
-
-/* alias */
-PROVIDE(esp_log_printf = ets_printf);
 
 SECTIONS
 {

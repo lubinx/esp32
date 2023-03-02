@@ -4,9 +4,10 @@
 #include <pthread.h>
 #include <semaphore.h>
 
+#include "soc.h"
 #include "clk_tree.h"
 #include "gpio.h"
-#include "esp_cpu.h"
+
 #include "esp_log.h"
 #include "esp_heap_caps.h"
 

@@ -204,7 +204,7 @@ void panic_soc_fill_info(void *f, panic_info_t *info)
          * details field. As its name states, it will give more details
          * about why the error happened. */
 
-        info->core = esp_cache_err_get_cpuid();
+        info->core = SOC_cache_err_core_id();
         info->reason = pseudo_reason[PANIC_RSN_CACHEERR];
         info->details = print_cache_err_details;
 
@@ -212,7 +212,7 @@ void panic_soc_fill_info(void *f, panic_info_t *info)
         /* Watchdog interrupt occured, get the core on which it happened
          * and update the reason/message accordingly. */
 
-        int const core = esp_cache_err_get_cpuid();
+        int const core = SOC_cache_err_core_id();
         info->core = core;
         info->exception = PANIC_EXCEPTION_IWDT;
 

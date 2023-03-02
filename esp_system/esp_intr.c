@@ -11,10 +11,10 @@
 #include <string.h>
 #include <assert.h>
 
+#include "soc.h"
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_intr_alloc.h"
-#include "esp_cpu.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -289,8 +289,8 @@ static bool is_vect_desc_usable(vector_desc_t *vd, int flags, int cpu, int force
             ALCHLOG("...Unusable: int is shared, we need non-shared.");
             return false;
         }
-    } else if (esp_cpu_intr_has_handler(x)) {
-        //Check if interrupt already is allocated by esp_cpu_intr_set_handler
+    } else if (SOC_intr_is_handled(x)) {
+        //Check if interrupt already is allocated by SOC_intr_set_handler
         ALCHLOG("....Unusable: already allocated");
         return false;
     }
@@ -363,7 +363,7 @@ static int get_available_int(int flags, int cpu, int force, int source)
 
         ALCHLOG("Int %d reserved %d priority %d %s hasIsr %d",
             x, intr_desc.flags & ESP_CPU_INTR_DESC_FLAG_RESVD, intr_desc.priority,
-            intr_desc.type == ESP_CPU_INTR_TYPE_LEVEL? "LEVEL" : "EDGE", esp_cpu_intr_has_handler(x));
+            intr_desc.type == ESP_CPU_INTR_TYPE_LEVEL? "LEVEL" : "EDGE", SOC_intr_is_handled(x));
 
         if (!is_vect_desc_usable(vd, flags, cpu, force)) {
             continue;
@@ -556,7 +556,7 @@ esp_err_t esp_intr_alloc_intrstatus(int source, int flags, uint32_t intrstatusre
         vd->shared_vec_info = sh_vec;
         vd->flags |= VECDESC_FL_SHARED;
         //(Re-)set shared isr handler to new value.
-        esp_cpu_intr_set_handler(intr, (esp_cpu_intr_handler_t)shared_intr_isr, vd);
+        SOC_intr_set_handler(intr, (esp_cpu_intr_handler_t)shared_intr_isr, vd);
     } else {
         //Mark as unusable for other interrupt sources. This is ours now!
         vd->flags = VECDESC_FL_NONSHARED;
@@ -571,9 +571,9 @@ esp_err_t esp_intr_alloc_intrstatus(int source, int flags, uint32_t intrstatusre
             ns_isr_arg->isr = handler;
             ns_isr_arg->isr_arg = arg;
             ns_isr_arg->source = source;
-            esp_cpu_intr_set_handler(intr, (esp_cpu_intr_handler_t)non_shared_intr_isr, ns_isr_arg);
+            SOC_intr_set_handler(intr, (esp_cpu_intr_handler_t)non_shared_intr_isr, ns_isr_arg);
 #else
-            esp_cpu_intr_set_handler(intr, (esp_cpu_intr_handler_t)handler, arg);
+            SOC_intr_set_handler(intr, (esp_cpu_intr_handler_t)handler, arg);
 #endif
         }
 
@@ -599,7 +599,7 @@ esp_err_t esp_intr_alloc_intrstatus(int source, int flags, uint32_t intrstatusre
     ret->shared_vector_desc = vd->shared_vec_info;
 
     //Enable int at CPU-level;
-    esp_cpu_intr_enable(1 << intr);
+    SOC_intr_enable_nb(intr);
 
     //If interrupt has to be started disabled, do that now; ints won't be enabled for real until the end
     //of the critical section.
@@ -699,14 +699,14 @@ esp_err_t esp_intr_free(intr_handle_t handle)
         ESP_EARLY_LOGV(TAG, "esp_intr_free: Disabling int, killing handler");
 #if CONFIG_APPTRACE_SV_ENABLE
         if (!free_shared_vector) {
-            void *isr_arg = esp_cpu_intr_get_handler_arg(handle->vector_desc->intno);
+            void *isr_arg = SOC_intr_handler_arg(handle->vector_desc->intno);
             if (isr_arg) {
                 free(isr_arg);
             }
         }
 #endif
         //Reset to normal handler:
-        esp_cpu_intr_set_handler(handle->vector_desc->intno, NULL, (void*)((int)handle->vector_desc->intno));
+        SOC_intr_set_handler(handle->vector_desc->intno, NULL, (void*)((int)handle->vector_desc->intno));
         //Theoretically, we could free the vector_desc... not sure if that's worth the few bytes of memory
         //we save.(We can also not use the same exit path for empty shared ints anymore if we delete
         //the desc.) For now, just mark it as free.
@@ -734,7 +734,7 @@ int esp_intr_get_cpu(intr_handle_t handle)
 /*
  Interrupt disabling strategy:
  If the source is >=0 (meaning a muxed interrupt), we disable it by muxing the interrupt to a non-connected
- interrupt. If the source is <0 (meaning an internal, per-cpu interrupt), we disable it using esp_cpu_intr_disable.
+ interrupt. If the source is <0 (meaning an internal, per-cpu interrupt), we disable it using SOC_intr_disable_mask.
  This allows us to, for the muxed CPUs, disable an int from the other core. It also allows disabling shared
  interrupts.
  */
@@ -764,7 +764,7 @@ esp_err_t esp_intr_enable(intr_handle_t handle)
             portEXIT_CRITICAL_SAFE(&spinlock);
             return ESP_ERR_INVALID_ARG; //Can only enable these ints on this cpu
         }
-        esp_cpu_intr_enable(1 << handle->vector_desc->intno);
+        SOC_intr_enable_nb(handle->vector_desc->intno);
     }
     portEXIT_CRITICAL_SAFE(&spinlock);
     return ESP_OK;
@@ -806,7 +806,7 @@ esp_err_t esp_intr_disable(intr_handle_t handle)
             portEXIT_CRITICAL_SAFE(&spinlock);
             return ESP_ERR_INVALID_ARG; //Can only enable these ints on this cpu
         }
-        esp_cpu_intr_disable(1 << handle->vector_desc->intno);
+        SOC_intr_disable_nb(handle->vector_desc->intno);
     }
     portEXIT_CRITICAL_SAFE(&spinlock);
     return ESP_OK;

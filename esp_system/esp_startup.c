@@ -1,8 +1,5 @@
 #include "soc.h"
-#include "clk_tree.h"
-
 #include "esp_system.h"
-#include "esp_private/cache_err_int.h"
 
 // TODO: remove these reqiured by ets_set_appcpu_boot_addr()
 #include "esp_rom_sys.h"
@@ -15,7 +12,6 @@ static char const *TAG = "startup";
 /****************************************************************************
  *  imports
 *****************************************************************************/
-extern void *_vector_table;
 extern uint32_t __zero_table_start__;
 extern uint32_t __zero_table_end__;
 
@@ -34,7 +30,6 @@ extern __attribute__((noreturn)) void esp_startup_start_app_other_cores(void);
 /****************************************************************************
  *  local
 *****************************************************************************/
-static void core_intr_matrix_clear(void);
 static void core_other_cpu_init(void);
 
 static void do_global_ctors(void);
@@ -77,8 +72,6 @@ void Startup_Handler(void)
             tbl->dst[i] = 0;
     }
 
-    // Move exception vectors to IRAM
-    __set_VECBASE(&_vector_table);
 
     // Enable trace memory and immediately start trace.
     #if CONFIG_ESP32_TRAX || CONFIG_ESP32S2_TRAX || CONFIG_ESP32S3_TRAX
@@ -94,10 +87,7 @@ void Startup_Handler(void)
         trax_start_trace(TRAX_DOWNCOUNT_WORDS);
     #endif
 
-    CLK_TREE_initialize();
-
-    core_intr_matrix_clear();
-    esp_cache_err_int_init();
+    SOC_initialize();
 
     extern void __libc_retarget_init(void); //  _retarget_init.c
     __libc_retarget_init();
@@ -138,14 +128,6 @@ void Startup_Handler(void)
 /****************************************************************************
  *  local
 *****************************************************************************/
-static void core_intr_matrix_clear(void)
-{
-    uint32_t core_id = __get_CORE_ID();
-
-    for (int i = 0; i < ETS_MAX_INTR_SOURCE; i++)
-        esp_rom_route_intr_matrix(core_id, i, ETS_INVALID_INUM);
-}
-
 static void do_global_ctors(void)
 {
     #ifdef CONFIG_COMPILER_CXX_EXCEPTIONS
@@ -183,14 +165,7 @@ static void do_system_init_fn(void)
 
 static void startup_other_cores(void)
 {
-    ets_set_appcpu_boot_addr(0);
-    __set_VECBASE(&_vector_table);
-
-    REG_WRITE(ASSIST_DEBUG_CORE_1_RCD_PDEBUGENABLE_REG, 1);
-    REG_WRITE(ASSIST_DEBUG_CORE_1_RCD_RECORDING_REG, 1);
-
-    core_intr_matrix_clear();
-    esp_cache_err_int_init();
+    SOC_initialize();
 
     #if (CONFIG_IDF_TARGET_ESP32 && CONFIG_ESP32_TRAX_TWOBANKS) || (CONFIG_IDF_TARGET_ESP32S3 && CONFIG_ESP32S3_TRAX_TWOBANKS)
         trax_start_trace(TRAX_DOWNCOUNT_WORDS);

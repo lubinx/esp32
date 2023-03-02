@@ -10,7 +10,7 @@
 #include "sdkconfig.h"
 #include "soc/rtc.h"
 
-char const *TAG = "clktree";
+static char const *TAG = "clktree";
 
 /****************************************************************************
  * @def
