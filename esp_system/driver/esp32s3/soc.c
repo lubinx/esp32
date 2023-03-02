@@ -61,6 +61,80 @@ unsigned SOC_cache_err_core_id(void)
     return -1;
 }
 
+void SOC_reset(void)
+{
+    RTCCNTL.options0.sw_sys_rst = 1;
+    while (1);
+}
+
+void SOC_core_reset(int core_id)
+{
+    assert((unsigned)core_id < SOC_CPU_CORES_NUM);
+    /*
+    Note: This function can be called when the cache is disabled. We use "ternary if" instead of an array so that the
+    "rodata" of the register masks/shifts will be stored in this function's "rodata" section, instead of the source
+    file's "rodata" section (see IDF-5214).
+    */
+    int rtc_cntl_rst_m = (core_id == 0) ? RTC_CNTL_SW_PROCPU_RST_M : RTC_CNTL_SW_APPCPU_RST_M;
+    SET_PERI_REG_MASK(RTC_CNTL_OPTIONS0_REG, rtc_cntl_rst_m);
+}
+
+void SOC_core_stall(int core_id)
+{
+    assert((unsigned)core_id < SOC_CPU_CORES_NUM);
+    /*
+    We need to write the value "0x86" to stall a particular core. The write location is split into two separate
+    bit fields named "c0" and "c1", and the two fields are located in different registers. Each core has its own pair of
+    "c0" and "c1" bit fields.
+
+    Note: This function can be called when the cache is disabled. We use "ternary if" instead of an array so that the
+    "rodata" of the register masks/shifts will be stored in this function's "rodata" section, instead of the source
+    file's "rodata" section (see IDF-5214).
+    */
+    int rtc_cntl_c0_m = (core_id == 0) ? RTC_CNTL_SW_STALL_PROCPU_C0_M : RTC_CNTL_SW_STALL_APPCPU_C0_M;
+    int rtc_cntl_c0_s = (core_id == 0) ? RTC_CNTL_SW_STALL_PROCPU_C0_S : RTC_CNTL_SW_STALL_APPCPU_C0_S;
+    int rtc_cntl_c1_m = (core_id == 0) ? RTC_CNTL_SW_STALL_PROCPU_C1_M : RTC_CNTL_SW_STALL_APPCPU_C1_M;
+    int rtc_cntl_c1_s = (core_id == 0) ? RTC_CNTL_SW_STALL_PROCPU_C1_S : RTC_CNTL_SW_STALL_APPCPU_C1_S;
+
+    CLEAR_PERI_REG_MASK(RTC_CNTL_OPTIONS0_REG, rtc_cntl_c0_m);
+    SET_PERI_REG_MASK(RTC_CNTL_OPTIONS0_REG, 2 << rtc_cntl_c0_s);
+    CLEAR_PERI_REG_MASK(RTC_CNTL_SW_CPU_STALL_REG, rtc_cntl_c1_m);
+    SET_PERI_REG_MASK(RTC_CNTL_SW_CPU_STALL_REG, 0x21 << rtc_cntl_c1_s);
+}
+
+void SOC_core_unstall(int core_id)
+{
+    assert((unsigned)core_id < SOC_CPU_CORES_NUM);
+    /*
+    We need to write clear the value "0x86" to unstall a particular core. The location of this value is split into
+    two separate bit fields named "c0" and "c1", and the two fields are located in different registers. Each core has
+    its own pair of "c0" and "c1" bit fields.
+
+    Note: This function can be called when the cache is disabled. We use "ternary if" instead of an array so that the
+    "rodata" of the register masks/shifts will be stored in this function's "rodata" section, instead of the source
+    file's "rodata" section (see IDF-5214).
+    */
+    if (0 == core_id)
+    {
+        RTCCNTL.options0.sw_stall_procpu_c0 = RTC_CNTL_SW_STALL_PROCPU_C0_V;
+        RTCCNTL.sw_cpu_stall.procpu_c1 = RTC_CNTL_SW_STALL_PROCPU_C1_V;
+    }
+    else
+    {
+        RTCCNTL.options0.sw_stall_appcpu_c0 = RTC_CNTL_SW_STALL_APPCPU_C0_V;
+        RTCCNTL.sw_cpu_stall.appcpu_c1 = RTC_CNTL_SW_STALL_APPCPU_C1_V;
+
+        if (! SYSTEM.core_1_control_0.control_core_1_clkgate_en)
+        {
+            SYSTEM.core_1_control_0.control_core_1_clkgate_en = 1;
+            SYSTEM.core_1_control_0.control_core_1_runstall = 0;
+
+            SYSTEM.core_1_control_0.control_core_1_reseting = 1;
+            SYSTEM.core_1_control_0.control_core_1_reseting = 0;
+        }
+    }
+}
+
 /****************************************************************************
  *  @internal
  ****************************************************************************/
