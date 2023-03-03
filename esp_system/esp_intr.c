@@ -26,7 +26,7 @@
 // #include "esp_private/rtc_ctrl.h"
 
 #if !CONFIG_FREERTOS_UNICORE
-#include "esp_ipc.h"
+    #include "esp_ipc.h"
 #endif
 
 static const char *TAG = "intr_alloc";

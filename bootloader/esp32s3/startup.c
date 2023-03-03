@@ -251,9 +251,7 @@ static kernel_entry_t KERNEL_load(uintptr_t flash_location)
         MAP_flash_segment(&ro_seg);
 
         cache_ll_l1_enable_bus(0, CACHE_BUS_DBUS0);
-        #if ! CONFIG_FREERTOS_UNICORE
-            cache_ll_l1_enable_bus(1, CACHE_BUS_DBUS0);
-        #endif
+        cache_ll_l1_enable_bus(1, CACHE_BUS_DBUS0);
     }
 
     if (text_seg.location)
@@ -261,9 +259,7 @@ static kernel_entry_t KERNEL_load(uintptr_t flash_location)
         MAP_flash_segment(&text_seg);
 
         cache_ll_l1_enable_bus(0, CACHE_BUS_IBUS0);
-        #if ! CONFIG_FREERTOS_UNICORE
-            cache_ll_l1_enable_bus(1, CACHE_BUS_IBUS0);
-        #endif
+        cache_ll_l1_enable_bus(1, CACHE_BUS_IBUS0);
     }
 
     rom_config_instruction_cache_mode(CONFIG_ESP32S3_INSTRUCTION_CACHE_SIZE,
@@ -328,4 +324,3 @@ static void MAP_flash_segment(struct flash_segment_t *seg)
         pages --;
     }
 }
-

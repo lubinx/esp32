@@ -367,50 +367,5 @@ menu "FreeRTOS"
         config FREERTOS_SYSTICK_USES_CCOUNT
             bool
             default y if FREERTOS_CORETIMER_0 || FREERTOS_CORETIMER_1
-
-        choice FREERTOS_RUN_TIME_STATS_CLK
-            prompt "Choose the clock source for run time stats"
-            depends on FREERTOS_GENERATE_RUN_TIME_STATS
-            default FREERTOS_RUN_TIME_STATS_USING_ESP_TIMER
-            help
-                Choose the clock source for FreeRTOS run time stats. Options are CPU0's CPU Clock or the ESP Timer.
-                Both clock sources are 32 bits. The CPU Clock can run at a higher frequency hence provide a finer
-                resolution but will overflow much quicker. Note that run time stats are only valid until the clock
-                source overflows.
-
-            config FREERTOS_RUN_TIME_STATS_USING_ESP_TIMER
-                bool "Use ESP TIMER for run time stats"
-                help
-                    ESP Timer will be used as the clock source for FreeRTOS run time stats. The ESP Timer runs at a
-                    frequency of 1MHz regardless of Dynamic Frequency Scaling. Therefore the ESP Timer will overflow in
-                    approximately 4290 seconds.
-
-            config FREERTOS_RUN_TIME_STATS_USING_CPU_CLK
-                # Todo: This should be disabled for multi-core due to different CCOUNTs (IDF-4986)
-                bool "Use CPU Clock for run time stats"
-                depends on FREERTOS_SYSTICK_USES_CCOUNT
-                help
-                    CPU Clock will be used as the clock source for the generation of run time stats. The CPU Clock has
-                    a frequency dependent on ESP_DEFAULT_CPU_FREQ_MHZ and Dynamic Frequency Scaling (DFS). Therefore
-                    the CPU Clock frequency can fluctuate between 80 to 240MHz. Run time stats generated using the CPU
-                    Clock represents the number of CPU cycles each task is allocated and DOES NOT reflect the amount of
-                    time each task runs for (as CPU clock frequency can change). If the CPU clock consistently runs at
-                    the maximum frequency of 240MHz, it will overflow in approximately 17 seconds.
-        endchoice # FREERTOS_RUN_TIME_STATS_CLK
-
-        config FREERTOS_CHECK_PORT_CRITICAL_COMPLIANCE
-            # Todo: Check if we still need this (IDF-4986)
-            bool "Tests compliance with Vanilla FreeRTOS port*_CRITICAL calls"
-            default n
-            help
-                If enabled, context of port*_CRITICAL calls (ISR or Non-ISR) would be checked to be in compliance with
-                Vanilla FreeRTOS. e.g Calling port*_CRITICAL from ISR context would cause assert failure
-
-        config FREERTOS_ENABLE_TASK_SNAPSHOT
-            bool "Enable task snapshot functions"
-            default y
-            help
-                When enabled, the functions related to snapshots, such as vTaskGetSnapshot or uxTaskGetSnapshotAll, are
-                compiled and linked. Task snapshots are used by Task Watchdog (TWDT), GDB Stub and Core dump.
     endmenu
 endmenu

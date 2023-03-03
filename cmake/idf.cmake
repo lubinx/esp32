@@ -705,7 +705,6 @@ function(idf_build)
     add_executable(${CMAKE_PROJECT_NAME} ${__SRCS})
     set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME "${CMAKE_PROJECT_NAME}.elf")
 
-
     get_optimization_level(optimize)
     target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE ${optimize})
     add_compile_options(${COMPILE_OPTIONS})

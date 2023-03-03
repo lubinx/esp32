@@ -61,20 +61,6 @@ void esp_crosscore_int_send_gdb_call(int core_id);
  */
 void esp_crosscore_int_send_print_backtrace(int core_id);
 
-#if CONFIG_ESP_TASK_WDT_EN
-/**
- * Send an interrupt to a CPU indicating it call `task_wdt_timeout_abort_xtensa`.
- * This will make the CPU abort, using the interrupted task frame.
- *
- * This is used internally by the Task Watchdog when it should abort after a task,
- * running on the other core than the one running the TWDT ISR, failed to reset
- * its timer.
- *
- * @param core_id Core that should abort
- */
-void esp_crosscore_int_send_twdt_abort(int core_id);
-
-#endif // CONFIG_ESP_TASK_WDT_EN
 #endif // !CONFIG_IDF_TARGET_ESP32C3 && !CONFIG_IDF_TARGET_ESP32H4 && !CONFIG_IDF_TARGET_ESP32C2 && !CONFIG_IDF_TARGET_ESP32C6
 
 #ifdef __cplusplus

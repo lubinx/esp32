@@ -82,15 +82,6 @@ void esp_rtos_bootstrap(void)
     // Initialize the cross-core interrupt on CPU0
     esp_crosscore_int_init();
 
-    /*
-    BaseType_t res = xTaskCreatePinnedToCore(esp_main_thread_entry, "main",
-        ESP_TASK_MAIN_STACK, NULL,
-        configMAX_PRIORITIES, NULL, ESP_TASK_MAIN_CORE
-    );
-    assert(res == pdTRUE);
-    (void)res;
-    */
-
    if (0 == __get_CORE_ID())
    {
         // TODO: main task pined to core?
@@ -115,19 +106,6 @@ __attribute__((weak))
 void __esp_rtos_initialize(void)
 {
 }
-
-// --------------- CPU[1:N-1] App Startup ------------------
-
-#if !CONFIG_FREERTOS_UNICORE
-void esp_startup_start_app_other_cores(void)
-{
-    // Initialize the cross-core interrupt on CPU1
-    esp_crosscore_int_init();
-
-    xPortStartScheduler();
-    abort(); // Only get to here if FreeRTOS somehow very broken
-}
-#endif // !CONFIG_FREERTOS_UNICORE
 
 /****************************************************************************
  *  @implements: esp_system.h
