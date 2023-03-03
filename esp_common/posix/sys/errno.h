@@ -1,6 +1,6 @@
 #pragma once
 
-#include <sys/cdefs.h>
+#include <features.h>
 #include <sys/reent.h>
 
 // NOTE: do not use esp-idf errno defines

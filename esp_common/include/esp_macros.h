@@ -9,8 +9,8 @@
 /*
 This header contains various general purpose helper macros used across ESP-IDF
 */
+#include <features.h>
 #include <assert.h>
-#include <sys/cdefs.h>
 
 #include "esp_assert.h"
 

@@ -4,6 +4,7 @@ idf_component_register(
         "log.c"
     INCLUDE_DIRS
         "include"
+        "posix"
     LDFRAGMENTS
         "soc.lf"
         "common.lf"

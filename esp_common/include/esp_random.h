@@ -1,8 +1,6 @@
 #pragma once
 
 #include <features.h>
-#include <stdlib.h>
-#include <stdint.h>
 #include <sys/random.h>
 
 __BEGIN_DECLS

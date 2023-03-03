@@ -52,10 +52,7 @@ typedef enum {
  *      * ESP_ERR_INVALID_ARG if message or hmac is a nullptr or if key_id out of range
  *      * ESP_FAIL, if the hmac calculation failed
  */
-esp_err_t esp_hmac_calculate(hmac_key_id_t key_id,
-                             const void *message,
-                             size_t message_len,
-                             uint8_t *hmac);
+esp_err_t esp_hmac_calculate(hmac_key_id_t key_id, const void *message, size_t message_len, uint8_t *hmac);
 
 /**
  * @brief Use HMAC peripheral in Downstream mode to re-enable the JTAG, if it is not permanently disabled by HW.

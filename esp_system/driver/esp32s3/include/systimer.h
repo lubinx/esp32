@@ -1,7 +1,7 @@
 #ifndef __ESP32S3_SYSTIMER_H
 #define __ESP32S3_SYSTIMER_H            1
 
-#include <sys/cdefs.h>
+#include <features.h>
 #include "soc/systimer_struct.h"
 
 __BEGIN_DECLS

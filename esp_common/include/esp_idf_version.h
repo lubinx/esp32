@@ -1,6 +1,6 @@
 #pragma once
 
-#include <sys/cdefs.h>
+#include <features.h>
 
 /** Major version number (X.x.x) */
 #define ESP_IDF_VERSION_MAJOR   5

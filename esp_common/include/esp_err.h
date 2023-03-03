@@ -1,6 +1,6 @@
 #pragma once
 
-#include <sys/cdefs.h>
+#include <features.h>
 #include <assert.h>
 #include <sys/errno.h>
 

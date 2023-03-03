@@ -10,11 +10,6 @@ list(APPEND srcs
     "${CMAKE_CURRENT_LIST_DIR}/semaphore.c"
     "${CMAKE_CURRENT_LIST_DIR}/time.c"
     "${CMAKE_CURRENT_LIST_DIR}/unistd.c"
-    "${CMAKE_CURRENT_LIST_DIR}/tiny_printf.c"
-)
-
-list(APPEND includes
-    "${CMAKE_CURRENT_LIST_DIR}/include"
 )
 
 set_source_files_properties("${CMAKE_CURRENT_LIST_DIR}/_retarget_init.c" PROPERTIES COMPILE_FLAGS -fno-builtin)
