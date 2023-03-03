@@ -11,11 +11,24 @@
 
 __BEGIN_DECLS
 
-extern __attribute__((nothrow, noreturn))
-    void esp_system_abort(char const *details);
+/****************************************************************************
+ *  for esp-idf's freertos porting
+*****************************************************************************/
+    /**
+     *  creating main task => esp_main_entry() when first cpu runs
+     *  call freertos xPortStartScheduler
+    */
+extern __attribute__((noreturn))
+    void esp_freertos_startup(void);
+
+extern __attribute__((noreturn))
+    void esp_main_entry(void);
 
 extern __attribute__((nothrow, const))
     uint32_t esp_get_free_heap_size(void);
+
+extern __attribute__((nothrow, noreturn))
+    void esp_system_abort(char const *details);
 
 typedef void (*shutdown_handler_t)(void);
 

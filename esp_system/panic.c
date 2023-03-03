@@ -13,7 +13,6 @@
 #include "uart.h"
 
 #include "esp_private/panic_internal.h"
-#include "port/panic_funcs.h"
 #include "esp_rom_sys.h"
 
 bool g_panic_abort = false;

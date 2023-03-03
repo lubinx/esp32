@@ -129,55 +129,6 @@ menu "ESP System Settings"
         default 0x0 if ESP_MAIN_TASK_AFFINITY_CPU0
         default 0x1 if ESP_MAIN_TASK_AFFINITY_CPU1
         default FREERTOS_NO_AFFINITY if ESP_MAIN_TASK_AFFINITY_NO_AFFINITY
-
-    config ESP_PANIC_HANDLER_IRAM
-        bool "Place panic handler code in IRAM"
-        default n
-        help
-            If this option is disabled (default), the panic handler code is placed in flash not IRAM.
-            This means that if ESP-IDF crashes while flash cache is disabled, the panic handler will
-            automatically re-enable flash cache before running GDB Stub or Core Dump. This adds some minor
-            risk, if the flash cache status is also corrupted during the crash.
-
-            If this option is enabled, the panic handler code (including required UART functions) is placed
-            in IRAM. This may be necessary to debug some complex issues with crashes while flash cache is
-            disabled (for example, when writing to SPI flash) or when flash cache is corrupted when an exception
-            is triggered.
-
-    config ESP_DEBUG_STUBS_ENABLE
-        bool "OpenOCD debug stubs"
-        default COMPILER_OPTIMIZATION_LEVEL_DEBUG
-        depends on !ESP32_TRAX && !ESP32S2_TRAX && !ESP32S3_TRAX
-        help
-            Debug stubs are used by OpenOCD to execute pre-compiled onboard code
-            which does some useful debugging stuff, e.g. GCOV data dump.
-
-    config ESP_DEBUG_OCDAWARE
-        bool "Make exception and panic handlers JTAG/OCD aware"
-        default y
-        select FREERTOS_DEBUG_OCDAWARE
-        help
-            The FreeRTOS panic and unhandled exception handers can detect a JTAG OCD debugger and
-            instead of panicking, have the debugger stop on the offending instruction.
-
-    choice ESP_SYSTEM_CHECK_INT_LEVEL
-        prompt "Interrupt level to use for Interrupt Watchdog and other system checks"
-        default ESP_SYSTEM_CHECK_INT_LEVEL_4
-        help
-            Interrupt level to use for Interrupt Watchdog and other system checks.
-
-        config ESP_SYSTEM_CHECK_INT_LEVEL_5
-            bool "Level 5 interrupt"
-            depends on IDF_TARGET_ESP32
-            help
-                Using level 5 interrupt for Interrupt Watchdog and other system checks.
-
-        config ESP_SYSTEM_CHECK_INT_LEVEL_4
-            bool "Level 4 interrupt"
-            depends on !BTDM_CTRL_HLI
-            help
-                Using level 4 interrupt for Interrupt Watchdog and other system checks.
-    endchoice
 endmenu
 
 menu "POSIX"

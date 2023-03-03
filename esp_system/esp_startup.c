@@ -32,7 +32,6 @@ extern __attribute__((noreturn)) void esp_startup_start_app_other_cores(void);
 *****************************************************************************/
 static void core_other_cpu_init(void);
 
-static void do_global_ctors(void);
 static void do_system_init_fn(void);
 static void startup_other_cores(void);
 
@@ -72,32 +71,27 @@ void Startup_Handler(void)
             tbl->dst[i] = 0;
     }
 
-
-    // Enable trace memory and immediately start trace.
-    #if CONFIG_ESP32_TRAX || CONFIG_ESP32S2_TRAX || CONFIG_ESP32S3_TRAX
-        #if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S3
-            #if CONFIG_ESP32_TRAX_TWOBANKS || CONFIG_ESP32S3_TRAX_TWOBANKS
-                trax_enable(TRAX_ENA_PRO_APP);
-            #else
-                trax_enable(TRAX_ENA_PRO);
-            #endif
-        #elif CONFIG_IDF_TARGET_ESP32S2
-            trax_enable(TRAX_ENA_PRO);
-        #endif
-        trax_start_trace(TRAX_DOWNCOUNT_WORDS);
-    #endif
-
     SOC_initialize();
 
     extern void __libc_retarget_init(void); //  _retarget_init.c
     __libc_retarget_init();
 
-    do_global_ctors();
+    #ifdef CONFIG_COMPILER_CXX_EXCEPTIONS
+        struct object { long placeholder[10]; };
+        extern void __register_frame_info (const void *begin, struct object *ob);
+        extern char __eh_frame[];
 
-    #if CONFIG_ESP_DEBUG_STUBS_ENABLE
-        extern void esp_dbg_stubs_init(void);
-        esp_dbg_stubs_init();
+        static struct object ob;
+        __register_frame_info(__eh_frame, &ob);
     #endif
+
+    // gcc ctors
+    for (void (**p)(void) = &__init_array_start;
+        p < &__init_array_end;
+        p ++)
+    {
+        (*p)();
+    }
 
     #if defined(CONFIG_PM_ENABLE)
         extern void esp_pm_impl_init(void);
@@ -112,41 +106,14 @@ void Startup_Handler(void)
     do_system_init_fn();
 
     SOC_core_unstall(1);
-    if (! REG_GET_BIT(SYSTEM_CORE_1_CONTROL_0_REG, SYSTEM_CONTROL_CORE_1_CLKGATE_EN))
-    {
-        REG_SET_BIT(SYSTEM_CORE_1_CONTROL_0_REG, SYSTEM_CONTROL_CORE_1_CLKGATE_EN);
-        REG_CLR_BIT(SYSTEM_CORE_1_CONTROL_0_REG, SYSTEM_CONTROL_CORE_1_RUNSTALL);
-
-        REG_SET_BIT(SYSTEM_CORE_1_CONTROL_0_REG, SYSTEM_CONTROL_CORE_1_RESETING);
-        REG_CLR_BIT(SYSTEM_CORE_1_CONTROL_0_REG, SYSTEM_CONTROL_CORE_1_RESETING);
-    }
-
     ets_set_appcpu_boot_addr((uint32_t)startup_other_cores);
+
     esp_startup_start_app();
 }
 
 /****************************************************************************
  *  local
 *****************************************************************************/
-static void do_global_ctors(void)
-{
-    #ifdef CONFIG_COMPILER_CXX_EXCEPTIONS
-        struct object { long placeholder[10]; };
-        extern void __register_frame_info (const void *begin, struct object *ob);
-        extern char __eh_frame[];
-
-        static struct object ob;
-        __register_frame_info(__eh_frame, &ob);
-    #endif
-
-    for (void (**p)(void) = &__init_array_start;
-        p < &__init_array_end;
-        p ++)
-    {
-        (*p)();
-    }
-}
-
 static void do_system_init_fn(void)
 {
     int core_id = __get_CORE_ID();
@@ -166,10 +133,6 @@ static void do_system_init_fn(void)
 static void startup_other_cores(void)
 {
     SOC_initialize();
-
-    #if (CONFIG_IDF_TARGET_ESP32 && CONFIG_ESP32_TRAX_TWOBANKS) || (CONFIG_IDF_TARGET_ESP32S3 && CONFIG_ESP32S3_TRAX_TWOBANKS)
-        trax_start_trace(TRAX_DOWNCOUNT_WORDS);
-    #endif
 
     do_system_init_fn();
     esp_startup_start_app_other_cores();

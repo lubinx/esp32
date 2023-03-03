@@ -107,6 +107,9 @@ __BEGIN_DECLS
 extern __attribute__((nothrow))
     void SOC_initialize(void);
 
+extern __attribute__((nothrow))
+    void SOC_startup(void);
+
 extern __attribute__((nothrow, noreturn))
     void SOC_reset(void);
 

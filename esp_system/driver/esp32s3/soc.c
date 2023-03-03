@@ -50,6 +50,10 @@ void SOC_initialize(void)
     }
 }
 
+void SOC_startup(void)
+{
+}
+
 unsigned SOC_cache_err_core_id(void)
 {
     if (cache_ll_l1_get_access_error_intr_status(0, CACHE_LL_L1_ACCESS_EVENT_MASK))

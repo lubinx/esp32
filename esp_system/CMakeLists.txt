@@ -24,7 +24,6 @@ list(APPEND includes
     "${IDF_PATH}/components/soc/${IDF_TARGET}/include"
 )
 list(APPEND priv_includes
-    "priv_include"
 )
 
 list(APPEND errata_link_scripts
