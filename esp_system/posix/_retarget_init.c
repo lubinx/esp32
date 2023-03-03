@@ -105,7 +105,7 @@ void _exit(int status)
     for (uint32_t i = 0; i < SOC_CPU_CORES_NUM; i ++)
     {
         if (i != core_id)
-            SOC_core_acquire(i);
+            SOC_acquire_core(i);
     }
 
     SOC_reset();
@@ -145,9 +145,9 @@ __WEAK int _link_r(struct _reent *r, const char *n1, const char *n2)            
 __WEAK int _unlink_r(struct _reent *r, char const *path)                            __ENOSYS;
 __WEAK int _rename_r(struct _reent *r, char const *src, char const *dst)            __ENOSYS;
 
+__WEAK off_t _lseek_r(struct _reent *r, int fd, off_t offset, int origin)           __ENOSYS;
 __WEAK ssize_t _read_r(struct _reent *r, int fd, void *buf, size_t bufsize)         __ENOSYS;
 __WEAK ssize_t _write_r(struct _reent *r, int fd, void const *buf, size_t count)    __ENOSYS;
-__WEAK off_t _lseek_r(struct _reent *r, int fd, off_t offset, int origin)           __ENOSYS;
 
 /****************************************************************************
  *  @internal

@@ -7,15 +7,17 @@
 #include <stddef.h>
 #include <assert.h>
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
 #include "esp_task.h"
 #include "esp_attr.h"
 #include "esp_log.h"
 #include "esp_freertos_hooks.h"
 #include "esp_private/crosscore_int.h"
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/portmacro.h"
+#include "hal/systimer_ll.h"
+#include "hal/systimer_hal.h"
 
 /****************************************************************************
  *  @implements: freertos tick & idle
@@ -43,30 +45,49 @@ void IRAM_ATTR esp_vApplicationIdleHook(void)
 /****************************************************************************
  *  @implements: freertos main task
 *****************************************************************************/
-static void freertos_main_task(void *args)
+static void __esp_freertos_main_thread(void *arg)
 {
+    ARG_UNUSED(arg);
+    __esp_rtos_initialize();
+
+    extern __attribute__((noreturn)) void main(void);
     // TODO: process main() exit code
-    extern void main(void);
     main();
 
+    // main should not return
     vTaskDelete(NULL);
 }
 
-void esp_startup_start_app(void)
+void esp_rtos_bootstrap(void)
 {
     // Initialize the cross-core interrupt on CPU0
     esp_crosscore_int_init();
 
     /*
-    BaseType_t res = xTaskCreatePinnedToCore(freertos_main_task, "main",
+    BaseType_t res = xTaskCreatePinnedToCore(esp_main_thread_entry, "main",
         ESP_TASK_MAIN_STACK, NULL,
         ESP_TASK_MAIN_PRIO, NULL, ESP_TASK_MAIN_CORE
     );
     assert(res == pdTRUE);
     (void)res;
     */
-    BaseType_t res = xTaskCreate(freertos_main_task, "app_main", ESP_TASK_MAIN_STACK, NULL, ESP_TASK_MAIN_PRIO, NULL);
-    vTaskStartScheduler();
+
+   if (0 == __get_CORE_ID())
+   {
+        xTaskCreate(__esp_freertos_main_thread, "esp_freertos_main_thread", ESP_TASK_MAIN_STACK, NULL, ESP_TASK_MAIN_PRIO, NULL);
+        vTaskStartScheduler();
+        abort();
+   }
+   else
+   {
+        xPortStartScheduler();
+        abort(); // Only get to here if FreeRTOS somehow very broken
+   }
+}
+
+__attribute__((weak))
+void __esp_rtos_initialize(void)
+{
 }
 
 // --------------- CPU[1:N-1] App Startup ------------------
@@ -74,23 +95,6 @@ void esp_startup_start_app(void)
 #if !CONFIG_FREERTOS_UNICORE
 void esp_startup_start_app_other_cores(void)
 {
-    // For now, we only support up to two core: 0 and 1.
-    if (xPortGetCoreID() >= 2) {
-        abort();
-    }
-
-    // Wait for CPU0 to start FreeRTOS before progressing
-    extern volatile unsigned port_xSchedulerRunning[portNUM_PROCESSORS];
-    while (port_xSchedulerRunning[0] == 0) {
-        ;
-    }
-
-#if CONFIG_APPTRACE_ENABLE
-    // [refactor-todo] move to esp_system initialization
-    esp_err_t err = esp_apptrace_init();
-    assert(err == ESP_OK && "Failed to init apptrace module on APP CPU!");
-#endif
-
     // Initialize the cross-core interrupt on CPU1
     esp_crosscore_int_init();
 
@@ -177,9 +181,6 @@ esp_err_t esp_cpu_clear_watchpoint(int wp_nb)
 /****************************************************************************
  *  @implements: hal/systimer_hal.h
 *****************************************************************************/
-#include "hal/systimer_hal.h"
-#include "hal/systimer_ll.h"
-
 void systimer_hal_init(systimer_hal_context_t *hal)
 {
     hal->dev = &SYSTIMER;

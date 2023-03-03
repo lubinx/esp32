@@ -117,10 +117,10 @@ extern __attribute__((nothrow))
     void SOC_reset_core(int core_id);
 
 extern __attribute__((nothrow))
-    void SOC_core_acquire(int core_id);
+    void SOC_acquire_core(int core_id);
 
 extern __attribute__((nothrow))
-    void SOC_core_release(int core_id);
+    void SOC_release_core(int core_id);
 
 __END_DECLS
 #endif

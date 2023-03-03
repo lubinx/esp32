@@ -12,18 +12,21 @@
 __BEGIN_DECLS
 
 /****************************************************************************
+ *  rtos
+*****************************************************************************/
+extern __attribute__((noreturn))
+    void esp_rtos_bootstrap(void);
+
+    /**
+     *  this function will called before enter main()
+     *  NOTE: rtos context here must be initialized
+    */
+extern __attribute__((nothrow))
+    void __esp_rtos_initialize(void);
+
+/****************************************************************************
  *  for esp-idf's freertos porting
 *****************************************************************************/
-    /**
-     *  creating main task => esp_main_entry() when first cpu runs
-     *  call freertos xPortStartScheduler
-    */
-extern __attribute__((noreturn))
-    void esp_freertos_startup(void);
-
-extern __attribute__((noreturn))
-    void esp_main_entry(void);
-
 extern __attribute__((nothrow, const))
     uint32_t esp_get_free_heap_size(void);
 
