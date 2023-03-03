@@ -35,17 +35,9 @@
 
 #include <xtensa/hal.h>
 #include <xtensa/config/core.h>
-
 #include "xtensa/xtensa_context.h"
 
-/*
- * When compiling for G0-only, we don't have FreeRTOS component.
- * In fact, FreeRTOS component is only used for the configuration, so only the
- * macro portNUM_PROCESSORS needs to be defined (in the build file).
- */
-#if __has_include("freertos/FreeRTOSConfig.h")
-    #include "freertos/FreeRTOSConfig.h"
-#endif
+#include "soc/soc_caps.h"
 
 #if XCHAL_HAVE_INTERRUPTS
 
@@ -97,7 +89,7 @@ _xt_vpri_mask:     .word   0xFFFFFFFF    /* Virtual priority mask */
 _xt_interrupt_table:
 
     .set    i, 0
-    .rept   XCHAL_NUM_INTERRUPTS*portNUM_PROCESSORS
+    .rept   XCHAL_NUM_INTERRUPTS * SOC_CPU_CORES_NUM
     .word   xt_unhandled_interrupt      /* handler address               */
     .word   i                           /* handler arg (default: intnum) */
     .set    i, i+1
@@ -130,12 +122,11 @@ _xt_interrupt_table:
     .align  4
 
 _xt_exception_table:
-    .rept   XCHAL_EXCCAUSE_NUM * portNUM_PROCESSORS
+    .rept   XCHAL_EXCCAUSE_NUM * SOC_CPU_CORES_NUM
     .word   xt_unhandled_exception    /* handler address */
     .endr
 
 #endif
-
 
 /*
 -------------------------------------------------------------------------------
