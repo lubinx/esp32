@@ -33,8 +33,8 @@ struct CLK_TREE_context
 /****************************************************************************
  *  @internal
  ****************************************************************************/
-static uint32_t periph_clk_en_reg(PERIPH_module_t periph);
-static uint32_t periph_rst_en_reg(PERIPH_module_t periph);
+static uint32_t *periph_clk_en_reg(PERIPH_module_t periph);
+static uint32_t *periph_rst_en_reg(PERIPH_module_t periph);
 static uint32_t periph_clk_en_mask(PERIPH_module_t periph);
 static uint32_t periph_rst_en_mask(PERIPH_module_t periph);
 
@@ -130,6 +130,7 @@ void CLK_TREE_initialize(void)
         switch (CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ)
         {
         default:
+            ESP_LOGW(TAG, "unknown CPU frequency %uMhz, fallback to 80Mhz", CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ);
         case PLL_DIV_TO_80M_FREQ / MHZ:
             CLK_TREE_pll_conf(PLL_FREQ_SEL_320M);
             CLK_TREE_cpu_conf(CPU_SCLK_SEL_PLL, 4);
@@ -257,7 +258,6 @@ int CLK_TREE_pll_conf(PLL_freq_sel_t sel)
 
 uint64_t CLK_TREE_pll_freq(void)
 {
-    // SYSTEM.cpu_per_conf.pll_freq_sel
     switch (SYSTEM.cpu_per_conf.pll_freq_sel)
     {
     case 0:
@@ -573,19 +573,19 @@ void CLK_TREE_periph_reset(PERIPH_module_t periph)
 /****************************************************************************
  *  @internal
  ****************************************************************************/
-static uint32_t periph_clk_en_reg(PERIPH_module_t periph)
+static uint32_t *periph_clk_en_reg(PERIPH_module_t periph)
 {
     switch (periph)
     {
     case PERIPH_DEDIC_GPIO_MODULE:
-        return SYSTEM_CPU_PERI_CLK_EN_REG;
+        return (uint32_t *)SYSTEM_CPU_PERI_CLK_EN_REG;
     case PERIPH_RNG_MODULE:
     case PERIPH_WIFI_MODULE:
     case PERIPH_BT_MODULE:
     case PERIPH_WIFI_BT_COMMON_MODULE:
     case PERIPH_BT_BASEBAND_MODULE:
     case PERIPH_BT_LC_MODULE:
-        return SYSTEM_WIFI_CLK_EN_REG;
+        return (uint32_t *)SYSTEM_WIFI_CLK_EN_REG;
     case PERIPH_UART2_MODULE:
     case PERIPH_SDMMC_MODULE:
     case PERIPH_LCD_CAM_MODULE:
@@ -595,25 +595,25 @@ static uint32_t periph_clk_en_reg(PERIPH_module_t periph)
     case PERIPH_AES_MODULE:
     case PERIPH_SHA_MODULE:
     case PERIPH_RSA_MODULE:
-        return SYSTEM_PERIP_CLK_EN1_REG;
+        return (uint32_t *)SYSTEM_PERIP_CLK_EN1_REG;
     default:
-        return SYSTEM_PERIP_CLK_EN0_REG;
+        return (uint32_t *)SYSTEM_PERIP_CLK_EN0_REG;
     }
 }
 
-static uint32_t periph_rst_en_reg(PERIPH_module_t periph)
+static uint32_t *periph_rst_en_reg(PERIPH_module_t periph)
 {
     switch (periph)
     {
     case PERIPH_DEDIC_GPIO_MODULE:
-        return SYSTEM_CPU_PERI_RST_EN_REG;
+        return (uint32_t *)SYSTEM_CPU_PERI_RST_EN_REG;
     case PERIPH_RNG_MODULE:
     case PERIPH_WIFI_MODULE:
     case PERIPH_BT_MODULE:
     case PERIPH_WIFI_BT_COMMON_MODULE:
     case PERIPH_BT_BASEBAND_MODULE:
     case PERIPH_BT_LC_MODULE:
-        return SYSTEM_CORE_RST_EN_REG;
+        return (uint32_t *)SYSTEM_CORE_RST_EN_REG;
     case PERIPH_UART2_MODULE:
     case PERIPH_SDMMC_MODULE:
     case PERIPH_LCD_CAM_MODULE:
@@ -623,9 +623,9 @@ static uint32_t periph_rst_en_reg(PERIPH_module_t periph)
     case PERIPH_AES_MODULE:
     case PERIPH_SHA_MODULE:
     case PERIPH_RSA_MODULE:
-        return SYSTEM_PERIP_RST_EN1_REG;
+        return (uint32_t *)SYSTEM_PERIP_RST_EN1_REG;
     default:
-        return SYSTEM_PERIP_RST_EN0_REG;
+        return (uint32_t *)SYSTEM_PERIP_RST_EN0_REG;
     }
 }
 static uint32_t periph_clk_en_mask(PERIPH_module_t periph)

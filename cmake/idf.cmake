@@ -108,13 +108,17 @@ list(APPEND IDF_KERNEL_COMPONENTS
     "esp_system"
     "esp_common" "soc" "heap"
     "freertos"
-    # "hal"
     "esptool_py"
 )
 
 # OBSOLETED_COMPONENTS: force remove REQUIRES & PRIV_REQUIRES
 list(APPEND OBSOLETED_COMPONENTS
     "esp_rom"
+    "vfs"
+    # "hal"
+    # "spi_flash"
+    # "esp_hw_support"
+    # "esp_pm"
 )
 
 #############################################################################
@@ -482,7 +486,6 @@ function(__inherited_component_register component_target)
     endif()
     list(REMOVE_DUPLICATES sources)
 
-    idf_build_get_property(config_dir CONFIG_DIR)
     idf_build_get_property(component_targets __COMPONENT_TARGETS)
 
     macro(__component_set_dependencies reqs type)
@@ -507,7 +510,6 @@ function(__inherited_component_register component_target)
         idf_build_get_property(include_directories INCLUDE_DIRECTORIES GENERATOR_EXPRESSION)
         target_include_directories(${component_lib} INTERFACE "${include_directories}")
 
-        idf_target_include_directories(${component_lib} INTERFACE "${config_dir}")
         idf_target_include_directories(${component_lib} PUBLIC "${__INCLUDE_DIRS}")
         idf_target_include_directories(${component_lib} PRIVATE "${__PRIV_INCLUDE_DIRS}")
 
@@ -524,7 +526,6 @@ function(__inherited_component_register component_target)
     else()
         add_library(${component_lib} INTERFACE)
 
-        idf_target_include_directories(${component_lib} INTERFACE "${config_dir}")
         idf_target_include_directories(${component_lib} INTERFACE "${__INCLUDE_DIRS}")
 
         __component_get_property(reqs ${component_target} REQUIRES)
@@ -704,11 +705,6 @@ function(idf_build)
     add_executable(${CMAKE_PROJECT_NAME} ${__SRCS})
     set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME "${CMAKE_PROJECT_NAME}.elf")
 
-    idf_build_get_property(include_directories INCLUDE_DIRECTORIES)
-    target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${include_directories})
-    if (__INCLUDE_DIRS)
-        target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${__INCLUDE_DIRS})
-    endif()
 
     get_optimization_level(optimize)
     target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE ${optimize})
@@ -761,6 +757,13 @@ function(idf_build)
 
     message("\n💡 Add sub-project: bootloader")
     add_subdirectory("bootloader")
+
+
+    message("\n💡 global includes")
+    idf_build_get_property(include_directories INCLUDE_DIRECTORIES)
+    foreach(inc ${include_directories})
+        message(STATUS ${inc})
+    endforeach()
 
     message("")
 endfunction()

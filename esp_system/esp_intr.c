@@ -10,11 +10,15 @@
 #include <stdbool.h>
 #include <string.h>
 #include <assert.h>
+#include <limits.h>
 
 #include "soc.h"
 #include "esp_err.h"
 #include "esp_log.h"
+#include "esp_heap_caps.h"
 #include "esp_intr_alloc.h"
+#include "esp_rom_sys.h"
+
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -306,7 +310,7 @@ static int get_available_int(int flags, int cpu, int force, int source)
     int x;
     int best=-1;
     int bestPriority=9;
-    int bestSharedCt=INT_MAX;
+    int bestSharedCt = INT_MAX;
 
     //Default vector desc, for vectors not in the linked list
     vector_desc_t empty_vect_desc;
@@ -561,20 +565,7 @@ esp_err_t esp_intr_alloc_intrstatus(int source, int flags, uint32_t intrstatusre
         //Mark as unusable for other interrupt sources. This is ours now!
         vd->flags = VECDESC_FL_NONSHARED;
         if (handler) {
-#if CONFIG_APPTRACE_SV_ENABLE
-            non_shared_isr_arg_t *ns_isr_arg=malloc(sizeof(non_shared_isr_arg_t));
-            if (!ns_isr_arg) {
-                portEXIT_CRITICAL(&spinlock);
-                free(ret);
-                return ESP_ERR_NO_MEM;
-            }
-            ns_isr_arg->isr = handler;
-            ns_isr_arg->isr_arg = arg;
-            ns_isr_arg->source = source;
-            SOC_set_intr_handler(intr, (esp_cpu_intr_handler_t)non_shared_intr_isr, ns_isr_arg);
-#else
             SOC_set_intr_handler(intr, (esp_cpu_intr_handler_t)handler, arg);
-#endif
         }
 
         if (flags & ESP_INTR_FLAG_EDGE) {
@@ -697,14 +688,7 @@ esp_err_t esp_intr_free(intr_handle_t handle)
 
     if ((handle->vector_desc->flags & VECDESC_FL_NONSHARED) || free_shared_vector) {
         ESP_EARLY_LOGV(TAG, "esp_intr_free: Disabling int, killing handler");
-#if CONFIG_APPTRACE_SV_ENABLE
-        if (!free_shared_vector) {
-            void *isr_arg = SOC_intr_handler_arg(handle->vector_desc->intno);
-            if (isr_arg) {
-                free(isr_arg);
-            }
-        }
-#endif
+
         //Reset to normal handler:
         SOC_set_intr_handler(handle->vector_desc->intno, NULL, (void*)((int)handle->vector_desc->intno));
         //Theoretically, we could free the vector_desc... not sure if that's worth the few bytes of memory
@@ -719,16 +703,6 @@ esp_err_t esp_intr_free(intr_handle_t handle)
     portEXIT_CRITICAL(&spinlock);
     free(handle);
     return ESP_OK;
-}
-
-int esp_intr_get_intno(intr_handle_t handle)
-{
-    return handle->vector_desc->intno;
-}
-
-int esp_intr_get_cpu(intr_handle_t handle)
-{
-    return handle->vector_desc->cpu;
 }
 
 /*

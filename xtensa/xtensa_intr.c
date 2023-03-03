@@ -29,35 +29,15 @@
 
 #include <stdlib.h>
 
-#include "soc/soc_caps.h"
-
 #include <xtensa/config/core.h>
 #include "xtensa/xtensa_api.h"
 #include "xt_instr_macros.h"
 
-// #include "sdkconfig.h"
-
-/*
- * When compiling for G0-only, we don't have FreeRTOS component.
- * In fact, FreeRTOS component is only used for the core configuration, so
- * the macro SOC_CPU_CORES_NUM and the macro/function __get_CORE_ID need to
- * be defined.
- */
-/*
-#if __has_include("freertos/FreeRTOS.h")
-    #include "freertos/FreeRTOS.h"
-    #include "freertos/portable.h"
-#else
-    _Static_assert(SOC_CPU_CORES_NUM == 1, "G0-only Xtensa builds can only be compiled in single-core mode");
-    #define __get_CORE_ID()    0
-#endif
-*/
+#include "soc/soc_caps.h"
 
 #if XCHAL_HAVE_EXCEPTIONS
     /* Handler table is in xtensa_intr_asm.S */
-
     extern xt_exc_handler _xt_exception_table[];
-
 
     /*
     Default handler for unhandled exceptions.
@@ -100,13 +80,13 @@
 #if XCHAL_HAVE_INTERRUPTS
     /* Handler table is in xtensa_intr_asm.S */
 
-    typedef struct xt_handler_table_entry {
+    typedef struct xt_handler_table_entry
+    {
         void * handler;
         void * arg;
     } xt_handler_table_entry;
 
-    extern xt_handler_table_entry _xt_interrupt_table[XCHAL_NUM_INTERRUPTS*SOC_CPU_CORES_NUM];
-
+    extern xt_handler_table_entry _xt_interrupt_table[XCHAL_NUM_INTERRUPTS * SOC_CPU_CORES_NUM];
 
     /*
     Default handler for unhandled interrupts.
@@ -120,7 +100,7 @@
     //Returns true if handler for interrupt is not the default unhandled interrupt handler
     bool xt_int_has_handler(int intr, int cpu)
     {
-        return (_xt_interrupt_table[intr*SOC_CPU_CORES_NUM+cpu].handler != xt_unhandled_interrupt);
+        return (_xt_interrupt_table[intr * SOC_CPU_CORES_NUM + cpu].handler != xt_unhandled_interrupt);
     }
 
     /*
@@ -156,20 +136,4 @@
 
         return ((old == &xt_unhandled_interrupt) ? 0 : old);
     }
-
-    #if CONFIG_APPTRACE_SV_ENABLE
-        void * xt_get_interrupt_handler_arg(int n)
-        {
-            xt_handler_table_entry * entry;
-
-            if( n < 0 || n >= XCHAL_NUM_INTERRUPTS )
-                return 0;       /* invalid interrupt number */
-
-            /* Convert exception number to _xt_exception_table name */
-            n = n * SOC_CPU_CORES_NUM + __get_CORE_ID();
-
-            entry = _xt_interrupt_table + n;
-            return entry->arg;
-        }
-    #endif
 #endif

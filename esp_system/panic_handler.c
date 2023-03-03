@@ -9,7 +9,7 @@
 #include "soc.h"
 #include "esp_attr.h"
 
-#include "esp_ipc_isr.h"
+// #include "esp_ipc_isr.h"
 
 #include "soc/soc_memory_layout.h"
 #include "soc/soc_caps.h"
@@ -127,7 +127,7 @@ static void panic_handler(void *frame, bool pseudo_excause)
         }
     }
 
-    esp_ipc_isr_stall_abort();
+    // esp_ipc_isr_stall_abort();
 
     if (__dbgr_is_attached())
     {

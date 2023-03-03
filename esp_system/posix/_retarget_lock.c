@@ -1,14 +1,11 @@
-/*
- * SPDX-FileCopyrightText: 2015-2022 Espressif Systems (Shanghai) CO LTD
- *
- * SPDX-License-Identifier: Apache-2.0
- */
+#include <string.h>
+#include <stdlib.h>
 
 #include <sys/lock.h>
-#include <stdlib.h>
-#include <sys/reent.h>
+#include <sys/errno.h>
 
 #include "esp_log.h"
+#include "esp_heap_caps.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
@@ -106,7 +103,7 @@ void libc_lock_close(_LOCK_T lock)
 
 void libc_lock_acquire(_LOCK_T lock)
 {
-    if (! xPortCanYield())
+    if (0 != __get_IPSR())
     {
         BaseType_t higher_task_woken = false;
         if (! xSemaphoreTakeFromISR((void *)&lock->__pad, &higher_task_woken))
@@ -143,7 +140,7 @@ int libc_lock_try_acquire_recursive(_LOCK_T lock)
 
 void libc_lock_release(_LOCK_T lock)
 {
-    if (! xPortCanYield())
+    if (0 != __get_IPSR())
     {
         BaseType_t higher_task_woken = false;
         xSemaphoreGiveFromISR((void *)&lock->__pad, &higher_task_woken);

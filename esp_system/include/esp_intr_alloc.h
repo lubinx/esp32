@@ -252,25 +252,6 @@ esp_err_t esp_intr_alloc_intrstatus(int source, int flags, uint32_t intrstatusre
  */
 esp_err_t esp_intr_free(intr_handle_t handle);
 
-
-/**
- * @brief Get CPU number an interrupt is tied to
- *
- * @param handle The handle, as obtained by esp_intr_alloc or esp_intr_alloc_intrstatus
- *
- * @return The core number where the interrupt is allocated
- */
-int esp_intr_get_cpu(intr_handle_t handle);
-
-/**
- * @brief Get the allocated interrupt for a certain handle
- *
- * @param handle The handle, as obtained by esp_intr_alloc or esp_intr_alloc_intrstatus
- *
- * @return The interrupt number
- */
-int esp_intr_get_intno(intr_handle_t handle);
-
 /**
  * @brief Disable the interrupt associated with the handle
  *

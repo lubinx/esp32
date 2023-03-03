@@ -10,11 +10,12 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-#include "clk_tree.h"
 #include "esp_attr.h"
-#include "esp_log.h"
-#include "esp_freertos_hooks.h"
-#include "esp_private/crosscore_int.h"
+#include "esp_err.h"
+#include "esp_system.h"
+#include "esp_heap_caps.h"
+
+#include "clk_tree.h"
 
 #include "hal/systimer_ll.h"
 #include "hal/systimer_hal.h"
@@ -149,59 +150,7 @@ uint32_t esp_get_free_heap_size(void)
 /****************************************************************************
  *  @implements: esp_cpu.h
 *****************************************************************************/
-esp_err_t esp_cpu_set_watchpoint(int wp_nb, const void *wp_addr, size_t size, esp_cpu_watchpoint_trigger_t trigger)
-{
-    assert(SOC_CPU_WATCHPOINTS_NUM > 0);
 
-    /*
-    Todo:
-    - Check that wp_nb is in range
-    - Check if the wp_nb is already in use
-    */
-    // Check if size is 2^n, where n is in [0...6]
-    if (size < 1 || size > 64 || (size & (size - 1)) != 0) {
-        return ESP_ERR_INVALID_ARG;
-    }
-    int on_read = (trigger == ESP_CPU_WATCHPOINT_LOAD || trigger == ESP_CPU_WATCHPOINT_ACCESS);
-    int on_write = (trigger == ESP_CPU_WATCHPOINT_STORE || trigger == ESP_CPU_WATCHPOINT_ACCESS);
-#if __XTENSA__
-    xt_utils_set_watchpoint(wp_nb, (uint32_t)wp_addr, size, on_read, on_write);
-#else
-    if (__dbgr_is_attached()) {
-        // See description in esp_cpu_set_breakpoint()
-        long args[] = {true, wp_nb, (long)wp_addr, (long)size,
-            (long)((on_read ? ESP_SEMIHOSTING_WP_FLG_RD : 0) | (on_write ? ESP_SEMIHOSTING_WP_FLG_WR : 0))
-        };
-
-        if (0 == semihosting_call_noerrno(ESP_SEMIHOSTING_SYS_WATCHPOINT_SET, args))
-            return ESP_ERR_INVALID_RESPONSE;
-    }
-    rv_utils_set_watchpoint(wp_nb, (uint32_t)wp_addr, size, on_read, on_write);
-#endif
-    return ESP_OK;
-}
-
-esp_err_t esp_cpu_clear_watchpoint(int wp_nb)
-{
-    /*
-    Todo:
-    - Check if the wp_nb is valid
-    */
-#if __XTENSA__
-    xt_utils_clear_watchpoint(wp_nb);
-#else
-    if (__dbgr_is_attached())
-    {
-        // See description in __dbgr_is_attached()
-        long args[] = {false, wp_nb};
-
-        if (0 == semihosting_call_noerrno(ESP_SEMIHOSTING_SYS_WATCHPOINT_SET, args))
-            return ESP_ERR_INVALID_RESPONSE;
-    }
-    rv_utils_clear_watchpoint(wp_nb);
-#endif // __XTENSA__
-    return ESP_OK;
-}
 
 /****************************************************************************
  *  @implements: hal/systimer_hal.h

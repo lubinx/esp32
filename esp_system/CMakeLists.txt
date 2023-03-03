@@ -8,13 +8,12 @@ endif()
 
 list(APPEND srcs
     "esp_crosscore_int.c"
-    "esp_cpu.c"
     "esp_dbg_ubsan.c"                   # debug for undefined behavior, but not sure if its works
-    "esp_intr.c"
     "esp_startup.c"
     "panic.c"
     "panic_handler.c"
     "esp_freertos_impl.c"               # implements freertos/hal
+    "esp_intr.c"
 )
 
 list(APPEND includes

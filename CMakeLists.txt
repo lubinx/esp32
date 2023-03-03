@@ -5,7 +5,9 @@ project(kernel)
 
 idf_build(
     COMPONENTS
-        # ...
+        # "mbedtls"
+        # "esp_event"
+        # "lwip"
     SRCS
         "main.cpp"
 )

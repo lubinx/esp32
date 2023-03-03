@@ -25,10 +25,6 @@ config FREERTOS_SUPPORT_STATIC_ALLOCATION
     bool
     default y
 
-config FREERTOS_DEBUG_OCDAWARE
-    bool
-    default y
-
 menu "FreeRTOS"
     config FREERTOS_HZ
         # Todo: Rename to CONFIG_FREERTOS_TICK_RATE_HZ (IDF-4986)
@@ -196,16 +192,6 @@ menu "FreeRTOS"
         help
             If enabled, this will include an extra column when vTaskList is called to display the CoreID the task
             is pinned to (0,1) or -1 if not pinned.
-
-    config FREERTOS_GENERATE_RUN_TIME_STATS
-        bool "configGENERATE_RUN_TIME_STATS"
-        default n
-        select FREERTOS_USE_TRACE_FACILITY
-        select FREERTOS_USE_STATS_FORMATTING_FUNCTIONS
-        help
-            Enables collection of run time statistics for each task (see configGENERATE_RUN_TIME_STATS
-            documentation for more details).
-            Note: The clock used for run time statistics can be configured in FREERTOS_RUN_TIME_STATS_CLK.
 
     config FREERTOS_USE_TICKLESS_IDLE
         # Todo: Currently not supported in SMP FreeRTOS yet (IDF-4986)

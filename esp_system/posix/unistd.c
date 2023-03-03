@@ -1,5 +1,7 @@
 #include <features.h>
+
 #include <sys/types.h>
+#include <sys/errno.h>
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
