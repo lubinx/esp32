@@ -3,11 +3,10 @@
 #include "esp_system.h"
 #include "esp_log.h"
 
-#include "esp_rom_sys.h"
-#include "soc/periph_defs.h"
 #include "cache_ll.h"
 
 // TODO: remove these reqiured by ets_set_appcpu_boot_addr()
+#include "esp_rom_sys.h"
 #include "esp32s3/rom/ets_sys.h"
 
 static char const *TAG = "SoC";

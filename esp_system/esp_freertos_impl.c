@@ -10,7 +10,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-#include "esp_task.h"
+#include "clk_tree.h"
 #include "esp_attr.h"
 #include "esp_log.h"
 #include "esp_freertos_hooks.h"
@@ -18,6 +18,14 @@
 
 #include "hal/systimer_ll.h"
 #include "hal/systimer_hal.h"
+
+#include "sdkconfig.h"
+
+/****************************************************************************
+ *  @internal
+*****************************************************************************/
+static uintptr_t __main_stack[CONFIG_ESP_MAIN_TASK_STACK_SIZE / sizeof(uintptr_t)];
+static StaticTask_t __main_task;
 
 /****************************************************************************
  *  @implements: freertos tick & idle
@@ -40,6 +48,16 @@ void IRAM_ATTR esp_vApplicationTickHook(void)
 void IRAM_ATTR esp_vApplicationIdleHook(void)
 {
     // override to remove
+}
+
+uint64_t systimer_ticks_to_us(uint64_t ticks)
+{
+    return ticks * 1000000 / CLK_TREE_systimer_freq();
+}
+
+uint64_t systimer_us_to_ticks(uint64_t us)
+{
+    return us * CLK_TREE_systimer_freq() / 1000000;
 }
 
 /****************************************************************************
@@ -66,7 +84,7 @@ void esp_rtos_bootstrap(void)
     /*
     BaseType_t res = xTaskCreatePinnedToCore(esp_main_thread_entry, "main",
         ESP_TASK_MAIN_STACK, NULL,
-        ESP_TASK_MAIN_PRIO, NULL, ESP_TASK_MAIN_CORE
+        configMAX_PRIORITIES, NULL, ESP_TASK_MAIN_CORE
     );
     assert(res == pdTRUE);
     (void)res;
@@ -74,7 +92,14 @@ void esp_rtos_bootstrap(void)
 
    if (0 == __get_CORE_ID())
    {
-        xTaskCreate(__esp_freertos_main_thread, "esp_freertos_main_thread", ESP_TASK_MAIN_STACK, NULL, ESP_TASK_MAIN_PRIO, NULL);
+        // TODO: main task pined to core?
+        // CONFIG_ESP_MAIN_TASK_AFFINITY
+
+        xTaskCreateStatic(__esp_freertos_main_thread, "esp_freertos_main_thread",
+            CONFIG_ESP_MAIN_TASK_STACK_SIZE, NULL, configMAX_PRIORITIES,
+            (void *)__main_stack, &__main_task
+        );
+
         vTaskStartScheduler();
         abort();
    }

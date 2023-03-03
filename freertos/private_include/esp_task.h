@@ -1,3 +1,5 @@
+// dummy required by freertos/portable/<arch>/port.c
+
 /*
  * SPDX-FileCopyrightText: 2019-2022 Espressif Systems (Shanghai) CO LTD
  *
@@ -17,6 +19,7 @@
  * are up to date
  */
 
+/*
 #ifndef _ESP_TASK_H_
 #define _ESP_TASK_H_
 
@@ -27,8 +30,7 @@
 #define ESP_TASK_PRIO_MAX (configMAX_PRIORITIES)
 #define ESP_TASK_PRIO_MIN (0)
 
-/* Bt contoller Task */
-/* controller */
+// Bt contoller Task
 #define ESP_TASK_BT_CONTROLLER_PRIO     (ESP_TASK_PRIO_MAX - 2)
 
 #ifdef CONFIG_NEWLIB_NANO_FORMAT
@@ -41,7 +43,7 @@
 #define ESP_TASK_BT_CONTROLLER_STACK    (3584 + TASK_EXTRA_STACK_SIZE)
 
 
-/* idf task */
+// idf task
 #define ESP_TASK_TIMER_PRIO             (ESP_TASK_PRIO_MAX - 3)
 #define ESP_TASK_TIMER_STACK            (CONFIG_ESP_TIMER_TASK_STACK_SIZE +  TASK_EXTRA_STACK_SIZE)
 #define ESP_TASKD_EVENT_PRIO            (ESP_TASK_PRIO_MAX - 5)
@@ -59,3 +61,5 @@
 #define ESP_TASK_MAIN_CORE              CONFIG_ESP_MAIN_TASK_AFFINITY
 
 #endif
+
+*/

@@ -39,22 +39,6 @@ static uint32_t periph_clk_en_mask(PERIPH_module_t periph);
 static uint32_t periph_rst_en_mask(PERIPH_module_t periph);
 
 struct CLK_TREE_context CLK_TREE_context = {0};
-
-/****************************************************************************
- *  @implements: freertos/systimer.h
- ****************************************************************************/
-uint64_t systimer_ticks_to_us(uint64_t ticks)
-{
-    // see CLK_TREE_systimer_freq()
-    return ticks / 16;
-}
-
-uint64_t systimer_us_to_ticks(uint64_t us)
-{
-    // see CLK_TREE_systimer_freq()
-    return us * 16;
-}
-
 /****************************************************************************
  * @implements hw/clk_tree.h
  ****************************************************************************/
