@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 #include <stdint.h>
+
 #include "esp_attr.h"
 #include "esp_err.h"
 #include "esp_arch.h"
@@ -14,14 +15,12 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/portmacro.h"
 
-#if CONFIG_ESP_SYSTEM_GDBSTUB_RUNTIME
-    #include "esp_gdbstub.h"
-#endif
+#include "sdkconfig.h"
 
 #if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S2
-#include "soc/dport_reg.h"
+    #include "soc/dport_reg.h"
 #else
-#include "soc/system_reg.h"
+    #include "soc/system_reg.h"
 #endif
 
 #define REASON_YIELD            BIT(0)
@@ -87,16 +86,6 @@ static void IRAM_ATTR esp_crosscore_isr(void *arg) {
          * to allow DFS features without the extra latency of the ISR hook.
          */
     }
-#if CONFIG_ESP_SYSTEM_GDBSTUB_RUNTIME
-    if (my_reason_val & REASON_GDB_CALL) {
-        update_breakpoints();
-    }
-#endif // !CONFIG_ESP_SYSTEM_GDBSTUB_RUNTIME
-#if CONFIG_IDF_TARGET_ARCH_XTENSA // IDF-2986
-    if (my_reason_val & REASON_PRINT_BACKTRACE) {
-        esp_backtrace_print(100);
-    }
-#endif // CONFIG_IDF_TARGET_ARCH_XTENSA
 }
 
 //Initialize the crosscore interrupt on this core. Call this once

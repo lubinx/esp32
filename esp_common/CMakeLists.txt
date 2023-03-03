@@ -4,7 +4,7 @@ idf_component_register(
         "log.c"
     INCLUDE_DIRS
         "include"
-        "posix"
+        "posix"     # posix includes should be globaly visiable
     LDFRAGMENTS
         "soc.lf"
         "common.lf"

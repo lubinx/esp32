@@ -71,7 +71,7 @@ void SOC_reset(void)
     while (1);
 }
 
-void SOC_core_reset(int core_id)
+void SOC_reset_core(int core_id)
 {
     assert((unsigned)core_id < SOC_CPU_CORES_NUM);
     /*
@@ -83,7 +83,7 @@ void SOC_core_reset(int core_id)
     SET_PERI_REG_MASK(RTC_CNTL_OPTIONS0_REG, rtc_cntl_rst_m);
 }
 
-void SOC_core_stall(int core_id)
+void SOC_core_release(int core_id)
 {
     assert((unsigned)core_id < SOC_CPU_CORES_NUM);
     /*
@@ -106,7 +106,7 @@ void SOC_core_stall(int core_id)
     SET_PERI_REG_MASK(RTC_CNTL_SW_CPU_STALL_REG, 0x21 << rtc_cntl_c1_s);
 }
 
-void SOC_core_unstall(int core_id)
+void SOC_core_acquire(int core_id)
 {
     assert((unsigned)core_id < SOC_CPU_CORES_NUM);
     /*
@@ -144,7 +144,7 @@ void SOC_core_unstall(int core_id)
  ****************************************************************************/
 static void esp_cache_err_int_init(int core_id)
 {
-    SOC_intr_disable_nb(ETS_CACHEERR_INUM);
+    SOC_disable_intr_nb(ETS_CACHEERR_INUM);
 
     // We do not register a handler for the interrupt because it is interrupt
     // level 4 which is not serviceable from C. Instead, xtensa_vectors.S has
@@ -182,5 +182,5 @@ static void esp_cache_err_int_init(int core_id)
         cache_ll_l1_enable_access_error_intr(1, CACHE_LL_L1_ACCESS_EVENT_MASK);
     }
 
-    SOC_intr_enable_nb(ETS_CACHEERR_INUM);
+    SOC_enable_intr_nb(ETS_CACHEERR_INUM);
 }

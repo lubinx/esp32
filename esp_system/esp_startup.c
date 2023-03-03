@@ -40,7 +40,7 @@ static void startup_other_cores(void);
 *****************************************************************************/
 void Startup_Handler(void)
 {
-    /* copy table loaded by bootlader
+    /* bootloader already loaded these
     struct copy_table_t
     {
         uint32_t const *src;
@@ -105,7 +105,7 @@ void Startup_Handler(void)
 
     do_system_init_fn();
 
-    SOC_core_unstall(1);
+    SOC_core_acquire(1);
     ets_set_appcpu_boot_addr((uint32_t)startup_other_cores);
 
     esp_startup_start_app();

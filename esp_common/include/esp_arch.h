@@ -25,7 +25,7 @@
 #endif
 
 static inline
-    bool SOC_intr_is_handled(unsigned intr_nb)
+    bool SOC_is_intr_handled(unsigned intr_nb)
     {
     #ifdef __XTENSA__
         return xt_int_has_handler(intr_nb, __get_CORE_ID());
@@ -35,7 +35,7 @@ static inline
     }
 
 static inline
-    esp_intr_handler_t SOC_intr_set_handler(unsigned intr_nb, esp_intr_handler_t handler, void* arg)
+    esp_intr_handler_t SOC_set_intr_handler(unsigned intr_nb, esp_intr_handler_t handler, void* arg)
     {
     #ifdef __XTENSA__
         return xt_set_interrupt_handler(intr_nb, handler, arg);
@@ -46,6 +46,7 @@ static inline
     #endif
     }
 
+    /* its pointless to get this
 static inline
     void *SOC_intr_handler_arg(unsigned intr_nb)
     {
@@ -55,12 +56,13 @@ static inline
         return intr_handler_get_arg(intr_nb);
     #endif
     }
+    */
 
     /**
      *  entable interrupt
     */
 static inline
-    void SOC_intr_enable_nb(unsigned intr_nb)
+    void SOC_enable_intr_nb(unsigned intr_nb)
     {
     #ifdef __XTENSA__
         xt_ints_on(1 << intr_nb);
@@ -69,9 +71,9 @@ static inline
     #endif
     }
 
-    // NOTE: esp-idf perfer using mask to enable/disable interrupts, this consider is dangers~!
-static inline __attribute__((deprecated("using SOC_intr_enable_nb() instead")))
-    void SOC_intr_enable_mask(unsigned intr_mask)
+    // NOTE: esp-idf perfer to enable/disable interrupts by mask, this consider is dangers~!
+static inline __attribute__((deprecated("using SOC_enable_intr_nb() instead")))
+    void SOC_enable_intr_mask(unsigned intr_mask)
     {
     #ifdef __XTENSA__
         xt_ints_on(intr_mask);
@@ -84,7 +86,7 @@ static inline __attribute__((deprecated("using SOC_intr_enable_nb() instead")))
      *  disable interrrupt
     */
 static inline
-    void SOC_intr_disable_nb(unsigned intr_nb)
+    void SOC_disable_intr_nb(unsigned intr_nb)
     {
     #ifdef __XTENSA__
         xt_ints_off(1 << intr_nb);
@@ -93,9 +95,9 @@ static inline
     #endif
     }
 
-    // NOTE: esp-idf perfer using mask to enable/disable interrupts, this consider is dangers~!
-static inline __attribute__((deprecated("using SOC_intr_disable_nb() instead")))
-    void SOC_intr_disable_mask(unsigned intr_mask)
+    // NOTE: esp-idf perfer to enable/disable interrupts by mask, this consider is dangers~!
+static inline __attribute__((deprecated("using SOC_disable_intr_nb() instead")))
+    void SOC_disable_intr_mask(unsigned intr_mask)
     {
     #ifdef __XTENSA__
         xt_ints_off(intr_mask);
@@ -104,9 +106,11 @@ static inline __attribute__((deprecated("using SOC_intr_disable_nb() instead")))
     #endif
     }
 
-    /*
+    /**
+     *  REVIEW: get interrupt mask, this should be __get_IPSR()?
+    */
 static inline
-    unsigned SOC_enabled_intr(void)
+    unsigned SOC_get_intr_mask(void)
     {
     #ifdef __XTENSA__
         return xt_utils_intr_get_enabled_mask();
@@ -114,17 +118,12 @@ static inline
         return rv_utils_intr_get_enabled_mask();
     #endif
     }
-    */
-
-    /**
-     *  REIVEW: get interrupt mask, this should be __get_IPSR()?
-    */
 
     /**
      *  REVIEW: clear interrupt pending?
     */
 static inline
-    void SOC_intr_clear_pending(unsigned intr_nb)
+    void SOC_clear_intr_pending(unsigned intr_nb)
     {
     #ifdef __XTENSA__
         xthal_set_intclear(1 << intr_nb);
@@ -169,9 +168,9 @@ static inline
     #define esp_cpu_get_core_id()       \
         __get_CORE_ID()
     #define esp_cpu_intr_enable(mask)   \
-        SOC_intr_enable_mask(mask)
+        SOC_enable_intr_mask(mask)
     #define esp_cpu_intr_disable(mask)  \
-        SOC_intr_disable_mask(mask)
+        SOC_disable_intr_mask(mask)
     #define esp_cpu_intr_edge_ack(intr_nb)  \
-        SOC_intr_clear_pending(intr_nb)
+        SOC_clear_intr_pending(intr_nb)
 #endif

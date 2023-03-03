@@ -37,5 +37,4 @@ int clock_gettime(clockid_t clock_id, struct timespec *tp)
 int clock_getres(clockid_t clock_id, struct timespec *res)
 {
     return __set_errno_neg(ENOSYS);
-
 }

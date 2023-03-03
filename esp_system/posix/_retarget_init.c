@@ -105,7 +105,7 @@ void _exit(int status)
     for (uint32_t i = 0; i < SOC_CPU_CORES_NUM; i ++)
     {
         if (i != core_id)
-            SOC_core_unstall(i);
+            SOC_core_acquire(i);
     }
 
     SOC_reset();

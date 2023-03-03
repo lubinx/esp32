@@ -123,7 +123,7 @@ static void panic_handler(void *frame, bool pseudo_excause)
     // Stall all other cores
     for (uint32_t i = 0; i < SOC_CPU_CORES_NUM; i++) {
         if (i != core_id) {
-            SOC_core_stall(i);
+            SOC_core_release(i);
         }
     }
 
