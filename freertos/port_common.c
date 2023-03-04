@@ -5,7 +5,7 @@
  */
 
 #include <string.h>
-#include "FreeRTOS.h"
+#include "freertos/FreeRTOS.h"
 #include "task.h"
 #include "esp_system.h"
 #include "esp_memory_utils.h"

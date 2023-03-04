@@ -13,8 +13,6 @@
 #include "soc/periph_defs.h"
 
 #include "freertos/FreeRTOS.h"
-#include "freertos/portmacro.h"
-
 #include "sdkconfig.h"
 
 #if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S2

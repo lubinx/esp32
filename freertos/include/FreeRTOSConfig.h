@@ -35,11 +35,6 @@ This file get's pulled into assembly sources. Therefore, some includes need to b
 
 #define configXT_SIMULATOR                                  0
 #define configXT_BOARD                                      1   /* Board mode */
-#if CONFIG_FREERTOS_CORETIMER_0
-#define configXT_TIMER_INDEX                                0
-#elif CONFIG_FREERTOS_CORETIMER_1
-#define configXT_TIMER_INDEX                                1
-#endif
 #define configXT_INTEXC_HOOKS                               0
 
 #define configBENCHMARK                                     0

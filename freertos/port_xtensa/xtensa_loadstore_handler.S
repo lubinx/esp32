@@ -37,7 +37,6 @@
  */
 
 #include "xtensa_rtos.h"
-#include "sdkconfig.h"
 #include "soc/soc.h"
 
 #define LOADSTORE_HANDLER_STACK_SZ      8

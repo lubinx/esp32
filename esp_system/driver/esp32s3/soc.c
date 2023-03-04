@@ -200,11 +200,7 @@ static intr_desc_t const intr_desc_table[SOC_CPU_INTR_NUM] =
     {1, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                               }}, //3
     {1, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      0                               }}, //4
     {1, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //5
-#if CONFIG_FREERTOS_CORETIMER_0
-    {1, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //6
-#else
     {1, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_SPECIAL,    ESP_CPU_INTR_DESC_FLAG_SPECIAL  }}, //6
-#endif
     {1, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_SPECIAL,    ESP_CPU_INTR_DESC_FLAG_SPECIAL  }}, //7
     {1, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //8
     {1, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                               }}, //9
@@ -213,11 +209,7 @@ static intr_desc_t const intr_desc_table[SOC_CPU_INTR_NUM] =
     {1, ESP_CPU_INTR_TYPE_LEVEL,    {0, 0}},                                                                //12
     {1, ESP_CPU_INTR_TYPE_LEVEL,    {0, 0}},                                                                //13
     {7, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //14, NMI
-#if CONFIG_FREERTOS_CORETIMER_1
-    {3, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //15
-#else
     {3, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_SPECIAL,    ESP_CPU_INTR_DESC_FLAG_SPECIAL  }}, //15
-#endif
     {5, ESP_CPU_INTR_TYPE_NA,       {ESP_CPU_INTR_DESC_FLAG_SPECIAL,    ESP_CPU_INTR_DESC_FLAG_SPECIAL  }}, //16
     {1, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                               }}, //17
     {1, ESP_CPU_INTR_TYPE_LEVEL,    {0,                                 0                               }}, //18

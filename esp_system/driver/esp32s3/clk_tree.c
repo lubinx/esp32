@@ -153,6 +153,9 @@ void CLK_TREE_initialize(void)
         // Re calculate the ccount to make time calculation correct.
         __set_CCOUNT((uint64_t)__get_CCOUNT() * CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ / old_freq_mhz);
     }
+
+    // TODO: freertos using SYSTIMER, remove this later
+    CLK_TREE_periph_enable(PERIPH_SYSTIMER_MODULE);
 }
 
 int CLK_TREE_pll_conf(PLL_freq_sel_t sel)

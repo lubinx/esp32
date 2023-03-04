@@ -1,10 +1,11 @@
-#include "freertos/xtensa_rtos.h"
 #include "esp_private/panic_reason.h"
 #include "soc/soc.h"
 
-#include "sdkconfig.h"
-
-
+/*
+    this defined in frreertos port_xtensa/include
+*/
+// TODO: maybe move panic_handler_asm into rtos implements? but implement echo/print functions in esp_system
+#include "xtensa_rtos.h"
 
 /*
 --------------------------------------------------------------------------------
