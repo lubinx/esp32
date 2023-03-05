@@ -3,8 +3,6 @@
 #include "esp_system.h"
 #include "esp_log.h"
 
-#include "cache_ll.h"
-
 // TODO: remove these reqiured by ets_set_appcpu_boot_addr()
 #include "esp_rom_sys.h"
 #include "esp32s3/rom/ets_sys.h"
@@ -22,7 +20,7 @@ extern struct __esp_init_fn _esp_system_init_fn_array_end;
 /****************************************************************************
  *  @internal
  ****************************************************************************/
-static void esp_cache_err_int_init(int core_id);
+static void SOC_cache_err_init(int core_id);
 
 /****************************************************************************
  *  @implements
@@ -36,11 +34,11 @@ void SOC_initialize(void)
     for (int i = 0; i < ETS_MAX_INTR_SOURCE; i++)
         esp_rom_route_intr_matrix(core_id, i, ETS_INVALID_INUM);
 
-    esp_cache_err_int_init(core_id);
+    SOC_cache_err_init(core_id);
 
     if (0 == core_id)
     {
-        CLK_TREE_initialize();
+        CLK_initialize();
 
         /*
         REG_WRITE(ASSIST_DEBUG_CORE_0_RCD_PDEBUGENABLE_REG, 1);
@@ -93,14 +91,30 @@ void __esp_rtos_initialize(void)
     ets_set_appcpu_boot_addr((uint32_t)startup_other_cores);
 }
 
-
 unsigned SOC_cache_err_core_id(void)
 {
+    /*
     if (cache_ll_l1_get_access_error_intr_status(0, CACHE_LL_L1_ACCESS_EVENT_MASK))
         return PRO_CPU_NUM;
 
     if (cache_ll_l1_get_access_error_intr_status(1, CACHE_LL_L1_ACCESS_EVENT_MASK))
         return APP_CPU_NUM;
+    */
+    // EXTMEM_CORE0_ACS_CACHE_INT_ST_REG
+    if ((
+            EXTMEM_CORE0_IBUS_ACS_MSK_ICACHE_ST | EXTMEM_CORE0_IBUS_WR_ICACHE_ST | EXTMEM_CORE0_IBUS_REJECT_ST |
+            EXTMEM_CORE0_DBUS_ACS_MSK_DCACHE_ST | EXTMEM_CORE0_DBUS_REJECT_ST
+        ) &  EXTMEM.core0_acs_cache_int_st.val)
+    {
+        return 0;
+    }
+    if ((
+            EXTMEM_CORE1_IBUS_ACS_MSK_ICACHE_ST | EXTMEM_CORE1_IBUS_WR_ICACHE_ST | EXTMEM_CORE1_IBUS_REJECT_ST |
+            EXTMEM_CORE1_DBUS_ACS_MSK_DCACHE_ST | EXTMEM_CORE1_DBUS_REJECT_ST
+        ) &  EXTMEM.core1_acs_cache_int_st.val)
+    {
+        return 1;
+    }
 
     return -1;
 }
@@ -240,7 +254,7 @@ void esp_cpu_intr_get_desc(int core_id, int intr_nb, esp_cpu_intr_desc_t *intr_d
 /****************************************************************************
  *  @internal
  ****************************************************************************/
-static void esp_cache_err_int_init(int core_id)
+static void SOC_cache_err_init(int core_id)
 {
     SOC_disable_intr_nb(ETS_CACHEERR_INUM);
 
@@ -257,27 +271,60 @@ static void esp_cache_err_int_init(int core_id)
     // For this reason, panic handler backtrace will not be correct if the
     // interrupt is connected to PRO CPU and invalid access happens on the APP CPU.
 
-    ESP_DRAM_LOGV(TAG, "illegal error intr clr & ena mask is: 0x%x", CACHE_LL_L1_ILG_EVENT_MASK);
-    //illegal error intr doesn't depend on cache_id
-    cache_ll_l1_clear_illegal_error_intr(0, CACHE_LL_L1_ILG_EVENT_MASK);
-    cache_ll_l1_enable_illegal_error_intr(0, CACHE_LL_L1_ILG_EVENT_MASK);
+    EXTMEM.cache_ilg_int_clr.val = EXTMEM_ICACHE_SYNC_OP_FAULT_INT_CLR |
+        EXTMEM_ICACHE_PRELOAD_OP_FAULT_INT_CLR |
+        EXTMEM_DCACHE_SYNC_OP_FAULT_INT_CLR |
+        EXTMEM_DCACHE_PRELOAD_OP_FAULT_INT_CLR |
+        EXTMEM_DCACHE_WRITE_FLASH_INT_CLR |
+        EXTMEM_MMU_ENTRY_FAULT_INT_CLR |
+        EXTMEM_DCACHE_OCCUPY_EXC_INT_CLR |
+        EXTMEM_IBUS_CNT_OVF_INT_CLR |
+        EXTMEM_DBUS_CNT_OVF_INT_CLR |
+        0;
+    EXTMEM.cache_ilg_int_ena.val = EXTMEM_ICACHE_SYNC_OP_FAULT_INT_ENA |
+        EXTMEM_ICACHE_PRELOAD_OP_FAULT_INT_ENA |
+        EXTMEM_DCACHE_SYNC_OP_FAULT_INT_ENA |
+        EXTMEM_DCACHE_PRELOAD_OP_FAULT_INT_ENA |
+        EXTMEM_DCACHE_WRITE_FLASH_INT_ENA |
+        EXTMEM_MMU_ENTRY_FAULT_INT_ENA |
+        EXTMEM_DCACHE_OCCUPY_EXC_INT_ENA |
+        EXTMEM_IBUS_CNT_OVF_INT_ENA |
+        EXTMEM_DBUS_CNT_OVF_INT_ENA |
+        0;
 
-    if (core_id == PRO_CPU_NUM) {
+    if (0 == core_id)
+    {
         esp_rom_route_intr_matrix(core_id, ETS_CACHE_CORE0_ACS_INTR_SOURCE, ETS_CACHEERR_INUM);
 
-        /* On the hardware side, stat by clearing all the bits reponsible for
-         * enabling cache access error interrupts.  */
-        ESP_DRAM_LOGV(TAG, "core 0 access error intr clr & ena mask is: 0x%x", CACHE_LL_L1_ACCESS_EVENT_MASK);
-        cache_ll_l1_clear_access_error_intr(0, CACHE_LL_L1_ACCESS_EVENT_MASK);
-        cache_ll_l1_enable_access_error_intr(0, CACHE_LL_L1_ACCESS_EVENT_MASK);
-    } else {
+        EXTMEM.core0_acs_cache_int_clr.val = EXTMEM_CORE0_IBUS_ACS_MSK_IC_INT_CLR |
+            EXTMEM_CORE0_IBUS_WR_IC_INT_CLR |
+            EXTMEM_CORE0_IBUS_REJECT_INT_CLR |
+            EXTMEM_CORE0_DBUS_ACS_MSK_DC_INT_CLR |
+            EXTMEM_CORE0_DBUS_REJECT_INT_CLR |
+            0;
+        EXTMEM.core0_acs_cache_int_ena.val = EXTMEM_CORE0_IBUS_ACS_MSK_IC_INT_ENA |
+            EXTMEM_CORE0_IBUS_WR_IC_INT_ENA |
+            EXTMEM_CORE0_IBUS_REJECT_INT_ENA |
+            EXTMEM_CORE0_DBUS_ACS_MSK_DC_INT_ENA |
+            EXTMEM_CORE0_DBUS_REJECT_INT_ENA |
+            0;
+    }
+    else
+    {
         esp_rom_route_intr_matrix(core_id, ETS_CACHE_CORE1_ACS_INTR_SOURCE, ETS_CACHEERR_INUM);
 
-        /* On the hardware side, stat by clearing all the bits reponsible for
-         * enabling cache access error interrupts.  */
-        ESP_DRAM_LOGV(TAG, "core 1 access error intr clr & ena mask is: 0x%x", CACHE_LL_L1_ACCESS_EVENT_MASK);
-        cache_ll_l1_clear_access_error_intr(1, CACHE_LL_L1_ACCESS_EVENT_MASK);
-        cache_ll_l1_enable_access_error_intr(1, CACHE_LL_L1_ACCESS_EVENT_MASK);
+        EXTMEM.core1_acs_cache_int_clr.val = EXTMEM_CORE1_IBUS_ACS_MSK_IC_INT_CLR |
+            EXTMEM_CORE1_IBUS_WR_IC_INT_CLR |
+            EXTMEM_CORE1_IBUS_REJECT_INT_CLR |
+            EXTMEM_CORE1_DBUS_ACS_MSK_DC_INT_CLR |
+            EXTMEM_CORE1_DBUS_REJECT_INT_CLR |
+            0;
+        EXTMEM.core1_acs_cache_int_ena.val = EXTMEM_CORE1_IBUS_ACS_MSK_IC_INT_ENA |
+            EXTMEM_CORE1_IBUS_WR_IC_INT_ENA |
+            EXTMEM_CORE1_IBUS_REJECT_INT_ENA |
+            EXTMEM_CORE1_DBUS_ACS_MSK_DC_INT_ENA |
+            EXTMEM_CORE1_DBUS_REJECT_INT_ENA |
+            0;
     }
 
     SOC_enable_intr_nb(ETS_CACHEERR_INUM);

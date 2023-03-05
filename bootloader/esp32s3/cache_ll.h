@@ -46,7 +46,6 @@ enum cache_type_t
 #define CACHE_LL_L1_ILG_EVENT_ICACHE_PRELOAD_OP_FAULT    (1<<1)
 #define CACHE_LL_L1_ILG_EVENT_ICACHE_SYNC_OP_FAULT       (1<<0)
 
-
 /**
  * @brief Get the buses of a particular cache that are mapped to a virtual address range
  *
@@ -57,9 +56,6 @@ enum cache_type_t
  * @param vaddr_start       virtual address start
  * @param len               vaddr length
  */
-#if !BOOTLOADER_BUILD
-__attribute__((always_inline))
-#endif
 static inline unsigned cache_ll_l1_get_bus(uint32_t cache_id, uint32_t vaddr_start, uint32_t len)
 {
     assert(cache_id == 0 || cache_id == 1);
@@ -81,9 +77,6 @@ static inline unsigned cache_ll_l1_get_bus(uint32_t cache_id, uint32_t vaddr_sta
  * @param cache_id    cache ID (when l1 cache is per core)
  * @param mask        To know which buses should be enabled
  */
-#if !BOOTLOADER_BUILD
-__attribute__((always_inline))
-#endif
 static inline void cache_ll_l1_enable_bus(uint32_t cache_id, unsigned mask)
 {
     uint32_t ibus_mask = 0;
@@ -109,7 +102,6 @@ static inline void cache_ll_l1_enable_bus(uint32_t cache_id, unsigned mask)
  * @param cache_id    cache ID (when l1 cache is per core)
  * @param mask        To know which buses should be disabled
  */
-__attribute__((always_inline))
 static inline void cache_ll_l1_disable_bus(uint32_t cache_id, unsigned mask)
 {
     assert(cache_id == 0 || cache_id == 1);

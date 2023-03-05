@@ -12,7 +12,7 @@ void TRNG_initialize(void)
         High Speed ADC
     */
     periph_module_enable(PERIPH_RNG_MODULE);
-    RC_FAST_SCLK_ref();
+    CLK_SCLK_RC_FAST_ref();
 
     // what aobut SAR ADC?
 }

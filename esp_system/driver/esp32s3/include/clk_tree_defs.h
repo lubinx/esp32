@@ -46,19 +46,19 @@
     // alias
     typedef periph_module_t         PERIPH_module_t;
 
-// provided source clocks
+// provided source clocks, its XTAL/RC(fast/slow)
     #define XTAL_32M                    (32000000U)
     #define XTAL_40M                    (40000000U)
     #define XTAL32K_FREQ                (32768U)
     #define RC_FAST_FREQ                (20000000U)         // SOO..RC_FAST_FREQ is 20M, not documented 17.5M
     #define RC_SLOW_FREQ                (136000U)
 
-    // this is tested minimal CPU working freq, maybe caused by freertos
-    #define MINIAL_CPU_WORK_FREQ        (4000000U)
-
 // fixed divider
     #define XTAL_D2_FREQ                (XTAL_FREQ / 2)
     #define RC_FAST_D256_FREQ           (RC_FAST_FREQ / 256)
+
+// this is tested minimal CPU working freq is 4M, any value smaller than this halt the CPU
+    #define MINIAL_CPU_WORK_FREQ        (4000000U)
 
     enum PLL_freq_sel_t
     {
@@ -84,7 +84,7 @@
     enum RTC_sclk_sel_t
     {
         RTC_SCLK_SEL_RC_SLOW        = 0,
-        RTC_SCLK_SEL_XTAL,
+        RTC_SCLK_SEL_XTAL32K,
         RTC_SLOW_SCLK_SEL_RC_FAST_D256,
     };
     typedef enum RTC_sclk_sel_t     RTC_sclk_sel_t;

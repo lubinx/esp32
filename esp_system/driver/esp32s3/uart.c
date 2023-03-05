@@ -184,13 +184,13 @@ int UART_configure(uart_dev_t *dev, uint32_t bps, enum UART_parity_t parity, enu
     else
         return ENODEV;
 
-    if (CLK_TREE_periph_is_enable(uart_module))
+    if (CLK_periph_is_enable(uart_module))
     {
         dev->int_ena.val = 0;
         while (0 != dev->status.txfifo_cnt) sched_yield();
     }
     else
-        CLK_TREE_periph_enable(uart_module);
+        CLK_periph_enable(uart_module);
 
     // uart normal
     dev->rs485_conf.val = 0;
@@ -239,7 +239,7 @@ int UART_configure(uart_dev_t *dev, uint32_t bps, enum UART_parity_t parity, enu
         dev->conf0.stop_bit_num = 2;
     */
     }
-    uint64_t sclk_freq = CLK_TREE_uart_sclk_freq(dev);
+    uint64_t sclk_freq = CLK_uart_sclk_freq(dev);
 
     // calucate baudrate
     int sclk_div = (sclk_freq + 4095 * bps - 1) / (4095 * bps);
@@ -258,7 +258,7 @@ int UART_configure(uart_dev_t *dev, uint32_t bps, enum UART_parity_t parity, enu
     if (false)
     {
 uart_configure_fail_exit:
-        CLK_TREE_periph_disable(uart_module);
+        CLK_periph_disable(uart_module);
     }
     else
         retval = 0;
@@ -279,13 +279,13 @@ int UART_deconfigure(uart_dev_t *dev)
     else
         return ENODEV;
 
-    CLK_TREE_periph_disable(uart_module);
+    CLK_periph_disable(uart_module);
     return 0;
 }
 
 uint32_t UART_get_baudrate(uart_dev_t *dev)
 {
-    return (CLK_TREE_uart_sclk_freq(dev) << 4) / (
+    return (CLK_uart_sclk_freq(dev) << 4) / (
         ((dev->clkdiv.clkdiv << 4) | dev->clkdiv.clkdiv_frag) * (dev->clk_conf.sclk_div_num + 1)
     );
 }

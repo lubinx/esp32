@@ -31,16 +31,16 @@ int main(void)
     (void)fd;
 
     printf("Minimum free heap size: %d bytes\n", heap_caps_get_minimum_free_size(MALLOC_CAP_DEFAULT));
-    printf("pll frequency: %llu MHz\n", CLK_TREE_pll_freq() / 1000000);
-    printf("cpu frequency: %llu MHz\n", CLK_TREE_cpu_freq() / 1000000);
-    printf("ahb frequency: %llu MHz\n", CLK_TREE_ahb_freq() / 1000000);
+    printf("pll frequency: %llu MHz\n", CLK_pll_freq() / 1000000);
+    printf("cpu frequency: %llu MHz\n", CLK_cpu_freq() / 1000000);
+    printf("ahb frequency: %llu MHz\n", CLK_ahb_freq() / 1000000);
 
-    if (CLK_TREE_periph_is_enable(PERIPH_UART0_MODULE))
-        printf("uart0: %lu bps sclk: %llu\n", UART_get_baudrate(&UART0), CLK_TREE_uart_sclk_freq(&UART0));
-    if (CLK_TREE_periph_is_enable(PERIPH_UART1_MODULE))
-        printf("uart1: %lu bps sclk: %llu\n", UART_get_baudrate(&UART1), CLK_TREE_uart_sclk_freq(&UART1));
-    if (CLK_TREE_periph_is_enable(PERIPH_UART2_MODULE))
-        printf("uart2: %lu bps sclk: %llu\n", UART_get_baudrate(&UART2), CLK_TREE_uart_sclk_freq(&UART2));
+    if (CLK_periph_is_enable(PERIPH_UART0_MODULE))
+        printf("uart0: %lu bps sclk: %llu\n", UART_get_baudrate(&UART0), CLK_uart_sclk_freq(&UART0));
+    if (CLK_periph_is_enable(PERIPH_UART1_MODULE))
+        printf("uart1: %lu bps sclk: %llu\n", UART_get_baudrate(&UART1), CLK_uart_sclk_freq(&UART1));
+    if (CLK_periph_is_enable(PERIPH_UART2_MODULE))
+        printf("uart2: %lu bps sclk: %llu\n", UART_get_baudrate(&UART2), CLK_uart_sclk_freq(&UART2));
 
     printf("\nmalloc 32k test...\n");
     void *ptr = malloc(32768);
@@ -88,12 +88,22 @@ int main(void)
     printf("infinite loop...\n");
     fflush(stdout);
 
+
+    RTCCNTL.time_low0 = 34000 * 1000;
+
     while (1)
     {
         sem_post(&sema);
 
-        printf("thread/cpu (0 <=> %d)\n", __get_CORE_ID());
+        RTCCNTL.time_update.update = 1;
+
+        uint64_t t_slp = (uint64_t)RTCCNTL.slp_timer1.slp_val_hi << 32 | RTCCNTL.slp_timer0;
+        uint64_t t1 = (uint64_t)RTCCNTL.time_high0.rtc_timer_value0_high << 32 | RTCCNTL.time_low0;
+        uint64_t t2 = (uint64_t)RTCCNTL.time_high1.rtc_timer_value1_high << 32 | RTCCNTL.time_low1;
+
+        printf("thread/cpu (0 <=> %d) tick: %llu/%llu/%llu\n", __get_CORE_ID(), t_slp, t1, t2);
         fflush(stdout);
+
 
         msleep(500);
     }
@@ -111,12 +121,7 @@ static void *blink_thread1(void *arg)
         fflush(stdout);
 
         msleep(600);
-        /*
-        for (int i = 0; i < 1000; i ++)
-            usleep(800);
-        */
     }
-
 }
 
 static void *blink_thread2(void *arg)

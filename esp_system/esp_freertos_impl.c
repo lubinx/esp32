@@ -53,12 +53,12 @@ void IRAM_ATTR esp_vApplicationIdleHook(void)
 
 uint64_t systimer_ticks_to_us(uint64_t ticks)
 {
-    return ticks * 1000000 / CLK_TREE_systimer_freq();
+    return ticks * 1000000 / CLK_systimer_freq();
 }
 
 uint64_t systimer_us_to_ticks(uint64_t us)
 {
-    return us * CLK_TREE_systimer_freq() / 1000000;
+    return us * CLK_systimer_freq() / 1000000;
 }
 
 /****************************************************************************
