@@ -135,7 +135,8 @@ soo..the esp-idf manual is not well documented
 
     enum SYSTIMER_sclk_sel_t
     {
-        SYSTIMER_SCLK_SEL_XTAL      = 0
+        SYSTIMER_SCLK_SEL_XTAL      = 0,
+        // SYSTIMER_SCLK_SEL_APB    <== no selectable? fixed at 16M
     };
     typedef enum SYSTIMER_sclk_sel_t    SYSTIMER_sclk_sel_t;
 
