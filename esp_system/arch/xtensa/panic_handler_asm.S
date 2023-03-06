@@ -2,7 +2,7 @@
 #include "soc/soc.h"
 
 /*
-    this defined in frreertos port_xtensa/include
+    this defined in frreertos xtensa/include
 */
 // TODO: maybe move panic_handler_asm into rtos implements? but implement echo/print functions in esp_system
 #include "xtensa_rtos.h"

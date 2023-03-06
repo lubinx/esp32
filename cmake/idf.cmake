@@ -96,7 +96,7 @@ list(APPEND IDF_COMPILE_OPTIONS
     "-Wno-array-bounds"         # freertos
     "-Wno-conversion"
     "-Wno-format"
-    "-Wno-unused-parameter"
+    # "-Wno-unused-parameter"
     # "-fno-jump-tables"
     # "-fno-tree-switch-conversion"
     "$<$<COMPILE_LANGUAGE:C>:-fstrict-volatile-bitfields>"

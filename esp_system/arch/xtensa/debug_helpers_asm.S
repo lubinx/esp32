@@ -15,7 +15,6 @@
 #include <xtensa/coreasm.h>
 #include <xtensa/corebits.h>
 #include <xtensa/config/system.h>
-#include <xtensa/hal.h>
 
 /*
  * esp_backtrace_get_start(uint32_t *pc, uint32_t *sp, uint32_t *next_pc)
