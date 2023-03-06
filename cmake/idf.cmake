@@ -113,8 +113,9 @@ list(APPEND IDF_KERNEL_COMPONENTS
 
 # OBSOLETED_COMPONENTS: force remove REQUIRES & PRIV_REQUIRES
 list(APPEND OBSOLETED_COMPONENTS
-    "esp_rom"
-    "vfs"
+    "esp_rom"       # merged into esp_system
+    "esp_ringbuf"   # merged into freertos
+    "vfs"           # merged into posix
     # "hal"
     # "spi_flash"
     # "esp_hw_support"
