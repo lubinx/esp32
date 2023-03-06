@@ -10,7 +10,6 @@
 #include "FreeRTOS.h"
 #include "task.h"   //For vApplicationStackOverflowHook
 #include "portmacro.h"
-#include "spinlock.h"
 #include "xt_instr_macros.h"
 #include "xtensa/xtensa_context.h"
 #include "xtensa/corebits.h"

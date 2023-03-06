@@ -44,11 +44,11 @@
 extern "C" {
 #endif
 
-#include <xtensa/hal.h>
+// #include <xtensa/hal.h>
 #include <xtensa/config/core.h>
 #include <xtensa/config/system.h>	/* required for XSHAL_CLIB */
 
-#include "xtensa_context.h"
+#include "xtensa/xtensa_context.h"
 
 
 /*-----------------------------------------------------------------------------

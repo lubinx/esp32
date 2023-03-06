@@ -213,12 +213,11 @@ into an array of handlers of prototype 'unsigned h(unsigned)'.
 To enable interrupt/exception hooks, compile the RTOS with '-DXT_INTEXC_HOOKS'.
 
 *******************************************************************************/
-
 #define XT_INTEXC_HOOK_NUM  (1 + XCHAL_NUM_INTLEVELS + XCHAL_HAVE_NMI)
 
 #ifndef __ASSEMBLER__
-typedef unsigned (*XT_INTEXC_HOOK)(unsigned cause);
-extern  volatile XT_INTEXC_HOOK _xt_intexc_hooks[XT_INTEXC_HOOK_NUM];
+    typedef unsigned (*XT_INTEXC_HOOK)(unsigned cause);
+    extern  volatile XT_INTEXC_HOOK _xt_intexc_hooks[XT_INTEXC_HOOK_NUM];
 #endif
 
 
@@ -231,17 +230,14 @@ These headers are included last so they can use the RTOS definitions above.
 
 *******************************************************************************/
 
-#include    "xtensa_context.h"
+#include "xtensa/xtensa_context.h"
 
 #ifdef XT_RTOS_TIMER_INT
-#include    "xtensa_timer.h"
+    #include "xtensa_timer.h"
 #endif
 
-
 /*******************************************************************************
-
 Xtensa Port Version.
-
 *******************************************************************************/
 
 #define XTENSA_PORT_VERSION             1.7

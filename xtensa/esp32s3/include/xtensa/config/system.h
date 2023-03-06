@@ -35,10 +35,6 @@
 #ifndef XTENSA_CONFIG_SYSTEM_H
 #define XTENSA_CONFIG_SYSTEM_H
 
-/*#include <xtensa/hal.h>*/
-
-
-
 /*----------------------------------------------------------------------
 				CONFIGURED SOFTWARE OPTIONS
   ----------------------------------------------------------------------*/

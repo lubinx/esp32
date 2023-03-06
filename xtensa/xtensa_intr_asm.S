@@ -33,7 +33,6 @@
  * Also see xtensa_intr.c and xtensa_vectors.S.
  */
 
-#include <xtensa/hal.h>
 #include <xtensa/config/core.h>
 #include "xtensa/xtensa_context.h"
 

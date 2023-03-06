@@ -8,11 +8,12 @@
 
 #include <stdint.h>
 
-#include "spinlock.h"
 #include "xtensa/xtruntime.h"
 #include "xtensa/config/core.h"
 #include "xtensa/config/core-isa.h"
 #include "xtensa/config/specreg.h"
+#include "xtensa/spinlock.h"
+
 #include "xt_instr_macros.h"
 
 #include "esp_macros.h"

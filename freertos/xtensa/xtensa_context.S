@@ -57,7 +57,6 @@ NOERROR: .error "C preprocessor needed for this file: make sure its filename\
 
 
 #include "xtensa_rtos.h"
-#include "xtensa_context.h"
 #include "xt_asm_utils.h"
 
 #ifdef XT_USE_OVLY
