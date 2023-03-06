@@ -20,19 +20,19 @@ extern __attribute__((nothrow))
  ****************************************************************************/
     // PLL
 extern __attribute__((nothrow))
-    int CLK_pll_conf(PLL_freq_sel_t sel);
+    int CLK_pll_conf(enum PLL_freq_sel_t sel);
 extern __attribute__((nothrow, const))
     uint64_t CLK_pll_freq(void);
 
     // CPU
 extern __attribute__((nothrow))
-    int CLK_cpu_conf(CPU_sclk_sel_t sel, uint32_t div);
+    int CLK_cpu_conf(enum CPU_sclk_sel_t sel, uint32_t div);
 extern __attribute__((nothrow, const))
     uint64_t CLK_cpu_freq(void);
 
     // SysTimer
 extern __attribute__((nothrow))
-    int CLK_systimer_conf(SYSTIMER_sclk_sel_t sel);
+    int CLK_systimer_conf(enum SYSTIMER_sclk_sel_t sel);
 extern __attribute__((nothrow, const))
     uint64_t CLK_systimer_freq(void);
 
@@ -44,7 +44,7 @@ extern __attribute__((nothrow, const))
 
     // RTC
 extern __attribute__((nothrow))
-    int CLK_rtc_conf(RTC_sclk_sel_t sel);
+    int CLK_rtc_conf(enum RTC_sclk_sel_t sel);
 extern __attribute__((nothrow, const))
     uint64_t CLK_rtc_freq(void);
 

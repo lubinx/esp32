@@ -9,10 +9,11 @@ list(APPEND includes
 )
 
 list(APPEND srcs
-    "${CMAKE_CURRENT_LIST_DIR}/${IDF_TARGET}/soc.c"
     "${CMAKE_CURRENT_LIST_DIR}/${IDF_TARGET}/clk_tree.c"
-    "${CMAKE_CURRENT_LIST_DIR}/${IDF_TARGET}/uart.c"
+    "${CMAKE_CURRENT_LIST_DIR}/${IDF_TARGET}/i2c.c"
+    "${CMAKE_CURRENT_LIST_DIR}/${IDF_TARGET}/soc.c"
     "${CMAKE_CURRENT_LIST_DIR}/${IDF_TARGET}/true-rng.c"
+    "${CMAKE_CURRENT_LIST_DIR}/${IDF_TARGET}/uart.c"
 )
 
 if (CONFIG_IDF_TARGET_ESP32S3)

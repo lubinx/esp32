@@ -7,6 +7,7 @@
 #include "soc.h"
 #include "clk_tree.h"
 #include "gpio.h"
+#include <sys/mutex.h>
 
 #include "esp_log.h"
 #include "esp_heap_caps.h"
@@ -18,6 +19,7 @@
 
 // pthread_mutex_t mutex;
 static sem_t sema;
+mutex_t mux = MUTEX_INITIALIZER;
 
 static void *blink_thread1(void *arg);
 static void *blink_thread2(void *arg);

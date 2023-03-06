@@ -17,6 +17,8 @@
     };
     typedef struct xt_spinlock_t    spinlock_t;
 
+    #define SPINLOCK_INITIALIZER        {.core_id = 0, .lock_count = 0}
+
 __BEGIN_DECLS
 
 static inline __attribute__((nonnull, nothrow))
@@ -56,7 +58,6 @@ static inline __attribute__((nonnull, nothrow))
     }
 
 // for esp-idf compatiable
-    #define SPINLOCK_INITIALIZER        {.core_id = 0, .lock_count = 0}
     #define SPINLOCK_WAIT_FOREVER       ((unsigned)(-1))
 
 static inline

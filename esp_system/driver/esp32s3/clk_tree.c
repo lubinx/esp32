@@ -190,7 +190,7 @@ static void OSC_configure(void)
     }
 }
 
-int CLK_pll_conf(PLL_freq_sel_t sel)
+int CLK_pll_conf(enum PLL_freq_sel_t sel)
 {
     RTCCNTL.options0.val = RTCCNTL.options0.val & ~(
         RTC_CNTL_BB_I2C_FORCE_PD |
@@ -302,7 +302,7 @@ uint64_t CLK_pll_freq(void)
     }
 }
 
-int CLK_cpu_conf(CPU_sclk_sel_t sel, uint32_t div)
+int CLK_cpu_conf(enum CPU_sclk_sel_t sel, uint32_t div)
 {
     if (CPU_SCLK_SEL_XTAL == sel && MINIAL_CPU_WORK_FREQ > XTAL_FREQ / div)
         return EINVAL;
@@ -312,7 +312,7 @@ int CLK_cpu_conf(CPU_sclk_sel_t sel, uint32_t div)
     if (CPU_SCLK_SEL_RC_FAST == sel)
         CLK_SCLK_RC_FAST_ref();
 
-    CPU_sclk_sel_t old_sel = SYSTEM.sysclk_conf.soc_clk_sel;
+    enum CPU_sclk_sel_t old_sel = SYSTEM.sysclk_conf.soc_clk_sel;
 
     /// @ref Table 7-2 / Table 7-3
     switch (sel)
@@ -399,7 +399,7 @@ uint64_t CLK_cpu_freq(void)
     return 0;
 }
 
-int CLK_systimer_conf(SYSTIMER_sclk_sel_t sel)
+int CLK_systimer_conf(enum SYSTIMER_sclk_sel_t sel)
 {
     if (SYSTIMER_SCLK_SEL_XTAL != sel)
         return EINVAL;
@@ -432,7 +432,7 @@ uint64_t CLK_ahb_freq(void)
 uint64_t CLK_apb_freq(void)
     __attribute__((alias(("CLK_ahb_freq"))));
 
-int CLK_rtc_conf(RTC_sclk_sel_t sel)
+int CLK_rtc_conf(enum RTC_sclk_sel_t sel)
 {
     /**
      *  NOTE: keep in mind RTC counter is 48bits, count year = pow(2, 48) / ticks / 86400 / 365
@@ -455,7 +455,7 @@ int CLK_rtc_conf(RTC_sclk_sel_t sel)
         break;
     }
 
-    RTC_sclk_sel_t old_sel = RTCCNTL.clk_conf.ana_clk_rtc_sel;
+    enum RTC_sclk_sel_t old_sel = RTCCNTL.clk_conf.ana_clk_rtc_sel;
     RTCCNTL.clk_conf.ana_clk_rtc_sel = sel;
 
     if (RTC_SLOW_SCLK_SEL_RC_FAST_D256 == old_sel)
@@ -517,12 +517,12 @@ unsigned CLK_SCLK_RC_FAST_release(void)
     return refcount;
 }
 
-int CLK_rtc_fast_sclk_sel(RTC_FAST_sclk_sel_t sel, uint32_t div)
+int CLK_rtc_fast_sclk_sel(enum RTC_FAST_sclk_sel_t sel, uint32_t div)
 {
     if (RTC_FAST_SCLK_SEL_RC_FAST == sel)
         CLK_SCLK_RC_FAST_ref();
 
-    RTC_FAST_sclk_sel_t old_sel = RTCCNTL.clk_conf.fast_clk_rtc_sel;
+    enum RTC_FAST_sclk_sel_t old_sel = RTCCNTL.clk_conf.fast_clk_rtc_sel;
     RTCCNTL.clk_conf.fast_clk_rtc_sel = sel;
 
     if (RTC_FAST_SCLK_SEL_RC_FAST == old_sel)
@@ -543,12 +543,12 @@ uint64_t CLK_rtc_fast_sclk_freq(void)
     }
 }
 
-int CLK_uart_sclk_sel(uart_dev_t *dev, UART_sclk_sel_t sel)
+int CLK_uart_sclk_sel(uart_dev_t *dev, enum UART_sclk_sel_t sel)
 {
     if (UART_SCLK_SEL_RC_FAST == sel)
         CLK_SCLK_RC_FAST_ref();
 
-    UART_sclk_sel_t old_sel = dev->clk_conf.sclk_sel;
+    enum UART_sclk_sel_t old_sel = dev->clk_conf.sclk_sel;
     dev->clk_conf.sclk_sel = sel;
 
     if (UART_SCLK_SEL_RC_FAST == old_sel)
@@ -569,12 +569,12 @@ uint64_t CLK_uart_sclk_freq(uart_dev_t *dev)
     }
 }
 
-int CLK_i2c_sclk_sel(i2c_dev_t *dev, I2C_sclk_sel_t sel)
+int CLK_i2c_sclk_sel(i2c_dev_t *dev, enum I2C_sclk_sel_t sel)
 {
     if (I2C_SCLK_SEL_RC_FAST == sel)
         CLK_SCLK_RC_FAST_ref();
 
-    I2C_sclk_sel_t old_sel = dev->clk_conf.sclk_sel;
+    enum I2C_sclk_sel_t old_sel = dev->clk_conf.sclk_sel;
     dev->clk_conf.sclk_sel = sel;
 
     if (I2C_SCLK_SEL_RC_FAST == old_sel)
@@ -592,7 +592,7 @@ uint64_t CLK_i2c_sclk_freq(i2c_dev_t *dev)
     }
 }
 
-int CLK_i2s_rx_sclk_sel(i2s_dev_t *dev, I2S_sclk_sel_t sel)
+int CLK_i2s_rx_sclk_sel(i2s_dev_t *dev, enum I2S_sclk_sel_t sel)
 {
     dev->rx_clkm_conf.rx_clk_sel = sel;
     return 0;
@@ -611,7 +611,7 @@ uint64_t CLK_i2s_rx_sclk_freq(i2s_dev_t *dev)
     }
 }
 
-int CLK_i2s_tx_sclk_sel(i2s_dev_t *dev, I2S_sclk_sel_t sel)
+int CLK_i2s_tx_sclk_sel(i2s_dev_t *dev, enum I2S_sclk_sel_t sel)
 {
     dev->tx_clkm_conf.tx_clk_sel = sel;
     return 0;

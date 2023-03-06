@@ -183,6 +183,7 @@ static inline uint32_t cache_ll_l1_get_access_error_intr_status(uint32_t cache_i
  */
 static inline void cache_ll_l1_enable_illegal_error_intr(uint32_t cache_id, uint32_t mask)
 {
+    (void)cache_id;
     SET_PERI_REG_MASK(EXTMEM_CACHE_ILG_INT_ENA_REG, mask);
 }
 
@@ -194,6 +195,7 @@ static inline void cache_ll_l1_enable_illegal_error_intr(uint32_t cache_id, uint
  */
 static inline void cache_ll_l1_clear_illegal_error_intr(uint32_t cache_id, uint32_t mask)
 {
+    (void)cache_id;
     SET_PERI_REG_MASK(EXTMEM_CACHE_ILG_INT_CLR_REG, mask);
 }
 
@@ -207,6 +209,7 @@ static inline void cache_ll_l1_clear_illegal_error_intr(uint32_t cache_id, uint3
  */
 static inline uint32_t cache_ll_l1_get_illegal_error_intr_status(uint32_t cache_id, uint32_t mask)
 {
+    (void)cache_id;
     return GET_PERI_REG_MASK(EXTMEM_CACHE_ILG_INT_ST_REG, mask);
 }
 

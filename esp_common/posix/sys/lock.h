@@ -1,5 +1,7 @@
-#pragma once
+#ifndef __SYS_LOCK_H
+#define __SYS_LOCK_H                    1
 
+#include <features.h>
 #include_next <sys/lock.h>
 
 typedef _LOCK_T _lock_t;
@@ -8,7 +10,8 @@ struct __lock
 {
     int __pad[20];
 };
-typedef struct __lock   sys_static_lock_t;
+
+__BEGIN_DECLS
 
 extern __attribute__((nonnull, nothrow))
     void libc_lock_init(_LOCK_T *lock);
@@ -43,6 +46,7 @@ extern __attribute__((nonnull, nothrow))
 /***************************************************************************/
 /** esp-idf
 ****************************************************************************/
+/*
 static inline
     void _lock_init(_LOCK_T *lock)
     {
@@ -66,6 +70,7 @@ static inline
     {
         libc_lock_close_recursive(*lock);
     }
+*/
 
 extern __attribute__((nonnull, nothrow))
     int __esp_lock_impl(_LOCK_T *lock, int (*libc_lock_func)(_LOCK_T lock), char const *__function__);
@@ -105,3 +110,6 @@ static inline
     {
         __esp_lock_impl(lock, (int (*)(_LOCK_T))libc_lock_release, __func__);
     }
+
+__END_DECLS
+#endif

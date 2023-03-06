@@ -40,12 +40,16 @@
 
     #define PTHREAD_SPINLOCK_INITIALIZER   {0}
 
+#include <sys/mutex.h>
+
 // TODO: porting
 #include <sys/_pthreadtypes.h>
     typedef void *(*pthread_routine_t)(void *arg);
 
     typedef struct pthread_rwlockattr_t pthread_rwlockattr_t;
     typedef struct pthread_rwlock_t pthread_rwlock_t;
+
+    // typedef struct pthread_mutex_t pthread_mutex_t;
 
     #define PTHREAD_MUTEX_INITIALIZER   _PTHREAD_MUTEX_INITIALIZER
 

@@ -3,12 +3,15 @@
 
 #include <sys/lock.h>
 #include <sys/errno.h>
+#include <sys/mutex.h>
 
 #include "esp_log.h"
 #include "esp_heap_caps.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
+
+static spinlock_t mutex_atomic = SPINLOCK_INITIALIZER;
 
 // requirement checking
 static_assert(sizeof(struct __lock) != sizeof(StaticSemaphore_t), "sizeof(struct __lock) != sizeof(StaticSemaphore_t)");
@@ -54,7 +57,7 @@ extern struct __lock    __lock___tz_mutex               __attribute__((alias("__
 extern struct __lock    __lock___dd_hash_mutex          __attribute__((alias("__dd_hash_mutex")));
 extern struct __lock    __lock___arc4random_mutex       __attribute__((alias("__arc4random_mutex")));
 
-void __LOCK_retarget(void)
+void __LOCK_retarget_init(void)
 {
     xSemaphoreCreateRecursiveMutexStatic((void *)&__lock___sinit_recursive_mutex.__pad);
     xSemaphoreCreateRecursiveMutexStatic((void *)&__lock___sfp_recursive_mutex.__pad);
@@ -74,7 +77,7 @@ void __LOCK_retarget(void)
 }
 
 /****************************************************************************
- * @implements: static locks
+ * @implements
 *****************************************************************************/
 void libc_lock_init(_LOCK_T *lock)
 {
@@ -98,7 +101,7 @@ void libc__lock_sinit_recursive(_LOCK_T lock)
 
 void libc_lock_close(_LOCK_T lock)
 {
-    vSemaphoreDelete(lock->__pad);
+    vSemaphoreDelete((void *)&lock->__pad);
 }
 
 void libc_lock_acquire(_LOCK_T lock)
@@ -120,7 +123,6 @@ void libc_lock_acquire_recursive(_LOCK_T lock)
 {
     xSemaphoreTakeRecursive((void *)&lock->__pad, portMAX_DELAY);
 }
-
 
 int libc_lock_try_acquire(_LOCK_T lock)
 {
@@ -171,6 +173,51 @@ void __retarget_lock_close(_LOCK_T lock)
 
 void __retarget_lock_close_recursive(_LOCK_T lock)
     __attribute__((alias("libc_lock_close")));
+
+/****************************************************************************
+ * @implements: mutex
+*****************************************************************************/
+mutex_t *mutex_create(int flags)
+{
+    if (MUTEX_FLAG_RECURSIVE == flags)
+        return (mutex_t *)xSemaphoreCreateRecursiveMutex();
+    else
+        return (mutex_t *)xSemaphoreCreateMutex();
+}
+
+int mutex_destroy(mutex_t *mutex)
+{
+    vSemaphoreDelete((void *)&mutex->lock.__pad);
+    return 0;
+}
+
+int mutex_init(mutex_t *mutex, int flags)
+{
+    if (MUTEX_FLAG_RECURSIVE == flags)
+        xSemaphoreCreateRecursiveMutexStatic((void *)mutex->lock.__pad);
+    else
+        xSemaphoreCreateMutexStatic((void *)mutex->lock.__pad);
+
+    return 0;
+}
+
+int mutex_lock(mutex_t *mutex)
+{
+    spin_lock(&mutex_atomic);
+
+    if (~MUTEX_FLAG_NORMAL == mutex->__init)
+        mutex_init(mutex, MUTEX_FLAG_NORMAL);
+    else if (~MUTEX_FLAG_RECURSIVE == mutex->__init)
+        mutex_init(mutex, MUTEX_FLAG_RECURSIVE);
+    spin_unlock(&mutex_atomic);
+
+    return 0;
+}
+
+int mutex_unlock(mutex_t *mutex)
+{
+    return 0;
+}
 
 /****************************************************************************
  * @implements: newlib retargeting

@@ -15,28 +15,10 @@
 #include "esp_rom_sys.h"
 #include "esp_heap_caps_init.h"
 
-/*
-#if CONFIG_IDF_TARGET_ESP32
-    #include "esp32/rom/libc_stubs.h"
-#elif CONFIG_IDF_TARGET_ESP32S2
-    #include "esp32s2/rom/libc_stubs.h"
-#elif CONFIG_IDF_TARGET_ESP32S3
-    #include "esp32s3/rom/libc_stubs.h"
-#elif CONFIG_IDF_TARGET_ESP32C3
-    #include "esp32c3/rom/libc_stubs.h"
-#elif CONFIG_IDF_TARGET_ESP32H4
-    #include "esp32h4/rom/libc_stubs.h"
-#elif CONFIG_IDF_TARGET_ESP32C2
-    #include "esp32c2/rom/libc_stubs.h"
-#elif CONFIG_IDF_TARGET_ESP32C6
-    #include "esp32c6/rom/libc_stubs.h"
-#endif
-*/
-
 /****************************************************************************
  * @imports
 *****************************************************************************/
-extern void __LOCK_retarget(void);
+extern void __LOCK_retarget_init(void);
 extern void __FILESYSTEM_init(void);
 extern void __IO_retarget(void);
 
@@ -55,18 +37,7 @@ static struct _reent __reent = {0};
 void __libc_retarget_init(void)
 {
     heap_caps_init();
-    __LOCK_retarget();
-
-    /*
-    #if CONFIG_IDF_TARGET_ESP32
-        syscall_table_ptr_pro = syscall_table_ptr_app = &__stub_table;
-    #elif CONFIG_IDF_TARGET_ESP32S2
-        syscall_table_ptr_pro = &__stub_table;
-    #elif CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32H4 \
-        || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C6
-        syscall_table_ptr = (void *)&__stub_table;
-    #endif
-    */
+    __LOCK_retarget_init();
 
     _GLOBAL_REENT = &__reent;
     __sinit(&__reent);
@@ -152,7 +123,7 @@ __WEAK ssize_t _write_r(struct _reent *r, int fd, void const *buf, size_t count)
 /****************************************************************************
  *  @internal
 *****************************************************************************/
-/*
+/* REVIEW: it seems deprecated if we implements all libc retargets
 extern void _cleanup_r(struct _reent *r);
 
 extern int _printf_float(struct _reent *rptr, void *pdata,

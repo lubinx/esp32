@@ -42,5 +42,6 @@ struct _reent *__getreent(void)
 
 int pthread_setcancelstate(int state, int *oldstate)
 {
+    ARG_UNUSED(state, oldstate);
     return 0;
 }

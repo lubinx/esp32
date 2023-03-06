@@ -621,27 +621,6 @@ int IRAM_ATTR pthread_mutex_lock(pthread_mutex_t *mutex)
     return pthread_mutex_lock_internal((esp_pthread_mutex_t *)*mutex, portMAX_DELAY);
 }
 
-int IRAM_ATTR pthread_mutex_timedlock(pthread_mutex_t *mutex, const struct timespec *timeout)
-{
-    if (!mutex) {
-        return EINVAL;
-    }
-    int res = pthread_mutex_init_if_static(mutex);
-    if (res != 0) {
-        return res;
-    }
-
-    struct timespec currtime;
-    clock_gettime(CLOCK_REALTIME, &currtime);
-    TickType_t tmo = ((timeout->tv_sec - currtime.tv_sec)*1000 +
-                     (timeout->tv_nsec - currtime.tv_nsec)/1000000)/portTICK_PERIOD_MS;
-
-    res = pthread_mutex_lock_internal((esp_pthread_mutex_t *)*mutex, tmo);
-    if (res == EBUSY) {
-        return ETIMEDOUT;
-    }
-    return res;
-}
 
 int IRAM_ATTR pthread_mutex_trylock(pthread_mutex_t *mutex)
 {
