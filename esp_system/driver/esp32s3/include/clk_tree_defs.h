@@ -123,7 +123,6 @@ soo..the esp-idf manual is not well documented
         PLL_FREQ_SEL_320M           = 0,
         PLL_FREQ_SEL_480M
     };
-    typedef enum PLL_freq_sel_t     PLL_freq_sel_t;
 
     enum CPU_sclk_sel_t
     {
@@ -131,14 +130,12 @@ soo..the esp-idf manual is not well documented
         CPU_SCLK_SEL_PLL,
         CPU_SCLK_SEL_RC_FAST
     };
-    typedef enum CPU_sclk_sel_t     CPU_sclk_sel_t;
 
     enum SYSTIMER_sclk_sel_t
     {
         SYSTIMER_SCLK_SEL_XTAL      = 0,
         // SYSTIMER_SCLK_SEL_APB    <== no selectable? fixed at 16M
     };
-    typedef enum SYSTIMER_sclk_sel_t    SYSTIMER_sclk_sel_t;
 
     enum RTC_sclk_sel_t
     {
@@ -146,7 +143,6 @@ soo..the esp-idf manual is not well documented
         RTC_SCLK_SEL_XTAL32K,
         RTC_SLOW_SCLK_SEL_RC_FAST_D256,
     };
-    typedef enum RTC_sclk_sel_t     RTC_sclk_sel_t;
 
     enum RTC_FAST_sclk_sel_t
     {
@@ -155,7 +151,6 @@ soo..the esp-idf manual is not well documented
         // alias
         RTC_FAST_sCLK_SEL_XTAL_DIV = RTC_FAST_SCLK_SEL_XTAL_D2
     };
-    typedef enum RTC_FAST_sclk_sel_t    RTC_FAST_sclk_sel_t;
 
     enum UART_sclk_sel_t
     {
@@ -163,14 +158,12 @@ soo..the esp-idf manual is not well documented
         UART_SCLK_SEL_RC_FAST,
         UART_SCLK_SEL_XTAL
     };
-    typedef enum UART_sclk_sel_t    UART_sclk_sel_t;
 
     enum I2C_sclk_sel_t
     {
         I2C_SCLK_SEL_XTAL           = 0,
         I2C_SCLK_SEL_RC_FAST
     };
-    typedef enum I2C_sclk_sel_t     I2C_sclk_sel_t;
 
     enum I2S_sclk_sel_t
     {
@@ -178,6 +171,5 @@ soo..the esp-idf manual is not well documented
         I2S_SCLK_SEL_PLL_D2,
         I2S_SCLK_SEL_PLL_F160M
     };
-    typedef enum I2S_sclk_sel_t     I2S_sclk_sel_t;
 
 #endif

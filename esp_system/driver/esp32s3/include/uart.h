@@ -4,7 +4,6 @@
 #include <features.h>
 
 #include "hw/uart.h"
-#include "soc/soc_caps.h"
 #include "soc/uart_struct.h"
 
 __BEGIN_DECLS

@@ -25,7 +25,6 @@
 #include <sys/types.h>
 
 #include "glist.h"
-#include "atomic.h"
 // #include "ultracore.h"
 // #include "svc.h"
 
@@ -175,6 +174,11 @@ __BEGIN_DECLS
 /***************************************************************************/
 /** kernel functions
 ****************************************************************************/
+extern __attribute__((nothrow))
+    void KERNEL_spin_lock(void);
+extern __attribute__((nothrow))
+    void KERNEL_spin_unlock(void);
+
     /**
      *  KERNEL_handle_get(): create a handle
      *      @returns
