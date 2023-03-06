@@ -506,13 +506,6 @@ void vRingbufferGetInfo(RingbufHandle_t xRingbuffer,
                         UBaseType_t *uxAcquire,
                         UBaseType_t *uxItemsWaiting);
 
-/**
- * @brief   Debugging function to print the internal pointers in the ring buffer
- *
- * @param   xRingbuffer Ring buffer to show
- */
-void xRingbufferPrintInfo(RingbufHandle_t xRingbuffer);
-
 #ifdef __cplusplus
 }
 #endif

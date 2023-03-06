@@ -11,7 +11,7 @@ set(srcs
 
 set(include_dirs
     "include"                           # For files with #include "freertos/FreeRTOSConfig.h"
-    "port_xtensa/include"
+    "xtensa/include"
     "kernel-smp/include"
 )
 
@@ -22,14 +22,14 @@ set(private_include_dirs
 
 if(CONFIG_IDF_TARGET_ARCH_XTENSA)
     list(APPEND srcs
-        "port_xtensa/port.c"
-        "port_xtensa/portasm.S"
-        "port_xtensa/xtensa_context.S"
-        "port_xtensa/xtensa_overlay_os_hook.c"
-        "port_xtensa/xtensa_vector_defaults.S"
-        "port_xtensa/xtensa_vectors.S"
+        "xtensa/port.c"
+        "xtensa/portasm.S"
+        "xtensa/xtensa_context.S"
+        "xtensa/xtensa_overlay_os_hook.c"
+        "xtensa/xtensa_vector_defaults.S"
+        "xtensa/xtensa_vectors.S"
         # CONFIG_ESP32_IRAM_AS_8BIT_ACCESSIBLE_MEMORY
-        "port_xtensa/xtensa_loadstore_handler.S"
+        "xtensa/xtensa_loadstore_handler.S"
         # esp-idf
         "esp_ringbuf.c"     # TODO: CMAKE: esp_ringbuf remove later
     )

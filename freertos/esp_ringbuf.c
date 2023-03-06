@@ -1350,15 +1350,3 @@ void vRingbufferGetInfo(RingbufHandle_t xRingbuffer,
     }
     portEXIT_CRITICAL(&pxRingbuffer->mux);
 }
-
-void xRingbufferPrintInfo(RingbufHandle_t xRingbuffer)
-{
-    Ringbuffer_t *pxRingbuffer = (Ringbuffer_t *)xRingbuffer;
-    configASSERT(pxRingbuffer);
-    printf("Rb size:%d\tfree: %d\trptr: %d\tfreeptr: %d\twptr: %d, aptr: %d\n",
-           pxRingbuffer->xSize, prvGetFreeSize(pxRingbuffer),
-           pxRingbuffer->pucRead - pxRingbuffer->pucHead,
-           pxRingbuffer->pucFree - pxRingbuffer->pucHead,
-           pxRingbuffer->pucWrite - pxRingbuffer->pucHead,
-           pxRingbuffer->pucAcquire - pxRingbuffer->pucHead);
-}
