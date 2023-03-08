@@ -3,17 +3,18 @@
 #include <semaphore.h>
 #include <sys/errno.h>
 
-#include "esp_log.h"
 #include "clk_tree.h"
+#include "esp_log.h"
 #include "esp_intr_alloc.h"
 #include "soc/soc_caps.h"
 
-#include "uart.h"
 #include "ultracore/kernel.h"
+#include "uart.h"
+#include "soc/uart_reg.h"
 
 static char const *UART_TAG = "uart";
 static char const *RS485_TAG = "rs485";
-static char const *IRDA_TAG = "rs485";
+static char const *IRDA_TAG = "irda";
 
 /****************************************************************************
  *  @def
@@ -21,25 +22,12 @@ static char const *IRDA_TAG = "rs485";
 extern int __stdout_fd;
 
 void UART0_IntrHandler(void *arg);
-void UART2_IntrHandler(void *arg);
 void UART1_IntrHandler(void *arg);
-
-struct UART_context
-{
-    uart_dev_t *dev;
-    intr_handle_t intr_hdl;
-
-    sem_t read_rdy;
-    sem_t write_rdy;
-
-    // tx write to ptr
-    uint8_t *tx_ptr;
-    uint8_t *tx_end;
-};
+void UART2_IntrHandler(void *arg);
 
 enum
 {
-    UART_MODE_UART                  = 0,
+    UART_MODE_UART = 0,
     UART_MODE_RS485_HALF_DUPLEX,
     UART_MODE_IRDA,
     UART_MODE_RS485_COLLISION_DETECT,
@@ -47,21 +35,21 @@ enum
 };
 enum
 {
-    UART_DATA_5_BITS                = 0,
+    UART_DATA_5_BITS = 0,
     UART_DATA_6_BITS,
     UART_DATA_7_BITS,
     UART_DATA_8_BITS
 };
 enum
 {
-    UART_HW_FLOWCTRL_DISABLE        = 0,
+    UART_HW_FLOWCTRL_DISABLE = 0,
     UART_HW_FLOWCTRL_RTS,
     UART_HW_FLOWCTRL_CTS,
     UART_HW_FLOWCTRL_CTS_RTS
 };
 enum
 {
-    UART_SIGNAL_INV_DISABLE         = 0,
+    UART_SIGNAL_INV_DISABLE = 0,
     UART_SIGNAL_IRDA_TX_INV,
     UART_SIGNAL_IRDA_RX_INV,
     UART_SIGNAL_RXD_INV,
@@ -73,32 +61,45 @@ enum
 };
 enum
 {
-    UART_INTR_RXFIFO_FULL           = (1 << 0),
-    UART_INTR_TXFIFO_EMPTY          = (1 << 1),
-    UART_INTR_PARITY_ERR            = (1 << 2),
-    UART_INTR_FRAME_ERR             = (1 << 3),
-    UART_INTR_RXFIFO_OVF            = (1 << 4),
-    UART_INTR_DSR_CHG               = (1 << 5),
-    UART_INTR_CTS_CHG               = (1 << 6),
-    UART_INTR_BRK_DET               = (1 << 7),
-    UART_INTR_RXFIFO_TOUT           = (1 << 8),
-    UART_INTR_SW_XON                = (1 << 9),
-    UART_INTR_SW_XOFF               = (1 << 10),
-    UART_INTR_GLITCH_DET            = (1 << 11),
-    UART_INTR_TX_BRK_DONE           = (1 << 12),
-    UART_INTR_TX_BRK_IDLE           = (1 << 13),
-    UART_INTR_TX_DONE               = (1 << 14),
-    UART_INTR_RS485_PARITY_ERR      = (1 << 15),
-    UART_INTR_RS485_FRAME_ERR       = (1 << 16),
-    UART_INTR_RS485_CLASH           = (1 << 17),
-    UART_INTR_CMD_CHAR_DET          = (1 << 18),
-    UART_INTR_WAKEUP                = (1 << 19),
+    UART_INTR_RXFIFO_FULL = (1 << 0),
+    UART_INTR_TXFIFO_EMPTY = (1 << 1),
+    UART_INTR_PARITY_ERR = (1 << 2),
+    UART_INTR_FRAME_ERR = (1 << 3),
+    UART_INTR_RXFIFO_OVF = (1 << 4),
+    UART_INTR_DSR_CHG = (1 << 5),
+    UART_INTR_CTS_CHG = (1 << 6),
+    UART_INTR_BRK_DET = (1 << 7),
+    UART_INTR_RXFIFO_TOUT = (1 << 8),
+    UART_INTR_SW_XON = (1 << 9),
+    UART_INTR_SW_XOFF = (1 << 10),
+    UART_INTR_GLITCH_DET = (1 << 11),
+    UART_INTR_TX_BRK_DONE = (1 << 12),
+    UART_INTR_TX_BRK_IDLE = (1 << 13),
+    UART_INTR_TX_DONE = (1 << 14),
+    UART_INTR_RS485_PARITY_ERR = (1 << 15),
+    UART_INTR_RS485_FRAME_ERR = (1 << 16),
+    UART_INTR_RS485_CLASH = (1 << 17),
+    UART_INTR_CMD_CHAR_DET = (1 << 18),
+    UART_INTR_WAKEUP = (1 << 19),
+};
+
+struct UART_context
+{
+    uart_dev_t *dev;
+    intr_handle_t intr_hdl;
+
+    sem_t read_rdy;
+    sem_t write_rdy;
+
+    // tx write ptr
+    uint8_t *tx_ptr;
+    uint8_t *tx_end;
 };
 
 /****************************************************************************
  *  @internal
  ****************************************************************************/
-// io
+ // io
 static ssize_t UART_read(int fd, void *buf, size_t bufsize);
 static ssize_t UART_write(int fd, void const *buf, size_t count);
 static int UART_close(int fd);
@@ -106,13 +107,13 @@ static int UART_close(int fd);
 // const
 static struct FD_implement const implement =
 {
-    .close  = UART_close,
-    .read   = UART_read,
-    .write  = UART_write,
+    .close = UART_close,
+    .read = UART_read,
+    .write = UART_write,
 };
 
 // var
-static struct UART_context uart_context[SOC_UART_NUM] = {0};
+static struct UART_context uart_context[SOC_UART_NUM] = { 0 };
 
 /****************************************************************************
  *  @implements
@@ -184,10 +185,16 @@ int UART_configure(uart_dev_t *dev, uint32_t bps, enum UART_parity_t parity, enu
     else
         return ENODEV;
 
-    if (CLK_periph_is_enable(uart_module))
+    if (CLK_periph_is_enabledd(uart_module))
     {
-        dev->int_ena.val = 0;
-        while (0 != dev->status.txfifo_cnt) sched_yield();
+        // UART0 is default esp-idf enabled debug tracing port, it always enabled, but still we need to taking control
+        if (PERIPH_UART0_MODULE == uart_module)
+        {
+            dev->int_ena.val = 0;
+            while (0 != dev->status.txfifo_cnt) sched_yield();
+        }
+        else
+            return EBUSY;
     }
     else
         CLK_periph_enable(uart_module);
@@ -234,21 +241,17 @@ int UART_configure(uart_dev_t *dev, uint32_t bps, enum UART_parity_t parity, enu
     case UART_STOP_BITS_TWO:
         dev->conf0.stop_bit_num = 3;
         break;
-    /*
-        1.5 stopbits?
-        dev->conf0.stop_bit_num = 2;
-    */
     }
     uint64_t sclk_freq = CLK_uart_sclk_freq(dev);
 
-    // calucate baudrate
-    int sclk_div = (sclk_freq + 4095 * bps - 1) / (4095 * bps);
+    // calucate baudrate: UART_CLKDIV_V is max DIV
+    int sclk_div = (sclk_freq + UART_CLKDIV_V * bps - 1) / (UART_CLKDIV_V * bps);
     uint32_t clk_div = ((sclk_freq) << 4) / (bps * sclk_div);
-    // The baud rate configuration register is divided into // an integer part and a fractional part.
+    // baud rate configuration register is divided into // an integer part and a fractional part.
     dev->clkdiv.clkdiv = clk_div >> 4;
-    dev->clkdiv.clkdiv_frag = clk_div &  0xF;
-    dev->clk_conf.sclk_div_num =  sclk_div - 1;
-
+    dev->clkdiv.clkdiv_frag = clk_div & 0xF;
+    dev->clk_conf.sclk_div_num = sclk_div - 1;
+    // set read_rdy when any character in the queue
     dev->conf1.rxfifo_full_thrhd = 1;
 
     dev->int_ena.val = UART_INTR_PARITY_ERR | UART_INTR_FRAME_ERR |
@@ -257,7 +260,7 @@ int UART_configure(uart_dev_t *dev, uint32_t bps, enum UART_parity_t parity, enu
 
     if (false)
     {
-uart_configure_fail_exit:
+    uart_configure_fail_exit:
         CLK_periph_disable(uart_module);
     }
     else
@@ -285,13 +288,12 @@ int UART_deconfigure(uart_dev_t *dev)
 
 uint32_t UART_get_baudrate(uart_dev_t *dev)
 {
-    return (CLK_uart_sclk_freq(dev) << 4) / (
-        ((dev->clkdiv.clkdiv << 4) | dev->clkdiv.clkdiv_frag) * (dev->clk_conf.sclk_div_num + 1)
-    );
+    return (CLK_uart_sclk_freq(dev) << 4) / ((dev->clkdiv.clkdiv << 4) | dev->clkdiv.clkdiv_frag) /
+        (dev->clk_conf.sclk_div_num + 1);
 }
 
 /****************************************************************************
- *  @implements: direct write UART through fifo
+ *  @implements: direct UART fifo I/O
  ****************************************************************************/
 void UART_fifo_tx(uart_dev_t *dev, uint8_t ch)
 {
@@ -313,7 +315,7 @@ int UART_fifo_write(uart_dev_t *dev, void const *buf, unsigned count)
         if (SOC_UART_FIFO_LEN == dev->status.txfifo_cnt)
             break;
         dev->fifo.rxfifo_rd_byte = *((uint8_t *)buf + written);
-        written ++;
+        written++;
     }
     return written;
 }
@@ -326,7 +328,7 @@ int UART_fifo_read(uart_dev_t *dev, void *buf, unsigned bufsize)
         if (0 == dev->status.rxfifo_cnt)
             break;
         *((uint8_t *)buf + readed) = (uint8_t)dev->fifo.rxfifo_rd_byte;
-        readed ++;
+        readed++;
     }
     return readed;
 }
@@ -340,9 +342,9 @@ static ssize_t UART_read(int fd, void *buf, size_t bufsize)
     uart_dev_t *dev = context->dev;
     int retval;
 
-    if (! dev->status.rxfifo_cnt)
+    if (0 == dev->status.rxfifo_cnt)
     {
-        // rxfifo intr status is not automate cleared
+        // rxfifo intr status is not auto cleared
         dev->int_clr.rxfifo_full_int_clr = 1;
         dev->int_ena.rxfifo_full_int_ena = 1;
 
@@ -362,8 +364,12 @@ static ssize_t UART_read(int fd, void *buf, size_t bufsize)
         retval = 0;
 
     if (0 == retval)
+    {
         retval = UART_fifo_read(dev, buf, bufsize);
 
+        if (0 == retval)
+            retval =  __set_errno_neg(EAGAIN);
+    }
     return retval;
 }
 
@@ -389,13 +395,23 @@ static ssize_t UART_write(int fd, void const *buf, size_t count)
         int written = UART_fifo_write(dev, buf, count);
         if (written < count)
         {
-            context->tx_ptr = (uint8_t *)buf + written;
-            context->tx_end = (uint8_t *)buf + count;
+            if (FD_FLAG_NONBLOCK & AsFD(fd)->flags)
+            {
+                if (written)
+                    retval = written;
+                else
+                    retval = __set_errno_neg(EAGAIN);
+            }
+            else
+            {
+                context->tx_ptr = (uint8_t *)buf + written;
+                context->tx_end = (uint8_t *)buf + count;
 
-            dev->int_ena.tx_done_int_ena = 1;
+                dev->int_ena.tx_done_int_ena = 1;
+                sem_wait(&context->write_rdy);
 
-            sem_wait(&context->write_rdy);
-            retval = count;
+                retval = count;
+            }
         }
         else
             retval = written;
@@ -471,10 +487,10 @@ static void UART_IntrHandler(struct UART_context *context)
 }
 
 void UART0_IntrHandler(void *arg)
-    __attribute__((alias("UART_IntrHandler")));
+__attribute__((alias("UART_IntrHandler")));
 
 void UART1_IntrHandler(void *arg)
-    __attribute__((alias("UART_IntrHandler")));
+__attribute__((alias("UART_IntrHandler")));
 
 void UART2_IntrHandler(void *arg)
-    __attribute__((alias("UART_IntrHandler")));
+__attribute__((alias("UART_IntrHandler")));
