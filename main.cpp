@@ -37,11 +37,11 @@ int main(void)
     printf("cpu frequency: %llu MHz\n", CLK_cpu_freq() / 1000000);
     printf("ahb frequency: %llu MHz\n", CLK_ahb_freq() / 1000000);
 
-    if (CLK_periph_is_enable(PERIPH_UART0_MODULE))
+    if (CLK_periph_is_enabled(PERIPH_UART0_MODULE))
         printf("uart0: %lu bps sclk: %llu\n", UART_get_baudrate(&UART0), CLK_uart_sclk_freq(&UART0));
-    if (CLK_periph_is_enable(PERIPH_UART1_MODULE))
+    if (CLK_periph_is_enabled(PERIPH_UART1_MODULE))
         printf("uart1: %lu bps sclk: %llu\n", UART_get_baudrate(&UART1), CLK_uart_sclk_freq(&UART1));
-    if (CLK_periph_is_enable(PERIPH_UART2_MODULE))
+    if (CLK_periph_is_enabled(PERIPH_UART2_MODULE))
         printf("uart2: %lu bps sclk: %llu\n", UART_get_baudrate(&UART2), CLK_uart_sclk_freq(&UART2));
 
     printf("\nmalloc 32k test...\n");

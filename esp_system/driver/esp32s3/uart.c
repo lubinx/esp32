@@ -185,7 +185,7 @@ int UART_configure(uart_dev_t *dev, uint32_t bps, enum UART_parity_t parity, enu
     else
         return ENODEV;
 
-    if (CLK_periph_is_enabledd(uart_module))
+    if (CLK_periph_is_enabled(uart_module))
     {
         // UART0 is default esp-idf enabled debug tracing port, it always enabled, but still we need to taking control
         if (PERIPH_UART0_MODULE == uart_module)

@@ -633,7 +633,7 @@ uint64_t CLK_i2s_tx_sclk_freq(i2s_dev_t *dev)
 /****************************************************************************
  *  @implements: peripheral module gating control
  ****************************************************************************/
-bool CLK_periph_is_enable(PERIPH_module_t periph)
+bool CLK_periph_is_enabled(PERIPH_module_t periph)
 {
     return 0 != DPORT_GET_PERI_REG_MASK(periph_clk_en_reg(periph), periph_clk_en_mask(periph));
 }
