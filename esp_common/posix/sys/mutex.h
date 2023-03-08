@@ -6,11 +6,8 @@
 
     struct __mutex_t
     {
-        union
-        {
-            int __init;
-            struct __lock lock;
-        };
+        int __pad[20];
+        int __init;
     };
     typedef struct __mutex_t        mutex_t;
 
@@ -40,6 +37,9 @@ extern __attribute__((nonnull, nothrow))
 
 extern __attribute__((nonnull, nothrow))
     int mutex_unlock(mutex_t *mutex);
+
+extern __attribute__((nonnull, nothrow))
+    int mutex_trylock(mutex_t *mutex, uint32_t timeout);
 
 __END_DECLS
 #endif

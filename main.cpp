@@ -82,10 +82,10 @@ int main(void)
     pthread_mutex_init(&mutex, &attr);
     */
 
-    pthread_t id;
-    pthread_create(&id, NULL, blink_thread1, NULL);
-    pthread_create(&id, NULL, blink_thread2, NULL);
-    pthread_create(&id, NULL, blink_thread3, NULL);
+    // pthread_t id;
+    // pthread_create(&id, NULL, blink_thread1, NULL);
+    // pthread_create(&id, NULL, blink_thread2, NULL);
+    // pthread_create(&id, NULL, blink_thread3, NULL);
 
     printf("infinite loop...\n");
     fflush(stdout);
