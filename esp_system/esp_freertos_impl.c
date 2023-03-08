@@ -100,25 +100,15 @@ void __esp_rtos_initialize(void)
 /****************************************************************************
  *  @implements: esp_system.h
 *****************************************************************************/
-void esp_system_abort(const char *details)
+esp_err_t esp_register_shutdown_handler(void (*func_ptr)(void))
 {
-    abort();
+    return atexit(func_ptr);
 }
 
-esp_err_t esp_register_shutdown_handler(void (*function)(void))
+esp_err_t esp_unregister_shutdown_handler(void (*func_ptr)(void))
 {
-    return atexit(function);
+    return ESP_OK;
 }
-
-uint32_t esp_get_free_heap_size(void)
-{
-    return heap_caps_get_free_size(MALLOC_CAP_DEFAULT);
-}
-
-/****************************************************************************
- *  @implements: esp_cpu.h
-*****************************************************************************/
-
 
 /****************************************************************************
  *  @implements: hal/systimer_hal.h

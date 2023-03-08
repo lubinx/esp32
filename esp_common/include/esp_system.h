@@ -27,18 +27,10 @@ extern __attribute__((nothrow))
 /****************************************************************************
  *  for esp-idf's freertos porting
 *****************************************************************************/
-extern __attribute__((nothrow, const))
-    uint32_t esp_get_free_heap_size(void);
-
-extern __attribute__((nothrow, noreturn))
-    void esp_system_abort(char const *details);
-
-typedef void (*shutdown_handler_t)(void);
-
 extern __attribute__((nothrow))
-    esp_err_t esp_register_shutdown_handler(shutdown_handler_t handle);
+    esp_err_t esp_register_shutdown_handler(void (*func_ptr)(void));
 extern __attribute__((nothrow))
-    esp_err_t esp_unregister_shutdown_handler(shutdown_handler_t handle);
+    esp_err_t esp_unregister_shutdown_handler(void (*func_ptr)(void));
 
 /*
 typedef enum

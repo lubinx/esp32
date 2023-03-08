@@ -6,15 +6,13 @@
 __attribute__((constructor))
 void TRNG_initialize(void)
 {
+    CLK_SCLK_RC_FAST_ref();
     /*
-        RC_FAST_CLK
+        // RC_FAST_CLK
         SAR ADC
         High Speed ADC
     */
     periph_module_enable(PERIPH_RNG_MODULE);
-    CLK_SCLK_RC_FAST_ref();
-
-    // what aobut SAR ADC?
 }
 
 static unsigned rand_seed = 0;

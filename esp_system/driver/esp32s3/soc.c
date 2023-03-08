@@ -80,11 +80,6 @@ static void startup_other_cores(void)
 
 void __esp_rtos_initialize(void)
 {
-    #if CONFIG_SW_COEXIST_ENABLE || CONFIG_EXTERNAL_COEX_ENABLE
-        esp_coex_adapter_register(&g_coex_adapter_funcs);
-        coex_pre_init();
-    #endif
-
     do_system_init_fn();
 
     SOC_acquire_core(1);
