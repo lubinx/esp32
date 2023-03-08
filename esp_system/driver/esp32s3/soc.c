@@ -287,9 +287,11 @@ static void SOC_cache_err_init(int core_id)
         EXTMEM_DCACHE_PRELOAD_OP_FAULT_INT_ENA |
         EXTMEM_DCACHE_WRITE_FLASH_INT_ENA |
         EXTMEM_MMU_ENTRY_FAULT_INT_ENA |
+        /*
         EXTMEM_DCACHE_OCCUPY_EXC_INT_ENA |
         EXTMEM_IBUS_CNT_OVF_INT_ENA |
         EXTMEM_DBUS_CNT_OVF_INT_ENA |
+        */
         0;
 
     if (0 == core_id)
