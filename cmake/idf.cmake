@@ -647,11 +647,6 @@ function(idf_build)
             add_link_options("-Wl,--eh-frame-hdr" )
         endif()
 
-        # SMP FreeRTOS user provided minimal idle hook. This allows the user to provide their own copy of vApplicationMinimalIdleHook()
-        if(CONFIG_FREERTOS_USE_MINIMAL_IDLE_HOOK)
-            add_link_options("-Wl,--wrap=vApplicationMinimalIdleHook")
-        endif()
-
         if(CONFIG_COMPILER_SAVE_RESTORE_LIBCALLS)
             idf_build_set_property(COMPILE_OPTIONS "-msave-restore" APPEND)
         endif()

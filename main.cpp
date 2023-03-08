@@ -76,16 +76,10 @@ int main(void)
     // direct io
     writebuf(fd, long_text, strlen(long_text));
 
-    /*
-    pthread_mutexattr_t attr;
-    pthread_mutexattr_init(&attr);
-    pthread_mutex_init(&mutex, &attr);
-    */
-
-    // pthread_t id;
-    // pthread_create(&id, NULL, blink_thread1, NULL);
-    // pthread_create(&id, NULL, blink_thread2, NULL);
-    // pthread_create(&id, NULL, blink_thread3, NULL);
+    pthread_t id;
+    pthread_create(&id, NULL, blink_thread1, NULL);
+    pthread_create(&id, NULL, blink_thread2, NULL);
+    pthread_create(&id, NULL, blink_thread3, NULL);
 
     printf("infinite loop...\n");
     fflush(stdout);

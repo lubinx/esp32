@@ -143,7 +143,9 @@ This file get's pulled into assembly sources. Therefore, some includes need to b
 #endif
 #define configUSE_CORE_AFFINITY                         1
 #define configRUN_MULTIPLE_PRIORITIES                   1
-#define configUSE_MINIMAL_IDLE_HOOK                     1   // This is always enabled to call IDF style idle hooks, by can be "--Wl,--wrap" if users enable CONFIG_FREERTOS_USE_MINIMAL_IDLE_HOOK
+
+// #define configUSE_MINIMAL_IDLE_HOOK                     1   // This is always enabled to call IDF style idle hooks, by can be "--Wl,--wrap" if users enable CONFIG_FREERTOS_USE_MINIMAL_IDLE_HOOK
+#define configUSE_MINIMAL_IDLE_HOOK                     0   // disable this since nobody use that
 
 // ------------- Synchronization Primitives ----------------
 
@@ -188,17 +190,8 @@ This file get's pulled into assembly sources. Therefore, some includes need to b
 #define configSTACK_ALLOCATION_FROM_SEPARATE_HEAP       0   //Todo: Check this
 
 // ------------------------ Hooks --------------------------
-
-#if CONFIG_FREERTOS_USE_IDLE_HOOK
 #define configUSE_IDLE_HOOK                             1
-#else
-#define configUSE_IDLE_HOOK                             0
-#endif
-#if CONFIG_FREERTOS_USE_TICK_HOOK
 #define configUSE_TICK_HOOK                             1
-#else
-#define configUSE_TICK_HOOK                             0
-#endif
 #if CONFIG_FREERTOS_CHECK_STACKOVERFLOW_NONE
 #define configCHECK_FOR_STACK_OVERFLOW                  0
 #elif CONFIG_FREERTOS_CHECK_STACKOVERFLOW_PTRVAL

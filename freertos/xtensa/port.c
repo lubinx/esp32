@@ -17,11 +17,10 @@
 #include "xtensa/config/core-isa.h"
 #include "xtensa/xtruntime.h"
 
-#include "esp_private/systimer.h"
 #include "esp_attr.h"
 #include "esp_heap_caps.h"
-#include "esp_log.h"
 #include "esp_rom_sys.h"
+#include "systimer.h"
 
 #include "esp_intr_alloc.h"
 #include "esp_memory_utils.h"
@@ -371,7 +370,6 @@ static void vPortTaskWrapper(TaskFunction_t pxCode, void *pvParameters)
     pxCode(pvParameters);
     //FreeRTOS tasks should not return. Log the task name and abort.
     char *pcTaskName = pcTaskGetName(NULL);
-    ESP_LOGE("FreeRTOS", "FreeRTOS Task \"%s\" should not return, Aborting now!", pcTaskName);
     abort();
 }
 #endif
@@ -712,7 +710,6 @@ void vPortTLSPointersDelCb( void *pxTCB )
             /* In case the TLSP deletion callback has been overwritten by a TLS pointer, gracefully abort. */
             if ( !esp_ptr_executable( pvThreadLocalStoragePointersDelCallback[ x ] ) ) {
                 // We call EARLY log here as currently portCLEAN_UP_TCB() is called in a critical section
-                ESP_EARLY_LOGE("FreeRTOS", "Fatal error: TLSP deletion callback at index %d overwritten with non-excutable pointer %p", x, pvThreadLocalStoragePointersDelCallback[ x ]);
                 abort();
             }
 
@@ -723,15 +720,11 @@ void vPortTLSPointersDelCb( void *pxTCB )
 #endif // CONFIG_FREERTOS_TLSP_DELETION_CALLBACKS
 
 // -------------------- Tick Handler -----------------------
-
-extern void esp_vApplicationIdleHook(void);
-extern void esp_vApplicationTickHook(void);
-
 BaseType_t xPortSysTickHandler(void)
 {
     traceISR_ENTER(SYSTICK_INTR_ID);
     BaseType_t ret;
-    esp_vApplicationTickHook();
+
     if (__get_CORE_ID() == 0) {
         // FreeRTOS SMP requires that only core 0 calls xTaskIncrementTick()
         ret = xTaskIncrementTick();
@@ -766,25 +759,6 @@ void  __attribute__((weak)) vApplicationStackOverflowHook( TaskHandle_t xTask, c
     abort();
 }
 #endif
-
-#if CONFIG_FREERTOS_USE_MINIMAL_IDLE_HOOK
-/*
-By default, the port uses vApplicationMinimalIdleHook() to run IDF style idle
-hooks. However, users may also want to provide their own vApplicationMinimalIdleHook().
-In this case, we use to -Wl,--wrap option to wrap the user provided vApplicationMinimalIdleHook()
-*/
-extern void __real_vApplicationMinimalIdleHook( void );
-void __wrap_vApplicationMinimalIdleHook( void )
-{
-    esp_vApplicationIdleHook(); //Run IDF style hooks
-    __real_vApplicationMinimalIdleHook(); //Call the user provided vApplicationMinimalIdleHook()
-}
-#else // CONFIG_FREERTOS_USE_MINIMAL_IDLE_HOOK
-void vApplicationMinimalIdleHook( void )
-{
-    esp_vApplicationIdleHook(); //Run IDF style hooks
-}
-#endif // CONFIG_FREERTOS_USE_MINIMAL_IDLE_HOOK
 
 /*
  * Hook function called during prvDeleteTCB() to cleanup any

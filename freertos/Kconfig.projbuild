@@ -6,12 +6,6 @@ config FREERTOS_UNICORE
     bool
     default "n"
 
-config FREERTOS_USE_MINIMAL_IDLE_HOOK
-    # TODO: in freertos/portable/port.c they hardcoded esp_vApplicationIdleHook() what both minimal/normal, make this options menanless
-    bool
-    default n
-
-
 config FREERTOS_NO_AFFINITY
     # This invisible config value sets the value of tskNO_AFFINITY in task.h.
     # Intended to be used as a constant from other Kconfig files.
@@ -87,28 +81,6 @@ menu "FreeRTOS"
             - The stack size may need to be increased above the default if the app installs idle or thread local
                 storage cleanup hooks that use a lot of stack memory.
             - Conversely, the stack size can be reduced to the minimum if non of the idle features are used.
-
-    config FREERTOS_USE_IDLE_HOOK
-        bool "configUSE_IDLE_HOOK"
-        default y
-        help
-            Enables the idle task application hook (see configUSE_IDLE_HOOK documentation for more details).
-            Note:
-            - The application must provide the hook function ``void vApplicationIdleHook( void );``
-            - ``vApplicationIdleHook()`` is called from FreeRTOS idle task(s)
-            - The FreeRTOS idle hook is NOT the same as the ESP-IDF Idle Hook, but both can be enabled
-                simultaneously.
-
-    config FREERTOS_USE_TICK_HOOK
-        bool "configUSE_TICK_HOOK"
-        default n
-        help
-            Enables the tick hook (see configUSE_TICK_HOOK documentation for more details).
-            Note:
-            - The application must provide the hook function ``void vApplicationTickHook( void );``
-            - ``vApplicationTickHook()`` is called from FreeRTOS's tick handling function ``xTaskIncrementTick()``
-            - The FreeRTOS tick hook is NOT the same as the ESP-IDF Tick Interrupt Hook, but both can be enabled
-                simultaneously.
 
     config FREERTOS_MAX_TASK_NAME_LEN
         int "configMAX_TASK_NAME_LEN"

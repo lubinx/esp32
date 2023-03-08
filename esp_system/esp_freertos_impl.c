@@ -41,16 +41,6 @@ void IRAM_ATTR vApplicationIdleHook(void)
     __WFI();
 }
 
-void IRAM_ATTR esp_vApplicationTickHook(void)
-{
-    // override to remove
-}
-
-void IRAM_ATTR esp_vApplicationIdleHook(void)
-{
-    // override to remove
-}
-
 uint64_t systimer_ticks_to_us(uint64_t ticks)
 {
     return ticks * 1000000 / CLK_systimer_freq();
