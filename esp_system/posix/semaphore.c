@@ -78,7 +78,7 @@ int sem_timedwait_ms(sem_t *sema, unsigned int millisecond)
     if (pdTRUE == xSemaphoreTake((void *)&sema->__pad, millisecond / portTICK_PERIOD_MS))
         return 0;
     else
-        return __set_errno_neg(EAGAIN);
+        return __set_errno_neg(ETIMEDOUT);
 }
 
 int sem_post(sem_t *sema)
