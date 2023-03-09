@@ -6,15 +6,14 @@
 #include "regi2c_ctrl.h"
 
 #include "soc/dport_access.h"
-
 #include "sdkconfig.h"
-#include "soc/rtc.h"
 
 static char const *TAG = "clktree";
 
 /****************************************************************************
  * @def
  ****************************************************************************/
+#define _MHZ                            (1000000ULL)
 // default xtal is 40M, using sdkconfig?
 #define XTAL_FREQ                       XTAL_40M
 
@@ -47,22 +46,22 @@ void CLK_initialize(void)
 {
     OSC_configure();
 
-    uint32_t old_freq_mhz = CLK_cpu_freq() / MHZ;
-    if (XTAL_FREQ < CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ * MHZ)
+    uint32_t old_freq_mhz = CLK_cpu_freq() / _MHZ;
+    if (XTAL_FREQ < CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ * _MHZ)
     {
         switch (CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ)
         {
         default:
             ESP_LOGW(TAG, "unknown CPU frequency %uMhz, fallback to 80Mhz", CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ);
-        case PLL_DIV_TO_80M_FREQ / MHZ:
+        case PLL_DIV_TO_80M_FREQ / _MHZ:
             CLK_pll_conf(PLL_FREQ_SEL_320M);
             CLK_cpu_conf(CPU_SCLK_SEL_PLL, 4);
             break;
-        case PLL_DIV_TO_160M_FREQ / MHZ:
+        case PLL_DIV_TO_160M_FREQ / _MHZ:
             CLK_pll_conf(PLL_FREQ_SEL_320M);
             CLK_cpu_conf(CPU_SCLK_SEL_PLL, 2);
             break;
-        case PLL_DIV_TO_240M_FREQ / MHZ:
+        case PLL_DIV_TO_240M_FREQ / _MHZ:
             CLK_pll_conf(PLL_FREQ_SEL_480M);
             CLK_cpu_conf(CPU_SCLK_SEL_PLL, 2);
             break;
@@ -304,10 +303,19 @@ uint64_t CLK_pll_freq(void)
 
 int CLK_cpu_conf(enum CPU_sclk_sel_t sel, uint32_t div)
 {
+    if (0 == div)       // div 0 is truly mistake by code, no fallback
+        return EINVAL;
+
     if (CPU_SCLK_SEL_XTAL == sel && MINIAL_CPU_WORK_FREQ > XTAL_FREQ / div)
-        return EINVAL;
-    if (CPU_SCLK_SEL_RC_FAST == sel && MINIAL_CPU_WORK_FREQ > RC_FAST_FREQ < div)
-        return EINVAL;
+    {
+        ESP_LOGW(TAG, "invalid DIV(%d) for XTAL, fallback to %u Mhz", div, MINIAL_CPU_WORK_FREQ / _MHZ);
+        div = XTAL_FREQ / MINIAL_CPU_WORK_FREQ;
+    }
+    if (CPU_SCLK_SEL_RC_FAST == sel && MINIAL_CPU_WORK_FREQ > RC_FAST_FREQ / div)
+    {
+        ESP_LOGW(TAG, "invalid DIV(%d) for RC FAST, fallback to %u Mhz", div, MINIAL_CPU_WORK_FREQ / _MHZ);
+        div = RC_FAST_FREQ / MINIAL_CPU_WORK_FREQ;
+    }
 
     if (CPU_SCLK_SEL_RC_FAST == sel)
         CLK_SCLK_RC_FAST_ref();
@@ -330,13 +338,12 @@ int CLK_cpu_conf(enum CPU_sclk_sel_t sel, uint32_t div)
             switch(div)
             {
             default:
-                ESP_LOGW(TAG, "PLL 320M => CPU div possiable value is 2/4");
-                return EINVAL;
-            case 2:
-                SYSTEM.cpu_per_conf.cpuperiod_sel = 1;
-                break;
+                ESP_LOGW(TAG, "invalid DIV(%d) for PLL 320M => CPU div possiable value is 2/4, fallback to 80 Mhz", div);
             case 4:
                 SYSTEM.cpu_per_conf.cpuperiod_sel = 0;
+                break;
+            case 2:
+                SYSTEM.cpu_per_conf.cpuperiod_sel = 1;
                 break;
             }
         }
@@ -345,16 +352,15 @@ int CLK_cpu_conf(enum CPU_sclk_sel_t sel, uint32_t div)
             switch(div)
             {
             default:
-                ESP_LOGW(TAG, "PLL 480M => CPU div possiable value is 2/3/6");
-                return EINVAL;
-            case 2:
-                SYSTEM.cpu_per_conf.cpuperiod_sel = 2;
+                ESP_LOGW(TAG, "invalid DIV(%d) for PLL 480M => CPU div possiable value is 2/3/6, fallback to 80 Mhz", div);
+            case 6:
+                SYSTEM.cpu_per_conf.cpuperiod_sel = 0;
                 break;
             case 3:
                 SYSTEM.cpu_per_conf.cpuperiod_sel = 1;
                 break;
-            case 6:
-                SYSTEM.cpu_per_conf.cpuperiod_sel = 0;
+            case 2:
+                SYSTEM.cpu_per_conf.cpuperiod_sel = 2;
                 break;
             }
         }
@@ -543,16 +549,36 @@ uint64_t CLK_rtc_fast_sclk_freq(void)
     }
 }
 
+/**
+ *  TODO: uart source clocks updating & updated override is not a good way, what about all other clocks update?
+*/
+__attribute__((weak))
+void CLK_uart_sclk_updating(uart_dev_t *dev)
+{
+}
+
+__attribute__((weak))
+void CLK_uart_sclk_updated(uart_dev_t *dev)
+{
+}
+
 int CLK_uart_sclk_sel(uart_dev_t *dev, enum UART_sclk_sel_t sel)
 {
-    if (UART_SCLK_SEL_RC_FAST == sel)
-        CLK_SCLK_RC_FAST_ref();
+    if (sel != dev->clk_conf.sclk_sel)
+    {
+        CLK_uart_sclk_updating(dev);
 
-    enum UART_sclk_sel_t old_sel = dev->clk_conf.sclk_sel;
-    dev->clk_conf.sclk_sel = sel;
+        if (UART_SCLK_SEL_RC_FAST == sel)
+            CLK_SCLK_RC_FAST_ref();
 
-    if (UART_SCLK_SEL_RC_FAST == old_sel)
-        CLK_SCLK_RC_FAST_release();
+        enum UART_sclk_sel_t old_sel = dev->clk_conf.sclk_sel;
+        dev->clk_conf.sclk_sel = sel;
+
+        if (UART_SCLK_SEL_RC_FAST == old_sel)
+            CLK_SCLK_RC_FAST_release();
+
+        CLK_uart_sclk_updated(dev);
+    }
     return 0;
 }
 
@@ -571,14 +597,17 @@ uint64_t CLK_uart_sclk_freq(uart_dev_t *dev)
 
 int CLK_i2c_sclk_sel(i2c_dev_t *dev, enum I2C_sclk_sel_t sel)
 {
-    if (I2C_SCLK_SEL_RC_FAST == sel)
-        CLK_SCLK_RC_FAST_ref();
+    if (sel != dev->clk_conf.sclk_sel)
+    {
+        if (I2C_SCLK_SEL_RC_FAST == sel)
+            CLK_SCLK_RC_FAST_ref();
 
-    enum I2C_sclk_sel_t old_sel = dev->clk_conf.sclk_sel;
-    dev->clk_conf.sclk_sel = sel;
+        enum I2C_sclk_sel_t old_sel = dev->clk_conf.sclk_sel;
+        dev->clk_conf.sclk_sel = sel;
 
-    if (I2C_SCLK_SEL_RC_FAST == old_sel)
-        CLK_SCLK_RC_FAST_release();
+        if (I2C_SCLK_SEL_RC_FAST == old_sel)
+            CLK_SCLK_RC_FAST_release();
+    }
 }
 
 uint64_t CLK_i2c_sclk_freq(i2c_dev_t *dev)

@@ -88,6 +88,8 @@ struct UART_context
     uart_dev_t *dev;
     intr_handle_t intr_hdl;
 
+    uint32_t bps;
+
     sem_t read_rdy;
     sem_t write_rdy;
 
@@ -99,6 +101,8 @@ struct UART_context
 /****************************************************************************
  *  @internal
  ****************************************************************************/
+static void UART_configure_bps(uart_dev_t *dev, uint32_t bps);
+static void UART_configure_context_bps(struct UART_context *context, uart_dev_t *dev);
  // io
 static ssize_t UART_read(int fd, void *buf, size_t bufsize);
 static ssize_t UART_write(int fd, void const *buf, size_t count);
@@ -242,15 +246,9 @@ int UART_configure(uart_dev_t *dev, uint32_t bps, enum UART_parity_t parity, enu
         dev->conf0.stop_bit_num = 3;
         break;
     }
-    uint64_t sclk_freq = CLK_uart_sclk_freq(dev);
 
-    // calucate baudrate: UART_CLKDIV_V is max DIV
-    int sclk_div = (sclk_freq + UART_CLKDIV_V * bps - 1) / (UART_CLKDIV_V * bps);
-    uint32_t clk_div = ((sclk_freq) << 4) / (bps * sclk_div);
-    // baud rate configuration register is divided into // an integer part and a fractional part.
-    dev->clkdiv.clkdiv = clk_div >> 4;
-    dev->clkdiv.clkdiv_frag = clk_div & 0xF;
-    dev->clk_conf.sclk_div_num = sclk_div - 1;
+    UART_configure_bps(dev, bps);
+
     // set read_rdy when any character in the queue
     dev->conf1.rxfifo_full_thrhd = 1;
 
@@ -284,6 +282,40 @@ int UART_deconfigure(uart_dev_t *dev)
 
     CLK_periph_disable(uart_module);
     return 0;
+}
+
+/// override clk_tree.c
+void CLK_uart_sclk_updating(uart_dev_t *dev)
+{
+    while (dev->status.txfifo_cnt);
+}
+
+/// override clk_tree.c
+void CLK_uart_sclk_updated(uart_dev_t *dev)
+{
+    struct UART_context *context;
+    PERIPH_module_t uart_module;
+
+    if (&UART0 == dev)
+    {
+        uart_module = PERIPH_UART0_MODULE;
+        context = &uart_context[0];
+    }
+    else if (&UART1 == dev)
+    {
+        uart_module = PERIPH_UART1_MODULE;
+        context = &uart_context[1];
+    }
+    else if (&UART2 == dev)
+    {
+        uart_module = PERIPH_UART2_MODULE;
+        context = &uart_context[2];
+    }
+    else
+        return;
+
+    if (CLK_periph_is_enabled(uart_module));
+        UART_configure_context_bps(context, dev);
 }
 
 uint32_t UART_get_baudrate(uart_dev_t *dev)
@@ -336,6 +368,34 @@ int UART_fifo_read(uart_dev_t *dev, void *buf, unsigned bufsize)
 /****************************************************************************
  *  @internal
  ****************************************************************************/
+static void UART_configure_bps(uart_dev_t *dev, uint32_t bps)
+{
+    struct UART_context *context;
+
+    if (&UART0 == dev)
+        context = &uart_context[0];
+    else if (&UART1 == dev)
+        context = &uart_context[1];
+    else
+        context = &uart_context[2];
+
+    context->bps = bps;
+    UART_configure_context_bps(context, dev);
+}
+
+static void UART_configure_context_bps(struct UART_context *context, uart_dev_t *dev)
+{
+    uint64_t sclk_freq = CLK_uart_sclk_freq(dev);
+
+    // calucate baudrate: UART_CLKDIV_V = 12bits int = 0xFFF = 4095
+    int sclk_div = (sclk_freq + UART_CLKDIV_V * context->bps - 1) / (UART_CLKDIV_V * context->bps);
+    uint32_t clk_div = ((sclk_freq) << 4) / (context->bps * sclk_div);
+    // baud rate configuration register is divided into // an integer part and a fractional part.
+    dev->clkdiv.clkdiv = clk_div >> 4;
+    dev->clkdiv.clkdiv_frag = clk_div & 0xF;
+    dev->clk_conf.sclk_div_num = sclk_div - 1;
+}
+
 static ssize_t UART_read(int fd, void *buf, size_t bufsize)
 {
     struct UART_context *context = AsFD(fd)->ext;
