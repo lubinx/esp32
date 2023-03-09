@@ -52,7 +52,7 @@ void CLK_initialize(void)
         switch (CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ)
         {
         default:
-            ESP_LOGW(TAG, "unknown CPU frequency %uMhz, fallback to 80Mhz", CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ);
+            ESP_EARLY_LOGW(TAG, "unknown CPU frequency %uMhz, fallback to 80Mhz", CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ);
         case PLL_DIV_TO_80M_FREQ / _MHZ:
             CLK_pll_conf(PLL_FREQ_SEL_320M);
             CLK_cpu_conf(CPU_SCLK_SEL_PLL, 4);
@@ -219,7 +219,7 @@ int CLK_pll_conf(enum PLL_freq_sel_t sel)
         switch (XTAL_FREQ)
         {
         default:
-            ESP_LOGW(TAG, "unkonwn XTAL frequency: %u, assume is 40M", XTAL_FREQ);
+            ESP_EARLY_LOGW(TAG, "unkonwn XTAL frequency: %u, assume is 40M", XTAL_FREQ);
         case XTAL_40M:
             div_ref = 0;
             div7_0 = 8;
@@ -246,7 +246,7 @@ int CLK_pll_conf(enum PLL_freq_sel_t sel)
         switch (XTAL_FREQ)
         {
         default:
-            ESP_LOGW(TAG, "unkonwn XTAL frequency: %u, assume is 40M", XTAL_FREQ);
+            ESP_EARLY_LOGW(TAG, "unkonwn XTAL frequency: %u, assume is 40M", XTAL_FREQ);
         case XTAL_40M:
             div_ref = 0;
             div7_0 = 4;
@@ -308,12 +308,12 @@ int CLK_cpu_conf(enum CPU_sclk_sel_t sel, uint32_t div)
 
     if (CPU_SCLK_SEL_XTAL == sel && MINIAL_CPU_WORK_FREQ > XTAL_FREQ / div)
     {
-        ESP_LOGW(TAG, "invalid DIV(%d) for XTAL, fallback to %u Mhz", div, MINIAL_CPU_WORK_FREQ / _MHZ);
+        ESP_EARLY_LOGW(TAG, "invalid DIV(%d) for XTAL, fallback to %u Mhz", div, MINIAL_CPU_WORK_FREQ / _MHZ);
         div = XTAL_FREQ / MINIAL_CPU_WORK_FREQ;
     }
     if (CPU_SCLK_SEL_RC_FAST == sel && MINIAL_CPU_WORK_FREQ > RC_FAST_FREQ / div)
     {
-        ESP_LOGW(TAG, "invalid DIV(%d) for RC FAST, fallback to %u Mhz", div, MINIAL_CPU_WORK_FREQ / _MHZ);
+        ESP_EARLY_LOGW(TAG, "invalid DIV(%d) for RC FAST, fallback to %u Mhz", div, MINIAL_CPU_WORK_FREQ / _MHZ);
         div = RC_FAST_FREQ / MINIAL_CPU_WORK_FREQ;
     }
 
@@ -338,7 +338,7 @@ int CLK_cpu_conf(enum CPU_sclk_sel_t sel, uint32_t div)
             switch(div)
             {
             default:
-                ESP_LOGW(TAG, "invalid DIV(%d) for PLL 320M => CPU div possiable value is 2/4, fallback to 80 Mhz", div);
+                ESP_EARLY_LOGW(TAG, "invalid DIV(%d) for PLL 320M => CPU div possiable value is 2/4, fallback to 80 Mhz", div);
             case 4:
                 SYSTEM.cpu_per_conf.cpuperiod_sel = 0;
                 break;
@@ -352,7 +352,7 @@ int CLK_cpu_conf(enum CPU_sclk_sel_t sel, uint32_t div)
             switch(div)
             {
             default:
-                ESP_LOGW(TAG, "invalid DIV(%d) for PLL 480M => CPU div possiable value is 2/3/6, fallback to 80 Mhz", div);
+                ESP_EARLY_LOGW(TAG, "invalid DIV(%d) for PLL 480M => CPU div possiable value is 2/3/6, fallback to 80 Mhz", div);
             case 6:
                 SYSTEM.cpu_per_conf.cpuperiod_sel = 0;
                 break;
