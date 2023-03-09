@@ -12,7 +12,7 @@
 #include <inttypes.h>
 #include <stdarg.h>
 
-    enum esp_log_level_t
+    enum __ESP_LOG_t
     {
         ESP_LOG_NONE,
         ESP_LOG_ERROR,
@@ -21,44 +21,44 @@
         ESP_LOG_DEBUG,
         ESP_LOG_VERBOSE
     };
-    extern enum esp_log_level_t __log_level;
+    extern enum __ESP_LOG_t __log_level;
 
     #define ESP_LOGE(tag, format, ...)  \
-        ESP_LOG_LEVEL(ESP_LOG_ERROR,    tag, format, ##__VA_ARGS__)
+        __ESP_LOG(ESP_LOG_ERROR,    tag, format, ##__VA_ARGS__)
     #define ESP_LOGW(tag, format, ...)  \
-        ESP_LOG_LEVEL(ESP_LOG_WARN,     tag, format, ##__VA_ARGS__)
+        __ESP_LOG(ESP_LOG_WARN,     tag, format, ##__VA_ARGS__)
     #define ESP_LOGI(tag, format, ...)  \
-        ESP_LOG_LEVEL(ESP_LOG_INFO,     tag, format, ##__VA_ARGS__)
+        __ESP_LOG(ESP_LOG_INFO,     tag, format, ##__VA_ARGS__)
     #define ESP_LOGD(tag, format, ...)  \
-        ESP_LOG_LEVEL(ESP_LOG_DEBUG,    tag, format, ##__VA_ARGS__)
+        __ESP_LOG(ESP_LOG_DEBUG,    tag, format, ##__VA_ARGS__)
     #define ESP_LOGV(tag, format, ...)  \
-        ESP_LOG_LEVEL(ESP_LOG_VERBOSE,  tag, format, ##__VA_ARGS__)
+        __ESP_LOG(ESP_LOG_VERBOSE,  tag, format, ##__VA_ARGS__)
 
     #define ESP_EARLY_LOGE(tag, format, ...)    \
-        ESP_LOG_LEVEL(ESP_LOG_ERROR,    tag, format, ##__VA_ARGS__)
+        __ESP_EARLY_LOG(ESP_LOG_ERROR,    tag, format, ##__VA_ARGS__)
     #define ESP_EARLY_LOGW(tag, format, ...)    \
-        ESP_LOG_LEVEL(ESP_LOG_WARN,     tag, format, ##__VA_ARGS__)
+        __ESP_EARLY_LOG(ESP_LOG_WARN,     tag, format, ##__VA_ARGS__)
     #define ESP_EARLY_LOGI(tag, format, ...)    \
-        ESP_LOG_LEVEL(ESP_LOG_INFO,     tag, format, ##__VA_ARGS__)
+        __ESP_EARLY_LOG(ESP_LOG_INFO,     tag, format, ##__VA_ARGS__)
     #define ESP_EARLY_LOGD(tag, format, ...)    \
-        ESP_LOG_LEVEL(ESP_LOG_DEBUG,    tag, format, ##__VA_ARGS__)
+        __ESP_EARLY_LOG(ESP_LOG_DEBUG,    tag, format, ##__VA_ARGS__)
     #define ESP_EARLY_LOGV(tag, format, ...)    \
-        ESP_LOG_LEVEL(ESP_LOG_VERBOSE,  tag, format, ##__VA_ARGS__)
+        __ESP_EARLY_LOG(ESP_LOG_VERBOSE,  tag, format, ##__VA_ARGS__)
 
     #define ESP_DRAM_LOGE(tag, format, ...)     \
-        ESP_LOG_LEVEL(ESP_LOG_ERROR,    tag, format, ##__VA_ARGS__)
+        __ESP_EARLY_LOG(ESP_LOG_ERROR,    tag, format, ##__VA_ARGS__)
     #define ESP_DRAM_LOGW(tag, format, ...)     \
-        ESP_LOG_LEVEL(ESP_LOG_WARN,     tag, format, ##__VA_ARGS__)
+        __ESP_EARLY_LOG(ESP_LOG_WARN,     tag, format, ##__VA_ARGS__)
     #define ESP_DRAM_LOGI(tag, format, ...)     \
-        ESP_LOG_LEVEL(ESP_LOG_INFO,     tag, format, ##__VA_ARGS__)
+        __ESP_EARLY_LOG(ESP_LOG_INFO,     tag, format, ##__VA_ARGS__)
     #define ESP_DRAM_LOGD(tag, format, ...)     \
-        ESP_LOG_LEVEL(ESP_LOG_DEBUG,    tag, format, ##__VA_ARGS__)
+        __ESP_EARLY_LOG(ESP_LOG_DEBUG,    tag, format, ##__VA_ARGS__)
     #define ESP_DRAM_LOGV(tag, format, ...)     \
-        ESP_LOG_LEVEL(ESP_LOG_VERBOSE,  tag, format, ##__VA_ARGS__)
+        __ESP_EARLY_LOG(ESP_LOG_VERBOSE,  tag, format, ##__VA_ARGS__)
 
-    #define ESP_LOG_LEVEL(level, tag, format, ...)  \
+    #define __ESP_LOG(level, tag, format, ...)  \
         (level <= __log_level ? esp_log_printf(LOG_FORMAT(level, format), esp_log_timestamp(), tag, ##__VA_ARGS__) : (void)0)
-    #define ESP_EARLY_LOG               ESP_LOG_LEVEL
+    #define __ESP_EARLY_LOG             __ESP_LOG // for now
 
     #define LOG_FORMAT(level, format)   \
         level##_COLOR "%-6" PRIu32 level##_LETTER" %s: " format LOG_END "\n"
@@ -101,7 +101,7 @@
 __BEGIN_DECLS
 
 static inline
-    void esp_log_set_level(enum esp_log_level_t level)
+    void esp_log_set_level(enum __ESP_LOG_t level)
     {
         __log_level = level;
     }
