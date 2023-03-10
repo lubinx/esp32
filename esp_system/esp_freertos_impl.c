@@ -23,8 +23,11 @@
 #include "hal/systimer_ll.h"
 #include "hal/systimer_hal.h"
 
-#include "sdkconfig.h"
+#include <rtos/types.h>
+#include "sys/mutex.h"
+#include "semaphore.h"
 
+#include "sdkconfig.h"
 #include "esp_rom_sys.h"
 
 /****************************************************************************
@@ -282,6 +285,71 @@ int mutex_trylock(mutex_t *mutex, uint32_t timeout)
 int mutex_unlock(mutex_t *mutex)
 {
     return __freertos_release(mutex, CID_MUTEX);
+}
+
+/***************************************************************************
+ *  @implements
+ ***************************************************************************/
+int sem_init(sem_t *sema, int pshared, unsigned int value)
+{
+    if (pshared)
+        return __set_errno_neg(ENOSYS);
+    if (SEM_VALUE_MAX < value)
+        return __set_errno_neg(EINVAL);
+
+    sema->init_sem.max_count = value;
+    sema->init_sem.initial_count = 0;
+    return __freertos_init_hdl(sema, CID_SEMAPHORE, 0);
+}
+
+int sem_destroy(sem_t *sema)
+{
+    __freertos_destroy_hdl(sema);
+    return KERNEL_handle_release(sema);
+}
+
+int sem_wait(sem_t *sema)
+{
+    return __freertos_acquire(sema, CID_SEMAPHORE, portMAX_DELAY);
+}
+
+int sem_timedwait(sem_t *sema, struct timespec const *spec)
+{
+    return __freertos_acquire(sema, CID_SEMAPHORE, (spec->tv_sec * 1000 + spec->tv_nsec / 1000000) / portTICK_PERIOD_MS);
+}
+
+int sem_timedwait_ms(sem_t *sema, unsigned int millisecond)
+{
+    return __freertos_acquire(sema, CID_SEMAPHORE, millisecond / portTICK_PERIOD_MS);
+}
+
+int sem_post(sem_t *sema)
+{
+    return __freertos_release(sema, CID_SEMAPHORE);
+}
+
+int sem_getvalue(sem_t *sema, int *val)
+{
+    *val = uxSemaphoreGetCount(&sema->padding);
+    return 0;
+}
+
+sem_t *sem_open(char const *name, int oflag, ...)
+{
+    ARG_UNUSED(name, oflag);
+    return __set_errno_nullptr(ENOSYS);
+}
+
+int sem_close(sem_t *sema)
+{
+    ARG_UNUSED(sema);
+    return __set_errno_neg(ENOSYS);
+}
+
+int sem_unlink(char const *name)
+{
+    ARG_UNUSED(name);
+    return __set_errno_neg(ENOSYS);
 }
 
 /****************************************************************************

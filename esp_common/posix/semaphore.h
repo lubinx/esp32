@@ -18,11 +18,7 @@
 #include <features.h>
 #include <sys/_timespec.h>
 
-    struct __semaphore
-    {
-        int padding[20];
-    };
-    typedef struct __semaphore      sem_t;
+    typedef struct KERNEL_hdl      sem_t;
 
     /* MAX semaphore supported (2^31) */
 #ifndef SEM_VALUE_MAX
