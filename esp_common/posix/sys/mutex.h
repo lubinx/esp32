@@ -4,7 +4,7 @@
 #include <features.h>
 #include <sys/lock.h>
 
-#include "rtos/types.h"
+#include "ultracore/types.h"
 
 __BEGIN_DECLS
 

@@ -26,7 +26,7 @@
 #include <sys/types.h>
 
 #include "glist.h"
-#include "rtos/types.h"
+#include "ultracore/types.h"
 
 /***************************************************************************/
 /** freertos

@@ -28,7 +28,6 @@ list(APPEND errata_link_scripts
 
 include("${CMAKE_CURRENT_LIST_DIR}/driver/.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/posix/.cmake")
-include("${CMAKE_CURRENT_LIST_DIR}/ultracore/.cmake")
 
 idf_component_register(
     INCLUDE_DIRS

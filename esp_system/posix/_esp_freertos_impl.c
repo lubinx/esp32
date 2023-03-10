@@ -23,7 +23,7 @@
 #include "hal/systimer_ll.h"
 #include "hal/systimer_hal.h"
 
-#include <rtos/types.h>
+#include <ultracore/types.h>
 #include "sys/mutex.h"
 #include "semaphore.h"
 
