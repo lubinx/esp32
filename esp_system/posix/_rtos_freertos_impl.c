@@ -184,7 +184,6 @@ static int __freertos_hdl_init(struct KERNEL_hdl *hdl, uint8_t cid, uint8_t flag
         break;
 
     default:
-        while (1);
         return ENOSYS;
     }
 
@@ -213,9 +212,9 @@ static void __freertos_hdl_initializer(struct KERNEL_hdl *hdl)
 static IRAM_ATTR int __freertos_hdl_acquire(struct KERNEL_hdl *hdl, uint8_t cid, uint32_t os_ticks)
 {
     if (cid != hdl->cid)
-        return __set_errno_neg(EINVAL);
+        return EINVAL;
     if ((HDL_FLAG_NO_INTR & hdl->flags) && (0 != __get_IPSR()))
-        return __set_errno_neg(EACCES);
+        return EACCES;
     if (HDL_FLAG_INITIALIZER & hdl->flags)
         __freertos_hdl_initializer(hdl);
 
@@ -228,15 +227,15 @@ static IRAM_ATTR int __freertos_hdl_acquire(struct KERNEL_hdl *hdl, uint8_t cid,
     if (pdTRUE == retval)
         return 0;
     else
-        return __set_errno_neg(ETIMEDOUT);
+        return ETIMEDOUT;
 }
 
 static IRAM_ATTR int __freertos_hdl_release(struct KERNEL_hdl *hdl, uint8_t cid)
 {
     if (cid != hdl->cid)
-        return __set_errno_neg(EINVAL);
+        return EINVAL;
     if ((HDL_FLAG_NO_INTR & hdl->flags) && (0 != __get_IPSR()))
-        return __set_errno_neg(EACCES);
+        return EACCES;
     if (HDL_FLAG_INITIALIZER & hdl->flags)
         __freertos_hdl_initializer(hdl);
 
@@ -249,7 +248,7 @@ static IRAM_ATTR int __freertos_hdl_release(struct KERNEL_hdl *hdl, uint8_t cid)
     if (pdTRUE == retval)
         return 0;
     else
-        return __set_errno_neg(EOVERFLOW);
+        return EOVERFLOW;
 }
 
 /****************************************************************************
@@ -302,33 +301,64 @@ int sem_init(sem_t *sema, int pshared, unsigned int value)
 
     sema->init_sem.max_count = value;
     sema->init_sem.initial_count = 0;
-    return __freertos_hdl_init(sema, CID_SEMAPHORE, 0);
+
+    int retval = __freertos_hdl_init(sema, CID_SEMAPHORE, 0);
+
+    if (retval)
+        return __set_errno_neg(retval);
+    else
+        return retval;
 }
 
 int sem_destroy(sem_t *sema)
 {
     __freertos_hdl_destroy(sema);
-    return KERNEL_handle_release(sema);
+    int retval = KERNEL_handle_release(sema);
+
+    if (retval)
+        return __set_errno_neg(retval);
+    else
+        return retval;
 }
 
 int IRAM_ATTR sem_wait(sem_t *sema)
 {
-    return __freertos_hdl_acquire(sema, CID_SEMAPHORE, portMAX_DELAY);
+    int retval = __freertos_hdl_acquire(sema, CID_SEMAPHORE, portMAX_DELAY);
+
+    if (retval)
+        return __set_errno_neg(retval);
+    else
+        return retval;
 }
 
-int IRAM_ATTR sem_timedwait(sem_t *sema, struct timespec const *spec)
+int IRAM_ATTR sem_timedwait(sem_t *sema, struct timespec const *abs_timeout)
 {
-    return __freertos_hdl_acquire(sema, CID_SEMAPHORE, (spec->tv_sec * 1000 + spec->tv_nsec / 1000000) / portTICK_PERIOD_MS);
+    int retval = __freertos_hdl_acquire(sema, CID_SEMAPHORE, (abs_timeout->tv_sec * 1000 + abs_timeout->tv_nsec / 1000000) / portTICK_PERIOD_MS);
+
+    if (retval)
+        return __set_errno_neg(retval);
+    else
+        return retval;
 }
 
 int IRAM_ATTR sem_timedwait_ms(sem_t *sema, unsigned int millisecond)
 {
-    return __freertos_hdl_acquire(sema, CID_SEMAPHORE, millisecond / portTICK_PERIOD_MS);
+    int retval = __freertos_hdl_acquire(sema, CID_SEMAPHORE, millisecond / portTICK_PERIOD_MS);
+
+    if (retval)
+        return __set_errno_neg(retval);
+    else
+        return retval;
 }
 
 int IRAM_ATTR sem_post(sem_t *sema)
 {
-    return __freertos_hdl_release(sema, CID_SEMAPHORE);
+    int retval = __freertos_hdl_release(sema, CID_SEMAPHORE);
+
+    if (retval)
+        return __set_errno_neg(retval);
+    else
+        return retval;
 }
 
 int IRAM_ATTR sem_getvalue(sem_t *sema, int *val)
