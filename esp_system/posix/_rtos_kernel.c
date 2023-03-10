@@ -1,11 +1,10 @@
 #include <string.h>
 
-#include <sys/errno.h>
-
 #include <xtensa/spinlock.h>
-#include "ultracore/kernel.h"
+#include <sys/errno.h>
+#include <esp_log.h>
 
-#include "esp_log.h"
+#include <rtos/kernel.h>
 
 static char const *TAG = "kernel";
 #define DYNAMIC_INC_DESCRIPTORS         (1024 / sizeof(sizeof(struct KERNEL_hdl)))

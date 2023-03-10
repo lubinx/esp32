@@ -19,8 +19,8 @@
             // initializer
             struct
             {
-                uint32_t max_count;
                 uint32_t initial_count;
+                uint32_t max_count;
             } init_sem;
 
             // StaticSemaphore_t padding
@@ -48,22 +48,49 @@
     #define HDL_FLAG_SYSMEM_MANAGED     (1U << 6)
     /// indicate freertos StaticSemaphore_t is NOT allow in intr, like mutex
     #define HDL_FLAG_NO_INTR            (1U << 5)
-    /// indicate freertos StaticSemaphore_t is NOT initialized, by using INITIALIZER
+    /// indicate freertos hdl is *NOT* initialized(static INITIALIZER), it have to init on first use
     #define HDL_FLAG_INITIALIZER        (1U << 4)
-    /// indicate freertos StaticSemaphore_t is recursive (mutex)
-    #define HDL_FLAG_FREERTOS_RECURSIVE (1U << 3)
+    /// indicate freertos *mutex" is recursive
+    #define HDL_FLAG_RECURSIVE_MUTEX    (1U << 3)
 
 /***************************************************************************
- *  @def: mutex
+ *  @def: semaphore.h   sem_t
+ ***************************************************************************/
+    #define SEMA_INITIALIZER(INIT_COUNT, MAX_COUNT) \
+        {.cid = CID_SEMAPHORE, .flags = HDL_FLAG_INITIALIZER, .init_sem{.initial_count = INIT_COUNT, .max_count = MAX_COUNT}}
+
+    // sem_t initializer alias
+    #define SEMAPHORE_INITIALIZER       SEMA_INITIALIZER
+    #define SEM_INITIALIZER             SEMA_INITIALIZER
+
+/***************************************************************************
+ *  @def: sys/mutex.h   mutex_t
  ***************************************************************************/
     typedef struct KERNEL_hdl       mutex_t;
 
     // mutex_create() flags
     #define MUTEX_FLAG_NORMAL           (0x00)
-    #define MUTEX_FLAG_RECURSIVE        (HDL_FLAG_FREERTOS_RECURSIVE)
+    #define MUTEX_FLAG_RECURSIVE        (HDL_FLAG_RECURSIVE_MUTEX)
 
     // mutex initializer
-    #define MUTEX_INITIALIZER           {.cid = CID_MUTEX, .flags = HDL_FLAG_INITIALIZER | MUTEX_FLAG_NORMAL}
-    #define MUTEX_RECURSIVE_INITIALIZER {.cid = CID_MUTEX, .flags = HDL_FLAG_INITIALIZER | MUTEX_FLAG_RECURSIVE}
+    #define MUTEX_INITIALIZER           \
+        {.cid = CID_MUTEX, .flags = HDL_FLAG_INITIALIZER | MUTEX_FLAG_NORMAL}
+    #define MUTEX_RECURSIVE_INITIALIZER \
+        {.cid = CID_MUTEX, .flags = HDL_FLAG_INITIALIZER | MUTEX_FLAG_RECURSIVE}
 
+/***************************************************************************
+ *  @def: pthread.h     pthread_mutex_t
+ ***************************************************************************/
+    typedef struct KERNEL_hdl       pthread_mutex_t;
+
+    struct pthread_mutexattr_t
+    {
+        int type;
+    };
+    typedef struct pthread_mutexattr_t  pthread_mutexattr_t;
+
+    #define PTHREAD_MUTEX_INITIALIZER   \
+        MUTEX_INITIALIZER
+    #define PTHREAD_RECURSIVE_MUTEX_INITIALIZER \
+        MUTEX_RECURSIVE_INITIALIZER
 #endif

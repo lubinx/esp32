@@ -15,7 +15,7 @@
 #ifndef __HW_TIMER_HAL_H
 #define __HW_TIMER_HAL_H                1
 
-#include <ultracore/glist.h>
+#include <rtos/glist.h>
 #include "../timer.h"
 
 __BEGIN_DECLS

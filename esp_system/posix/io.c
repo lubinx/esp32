@@ -2,10 +2,12 @@
 #include <sched.h>
 #include <reent.h>
 #include <stropts.h>
+
 #include <sys/uio.h>
 #include <sys/errno.h>
 
-#include "ultracore/kernel.h"
+#include <rtos/kernel.h>
+
 #include "esp_log.h"
 
 void __IO_retarget(void)

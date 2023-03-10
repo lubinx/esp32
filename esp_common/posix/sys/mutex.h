@@ -2,9 +2,9 @@
 #define __MUTEX_H                       1
 
 #include <features.h>
-#include <sys/lock.h>
 
-#include "ultracore/types.h"
+#include <sys/lock.h>
+#include <rtos/types.h>
 
 __BEGIN_DECLS
 

@@ -3,20 +3,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-
 #pragma once
 
 #include <sys/types.h>
-
 #include_next <sys/unistd.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-int truncate(char const *, off_t __length);
-int gethostname(char *__name, size_t __len);
-
-#ifdef __cplusplus
-}
-#endif

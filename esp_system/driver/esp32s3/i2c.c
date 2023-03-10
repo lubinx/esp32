@@ -6,13 +6,14 @@
 #include <sys/types.h>
 #include <semaphore.h>
 
+#include <rtos/kernel.h>
+#include <soc/soc_caps.h>
+#include <soc/i2c_reg.h>
+
 #include "clk_tree.h"
 #include "esp_intr_alloc.h"
-#include "soc/soc_caps.h"
 
-#include "ultracore/kernel.h"
 #include "i2c.h"
-#include "soc/i2c_reg.h"
 
 /****************************************************************************
  *  @def

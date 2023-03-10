@@ -1,16 +1,17 @@
 #include <sched.h>
 #include <sys/types.h>
-#include <semaphore.h>
 #include <sys/errno.h>
+#include <semaphore.h>
+
+#include <rtos/kernel.h>
+#include <soc/soc_caps.h>
+#include <soc/uart_reg.h>
 
 #include "clk_tree.h"
 #include "esp_log.h"
 #include "esp_intr_alloc.h"
-#include "soc/soc_caps.h"
 
-#include "ultracore/kernel.h"
 #include "uart.h"
-#include "soc/uart_reg.h"
 
 static char const *UART_TAG = "uart";
 static char const *RS485_TAG = "rs485";

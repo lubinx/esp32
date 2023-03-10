@@ -20,13 +20,13 @@
 #define __KERNEL_KERNEL_H                 1
 
 #include <features.h>
+
 #include <stdint.h>
 #include <stdarg.h>
-
 #include <sys/types.h>
 
-#include "glist.h"
-#include "ultracore/types.h"
+#include <rtos/glist.h>
+#include <rtos/types.h>
 
 /***************************************************************************/
 /** freertos

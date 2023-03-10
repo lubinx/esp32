@@ -4,22 +4,24 @@
 #include <pthread.h>
 #include <semaphore.h>
 
+#include <rtos/types.h>
+
 #include "soc.h"
 #include "clk_tree.h"
 #include "gpio.h"
-#include <sys/mutex.h>
+#include "uart.h"
 
 #include "esp_log.h"
 #include "esp_heap_caps.h"
 
-#include "uart.h"
-#include "sys/random.h"
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <freertos/semphr.h>
 
 #pragma GCC diagnostic ignored "-Wunused-function"
 
 // pthread_mutex_t mutex;
-static sem_t sema;
-mutex_t mux = MUTEX_INITIALIZER;
+static sem_t sema = SEMA_INITIALIZER(0, 100);
 
 static void *blink_thread1(void *arg);
 static void *blink_thread2(void *arg);
@@ -27,7 +29,7 @@ static void *blink_thread3(void *arg);
 
 int main(void)
 {
-    sem_init(&sema, 0, 10);
+    // sem_init(&sema, 0, 10);
 
     int fd = UART_createfd(0, 115200, UART_PARITY_NONE, UART_STOP_BITS_ONE);
     (void)fd;
@@ -36,6 +38,7 @@ int main(void)
     printf("pll frequency: %llu MHz\n", CLK_pll_freq() / 1000000);
     printf("cpu frequency: %llu MHz\n", CLK_cpu_freq() / 1000000);
     printf("ahb frequency: %llu MHz\n", CLK_ahb_freq() / 1000000);
+    printf("sizeof(StaticTask_t): %d\n", sizeof(StaticTask_t));
 
     if (CLK_periph_is_enabled(PERIPH_UART0_MODULE))
         printf("uart0: %lu bps sclk: %llu\n", UART_get_baudrate(&UART0), CLK_uart_sclk_freq(&UART0));
@@ -85,9 +88,6 @@ int main(void)
 
     printf("infinite loop...\n");
     fflush(stdout);
-
-
-    RTCCNTL.time_low0 = 34000 * 1000;
 
     while (1)
     {

@@ -17,9 +17,6 @@
 
 #include <stdint.h>
 #include <sys/types.h>
-#include "sdkconfig.h"
-
-#ifdef CONFIG_VFS_SUPPORT_TERMIOS
 
 // subscripts for the array c_cc:
 #define VEOF                        0           /** EOF character */
@@ -282,7 +279,5 @@ int tcsetattr(int fd, int optional_actions, const struct termios *p);
 #ifdef __cplusplus
 } // extern "C"
 #endif
-
-#endif // CONFIG_VFS_SUPPORT_TERMIOS
 
 #endif //__ESP_SYS_TERMIOS_H__

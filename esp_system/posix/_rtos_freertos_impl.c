@@ -8,22 +8,21 @@
 #include <assert.h>
 #include <sys/types.h>
 
-#include <ultracore/kernel.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <freertos/semphr.h>
 
-#include "esp_attr.h"
-#include "esp_err.h"
-#include "esp_system.h"
-#include "esp_heap_caps.h"
+#include <rtos/kernel.h>
 
-#include "clk_tree.h"
+#include <clk_tree.h>
+#include <esp_attr.h>
+#include <esp_err.h>
+#include <esp_system.h>
+#include <esp_heap_caps.h>
 
 #include "hal/systimer_ll.h"
 #include "hal/systimer_hal.h"
 
-#include <ultracore/types.h>
 #include "sys/mutex.h"
 #include "semaphore.h"
 
@@ -84,18 +83,20 @@ void __esp_rtos_initialize(void)
 /****************************************************************************
  *  @implements: freertos tick & idle
 *****************************************************************************/
+__attribute__((weak))
 void IRAM_ATTR vApplicationTickHook(void)
 {
     // nothing to do
 }
 
+__attribute__((weak))
 void IRAM_ATTR vApplicationIdleHook(void)
 {
     __WFI();
 }
 
 /****************************************************************************
- *  @implements: unistd.c sleep() / msleep() / usleep()
+ *  @implements: unistd.h sleep() / msleep() / usleep()
 *****************************************************************************/
 int usleep(useconds_t us)
 {
@@ -148,12 +149,12 @@ int pthread_setcanceltype(int type, int *old_type)
 }
 
 /****************************************************************************
- * @implements: generic synchronize objects
+ * @implements: generic waitfor
 *****************************************************************************/
 int waitfor(handle_t hdl, uint32_t timeout)
 {
     UBaseType_t retval;
-    if (HDL_FLAG_FREERTOS_RECURSIVE & AsKernelHdl(hdl)->flags)
+    if (HDL_FLAG_RECURSIVE_MUTEX & AsKernelHdl(hdl)->flags)
         retval = xSemaphoreTakeRecursive((void *)&AsKernelHdl(hdl)->padding, timeout / portTICK_PERIOD_MS);
     else
         retval = xSemaphoreTake((void *)&AsKernelHdl(hdl)->padding, timeout / portTICK_PERIOD_MS);
@@ -164,7 +165,10 @@ int waitfor(handle_t hdl, uint32_t timeout)
         return __set_errno_neg(ETIMEDOUT);
 }
 
-static int __freertos_init_hdl(struct KERNEL_hdl *hdl, uint8_t cid, uint8_t flags)
+/****************************************************************************
+ * @internal: generic synchronize objects
+*****************************************************************************/
+static int __freertos_hdl_init(struct KERNEL_hdl *hdl, uint8_t cid, uint8_t flags)
 {
     switch (cid)
     {
@@ -173,7 +177,7 @@ static int __freertos_init_hdl(struct KERNEL_hdl *hdl, uint8_t cid, uint8_t flag
         break;
 
     case CID_MUTEX:
-        if (HDL_FLAG_FREERTOS_RECURSIVE & flags)
+        if (HDL_FLAG_RECURSIVE_MUTEX & flags)
             xSemaphoreCreateRecursiveMutexStatic((void *)hdl->padding);
         else
             xSemaphoreCreateMutexStatic((void *)&hdl->padding);
@@ -189,35 +193,34 @@ static int __freertos_init_hdl(struct KERNEL_hdl *hdl, uint8_t cid, uint8_t flag
     return 0;
 }
 
-static inline int __freertos_destroy_hdl(struct KERNEL_hdl *hdl)
+static int __freertos_hdl_destroy(struct KERNEL_hdl *hdl)
 {
     vSemaphoreDelete(hdl);
     return 0;
 }
 
-static inline void __freertos_do_initialize(struct KERNEL_hdl *hdl)
+static void __freertos_hdl_initializer(struct KERNEL_hdl *hdl)
 {
     static spinlock_t atomic = SPINLOCK_INITIALIZER;
-
     spin_lock(&atomic);
 
     if (HDL_FLAG_INITIALIZER & hdl->flags)
-        __freertos_init_hdl(hdl, hdl->cid, hdl->flags);
+        __freertos_hdl_init(hdl, hdl->cid, hdl->flags);
 
     spin_unlock(&atomic);
 }
 
-static int __freertos_acquire(struct KERNEL_hdl *hdl, uint8_t cid, uint32_t os_ticks)
+static IRAM_ATTR int __freertos_hdl_acquire(struct KERNEL_hdl *hdl, uint8_t cid, uint32_t os_ticks)
 {
     if (cid != hdl->cid)
         return __set_errno_neg(EINVAL);
     if ((HDL_FLAG_NO_INTR & hdl->flags) && (0 != __get_IPSR()))
         return __set_errno_neg(EACCES);
     if (HDL_FLAG_INITIALIZER & hdl->flags)
-        __freertos_do_initialize(hdl);
+        __freertos_hdl_initializer(hdl);
 
     UBaseType_t retval;
-    if (HDL_FLAG_FREERTOS_RECURSIVE & hdl->flags)
+    if (HDL_FLAG_RECURSIVE_MUTEX & hdl->flags)
         retval = xSemaphoreTakeRecursive((void *)&hdl->padding, os_ticks);
     else
         retval = xSemaphoreTake((void *)&hdl->padding, os_ticks);
@@ -228,17 +231,17 @@ static int __freertos_acquire(struct KERNEL_hdl *hdl, uint8_t cid, uint32_t os_t
         return __set_errno_neg(ETIMEDOUT);
 }
 
-static int __freertos_release(struct KERNEL_hdl *hdl, uint8_t cid)
+static IRAM_ATTR int __freertos_hdl_release(struct KERNEL_hdl *hdl, uint8_t cid)
 {
     if (cid != hdl->cid)
         return __set_errno_neg(EINVAL);
     if ((HDL_FLAG_NO_INTR & hdl->flags) && (0 != __get_IPSR()))
         return __set_errno_neg(EACCES);
     if (HDL_FLAG_INITIALIZER & hdl->flags)
-        __freertos_do_initialize(hdl);
+        __freertos_hdl_initializer(hdl);
 
     UBaseType_t retval;
-    if (HDL_FLAG_FREERTOS_RECURSIVE & hdl->flags)
+    if (HDL_FLAG_RECURSIVE_MUTEX & hdl->flags)
         retval = xSemaphoreGiveRecursive((void *)&hdl->padding);
     else
         retval = xSemaphoreGive((void *)&hdl->padding);
@@ -250,45 +253,45 @@ static int __freertos_release(struct KERNEL_hdl *hdl, uint8_t cid)
 }
 
 /****************************************************************************
- * @implements: mutex
+ * @implements: sys/mutex.h
 *****************************************************************************/
 mutex_t *mutex_create(int flags)
 {
     mutex_t *mutex = KERNEL_handle_get(CID_MUTEX);
     if (mutex)
-        __freertos_init_hdl(mutex, CID_MUTEX, HDL_FLAG_NO_INTR | flags | mutex->flags);
+        __freertos_hdl_init(mutex, CID_MUTEX, HDL_FLAG_NO_INTR | flags | mutex->flags);
 
     return mutex;
 }
 
 int mutex_init(mutex_t *mutex, int flags)
 {
-    return __freertos_init_hdl(mutex, CID_MUTEX, HDL_FLAG_NO_INTR | flags);
+    return __freertos_hdl_init(mutex, CID_MUTEX, HDL_FLAG_NO_INTR | flags);
 }
 
 int mutex_destroy(mutex_t *mutex)
 {
-    __freertos_destroy_hdl(mutex);
+    __freertos_hdl_destroy(mutex);
     return KERNEL_handle_release(mutex);
 }
 
-int mutex_lock(mutex_t *mutex)
+int IRAM_ATTR mutex_lock(mutex_t *mutex)
 {
     return mutex_trylock(mutex, portMAX_DELAY);
 }
 
-int mutex_trylock(mutex_t *mutex, uint32_t timeout)
+int IRAM_ATTR mutex_trylock(mutex_t *mutex, uint32_t timeout)
 {
-    return __freertos_acquire(mutex, CID_MUTEX, timeout / portTICK_PERIOD_MS);
+    return __freertos_hdl_acquire(mutex, CID_MUTEX, timeout / portTICK_PERIOD_MS);
 }
 
-int mutex_unlock(mutex_t *mutex)
+int IRAM_ATTR mutex_unlock(mutex_t *mutex)
 {
-    return __freertos_release(mutex, CID_MUTEX);
+    return __freertos_hdl_release(mutex, CID_MUTEX);
 }
 
 /***************************************************************************
- *  @implements
+ *  @implements: semaphore.h
  ***************************************************************************/
 int sem_init(sem_t *sema, int pshared, unsigned int value)
 {
@@ -299,36 +302,36 @@ int sem_init(sem_t *sema, int pshared, unsigned int value)
 
     sema->init_sem.max_count = value;
     sema->init_sem.initial_count = 0;
-    return __freertos_init_hdl(sema, CID_SEMAPHORE, 0);
+    return __freertos_hdl_init(sema, CID_SEMAPHORE, 0);
 }
 
 int sem_destroy(sem_t *sema)
 {
-    __freertos_destroy_hdl(sema);
+    __freertos_hdl_destroy(sema);
     return KERNEL_handle_release(sema);
 }
 
-int sem_wait(sem_t *sema)
+int IRAM_ATTR sem_wait(sem_t *sema)
 {
-    return __freertos_acquire(sema, CID_SEMAPHORE, portMAX_DELAY);
+    return __freertos_hdl_acquire(sema, CID_SEMAPHORE, portMAX_DELAY);
 }
 
-int sem_timedwait(sem_t *sema, struct timespec const *spec)
+int IRAM_ATTR sem_timedwait(sem_t *sema, struct timespec const *spec)
 {
-    return __freertos_acquire(sema, CID_SEMAPHORE, (spec->tv_sec * 1000 + spec->tv_nsec / 1000000) / portTICK_PERIOD_MS);
+    return __freertos_hdl_acquire(sema, CID_SEMAPHORE, (spec->tv_sec * 1000 + spec->tv_nsec / 1000000) / portTICK_PERIOD_MS);
 }
 
-int sem_timedwait_ms(sem_t *sema, unsigned int millisecond)
+int IRAM_ATTR sem_timedwait_ms(sem_t *sema, unsigned int millisecond)
 {
-    return __freertos_acquire(sema, CID_SEMAPHORE, millisecond / portTICK_PERIOD_MS);
+    return __freertos_hdl_acquire(sema, CID_SEMAPHORE, millisecond / portTICK_PERIOD_MS);
 }
 
-int sem_post(sem_t *sema)
+int IRAM_ATTR sem_post(sem_t *sema)
 {
-    return __freertos_release(sema, CID_SEMAPHORE);
+    return __freertos_hdl_release(sema, CID_SEMAPHORE);
 }
 
-int sem_getvalue(sem_t *sema, int *val)
+int IRAM_ATTR sem_getvalue(sem_t *sema, int *val)
 {
     *val = uxSemaphoreGetCount(&sema->padding);
     return 0;

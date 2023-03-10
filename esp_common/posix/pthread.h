@@ -53,7 +53,6 @@
 
     #define PTHREAD_MUTEX_INITIALIZER   _PTHREAD_MUTEX_INITIALIZER
 
-/*
 // Detach state.
     enum
     {
@@ -69,7 +68,6 @@
         PTHREAD_MUTEX_ERRORCHECK,
         PTHREAD_MUTEX_DEFAULT = PTHREAD_MUTEX_NORMAL
     };
-*/
 
 // Mutex protocols.
     enum
@@ -79,7 +77,6 @@
         PTHREAD_PRIO_PROTECT
     };
 
-/*
 // Scheduler inheritance.
     enum
     {
@@ -93,7 +90,6 @@
         PTHREAD_SCOPE_PROCESS,
         PTHREAD_SCOPE_SYSTEM
     };
-*/
 
 // Process shared or private flag.
     enum
