@@ -128,8 +128,6 @@ static inline void __attribute__((always_inline)) vPortYieldFromISR( void );
 
 // ----------------------- System --------------------------
 
-static inline BaseType_t __attribute__((always_inline)) xPortGetCoreID( void );
-
 // ----------------------- TCB Cleanup --------------------------
 
 void vPortCleanUpTCB ( void *pxTCB );

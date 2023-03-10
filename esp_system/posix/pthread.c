@@ -3,7 +3,9 @@
 #include <errno.h>
 #include <pthread.h>
 #include <string.h>
+
 #include <sys/errno.h>
+#include <sys/mutex.h>
 
 #include "esp_attr.h"
 #include "sys/queue.h"
@@ -50,21 +52,12 @@ typedef struct
     esp_pthread_cfg_t cfg;  ///< pthread configuration
 } esp_pthread_task_arg_t;
 
-/** pthread mutex FreeRTOS wrapper */
-typedef struct
-{
-    SemaphoreHandle_t   sem;        ///< Handle of the task waiting to join
-    int                 type;       ///< Mutex type. Currently supported PTHREAD_MUTEX_NORMAL and PTHREAD_MUTEX_RECURSIVE
-} esp_pthread_mutex_t;
-
 static SemaphoreHandle_t s_threads_mux  = NULL;
 portMUX_TYPE pthread_lazy_init_lock  = portMUX_INITIALIZER_UNLOCKED; // Used for mutexes and cond vars and rwlocks
 static SLIST_HEAD(esp_thread_list_head, esp_pthread_entry) s_threads_list
                                         = SLIST_HEAD_INITIALIZER(s_threads_list);
 static pthread_key_t s_pthread_cfg_key;
 
-
-static int pthread_mutex_lock_internal(esp_pthread_mutex_t *mux, TickType_t tmo);
 
 static void esp_pthread_cfg_key_destructor(void *value)
 {
@@ -450,8 +443,6 @@ int pthread_cancel(pthread_t thread)
     return ENOSYS;
 }
 
-
-
 pthread_t pthread_self(void)
 {
     if (xSemaphoreTake(s_threads_mux, portMAX_DELAY) != pdTRUE) {
@@ -485,233 +476,11 @@ int pthread_once(pthread_once_t *once_control, void (*init_routine)(void))
     return 0;
 }
 
-/***************** MUTEX ******************/
-static int mutexattr_check(const pthread_mutexattr_t *attr)
-{
-    if (attr->type != PTHREAD_MUTEX_NORMAL &&
-        attr->type != PTHREAD_MUTEX_RECURSIVE &&
-        attr->type != PTHREAD_MUTEX_ERRORCHECK) {
-        return EINVAL;
-    }
-    return 0;
-}
-
-int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
-{
-    int type = PTHREAD_MUTEX_NORMAL;
-
-    if (!mutex) {
-        return EINVAL;
-    }
-
-    if (attr) {
-        if (!attr->is_initialized) {
-            return EINVAL;
-        }
-        int res = mutexattr_check(attr);
-        if (res) {
-            return res;
-        }
-        type = attr->type;
-    }
-
-    esp_pthread_mutex_t *mux = (esp_pthread_mutex_t *)malloc(sizeof(esp_pthread_mutex_t));
-    if (!mux) {
-        return ENOMEM;
-    }
-    mux->type = type;
-
-    if (mux->type == PTHREAD_MUTEX_RECURSIVE) {
-        mux->sem = xSemaphoreCreateRecursiveMutex();
-    } else {
-        mux->sem = xSemaphoreCreateMutex();
-    }
-    if (!mux->sem) {
-        free(mux);
-        return EAGAIN;
-    }
-
-    *mutex = (pthread_mutex_t)mux; // pointer value fit into pthread_mutex_t (uint32_t)
-
-    return 0;
-}
-
-int pthread_mutex_destroy(pthread_mutex_t *mutex)
-{
-    esp_pthread_mutex_t *mux;
-
-    if (!mutex) {
-        return EINVAL;
-    }
-    if ((intptr_t) *mutex == PTHREAD_MUTEX_INITIALIZER) {
-        return 0; // Static mutex was never initialized
-    }
-
-    mux = (esp_pthread_mutex_t *)*mutex;
-    if (!mux) {
-        return EINVAL;
-    }
-
-    // check if mux is busy
-    int res = pthread_mutex_lock_internal(mux, 0);
-    if (res == EBUSY) {
-        return EBUSY;
-    }
-
-    if (mux->type == PTHREAD_MUTEX_RECURSIVE) {
-        res = xSemaphoreGiveRecursive(mux->sem);
-    } else {
-        res = xSemaphoreGive(mux->sem);
-    }
-    if (res != pdTRUE) {
-        assert(false && "Failed to release mutex!");
-    }
-    vSemaphoreDelete(mux->sem);
-    free(mux);
-
-    return 0;
-}
-
-static int IRAM_ATTR pthread_mutex_lock_internal(esp_pthread_mutex_t *mux, TickType_t tmo)
-{
-    if (!mux) {
-        return EINVAL;
-    }
-
-    if ((mux->type == PTHREAD_MUTEX_ERRORCHECK) &&
-        (xSemaphoreGetMutexHolder(mux->sem) == xTaskGetCurrentTaskHandle())) {
-        return EDEADLK;
-    }
-
-    if (mux->type == PTHREAD_MUTEX_RECURSIVE) {
-        if (xSemaphoreTakeRecursive(mux->sem, tmo) != pdTRUE) {
-            return EBUSY;
-        }
-    } else {
-        if (xSemaphoreTake(mux->sem, tmo) != pdTRUE) {
-            return EBUSY;
-        }
-    }
-
-    return 0;
-}
-
-static int pthread_mutex_init_if_static(pthread_mutex_t *mutex)
-{
-    int res = 0;
-    if ((intptr_t) *mutex == PTHREAD_MUTEX_INITIALIZER) {
-        portENTER_CRITICAL(&pthread_lazy_init_lock);
-        if ((intptr_t) *mutex == PTHREAD_MUTEX_INITIALIZER) {
-            res = pthread_mutex_init(mutex, NULL);
-        }
-        portEXIT_CRITICAL(&pthread_lazy_init_lock);
-    }
-    return res;
-}
-
-int IRAM_ATTR pthread_mutex_lock(pthread_mutex_t *mutex)
-{
-    if (!mutex) {
-        return EINVAL;
-    }
-    int res = pthread_mutex_init_if_static(mutex);
-    if (res != 0) {
-        return res;
-    }
-    return pthread_mutex_lock_internal((esp_pthread_mutex_t *)*mutex, portMAX_DELAY);
-}
-
-
-int IRAM_ATTR pthread_mutex_trylock(pthread_mutex_t *mutex)
-{
-    if (!mutex) {
-        return EINVAL;
-    }
-    int res = pthread_mutex_init_if_static(mutex);
-    if (res != 0) {
-        return res;
-    }
-    return pthread_mutex_lock_internal((esp_pthread_mutex_t *)*mutex, 0);
-}
-
-int IRAM_ATTR pthread_mutex_unlock(pthread_mutex_t *mutex)
-{
-    esp_pthread_mutex_t *mux;
-
-    if (!mutex) {
-        return EINVAL;
-    }
-    mux = (esp_pthread_mutex_t *)*mutex;
-    if (!mux) {
-        return EINVAL;
-    }
-
-    if (((mux->type == PTHREAD_MUTEX_RECURSIVE) ||
-        (mux->type == PTHREAD_MUTEX_ERRORCHECK)) &&
-        (xSemaphoreGetMutexHolder(mux->sem) != xTaskGetCurrentTaskHandle())) {
-        return EPERM;
-    }
-
-    int ret;
-    if (mux->type == PTHREAD_MUTEX_RECURSIVE) {
-        ret = xSemaphoreGiveRecursive(mux->sem);
-    } else {
-        ret = xSemaphoreGive(mux->sem);
-    }
-    if (ret != pdTRUE) {
-        assert(false && "Failed to unlock mutex!");
-    }
-    return 0;
-}
-
-int pthread_mutexattr_init(pthread_mutexattr_t *attr)
-{
-    if (!attr) {
-        return EINVAL;
-    }
-    memset(attr, 0, sizeof(*attr));
-    attr->type = PTHREAD_MUTEX_NORMAL;
-    attr->is_initialized = 1;
-    return 0;
-}
-
-int pthread_mutexattr_destroy(pthread_mutexattr_t *attr)
-{
-    if (!attr) {
-        return EINVAL;
-    }
-    attr->is_initialized = 0;
-    return 0;
-}
-
-int pthread_mutexattr_gettype(const pthread_mutexattr_t *attr, int *type)
-{
-    if (!attr) {
-        return EINVAL;
-    }
-    *type = attr->type;
-    return 0;
-}
-
-int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int type)
-{
-    if (!attr) {
-        return EINVAL;
-    }
-    pthread_mutexattr_t tmp_attr = {.type = type};
-    int res = mutexattr_check(&tmp_attr);
-    if (!res) {
-        attr->type = type;
-    }
-    return res;
-}
-
 /***************** ATTRIBUTES ******************/
 int pthread_attr_init(pthread_attr_t *attr)
 {
-    if (attr) {
-        /* Nothing to allocate. Set everything to default */
-        memset(attr, 0, sizeof(*attr));
+    if (attr)
+    {
         attr->stacksize   = CONFIG_PTHREAD_TASK_STACK_SIZE_DEFAULT;
         attr->detachstate = PTHREAD_CREATE_JOINABLE;
         return 0;
@@ -721,8 +490,7 @@ int pthread_attr_init(pthread_attr_t *attr)
 
 int pthread_attr_destroy(pthread_attr_t *attr)
 {
-    /* Nothing to deallocate. Reset everything to default */
-    return pthread_attr_init(attr);
+    return 0;
 }
 
 int pthread_attr_getstacksize(pthread_attr_t const *attr, size_t *stacksize)
@@ -768,4 +536,55 @@ int pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate)
         return 0;
     }
     return EINVAL;
+}
+
+/***************************************************************************
+ *  @implements: pthread mutex
+ ***************************************************************************/
+int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
+{
+    return 0;
+}
+
+int pthread_mutex_destroy(pthread_mutex_t *mutex)
+{
+    return 0;
+}
+
+int IRAM_ATTR pthread_mutex_lock(pthread_mutex_t *mutex)
+{
+    return 0;
+}
+
+int IRAM_ATTR pthread_mutex_trylock(pthread_mutex_t *mutex)
+{
+    return 0;
+}
+
+int IRAM_ATTR pthread_mutex_unlock(pthread_mutex_t *mutex)
+{
+    return 0;
+}
+
+int pthread_mutexattr_init(pthread_mutexattr_t *attr)
+{
+    attr->type = PTHREAD_MUTEX_NORMAL;
+    return 0;
+}
+
+int pthread_mutexattr_destroy(pthread_mutexattr_t *attr)
+{
+    return 0;
+}
+
+int pthread_mutexattr_gettype(const pthread_mutexattr_t *attr, int *type)
+{
+    *type = attr->type;
+    return 0;
+}
+
+int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int type)
+{
+    attr->type = type;
+    return 0;
 }
