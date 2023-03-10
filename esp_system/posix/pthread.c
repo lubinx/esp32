@@ -541,43 +541,131 @@ int pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate)
 /***************************************************************************
  *  @implements: pthread mutex
  ***************************************************************************/
-int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
+int pthread_mutex_init(pthread_mutex_t *mutex, pthread_mutexattr_t const *attr)
 {
-    return 0;
+    mutex_t *retval = mutex_create(attr == NULL ||
+        PTHREAD_MUTEX_RECURSIVE == attr->type ? MUTEX_FLAG_RECURSIVE : MUTEX_FLAG_NORMAL);
+
+    if (retval)
+    {
+        *mutex = (pthread_mutex_t)retval;
+        return 0;
+    }
+    else
+        return ENOMEM;
 }
 
 int pthread_mutex_destroy(pthread_mutex_t *mutex)
 {
-    return 0;
+    if (PTHREAD_MUTEX_INITIALIZER != *mutex && PTHREAD_RECURSIVE_MUTEX_INITIALIZER != *mutex)
+       return mutex_destroy((mutex_t *)*mutex);
+    else
+        return 0;
+}
+
+static void IRAM_ATTR pthread_mutex_do_initializer(pthread_mutex_t *mutex)
+{
+    static spinlock_t atomic = SPINLOCK_INITIALIZER;
+    spin_lock(&atomic);
+
+    if (PTHREAD_MUTEX_INITIALIZER == *mutex)
+        *mutex = (pthread_mutex_t)mutex_create(MUTEX_FLAG_NORMAL);
+    else if(PTHREAD_RECURSIVE_MUTEX_INITIALIZER == *mutex)
+        *mutex = (pthread_mutex_t)mutex_create(MUTEX_FLAG_RECURSIVE);
+
+    spin_unlock(&atomic);
 }
 
 int IRAM_ATTR pthread_mutex_lock(pthread_mutex_t *mutex)
 {
-    return 0;
+    if (PTHREAD_MUTEX_INITIALIZER == *mutex || PTHREAD_RECURSIVE_MUTEX_INITIALIZER == *mutex)
+        pthread_mutex_do_initializer(mutex);
+
+    return mutex_lock((mutex_t *)*mutex);
 }
 
 int IRAM_ATTR pthread_mutex_trylock(pthread_mutex_t *mutex)
 {
-    return 0;
+    if (PTHREAD_MUTEX_INITIALIZER == *mutex || PTHREAD_RECURSIVE_MUTEX_INITIALIZER == *mutex)
+        pthread_mutex_do_initializer(mutex);
+
+    return mutex_trylock((mutex_t *)*mutex, 0);
 }
 
 int IRAM_ATTR pthread_mutex_unlock(pthread_mutex_t *mutex)
 {
+    if (PTHREAD_MUTEX_INITIALIZER != *mutex && PTHREAD_RECURSIVE_MUTEX_INITIALIZER != *mutex)
+        return mutex_unlock((mutex_t *)*mutex);
+    else
+        return EACCES;
+}
+
+int pthread_mutex_getprioceiling(const pthread_mutex_t *restrict mutex, int *restrict prioceiling)
+{
+    ARG_UNUSED(mutex, prioceiling);
     return 0;
 }
 
+int pthread_mutex_setprioceiling(pthread_mutex_t *restrict mutex, int prioceiling, int *old_prioceiling)
+{
+    ARG_UNUSED(mutex, prioceiling, old_prioceiling);
+    return 0;
+}
+
+/***************************************************************************
+ *  @implements: pthread mutex attr
+ ***************************************************************************/
 int pthread_mutexattr_init(pthread_mutexattr_t *attr)
 {
-    attr->type = PTHREAD_MUTEX_NORMAL;
+    memset(attr, 0, sizeof(pthread_mutexattr_t));
     return 0;
 }
 
 int pthread_mutexattr_destroy(pthread_mutexattr_t *attr)
 {
+    ARG_UNUSED(attr);
     return 0;
 }
 
-int pthread_mutexattr_gettype(const pthread_mutexattr_t *attr, int *type)
+int pthread_mutexattr_getprioceiling(pthread_mutexattr_t const *restrict attr, int *restrict prioceiling)
+{
+    ARG_UNUSED(attr, prioceiling);
+    return 0;
+}
+
+int pthread_mutexattr_setprioceiling(pthread_mutexattr_t *attr, int prioceiling)
+{
+    ARG_UNUSED(attr, prioceiling);
+    return 0;
+}
+
+int pthread_mutexattr_getprotocol(pthread_mutexattr_t const *restrict attr, int *restrict protocol)
+{
+    ARG_UNUSED(attr);
+    *protocol = PTHREAD_PRIO_NONE;
+    return 0;
+}
+
+int pthread_mutexattr_setprotocol(pthread_mutexattr_t *attr, int protocol)
+{
+    ARG_UNUSED(attr, protocol);
+    return 0;
+}
+
+int pthread_mutexattr_getpshared(pthread_mutexattr_t const *restrict attr, int *restrict pshared)
+{
+    ARG_UNUSED(attr);
+    *pshared = PTHREAD_PROCESS_PRIVATE;
+    return 0;
+}
+
+int pthread_mutexattr_setpshared(pthread_mutexattr_t *attr, int pshared)
+{
+    ARG_UNUSED(attr, pshared);
+    return 0;
+}
+
+int pthread_mutexattr_gettype(pthread_mutexattr_t const *restrict attr, int *restrict type)
 {
     *type = attr->type;
     return 0;

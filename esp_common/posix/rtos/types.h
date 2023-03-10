@@ -1,5 +1,5 @@
-#ifndef __GENERIC_OS_TYPES_H
-#define __GENERIC_OS_TYPES_H            1
+#ifndef __GENERIC_RTOS_TYPES_H
+#define __GENERIC_RTOS_TYPES_H          1
 
 #include <features.h>
 #include <stdint.h>
@@ -57,7 +57,7 @@
  *  @def: semaphore.h   sem_t
  ***************************************************************************/
     #define SEMA_INITIALIZER(INIT_COUNT, MAX_COUNT) \
-        {.cid = CID_SEMAPHORE, .flags = HDL_FLAG_INITIALIZER, .init_sem{.initial_count = INIT_COUNT, .max_count = MAX_COUNT}}
+        {.glist_next = 0, .cid = CID_SEMAPHORE, .flags = HDL_FLAG_INITIALIZER, .rsv = {0}, .init_sem{.initial_count = INIT_COUNT, .max_count = MAX_COUNT}}
 
     // sem_t initializer alias
     #define SEMAPHORE_INITIALIZER       SEMA_INITIALIZER
@@ -74,23 +74,7 @@
 
     // mutex initializer
     #define MUTEX_INITIALIZER           \
-        {.cid = CID_MUTEX, .flags = HDL_FLAG_INITIALIZER | MUTEX_FLAG_NORMAL}
+        {.glist_next = 0, .cid = CID_MUTEX, .flags = HDL_FLAG_INITIALIZER | MUTEX_FLAG_NORMAL, .rsv = {0}}
     #define MUTEX_RECURSIVE_INITIALIZER \
-        {.cid = CID_MUTEX, .flags = HDL_FLAG_INITIALIZER | MUTEX_FLAG_RECURSIVE}
-
-/***************************************************************************
- *  @def: pthread.h     pthread_mutex_t
- ***************************************************************************/
-    typedef struct KERNEL_hdl       pthread_mutex_t;
-
-    struct pthread_mutexattr_t
-    {
-        int type;
-    };
-    typedef struct pthread_mutexattr_t  pthread_mutexattr_t;
-
-    #define PTHREAD_MUTEX_INITIALIZER   \
-        MUTEX_INITIALIZER
-    #define PTHREAD_RECURSIVE_MUTEX_INITIALIZER \
-        MUTEX_RECURSIVE_INITIALIZER
+        {.glist_next = 0, .cid = CID_MUTEX, .flags = HDL_FLAG_INITIALIZER | MUTEX_FLAG_RECURSIVE, .rsv = {0}}
 #endif
