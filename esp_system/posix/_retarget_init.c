@@ -37,6 +37,10 @@ static struct _reent __reent = {0};
 void __libc_retarget_init(void)
 {
     heap_caps_init();
+
+    extern void KERNEL_init(void);
+    KERNEL_init();
+
     __LOCK_retarget_init();
 
     _GLOBAL_REENT = &__reent;

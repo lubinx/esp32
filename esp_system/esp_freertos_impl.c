@@ -6,9 +6,12 @@
 
 #include <stddef.h>
 #include <assert.h>
+#include <sys/types.h>
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
+#include <ultracore/kernel.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <freertos/semphr.h>
 
 #include "esp_attr.h"
 #include "esp_err.h"
@@ -22,11 +25,58 @@
 
 #include "sdkconfig.h"
 
+#include "esp_rom_sys.h"
+
 /****************************************************************************
- *  @internal
+ *  @implements: freertos main task
 *****************************************************************************/
-static uintptr_t __main_stack[CONFIG_ESP_MAIN_TASK_STACK_SIZE / sizeof(uintptr_t)];
-static StaticTask_t __main_task;
+static char const *freertos_argv = "freertos_start";
+
+static void __esp_freertos_start(void *arg)
+{
+    ARG_UNUSED(arg);
+    __esp_rtos_initialize();
+
+    extern __attribute__((noreturn)) int main(int argc, char **argv);
+    // TODO: process main() exit code
+    main(1, (char **)&freertos_argv);
+
+    // main should not return
+    vTaskDelete(NULL);
+}
+
+void esp_rtos_bootstrap(void)
+{
+    static uintptr_t __main_stack[CONFIG_ESP_MAIN_TASK_STACK_SIZE / sizeof(uintptr_t)];
+    static StaticTask_t __main_task;
+
+    // Initialize the cross-core interrupt on CPU0
+    esp_crosscore_int_init();
+
+   if (0 == __get_CORE_ID())
+   {
+        // TODO: main task pined to core?
+        // CONFIG_ESP_MAIN_TASK_AFFINITY
+
+        xTaskCreateStatic(__esp_freertos_start, freertos_argv,
+            CONFIG_ESP_MAIN_TASK_STACK_SIZE, NULL, configMAX_PRIORITIES,
+            (void *)__main_stack, &__main_task
+        );
+
+        vTaskStartScheduler();
+        abort();
+   }
+   else
+   {
+        xPortStartScheduler();
+        abort(); // Only get to here if FreeRTOS somehow very broken
+   }
+}
+
+__attribute__((weak))
+void __esp_rtos_initialize(void)
+{
+}
 
 /****************************************************************************
  *  @implements: freertos tick & idle
@@ -52,49 +102,196 @@ uint64_t systimer_us_to_ticks(uint64_t us)
 }
 
 /****************************************************************************
- *  @implements: freertos main task
+ *  @implements: unistd.c sleep() / msleep() / usleep()
 *****************************************************************************/
-static void __esp_freertos_main_thread(void *arg)
+int usleep(useconds_t us)
 {
-    ARG_UNUSED(arg);
-    __esp_rtos_initialize();
+    if (! us)
+        return 0;
 
-    extern __attribute__((noreturn)) void main(void);
-    // TODO: process main() exit code
-    main();
+    uint32_t us_per_tick = portTICK_PERIOD_MS * 1000;
+    if (us > us_per_tick)
+    {
+        vTaskDelay((us + us_per_tick - 1) / us_per_tick);
+        return 0;
+    }
 
-    // main should not return
-    vTaskDelete(NULL);
+    esp_rom_delay_us(us);
+    return 0;
 }
 
-void esp_rtos_bootstrap(void)
+unsigned int sleep(unsigned int seconds)
 {
-    // Initialize the cross-core interrupt on CPU0
-    esp_crosscore_int_init();
-
-   if (0 == __get_CORE_ID())
-   {
-        // TODO: main task pined to core?
-        // CONFIG_ESP_MAIN_TASK_AFFINITY
-
-        xTaskCreateStatic(__esp_freertos_main_thread, "esp_freertos_main_thread",
-            CONFIG_ESP_MAIN_TASK_STACK_SIZE, NULL, configMAX_PRIORITIES,
-            (void *)__main_stack, &__main_task
-        );
-
-        vTaskStartScheduler();
-        abort();
-   }
-   else
-   {
-        xPortStartScheduler();
-        abort(); // Only get to here if FreeRTOS somehow very broken
-   }
+    vTaskDelay(seconds * 1000 / portTICK_PERIOD_MS);
+    return 0;
 }
 
-__attribute__((weak))
-void __esp_rtos_initialize(void)
+int msleep(uint32_t msec)
 {
+    if (msec)
+        vTaskDelay(msec / portTICK_PERIOD_MS);
+    else
+        taskYIELD();
+
+    return 0;
+}
+
+// TODO: move to pthread.c
+int pthread_yield(void)
+{
+    taskYIELD();
+}
+
+int pthread_setcancelstate(int state, int *oldstate)
+{
+    ARG_UNUSED(state, oldstate);
+    return ENOSYS;
+}
+
+int pthread_setcanceltype(int type, int *old_type)
+{
+    ARG_UNUSED(type, old_type);
+    return ENOSYS;
+}
+
+/****************************************************************************
+ * @implements: generic synchronize objects
+*****************************************************************************/
+int waitfor(handle_t hdl, uint32_t timeout)
+{
+    UBaseType_t retval;
+    if (HDL_FLAG_FREERTOS_RECURSIVE & AsKernelHdl(hdl)->flags)
+        retval = xSemaphoreTakeRecursive((void *)&AsKernelHdl(hdl)->padding, timeout / portTICK_PERIOD_MS);
+    else
+        retval = xSemaphoreTake((void *)&AsKernelHdl(hdl)->padding, timeout / portTICK_PERIOD_MS);
+
+    if (pdTRUE == retval)
+        return 0;
+    else
+        return __set_errno_neg(ETIMEDOUT);
+}
+
+static int __freertos_init_hdl(struct KERNEL_hdl *hdl, uint8_t cid, uint8_t flags)
+{
+    switch (cid)
+    {
+    case CID_SEMAPHORE:
+        xSemaphoreCreateCountingStatic(hdl->init_sem.max_count, hdl->init_sem.initial_count, (void *)hdl->padding);
+        break;
+
+    case CID_MUTEX:
+        if (HDL_FLAG_FREERTOS_RECURSIVE & flags)
+            xSemaphoreCreateRecursiveMutexStatic((void *)hdl->padding);
+        else
+            xSemaphoreCreateMutexStatic((void *)&hdl->padding);
+        break;
+
+    default:
+        while (1);
+        return ENOSYS;
+    }
+
+    hdl->cid = cid;
+    hdl->flags = flags & ~(HDL_FLAG_INITIALIZER);
+    return 0;
+}
+
+static inline int __freertos_destroy_hdl(struct KERNEL_hdl *hdl)
+{
+    vSemaphoreDelete(hdl);
+    return 0;
+}
+
+static inline void __freertos_do_initialize(struct KERNEL_hdl *hdl)
+{
+    static spinlock_t atomic = SPINLOCK_INITIALIZER;
+
+    spin_lock(&atomic);
+
+    if (HDL_FLAG_INITIALIZER & hdl->flags)
+        __freertos_init_hdl(hdl, hdl->cid, hdl->flags);
+
+    spin_unlock(&atomic);
+}
+
+static int __freertos_acquire(struct KERNEL_hdl *hdl, uint8_t cid, uint32_t os_ticks)
+{
+    if (cid != hdl->cid)
+        return __set_errno_neg(EINVAL);
+    if ((HDL_FLAG_NO_INTR & hdl->flags) && (0 != __get_IPSR()))
+        return __set_errno_neg(EACCES);
+    if (HDL_FLAG_INITIALIZER & hdl->flags)
+        __freertos_do_initialize(hdl);
+
+    UBaseType_t retval;
+    if (HDL_FLAG_FREERTOS_RECURSIVE & hdl->flags)
+        retval = xSemaphoreTakeRecursive((void *)&hdl->padding, os_ticks);
+    else
+        retval = xSemaphoreTake((void *)&hdl->padding, os_ticks);
+
+    if (pdTRUE == retval)
+        return 0;
+    else
+        return __set_errno_neg(ETIMEDOUT);
+}
+
+static int __freertos_release(struct KERNEL_hdl *hdl, uint8_t cid)
+{
+    if (cid != hdl->cid)
+        return __set_errno_neg(EINVAL);
+    if ((HDL_FLAG_NO_INTR & hdl->flags) && (0 != __get_IPSR()))
+        return __set_errno_neg(EACCES);
+    if (HDL_FLAG_INITIALIZER & hdl->flags)
+        __freertos_do_initialize(hdl);
+
+    UBaseType_t retval;
+    if (HDL_FLAG_FREERTOS_RECURSIVE & hdl->flags)
+        retval = xSemaphoreGiveRecursive((void *)&hdl->padding);
+    else
+        retval = xSemaphoreGive((void *)&hdl->padding);
+
+    if (pdTRUE == retval)
+        return 0;
+    else
+        return __set_errno_neg(EOVERFLOW);
+}
+
+/****************************************************************************
+ * @implements: mutex
+*****************************************************************************/
+mutex_t *mutex_create(int flags)
+{
+    mutex_t *mutex = KERNEL_handle_get(CID_MUTEX);
+    if (mutex)
+        __freertos_init_hdl(mutex, CID_MUTEX, HDL_FLAG_NO_INTR | flags | mutex->flags);
+
+    return mutex;
+}
+
+int mutex_init(mutex_t *mutex, int flags)
+{
+    return __freertos_init_hdl(mutex, CID_MUTEX, HDL_FLAG_NO_INTR | flags);
+}
+
+int mutex_destroy(mutex_t *mutex)
+{
+    __freertos_destroy_hdl(mutex);
+    return KERNEL_handle_release(mutex);
+}
+
+int mutex_lock(mutex_t *mutex)
+{
+    return mutex_trylock(mutex, portMAX_DELAY);
+}
+
+int mutex_trylock(mutex_t *mutex, uint32_t timeout)
+{
+    return __freertos_acquire(mutex, CID_MUTEX, timeout / portTICK_PERIOD_MS);
+}
+
+int mutex_unlock(mutex_t *mutex)
+{
+    return __freertos_release(mutex, CID_MUTEX);
 }
 
 /****************************************************************************

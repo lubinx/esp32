@@ -53,6 +53,7 @@ int main(void)
     for (int i = 0; i < 10; i ++)
         printf("\t0x%08x, 0x%08x, 0x%08x, 0x%08x\n", rand(), rand(), rand(), rand());
 
+    /*
     printf("\nc++ exception test...\n");
     try
     {
@@ -62,6 +63,7 @@ int main(void)
     {
         printf("catched c++ exception: %s\n\n", e);
     }
+    */
 
     char const *long_text =
 "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890\n\

@@ -18,8 +18,6 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 
-static_assert(sizeof_member(struct __semaphore, __pad) == sizeof(StaticSemaphore_t), "sizeof(struct __semaphore) != sizeof(StaticSemaphore_t)");
-
 /***************************************************************************
  *  @implements
  ***************************************************************************/
@@ -30,7 +28,7 @@ int sem_init(sem_t *sema, int pshared, unsigned int value)
     if (SEM_VALUE_MAX < value)
         return __set_errno_neg(EINVAL);
 
-    if (NULL == xSemaphoreCreateCountingStatic(value, 0, (void *)&sema->__pad))
+    if (NULL == xSemaphoreCreateCountingStatic(value, 0, (void *)&sema->padding))
         return __set_errno_neg(ENOMEM);
     else
         return 0;
@@ -38,7 +36,7 @@ int sem_init(sem_t *sema, int pshared, unsigned int value)
 
 int sem_destroy(sem_t *sema)
 {
-    vSemaphoreDelete((void *)&sema->__pad);
+    vSemaphoreDelete((void *)&sema->padding);
     return 0;
 }
 
@@ -62,7 +60,7 @@ int sem_unlink(char const *name)
 
 int sem_wait(sem_t *sema)
 {
-    if (pdTRUE == xSemaphoreTake((void *)&sema->__pad, portMAX_DELAY))
+    if (pdTRUE == xSemaphoreTake((void *)&sema->padding, portMAX_DELAY))
         return 0;
     else
         return __set_errno_neg(EINTR);  // REVIEW: EINTR?
@@ -75,7 +73,7 @@ int sem_timedwait(sem_t *sema, struct timespec const *spec)
 
 int sem_timedwait_ms(sem_t *sema, unsigned int millisecond)
 {
-    if (pdTRUE == xSemaphoreTake((void *)&sema->__pad, millisecond / portTICK_PERIOD_MS))
+    if (pdTRUE == xSemaphoreTake((void *)&sema->padding, millisecond / portTICK_PERIOD_MS))
         return 0;
     else
         return __set_errno_neg(ETIMEDOUT);
@@ -83,7 +81,7 @@ int sem_timedwait_ms(sem_t *sema, unsigned int millisecond)
 
 int sem_post(sem_t *sema)
 {
-    if (pdTRUE == xSemaphoreGive(&sema->__pad))
+    if (pdTRUE == xSemaphoreGive(&sema->padding))
         return 0;
     else
         return __set_errno_neg(EOVERFLOW);
@@ -91,6 +89,6 @@ int sem_post(sem_t *sema)
 
 int sem_getvalue(sem_t *sema, int *val)
 {
-    *val = uxSemaphoreGetCount(&sema->__pad);
+    *val = uxSemaphoreGetCount(&sema->padding);
     return 0;
 }

@@ -19,7 +19,6 @@ struct __lock
 };
 
 // requirement checking
-static_assert(sizeof_member(struct __mutex_t, __pad) != sizeof(StaticSemaphore_t), "sizeof(struct __lock) != sizeof(StaticSemaphore_t)");
 static_assert(configSUPPORT_STATIC_ALLOCATION, "FreeRTOS should be configured with static allocation support");
 
 struct __lock    __lock___sinit_recursive_mutex     = {0};
@@ -53,116 +52,21 @@ struct __lock    __lock___arc4random_mutex          = {0};
 
 void __LOCK_retarget_init(void)
 {
-    __lock___sinit_recursive_mutex.mutex.__init = MUTEX_FLAG_RECURSIVE;
-    __lock___sfp_recursive_mutex.mutex.__init = MUTEX_FLAG_RECURSIVE;
-    __lock___env_recursive_mutex.mutex.__init = MUTEX_FLAG_RECURSIVE;
-    __lock___malloc_recursive_mutex.mutex.__init = MUTEX_FLAG_RECURSIVE;
-    __lock___atexit_recursive_mutex.mutex.__init = MUTEX_FLAG_RECURSIVE;
-    xSemaphoreCreateRecursiveMutexStatic((void *)&__lock___sinit_recursive_mutex.mutex.__pad);
-    xSemaphoreCreateRecursiveMutexStatic((void *)&__lock___sfp_recursive_mutex.mutex.__pad);
-    xSemaphoreCreateRecursiveMutexStatic((void *)&__lock___env_recursive_mutex.mutex.__pad);
-    xSemaphoreCreateRecursiveMutexStatic((void *)&__lock___malloc_recursive_mutex.mutex.__pad);
-    xSemaphoreCreateRecursiveMutexStatic((void *)&__lock___atexit_recursive_mutex.mutex.__pad);
+    mutex_init(&__lock___sinit_recursive_mutex.mutex, MUTEX_FLAG_RECURSIVE);
+    mutex_init(&__lock___sfp_recursive_mutex.mutex, MUTEX_FLAG_RECURSIVE);
+    mutex_init(&__lock___env_recursive_mutex.mutex, MUTEX_FLAG_RECURSIVE);
+    mutex_init(&__lock___malloc_recursive_mutex.mutex, MUTEX_FLAG_RECURSIVE);
+    mutex_init(&__lock___atexit_recursive_mutex.mutex, MUTEX_FLAG_RECURSIVE);
 
-    __lock___at_quick_exit_mutex.mutex.__init = MUTEX_FLAG_NORMAL;
-    __lock___tz_mutex.mutex.__init = MUTEX_FLAG_NORMAL;
-    __lock___dd_hash_mutex.mutex.__init = MUTEX_FLAG_NORMAL;
-    __lock___arc4random_mutex.mutex.__init = MUTEX_FLAG_NORMAL;
-    xSemaphoreCreateMutexStatic((void *)&__lock___at_quick_exit_mutex.mutex.__pad);
-    xSemaphoreCreateMutexStatic((void *)&__lock___tz_mutex.mutex.__pad);
-    xSemaphoreCreateMutexStatic((void *)&__lock___dd_hash_mutex.mutex.__pad);
-    xSemaphoreCreateMutexStatic((void *)&__lock___arc4random_mutex.mutex.__pad);
+    mutex_init(&__lock___at_quick_exit_mutex.mutex, MUTEX_FLAG_NORMAL);
+    mutex_init(&__lock___tz_mutex.mutex, MUTEX_FLAG_NORMAL);
+    mutex_init(&__lock___dd_hash_mutex.mutex, MUTEX_FLAG_NORMAL);
+    mutex_init(&__lock___arc4random_mutex.mutex, MUTEX_FLAG_NORMAL);
 
     #if ESP_ROM_HAS_RETARGETABLE_LOCKING
-        idf_common_mutex.__init = MUTEX_FLAG_RECURSIVE;
-        xSemaphoreCreateRecursiveMutexStatic((void *)&idf_common_recursive_mutex.__pad);
-
-        idf_common_mutex.__init = MUTEX_FLAG_NORMAL;
-        xSemaphoreCreateMutexStatic((void *)&idf_common_mutex.__pad);
+        mutex_init(&idf_common_recursive_mutex, MUTEX_FLAG_RECURSIVE);
+        mutex_init(&idf_common_mutex, MUTEX_FLAG_NORMAL);
     #endif
-}
-
-/****************************************************************************
- * @implements: mutex
-*****************************************************************************/
-mutex_t *mutex_create(int flags)
-{
-    mutex_t *retval = malloc(sizeof(mutex_t));
-
-    if (retval)
-    {
-        if (MUTEX_FLAG_RECURSIVE == flags)
-            xSemaphoreCreateRecursiveMutexStatic((void *)&retval->__pad);
-        else
-            xSemaphoreCreateMutexStatic((void *)&retval->__pad);
-
-        retval->__init = flags;
-        return retval;
-    }
-    else
-        return __set_errno_nullptr(ENOMEM);
-}
-
-int mutex_destroy(mutex_t *mutex)
-{
-    if (MUTEX_FLAG_STATICALLY & mutex->__init)
-    {
-        vSemaphoreDelete((void *)mutex);
-        free(mutex);
-    }
-    return 0;
-}
-
-int mutex_init(mutex_t *mutex, int flags)
-{
-    if (MUTEX_FLAG_RECURSIVE == flags)
-        xSemaphoreCreateRecursiveMutexStatic((void *)&mutex->__pad);
-    else
-        xSemaphoreCreateMutexStatic((void *)&mutex->__pad);
-
-    mutex->__init = MUTEX_FLAG_STATICALLY | flags;
-    return 0;
-}
-
-int mutex_lock(mutex_t *mutex)
-{
-    return mutex_trylock(mutex, portMAX_DELAY);
-}
-
-int mutex_trylock(mutex_t *mutex, uint32_t timeout)
-{
-    if (0 != __get_IPSR())  // mutex not allowed in ISR
-        return EPERM;
-
-    int __init;
-    spin_lock(&mutex_atomic);
-
-    if (mutex->__init < 0)
-    {
-        mutex_init(mutex, ~mutex->__init);
-        __init = mutex->__init;
-    }
-    spin_unlock(&mutex_atomic);
-
-    if (MUTEX_FLAG_RECURSIVE & __init)
-        xSemaphoreTake((void *)&mutex->__pad, timeout);
-    else
-        xSemaphoreTakeRecursive((void *)&mutex->__pad, timeout);
-
-    return 0;
-}
-
-int mutex_unlock(mutex_t *mutex)
-{
-    if (mutex->__init < 0)  // not possiable fall here
-        return EPERM;
-
-    if (MUTEX_FLAG_RECURSIVE & mutex->__init)
-        xSemaphoreGiveRecursive((void *)&mutex->__pad);
-    else
-        xSemaphoreGive((void *)&mutex->__pad);
-
-    return 0;
 }
 
 /****************************************************************************
@@ -178,13 +82,13 @@ void __retarget_lock_init_recursive(_LOCK_T *lock)
     *lock = (_LOCK_T)mutex_create(MUTEX_FLAG_RECURSIVE);
 }
 
-#pragma GCC diagnostic ignored "-Wattribute-alias"
-
 void __retarget_lock_close(_LOCK_T lock)
-    __attribute__((alias("mutex_destroy")));
+{
+    mutex_destroy(&lock->mutex);
+}
 
 void __retarget_lock_close_recursive(_LOCK_T lock)
-    __attribute__((alias("mutex_destroy")));
+    __attribute__((alias("__retarget_lock_close")));
 
 void __retarget_lock_acquire(_LOCK_T lock)
 {

@@ -20,7 +20,7 @@
 
     struct __semaphore
     {
-        int __pad[19];
+        int padding[20];
     };
     typedef struct __semaphore      sem_t;
 

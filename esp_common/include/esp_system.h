@@ -1,7 +1,3 @@
-/**
- *  for freertos and ESP_SYSTEM_INIT_FN
- *      implement at esp_system/esp_freertos_impl.c
-*/
 #pragma once
 
 #include <features.h>

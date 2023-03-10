@@ -4,22 +4,7 @@
 #include <features.h>
 #include <sys/lock.h>
 
-    struct __mutex_t
-    {
-        int __pad[20];
-        int __init;
-    };
-    typedef struct __mutex_t        mutex_t;
-
-    // mutex_create() with flag "no recurse" otherwise is recursive
-    #define MUTEX_FLAG_NORMAL           (0x00)
-    #define MUTEX_FLAG_RECURSIVE        (0x01)
-
-    // mutex initializer
-    #define MUTEX_INITIALIZER           \
-        {.__init = ~MUTEX_FLAG_NORMAL}
-    #define PTHREAD_RECURSIVE_MUTEX_INITIALIZER \
-        {.__init = ~MUTEX_FLAG_RECURSIVE}
+#include "rtos/types.h"
 
 __BEGIN_DECLS
 

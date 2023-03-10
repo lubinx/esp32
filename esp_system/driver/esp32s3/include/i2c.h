@@ -19,5 +19,8 @@ extern __attribute__((nothrow, nonnull))
 extern __attribute__((nothrow, nonnull))
     int I2C_deconfigure(i2c_dev_t *dev);
 
+extern __attribute__((nothrow, const))
+    unsigned I2C_get_bps(i2c_dev_t dev);
+
 __END_DECLS
 #endif

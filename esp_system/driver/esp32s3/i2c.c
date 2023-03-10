@@ -52,6 +52,19 @@ struct I2C_context
     uint32_t bufsize;
 };
 
+struct I2C_clk_config
+{
+    uint16_t clkm_div;
+    uint16_t scl_low;
+    uint16_t scl_high;
+    uint16_t scl_wait_high;
+    uint16_t sda_hold;
+    uint16_t sda_sample;
+    uint16_t setup;             // start/stop setup period
+    uint16_t hold;              // start/stop hold period
+    uint16_t tout;              // bus timeout
+};
+
 struct I2C_fd_ext
 {
     struct I2C_context *context;
@@ -61,15 +74,14 @@ struct I2C_fd_ext
     uint8_t ridx_bytes;
     uint32_t highest_addr;
 
-    struct
-    {
-    } REG;
+    struct I2C_clk_config clk_conf;
 };
-
 
 /***************************************************************************
  *  @internal
  ***************************************************************************/
+static void I2C_calculate_bps(i2c_dev_t *dev, struct I2C_clk_config *cfg);
+
 static struct I2C_context *I2C_lock(int fd, uint32_t timeout);
 static void I2C_unlock(struct I2C_context *context);
 static void I2C_addressing(int fd, struct I2C_fd_ext *ext);
@@ -103,6 +115,78 @@ void I2C_initialize()
 /****************************************************************************
  *  @implements
  ****************************************************************************/
+int I2C_createfd(int nb, uint8_t da, uint16_t kbps, uint8_t page_size, uint32_t highest_addr)
+{
+    if (1000 < kbps || 0 == kbps)
+        return __set_errno_neg(EINVAL);
+
+    struct I2C_context *context = NULL;
+
+    if (0 == nb)
+    {
+        context = &i2c_context[0];
+
+        if (! context->dev)
+        {
+            context->dev = &I2C0;
+            goto init_context_syncobjs;
+        };
+    }
+    else if (1 == nb)
+    {
+        context = &i2c_context[1];
+
+        if (! context->dev)
+        {
+            context->dev = &I2C1;
+            goto init_context_syncobjs;
+        };
+    }
+
+    if (false)
+    {
+init_context_syncobjs:
+        mutex_init(&context->lock, MUTEX_FLAG_RECURSIVE);
+        sem_init(&context->evt, 0, 1);
+    }
+
+    if (NULL == context)
+        return __set_errno_neg(ENODEV);
+
+    struct I2C_fd_ext *ext = KERNEL_mallocz(sizeof(struct I2C_fd_ext));
+    if (NULL == ext)
+        return __set_errno_neg(ENOMEM);
+
+    int fd = KERNEL_createfd(FD_TAG_CHAR, &implement, ext);
+    if (-1 != fd)
+    {
+        context->fd_count ++;
+        AsFD(fd)->read_rdy = AsFD(fd)->write_rdy = &context->lock;
+
+        I2C_configure(context->dev, I2C_MASTER_MODE, kbps);
+
+        ext->context = context;
+        ext->da = da;
+        ext->page_size = page_size;
+        ext->highest_addr = highest_addr;
+
+        if (0 == highest_addr)                      // no Addressing
+            ext->ridx_bytes = 0;
+        else if (highest_addr < 256)                // 256 Bytes
+            ext->ridx_bytes = 1;
+        else if (highest_addr < 256 * 256)          // 64k
+            ext->ridx_bytes = 2;
+        else if (highest_addr < 256 * 256 * 256)    // 16m
+            ext->ridx_bytes = 3;
+        else
+            ext->ridx_bytes = 4;
+    }
+    else
+        KERNEL_mfree(ext);
+
+    return fd;
+}
+
 int I2C_configure(i2c_dev_t *dev, enum I2C_mode_t mode, uint32_t kbps)
 {
     if (I2C_MASTER_MODE != mode)
@@ -128,14 +212,8 @@ int I2C_configure(i2c_dev_t *dev, enum I2C_mode_t mode, uint32_t kbps)
 
     if (I2C_MASTER_MODE == mode)
     {
-        dev->ctr.val = 0;
-        dev->ctr.ms_mode = 1;
-
-        // scl/sda output mode. 0 open-drain, 1 push-pull
-        dev->ctr.sda_force_out = 1;
-        dev->ctr.scl_force_out = 1;
-        // MSB
-        dev->ctr.rx_lsb_first =  dev->ctr.tx_lsb_first = 0;
+        dev->int_ena.val = 0;
+        dev->int_clr.val= ~0;
         // fifo
         dev->fifo_conf.nonfifo_en = 0;
         dev->fifo_conf.tx_fifo_rst = dev->fifo_conf.rx_fifo_rst = 1;
@@ -151,14 +229,27 @@ int I2C_configure(i2c_dev_t *dev, enum I2C_mode_t mode, uint32_t kbps)
             dev->filter_cfg.sda_filter_en = 1;
             dev->filter_cfg.sda_filter_thres = I2C_SDA_FILTER_APB_CYCLE;
         }
+
+        // i2c ctr master
+        dev->ctr.val = 0;
+        dev->ctr.ms_mode = 1;
+        // dev->ctr.clk_en = 1; what is this?
+        // scl/sda output mode. 0 open-drain, 1 push-pull
+        dev->ctr.sda_force_out = 1;
+        dev->ctr.scl_force_out = 1;
+        // MSB
+        dev->ctr.rx_lsb_first =  dev->ctr.tx_lsb_first = 0;
+
         // bps
         uint64_t sclk_freq = CLK_i2c_sclk_freq(dev);
         uint32_t clkm_div = sclk_freq / (kbps * 1000 * 1024) + 1;
         uint32_t half_cycle = sclk_freq / clkm_div / (kbps * 1000) / 2;
 
-
-
         dev->ctr.conf_upgate = 1;
+
+        // update
+        // dev->clk_conf.sclk_active = 1;
+
     }
     else
     {
@@ -190,6 +281,11 @@ int I2C_deconfigure(i2c_dev_t *dev)
     return 0;
 }
 
+unsigned I2C_get_bps(i2c_dev_t dev)
+{
+
+}
+
 /****************************************************************************
  *  @implements: direct I2C start/stop
  ****************************************************************************/
@@ -216,14 +312,6 @@ int I2C_fifo_read(i2c_dev_t *dev, void *buf, unsigned bufsize)
 /***************************************************************************
  *  @internal
  ***************************************************************************/
-#define I2C_LL_MASTER_TX_INT          (I2C_NACK_INT_ENA_M|I2C_TIME_OUT_INT_ENA_M|I2C_TRANS_COMPLETE_INT_ENA_M|I2C_ARBITRATION_LOST_INT_ENA_M|I2C_END_DETECT_INT_ENA_M)
-// I2C master RX interrupt bitmap
-#define I2C_LL_MASTER_RX_INT          (I2C_TIME_OUT_INT_ENA_M|I2C_TRANS_COMPLETE_INT_ENA_M|I2C_ARBITRATION_LOST_INT_ENA_M|I2C_END_DETECT_INT_ENA_M)
-// I2C slave TX interrupt bitmap
-#define I2C_LL_SLAVE_TX_INT           (I2C_TXFIFO_WM_INT_ENA_M)
-// I2C slave RX interrupt bitmap
-#define I2C_LL_SLAVE_RX_INT           (I2C_RXFIFO_WM_INT_ENA_M | I2C_TRANS_COMPLETE_INT_ENA_M)
-
 static struct I2C_context *I2C_lock(int fd, uint32_t timeout)
 {
     struct I2C_fd_ext *ext = (struct I2C_fd_ext *)AsFD(fd)->ext;
@@ -279,6 +367,35 @@ static void I2C_unlock(struct I2C_context *context)
         else
             ASSERT_BKPT("NODEV");
         */
+    }
+}
+
+static void I2C_addressing(int fd, struct I2C_fd_ext *ext)
+{
+    struct I2C_context *context = ext->context;
+
+    context->ridx_wpos = 0;
+    context->addressing.da = ext->da;
+    context->addressing.ridx_bytes = ext->ridx_bytes;
+
+    uint8_t *ridx = context->addressing.ridx;
+    switch (ext->ridx_bytes)
+    {
+    case 4:
+        *ridx ++ = (uint8_t)((AsFD(fd)->position >> 24) & 0xFF);
+        goto fall_through_3;
+fall_through_3:
+    case 3:
+        *ridx ++ = (uint8_t)((AsFD(fd)->position >> 16) & 0xFF);
+        goto fall_through_2;
+fall_through_2:
+    case 2:
+        *ridx ++ = (uint8_t)((AsFD(fd)->position >> 8 ) & 0xFF);
+        goto fall_through_1;
+fall_through_1:
+    case 1:
+        *ridx = (uint8_t)(AsFD(fd)->position & 0xFF);
+        break;
     }
 }
 

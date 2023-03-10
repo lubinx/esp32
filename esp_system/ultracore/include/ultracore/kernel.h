@@ -22,39 +22,35 @@
 #include <features.h>
 #include <stdint.h>
 #include <stdarg.h>
+
 #include <sys/types.h>
 
 #include "glist.h"
-// #include "ultracore.h"
-// #include "svc.h"
+#include "rtos/types.h"
 
+/***************************************************************************/
+/** freertos
+****************************************************************************/
+    // infinite timeout
     #define INFINITE                    (0xFFFFFFFFUL)
 
-    #define INVALID_HANDLE              ((void *)0)
-    typedef void *                  handle_t;
-
-    #define CID_FREED                   (0x00)
-    #define CID_TIMEOUT                 (0x01)
-    #define CID_TCB                     (0x02)
-    #define CID_FD                      (0x03)
-    // synchronize objects, also defined in types.h
-    #define CID_SYNCOBJS                (0x80)
-    #define CID_SEMAPHORE               (CID_SYNCOBJS + 0)
-    #define CID_EVENT                   (CID_SYNCOBJS + 1)
-    #define CID_MUTEX                   (CID_SYNCOBJS + 2)
-    #define CID_RWLOCK                  (CID_SYNCOBJS + 3)
-
-    struct KERNEL_hdl
-    {
-        void        *glist_next;
-        /// +0x04
-        uint8_t     cid;                // default CID_FREE
-        uint8_t     flags;
-        uint8_t     rsv[sizeof(uintptr_t) - 2];
-        /// ...padding to 64 bytes
-        uintptr_t   padding[64 - 8];
-    };
-    #define AsKernelHdl(handle)           ((struct KERNEL_hdl *)handle)
+    /**
+     *  waitfor() generic waitfor synchronize objects
+     *      @param hdr
+     *          Semaphore/Event/Mutex and Thread
+     *      @param timeout
+     *          wait timeout in milliseconds
+     *      @returns
+     *          On Success 0 is returned
+     *          On Error an error number shall be returned to indicate the error
+     *      @errors
+     *          EINVAL: indicate hdr is not valid syncobj
+     *          ETIMEDOUT: syncobj can not acquire by timeout
+     *          EACCES: synobj is thread/mutex/rwlock, and it acquired from ISR
+     *          EDEADLK: synobj is mutex/rwlock
+     */
+extern __attribute__((nothrow))
+    int waitfor(handle_t hdl, uint32_t timeout);
 
     struct FD_implement
     {
@@ -64,16 +60,6 @@
         int     (* close) (int fd);
         int     (* ioctl) (int fd, unsigned long int request, va_list vl);
     };
-
-/***************************************************************************/
-/** @flags
-****************************************************************************/
-    /// indicate the handle was destroying
-    #define HDL_FLAG_DESTROYING         (1U << 7)
-    /// indicate the handle memory was managed by system
-    #define HDL_FLAG_SYSMEM             (1U << 6)
-
-    /// flags 0~5 is preserved for object use
 
 /***************************************************************************/
 /** @file descriptor
@@ -188,7 +174,7 @@ extern __attribute__((nothrow))
      *          ENOMEM
      */
 extern __attribute__((nothrow))
-    handle_t KERNEL_handle_get(uint32_t id);
+    handle_t KERNEL_handle_get(uint8_t cid);
 
     /**
      *  KERNEL_handle_release(): destroy a handle

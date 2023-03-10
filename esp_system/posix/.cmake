@@ -9,7 +9,6 @@ list(APPEND srcs
     "${CMAKE_CURRENT_LIST_DIR}/sched.c"
     "${CMAKE_CURRENT_LIST_DIR}/semaphore.c"
     "${CMAKE_CURRENT_LIST_DIR}/time.c"
-    "${CMAKE_CURRENT_LIST_DIR}/unistd.c"
 )
 
 set_source_files_properties("${CMAKE_CURRENT_LIST_DIR}/_retarget_init.c" PROPERTIES COMPILE_FLAGS -fno-builtin)

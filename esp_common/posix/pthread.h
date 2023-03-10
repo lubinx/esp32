@@ -20,7 +20,9 @@
 #define __PTHREAD_H                     1
 
 #include <features.h>
+
 #include <sys/types.h>
+#include <sys/mutex.h>
 
 #ifndef __GCC__
     #ifndef __KEIL_CC__
@@ -31,29 +33,6 @@
     #pragma clang system_header
 #endif
 
-// pthread spinlock types
-    struct pthread_spinlock_t
-    {
-        pthread_t volatile owner;
-    };
-    typedef struct pthread_spinlock_t   pthread_spinlock_t;
-
-    #define PTHREAD_SPINLOCK_INITIALIZER   {0}
-
-#include <sys/mutex.h>
-
-// TODO: porting
-#include <sys/_pthreadtypes.h>
-    typedef void *(*pthread_routine_t)(void *arg);
-
-    typedef struct pthread_rwlockattr_t pthread_rwlockattr_t;
-    typedef struct pthread_rwlock_t pthread_rwlock_t;
-
-    // typedef struct pthread_mutex_t pthread_mutex_t;
-
-    #define PTHREAD_MUTEX_INITIALIZER   _PTHREAD_MUTEX_INITIALIZER
-
-/*
 // Detach state.
     enum
     {
@@ -91,7 +70,6 @@
         PTHREAD_SCOPE_PROCESS,
         PTHREAD_SCOPE_SYSTEM
     };
-*/
 
 // Process shared or private flag.
     enum
@@ -378,7 +356,7 @@ extern __attribute__((nonnull, nothrow))
      *  **NO SUPPORT** always returns 0
      */
 extern __attribute__((nonnull, nothrow))
-    int pthread_mutexattr_getprioceiling(const pthread_mutexattr_t *restrict attr, int *restrict prioceiling);
+    int pthread_mutexattr_getprioceiling(pthread_mutexattr_t const *restrict attr, int *restrict prioceiling);
 extern __attribute__((nonnull, nothrow))
     int pthread_mutexattr_setprioceiling(pthread_mutexattr_t *attr, int prioceiling);
 
@@ -388,7 +366,7 @@ extern __attribute__((nonnull, nothrow))
      *  **ALWAYS** PTHREAD_PRIO_NONE
      */
 extern __attribute__((nonnull, nothrow))
-    int pthread_mutexattr_getprotocol(const pthread_mutexattr_t *restrict attr, int *restrict protocol);
+    int pthread_mutexattr_getprotocol(pthread_mutexattr_t const *restrict attr, int *restrict protocol);
 extern __attribute__((nonnull, nothrow))
     int pthread_mutexattr_setprotocol(pthread_mutexattr_t *attr, int protocol);
 
@@ -398,7 +376,7 @@ extern __attribute__((nonnull, nothrow))
      *  **ALWAYS** PTHREAD_PROCESS_PRIVATE, since we are single process system
      */
 extern __attribute__((nonnull, nothrow))
-    int pthread_mutexattr_getpshared(const pthread_mutexattr_t *restrict attr, int *restrict pshared);
+    int pthread_mutexattr_getpshared(pthread_mutexattr_t const *restrict attr, int *restrict pshared);
 extern __attribute__((nonnull, nothrow))
     int pthread_mutexattr_setpshared(pthread_mutexattr_t *attr, int pshared);
 
@@ -407,7 +385,7 @@ extern __attribute__((nonnull, nothrow))
      *      get and set the mutex type attribute
      */
 extern __attribute__((nonnull, nothrow))
-    int pthread_mutexattr_gettype(const pthread_mutexattr_t *restrict attr, int *restrict type);
+    int pthread_mutexattr_gettype(pthread_mutexattr_t const *restrict attr, int *restrict type);
 extern __attribute__((nonnull, nothrow))
     int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int type);
 
@@ -416,7 +394,7 @@ extern __attribute__((nonnull, nothrow))
      *      initialise or destroy a mutex
      */
 extern __attribute__((nothrow))
-    int pthread_mutex_init(pthread_mutex_t *restrict mutex, const pthread_mutexattr_t *restrict attr);
+    int pthread_mutex_init(pthread_mutex_t *restrict mutex, pthread_mutexattr_t const *restrict attr);
 extern __attribute__((nonnull, nothrow))
     int pthread_mutex_destroy(pthread_mutex_t *mutex);
 
