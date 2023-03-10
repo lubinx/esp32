@@ -91,16 +91,6 @@ void IRAM_ATTR vApplicationIdleHook(void)
     __WFI();
 }
 
-uint64_t systimer_ticks_to_us(uint64_t ticks)
-{
-    return ticks * 1000000 / CLK_systimer_freq();
-}
-
-uint64_t systimer_us_to_ticks(uint64_t us)
-{
-    return us * CLK_systimer_freq() / 1000000;
-}
-
 /****************************************************************************
  *  @implements: unistd.c sleep() / msleep() / usleep()
 *****************************************************************************/
@@ -310,6 +300,16 @@ esp_err_t esp_unregister_shutdown_handler(void (*func_ptr)(void))
 /****************************************************************************
  *  @implements: hal/systimer_hal.h
 *****************************************************************************/
+uint64_t systimer_ticks_to_us(uint64_t ticks)
+{
+    return ticks * 1000000 / CLK_systimer_freq();
+}
+
+uint64_t systimer_us_to_ticks(uint64_t us)
+{
+    return us * CLK_systimer_freq() / 1000000;
+}
+
 void systimer_hal_init(systimer_hal_context_t *hal)
 {
     hal->dev = &SYSTIMER;
