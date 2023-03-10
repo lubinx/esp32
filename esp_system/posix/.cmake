@@ -1,8 +1,8 @@
 list(APPEND srcs
-    "${CMAKE_CURRENT_LIST_DIR}/_esp_freertos_impl.c"
     "${CMAKE_CURRENT_LIST_DIR}/_retarget_init.c"
     "${CMAKE_CURRENT_LIST_DIR}/_retarget_lock.c"
-    "${CMAKE_CURRENT_LIST_DIR}/kernel.c"
+    "${CMAKE_CURRENT_LIST_DIR}/_rtos_freertos_impl.c"
+    "${CMAKE_CURRENT_LIST_DIR}/_rtos_kernel.c"
     "${CMAKE_CURRENT_LIST_DIR}/io.c"
     "${CMAKE_CURRENT_LIST_DIR}/filesystem.c"
     "${CMAKE_CURRENT_LIST_DIR}/random.c"
