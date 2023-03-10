@@ -12,7 +12,6 @@ list(APPEND srcs
     "esp_startup.c"
     "panic.c"
     "panic_handler.c"
-    "esp_freertos_impl.c"               # implements freertos/hal
     "esp_intr.c"
 )
 
