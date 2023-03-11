@@ -1,3 +1,6 @@
+/* log */
+PROVIDE(esp_log_printf = ets_printf);
+
 /* missed in esp32s3.peripherals.ld */
 PROVIDE(SYSTEM              = 0x600C0000);
 PROVIDE(ASSIST_DEBUG        = 0x600CE000);
@@ -18,6 +21,3 @@ PROVIDE(esp_rom_regi2c_read = rom_i2c_readReg);
 PROVIDE(esp_rom_regi2c_read_mask = rom_i2c_readReg_Mask);
 PROVIDE(esp_rom_regi2c_write = rom_i2c_writeReg);
 PROVIDE(esp_rom_regi2c_write_mask = rom_i2c_writeReg_Mask);
-
-
-PROVIDE(esp_log_printf = ets_printf);

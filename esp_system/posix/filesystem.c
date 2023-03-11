@@ -25,7 +25,15 @@ int _open_r(struct _reent *r, char const *path, int flags, int mode)
 
 int _fstat_r(struct _reent *r, int fd, struct stat *st)
 {
-    return __set_errno_r_neg(r, ENOSYS);
+    if (STDIN_FILENO == fd || STDOUT_FILENO == fd || STDERR_FILENO == fd)
+    {
+        memset(st, 0, sizeof(*st));
+
+        st->st_mode = S_IFCHR;
+        return 0;
+    }
+    else
+        return __set_errno_r_neg(r, ENOSYS);
 }
 
 int _fcntl_r(struct _reent *r, int fd, int cmd, int arg)

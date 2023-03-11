@@ -30,6 +30,19 @@ int isastream(int fd)
     return fd > 0 && CID_FD == AsFD(fd)->cid;
 }
 
+int _isatty_r(struct _reent *r, int fd)
+{
+    if (STDIN_FILENO == fd || STDOUT_FILENO == fd || STDERR_FILENO == fd)
+        return 1;
+    if (0 >= fd)
+        return (int)__set_errno_r_nullptr(r, EBADF);
+
+    if (FD_TAG_CHAR & AsFD(fd)->tag)
+        return 1;
+    else
+        return (int)__set_errno_r_nullptr(r, ENOTTY);
+}
+
 int _close_r(struct _reent *r, int fd)
 {
     if (0 >= fd || CID_FD != AsFD(fd)->cid)
@@ -199,25 +212,39 @@ ssize_t readln(int fd, char *buf, size_t bufsize)
     return __set_errno_r_neg(r, EMSGSIZE);
 }
 
+__attribute__((weak))
+ssize_t console_write(void const *buf, size_t count)
+{
+    return count;
+}
+
 ssize_t _write_r(struct _reent *r, int fd, void const *buf, size_t count)
 {
+    bool console_io;
+
     switch (fd)
     {
     case STDOUT_FILENO:
-        if (-1 == __stdout_fd)
-            return __set_errno_r_neg(r, ENOSYS);
-        else
-            fd = __stdout_fd;
+        fd = __stdout_fd;
+        console_io = true;
         break;
     case STDERR_FILENO:
-        if (-1 == __stderr_fd)
-            return __set_errno_r_neg(r, ENOSYS);
-        else
-            fd = __stderr_fd;
+        fd = __stderr_fd;
+        console_io = true;
         break;
+    default:
+        console_io = false;
     }
 
-    if (0 >= fd || CID_FD != AsFD(fd)->cid)
+    if (0 >= fd)
+    {
+        if (console_io)
+            return console_write(buf, count);
+        else
+            return __set_errno_r_neg(r, ENOSYS);
+    }
+
+    if (CID_FD != AsFD(fd)->cid)
         return __set_errno_r_neg(r, EBADF);
     if (0 == count)
         return 0;

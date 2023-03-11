@@ -104,7 +104,7 @@ struct UART_context
  ****************************************************************************/
 static void UART_configure_bps(uart_dev_t *dev, uint32_t bps);
 static void UART_configure_context_bps(struct UART_context *context, uart_dev_t *dev);
- // io
+// io
 static ssize_t UART_read(int fd, void *buf, size_t bufsize);
 static ssize_t UART_write(int fd, void const *buf, size_t count);
 static int UART_close(int fd);
@@ -118,7 +118,19 @@ static struct FD_implement const implement =
 };
 
 // var
-static struct UART_context uart_context[SOC_UART_NUM] = { 0 };
+static struct UART_context uart_context[SOC_UART_NUM] = {0};
+
+/****************************************************************************
+ *  @implements: console io, esp32s3 always enable UART0 as console
+ ****************************************************************************/
+ssize_t console_write(void const *buf, size_t count)
+{
+    int written = 0;
+    while (written < count)
+        written += UART_fifo_write(&UART0, (uint8_t *)buf + written, count - written);
+
+    return count;
+}
 
 /****************************************************************************
  *  @implements
