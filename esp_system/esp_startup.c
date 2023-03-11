@@ -1,5 +1,6 @@
-#include "soc.h"
-#include "esp_system.h"
+#include <esp_system.h>
+#include <soc.h>
+
 #include "sdkconfig.h"
 
 static char const *TAG = "startup";

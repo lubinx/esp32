@@ -20,8 +20,10 @@ uint32_t esp_log_timestamp(void)
     return __get_CCOUNT() / (CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ * 1000);
 }
 
+/*
 __attribute__((weak))
 int esp_log_printf(char const *format, ...)
 {
     return 0;
 }
+*/

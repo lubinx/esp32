@@ -13,12 +13,18 @@
 
 static char const *TAG = "filesystem";
 
+/***************************************************************************/
+/** exports
+****************************************************************************/
 void __FILESYSTEM_init(void)
 {
     // nothing to do but import retarget functions
 }
 
-int _open_r(struct _reent *r, char const *path, int flags, int mode)
+/***************************************************************************/
+/** @implements
+****************************************************************************/
+int _fcntl_r(struct _reent *r, int fd, int cmd, int arg)
 {
     return __set_errno_r_neg(r, ENOSYS);
 }
@@ -36,7 +42,7 @@ int _fstat_r(struct _reent *r, int fd, struct stat *st)
         return __set_errno_r_neg(r, ENOSYS);
 }
 
-int _fcntl_r(struct _reent *r, int fd, int cmd, int arg)
+int _open_r(struct _reent *r, char const *path, int flags, int mode)
 {
     return __set_errno_r_neg(r, ENOSYS);
 }

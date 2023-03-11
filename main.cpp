@@ -20,7 +20,7 @@
 
 #pragma GCC diagnostic ignored "-Wunused-function"
 
-// pthread_mutex_t mutex;
+pthread_mutex_t mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER;
 static sem_t sema = SEMA_INITIALIZER(0, 100);
 
 static void *blink_thread1(void *arg);
@@ -29,8 +29,6 @@ static void *blink_thread3(void *arg);
 
 int main(void)
 {
-    // sem_init(&sema, 0, 10);
-
     int fd = UART_createfd(0, 115200, UART_PARITY_NONE, UART_STOP_BITS_ONE);
     (void)fd;
 
@@ -56,7 +54,6 @@ int main(void)
     for (int i = 0; i < 10; i ++)
         printf("\t0x%08x, 0x%08x, 0x%08x, 0x%08x\n", rand(), rand(), rand(), rand());
 
-    /*
     printf("\nc++ exception test...\n");
     try
     {
@@ -65,8 +62,8 @@ int main(void)
     catch(char const *e)
     {
         printf("catched c++ exception: %s\n\n", e);
+        fflush(stdout);
     }
-    */
 
     char const *long_text =
 "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890\n\
@@ -74,11 +71,14 @@ int main(void)
 1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890\n\
 1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890\n\n\n";
 
-    printf(long_text);
-    printf(long_text);
-    fflush(stdout);
+    // printf
+    printf("printf: %s", long_text);
+    // fprintf
+    fprintf(stdout, "fprintf: %s", long_text);
 
+    fflush(stdout);
     // direct io
+    writebuf(fd, "direct i/o: ", 12);
     writebuf(fd, long_text, strlen(long_text));
 
     pthread_t id;
@@ -88,6 +88,7 @@ int main(void)
 
     printf("infinite loop...\n");
     fflush(stdout);
+
 
     while (1)
     {

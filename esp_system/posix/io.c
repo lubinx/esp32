@@ -10,11 +10,6 @@
 
 #include "esp_log.h"
 
-void __IO_retarget(void)
-{
-    // nothing to do but import retarget functions
-}
-
 /***************************************************************************/
 /** exports
 ****************************************************************************/
@@ -22,14 +17,20 @@ int __stdin_fd = -1;
 int __stdout_fd = -1;
 int __stderr_fd = -1;
 
-/***************************************************************************/
-/** @io.h implement
-****************************************************************************/
-int isastream(int fd)
+void __IO_retarget(void)
 {
-    return fd > 0 && CID_FD == AsFD(fd)->cid;
+    // nothing to do but import retarget functions
 }
 
+__attribute__((weak))
+ssize_t console_write(void const *buf, size_t count)
+{
+    return count;
+}
+
+/***************************************************************************/
+/** @implements
+****************************************************************************/
 int _isatty_r(struct _reent *r, int fd)
 {
     if (STDIN_FILENO == fd || STDOUT_FILENO == fd || STDERR_FILENO == fd)
@@ -41,6 +42,11 @@ int _isatty_r(struct _reent *r, int fd)
         return 1;
     else
         return (int)__set_errno_r_nullptr(r, ENOTTY);
+}
+
+int isastream(int fd)
+{
+    return fd > 0 && CID_FD == AsFD(fd)->cid;
 }
 
 int _close_r(struct _reent *r, int fd)
@@ -89,6 +95,11 @@ int ioctl(int fd, unsigned long int request, ...)
 }
 */
 
+off_t tell(int fd)
+{
+    return lseek(fd, 0, SEEK_CUR);
+}
+
 off_t _lseek_r(struct _reent *r, int fd, off_t offset, int origin)
 {
     if (0 >= fd || CID_FD != AsFD(fd)->cid)
@@ -100,11 +111,6 @@ off_t _lseek_r(struct _reent *r, int fd, off_t offset, int origin)
         return __set_errno_r_neg(r, EPERM);
     else
         return AsFD(fd)->implement->seek(fd, offset, origin);
-}
-
-off_t tell(int fd)
-{
-    return lseek(fd, 0, SEEK_CUR);
 }
 
 ssize_t _read_r(struct _reent *r, int fd, void *buf, size_t bufsize)
@@ -212,12 +218,6 @@ ssize_t readln(int fd, char *buf, size_t bufsize)
     return __set_errno_r_neg(r, EMSGSIZE);
 }
 
-__attribute__((weak))
-ssize_t console_write(void const *buf, size_t count)
-{
-    return count;
-}
-
 ssize_t _write_r(struct _reent *r, int fd, void const *buf, size_t count)
 {
     bool console_io;
@@ -306,7 +306,7 @@ ssize_t writeln(int fd, char const *buf, size_t count)
 }
 
 /***************************************************************************/
-/** @uio.h implement
+/** @implement: uio
 ****************************************************************************/
 ssize_t readv(int fd, struct iovec const *iov, int iovcnt)
 {
