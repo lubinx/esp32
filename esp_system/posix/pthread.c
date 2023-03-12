@@ -192,8 +192,27 @@ static void pthread_task_func(void *arg)
     pthread_exit(rval);
 }
 
-int pthread_create(pthread_t *thread, pthread_attr_t const *attr,
-                   void *(*start_routine) (void *), void *arg)
+int pthread_create2(pthread_t *thread, pthread_attr_t const *attr, pthread_routine_t routine, void *arg)
+{
+    struct _pthread_rtti
+    {
+        StaticTask_t task;
+        void *exit_code;
+
+        size_t stack_size;
+        uint32_t stack[];
+    };
+
+    // struct _pthread_rtti *rtti =;
+
+
+    uint32_t stack_size = attr ? attr->stack_size : CONFIG_PTHREAD_TASK_STACK_SIZE_DEFAULT;
+    BaseType_t prio = CONFIG_PTHREAD_TASK_PRIO_DEFAULT;
+    BaseType_t core_id = get_default_pthread_core();
+    char const *task_name = CONFIG_PTHREAD_TASK_NAME_DEFAULT;
+}
+
+int pthread_create(pthread_t *thread, pthread_attr_t const *attr, pthread_routine_t routine, void *arg)
 {
     TaskHandle_t xHandle = NULL;
 
@@ -245,7 +264,7 @@ int pthread_create(pthread_t *thread, pthread_attr_t const *attr,
 
     if (attr) {
         /* Overwrite attributes */
-        stack_size = attr->stacksize;
+        stack_size = attr->stack_size;
 
         switch (attr->detachstate) {
         case PTHREAD_CREATE_DETACHED:
@@ -257,7 +276,7 @@ int pthread_create(pthread_t *thread, pthread_attr_t const *attr,
         }
     }
 
-    task_arg->func = start_routine;
+    task_arg->func = routine;
     task_arg->arg = arg;
     pthread->task_arg = task_arg;
     BaseType_t res = xTaskCreatePinnedToCore(&pthread_task_func,
@@ -299,96 +318,12 @@ int pthread_create(pthread_t *thread, pthread_attr_t const *attr,
 
 int pthread_join(pthread_t thread, void **retval)
 {
-    esp_pthread_t *pthread = (esp_pthread_t *)thread;
-    int ret = 0;
-    bool wait = false;
-    void *child_task_retval = 0;
-
-    // find task
-    if (xSemaphoreTake(s_threads_mux, portMAX_DELAY) != pdTRUE) {
-        assert(false && "Failed to lock threads list!");
-    }
-    TaskHandle_t handle = pthread_find_handle(thread);
-    if (!handle) {
-        // not found
-        ret = ESRCH;
-    } else if (pthread->detached) {
-        // Thread is detached
-        ret = EDEADLK;
-    } else if (pthread->join_task) {
-        // already have waiting task to join
-        ret = EINVAL;
-    } else if (handle == xTaskGetCurrentTaskHandle()) {
-        // join to self not allowed
-        ret = EDEADLK;
-    } else {
-        esp_pthread_t *cur_pthread = pthread_find(xTaskGetCurrentTaskHandle());
-        if (cur_pthread && cur_pthread->join_task == handle) {
-            // join to each other not allowed
-            ret = EDEADLK;
-        } else {
-            if (pthread->state == PTHREAD_TASK_STATE_RUN) {
-                pthread->join_task = xTaskGetCurrentTaskHandle();
-                wait = true;
-            } else { // thread has exited and task is already suspended, or about to be suspended
-                child_task_retval = pthread->retval;
-                pthread_delete(pthread);
-            }
-        }
-    }
-    xSemaphoreGive(s_threads_mux);
-
-    if (ret == 0) {
-        if (wait) {
-            xTaskNotifyWait(0, 0, NULL, portMAX_DELAY);
-            if (xSemaphoreTake(s_threads_mux, portMAX_DELAY) != pdTRUE) {
-                assert(false && "Failed to lock threads list!");
-            }
-            child_task_retval = pthread->retval;
-            pthread_delete(pthread);
-            xSemaphoreGive(s_threads_mux);
-        }
-        /* clean up thread local storage before task deletion */
-        pthread_internal_local_storage_destructor_callback(handle);
-        vTaskDelete(handle);
-    }
-
-    if (retval) {
-        *retval = child_task_retval;
-    }
-
-    return ret;
+    return 0;
 }
 
 int pthread_detach(pthread_t thread)
 {
-    esp_pthread_t *pthread = (esp_pthread_t *)thread;
-    int ret = 0;
-
-    if (xSemaphoreTake(s_threads_mux, portMAX_DELAY) != pdTRUE) {
-        assert(false && "Failed to lock threads list!");
-    }
-    TaskHandle_t handle = pthread_find_handle(thread);
-    if (!handle) {
-        ret = ESRCH;
-    } else if (pthread->detached) {
-        // already detached
-        ret = EINVAL;
-    } else if (pthread->join_task) {
-        // already have waiting task to join
-        ret = EINVAL;
-    } else if (pthread->state == PTHREAD_TASK_STATE_RUN) {
-        // pthread still running
-        pthread->detached = true;
-    } else {
-        // pthread already stopped
-        pthread_delete(pthread);
-        /* clean up thread local storage before task deletion */
-        pthread_internal_local_storage_destructor_callback(handle);
-        vTaskDelete(handle);
-    }
-    xSemaphoreGive(s_threads_mux);
-    return ret;
+    return 0;
 }
 
 void pthread_exit(void *value_ptr)
@@ -458,34 +393,19 @@ pthread_t pthread_self(void)
 
 int pthread_equal(pthread_t t1, pthread_t t2)
 {
-    return ((int)t1 - t2);
+    return ((uintptr_t)t1 - (uintptr_t)t2);
 }
 
-/***************** ONCE ******************/
-int pthread_once(pthread_once_t *once_control, void (*init_routine)(void))
-{
-    if (once_control == NULL || init_routine == NULL || !once_control->is_initialized) {
-        return EINVAL;
-    }
-
-    // Check if compare and set was successful
-    if (__sync_bool_compare_and_swap((volatile uint32_t *)&once_control->init_executed, 0, 1)) {
-        init_routine();
-    }
-
-    return 0;
-}
-
-/***************** ATTRIBUTES ******************/
+/***************************************************************************
+ *  @implements: pthread mutex
+ ***************************************************************************/
 int pthread_attr_init(pthread_attr_t *attr)
 {
-    if (attr)
-    {
-        attr->stacksize   = CONFIG_PTHREAD_TASK_STACK_SIZE_DEFAULT;
-        attr->detachstate = PTHREAD_CREATE_JOINABLE;
-        return 0;
-    }
-    return EINVAL;
+    memset(attr, 0, sizeof(*attr));
+    attr->stack_size   = CONFIG_PTHREAD_TASK_STACK_SIZE_DEFAULT;
+    attr->detachstate = PTHREAD_CREATE_JOINABLE;
+
+    return 0;
 }
 
 int pthread_attr_destroy(pthread_attr_t *attr)
@@ -495,47 +415,38 @@ int pthread_attr_destroy(pthread_attr_t *attr)
 
 int pthread_attr_getstacksize(pthread_attr_t const *attr, size_t *stacksize)
 {
-    if (attr) {
-        *stacksize = attr->stacksize;
-        return 0;
-    }
-    return EINVAL;
+    *stacksize = attr->stack_size;
+    return 0;
 }
 
 int pthread_attr_setstacksize(pthread_attr_t *attr, size_t stacksize)
 {
-    if (attr && !(stacksize < CONFIG_PTHREAD_STACK_MIN)) {
-        attr->stacksize = stacksize;
-        return 0;
-    }
-    return EINVAL;
+    if (stacksize < CONFIG_PTHREAD_STACK_MIN)
+        return EINVAL;
+
+    attr->stack_size = stacksize;
+    return 0;
 }
 
 int pthread_attr_getdetachstate(pthread_attr_t const *attr, int *detachstate)
 {
-    if (attr) {
-        *detachstate = attr->detachstate;
-        return 0;
-    }
-    return EINVAL;
+    *detachstate = attr->detachstate;
+    return 0;
 }
 
 int pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate)
 {
-    if (attr) {
-        switch (detachstate) {
-        case PTHREAD_CREATE_DETACHED:
-            attr->detachstate = PTHREAD_CREATE_DETACHED;
-            break;
-        case PTHREAD_CREATE_JOINABLE:
-            attr->detachstate = PTHREAD_CREATE_JOINABLE;
-            break;
-        default:
-            return EINVAL;
-        }
-        return 0;
+    switch (detachstate) {
+    case PTHREAD_CREATE_DETACHED:
+        attr->detachstate = PTHREAD_CREATE_DETACHED;
+        break;
+    case PTHREAD_CREATE_JOINABLE:
+        attr->detachstate = PTHREAD_CREATE_JOINABLE;
+        break;
+    default:
+        return EINVAL;
     }
-    return EINVAL;
+    return 0;
 }
 
 /***************************************************************************

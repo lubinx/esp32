@@ -102,7 +102,7 @@ __BEGIN_DECLS
      */
     /*
 extern __attribute__((nonnull, nothrow))
-    int pthread_atfork(pthread_routine_t prepare, pthread_routine_t parent, pthread_routine_t child);
+    int pthread_atfork(pthread_routine_t prepare, d parent, s child);
     */
 
 //--------------------------------------------------------------------------

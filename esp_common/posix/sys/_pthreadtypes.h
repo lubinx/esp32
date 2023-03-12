@@ -3,50 +3,45 @@
 
 #include <sys/sched.h>
 
+/***************************************************************************
+ *  @def: pthread_key_t
+ ***************************************************************************/
     typedef void *(*pthread_routine_t)(void *arg);
     typedef __uint32_t pthread_t;            /* identify a thread */
 
-    typedef struct
+    struct pthread_attr_t
     {
-        int is_initialized;
-        void *stackaddr;
-        int stacksize;
-        int contentionscope;
-        int inheritsched;
-        int schedpolicy;
-        struct sched_param schedparam;
+        int stack_size;
+        void *stack;
 
-        /* P1003.4b/D8, p. 54 adds cputime_clock_allowed attribute.  */
-        #if defined(_POSIX_THREAD_CPUTIME)
-        int  cputime_clock_allowed;  /* see time.h */
-        #endif
         int  detachstate;
-    } pthread_attr_t;
+    };
+    typedef struct pthread_attr_t   pthread_attr_t;
 
-    /* Condition Variables */
-
-    typedef __uint32_t pthread_cond_t;       /* identify a condition variable */
-
-    #define _PTHREAD_COND_INITIALIZER ((pthread_cond_t) 0xFFFFFFFF)
-
-    typedef struct
-    {
-        int      is_initialized;
-        clock_t  clock;             /* specifiy clock for timeouts */
-        // int      process_shared;    /* allow this to be shared amongst processes */
-    } pthread_condattr_t;         /* a condition attribute object */
-
-    /* Keys */
-
+/***************************************************************************
+ *  @def: pthread_key_t
+ ***************************************************************************/
     typedef __uint32_t pthread_key_t;        /* thread-specific data keys */
 
-    typedef struct
-    {
-        int   is_initialized;  /* is this structure initialized? */
-        int   init_executed;   /* has the initialization routine been run? */
-    } pthread_once_t;       /* dynamic package initialization */
+/***************************************************************************
+ *  @def: pthread_condattr_t
+ ***************************************************************************/
+    typedef __uint32_t pthread_cond_t;       /* identify a condition variable */
 
-    #define _PTHREAD_ONCE_INIT  { 1, 0 }  /* is initialized and not run */
+    typedef struct pthread_condattr_t
+    {
+        int dummy;
+    };
+    typedef struct pthread_condattr_t   pthread_condattr_t;
+
+/***************************************************************************
+ *  @def: pthread_once_t
+ ***************************************************************************/
+    struct pthread_once_t
+    {
+        int dummy;
+    };
+    typedef struct pthread_once_t   pthread_once_t;
 
 /***************************************************************************
  *  @def: pthread_spinlock_t
