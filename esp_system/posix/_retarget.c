@@ -97,11 +97,14 @@ void __libc_retarget_init(void)
     _GLOBAL_REENT = &__reent;
     __sinit(&__reent);
 
-    extern void __FILESYSTEM_init(void);
-    __FILESYSTEM_init();
+    extern void __FILESYSTEM_introduce(void);
+    __FILESYSTEM_introduce();
 
-    extern void __IO_retarget(void);
-    __IO_retarget();
+    extern void __IO_introduce(void);
+    __IO_introduce();
+
+    extern void __PTHREAD_introduce(void);
+    __PTHREAD_introduce();
 }
 
 int setvbuf(FILE *fp, char *buffer, int mode, size_t size)

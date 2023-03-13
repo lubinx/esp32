@@ -17,7 +17,7 @@ int __stdin_fd = -1;
 int __stdout_fd = -1;
 int __stderr_fd = -1;
 
-void __IO_retarget(void)
+void __IO_introduce(void)
 {
     // nothing to do but import retarget functions
 }

@@ -29,6 +29,28 @@
 #include <rtos/types.h>
 #include <rtos/user.h>
 
+/***************************************************************************/
+/** @TCB
+****************************************************************************/
+    struct KERNEL_tcb
+    {
+        void        *glist_next;
+        uint8_t     cid;
+        uint8_t     flags;
+        uint8_t     rsv[sizeof(uintptr_t) - 2];
+
+        void *(*start_routine)(void *arg);
+        void *arg;
+        void *exit_code;
+
+        uint32_t    stack_size;
+        void        *stack_base;
+    };
+    #define AsTCB(handle)               ((struct KERNEL_tcb *)handle)
+
+/***************************************************************************/
+/** @file descriptor
+****************************************************************************/
     struct FD_implement
     {
         ssize_t (* read)  (int fd, void *buf, size_t bufsize);
@@ -38,9 +60,6 @@
         int     (* ioctl) (int fd, unsigned long int request, va_list vl);
     };
 
-/***************************************************************************/
-/** @file descriptor
-****************************************************************************/
     /// indicate the fd is non-block
     #define FD_FLAG_NONBLOCK            (1U << 0)
 
@@ -164,6 +183,13 @@ extern __attribute__((nothrow))
      */
 extern __attribute__((nonnull, nothrow))
     int KERNEL_handle_release(handle_t handle);
+
+    /**
+     *  KERNEL_handle_recycle():
+     *      NOTE: *MUST* call from rtos/idle to recycle released handle
+     */
+extern __attribute__((nonnull, nothrow))
+    void KERNEL_handle_recycle(void);
 
     /**
      *   KERNEL_createfd(): create a file descriptor

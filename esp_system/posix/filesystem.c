@@ -16,7 +16,7 @@ static char const *TAG = "filesystem";
 /***************************************************************************/
 /** exports
 ****************************************************************************/
-void __FILESYSTEM_init(void)
+void __FILESYSTEM_introduce(void)
 {
     // nothing to do but import retarget functions
 }

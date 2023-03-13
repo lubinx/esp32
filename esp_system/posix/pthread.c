@@ -5,51 +5,27 @@
 #include <sched.h>
 #include <string.h>
 
+#include <rtos/user.h>
 #include <sys/errno.h>
 #include <sys/mutex.h>
+#include <xtensa/spinlock.h>
 
 #include "esp_attr.h"
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/semphr.h"
-
-struct __thread_arg
+void __PTHREAD_introduce(void)
 {
-    StaticTask_t task;
-
-    void *(*start_routine)(void *arg);
-    void *arg;
-    void *exit_code;
-
-    uint32_t stack[];
-};
-
-static int get_default_pthread_core(void)
-{
-    return CONFIG_PTHREAD_TASK_CORE_DEFAULT == -1 ? tskNO_AFFINITY : CONFIG_PTHREAD_TASK_CORE_DEFAULT;
-}
-
-static void __freertos_thread_entry(struct __thread_arg *thread)
-{
-    thread->exit_code = thread->start_routine(thread->arg);
-    // vTaskDelete(&thread->task);
 }
 
 int pthread_create(pthread_t *thread, pthread_attr_t const *attr, pthread_routine_t routine, void *arg)
 {
+    void *stack = attr ? attr->stack : NULL;
     uint32_t stack_size = attr ? attr->stack_size : CONFIG_PTHREAD_TASK_STACK_SIZE_DEFAULT;
-    BaseType_t prio = CONFIG_PTHREAD_TASK_PRIO_DEFAULT;
 
-    struct __thread_arg *param = malloc(sizeof(struct __thread_arg) + stack_size);
-    param->start_routine = routine;
-    param->arg = arg;
-    param->exit_code = NULL;
-
-    *thread = xTaskCreateStatic((void *)__freertos_thread_entry, NULL,
-        stack_size, param, prio,
-        (void *)&param->stack, &param->task
-    );
+    *thread = (void *)thread_create(CONFIG_PTHREAD_TASK_PRIO_DEFAULT, routine, arg, stack, stack_size);
+    if (*thread)
+        return 0;
+    else
+        return errno;
 }
 
 int pthread_join(pthread_t thread, void **retval)
@@ -69,7 +45,7 @@ int pthread_cancel(pthread_t thread)
 
 pthread_t pthread_self(void)
 {
-    return xTaskGetCurrentTaskHandle();
+    return (void *)thread_self();
 }
 
 int pthread_equal(pthread_t t1, pthread_t t2)

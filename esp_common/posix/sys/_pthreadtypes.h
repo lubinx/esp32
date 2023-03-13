@@ -7,6 +7,7 @@
  *  @def: pthread_t
  ***************************************************************************/
     typedef void *(*pthread_routine_t)(void *arg);
+    typedef void *                  thread_id_t;
     typedef void *                  pthread_t;
 
     struct pthread_attr_t

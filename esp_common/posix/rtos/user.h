@@ -20,13 +20,24 @@
 #define __RTOS_USER_H                   1
 
 #include <features.h>
+#include <sys/types.h>
+#include <rtos/types.h>
 
 __BEGIN_DECLS
 /***************************************************************************/
 /** generic waitfor
 ****************************************************************************/
-extern __attribute__((nothrow, nonnull(1)))
-    int thread_create(void *(*start_rountine)(void *arg), uint32_t *stack, size_t stack_size);
+extern __attribute__((nothrow, nonnull(2)))
+    thread_id_t thread_create(unsigned priority, void *(*start_rountine)(void *arg), void *arg, uint32_t *stack, size_t stack_size);
+
+extern __attribute__((nothrow))
+    thread_id_t thread_self(void);
+
+extern __attribute__((nothrow, nonnull))
+    int thread_join(thread_id_t thread);
+
+extern __attribute__((nothrow, nonnull))
+    int thread_detach(thread_id_t thread);
 
 /***************************************************************************/
 /** generic waitfor
