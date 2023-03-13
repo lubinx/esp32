@@ -30,6 +30,8 @@
 #include "sdkconfig.h"
 #include "esp_rom_sys.h"
 
+static_assert(configSUPPORT_STATIC_ALLOCATION, "FreeRTOS should be configured with static allocation support");
+
 /****************************************************************************
  *  @implements: freertos main task
 *****************************************************************************/

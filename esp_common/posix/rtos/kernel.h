@@ -27,30 +27,7 @@
 
 #include <rtos/glist.h>
 #include <rtos/types.h>
-
-/***************************************************************************/
-/** freertos
-****************************************************************************/
-    // infinite timeout
-    #define INFINITE                    (0xFFFFFFFFUL)
-
-    /**
-     *  waitfor() generic waitfor synchronize objects
-     *      @param hdr
-     *          Semaphore/Event/Mutex and Thread
-     *      @param timeout
-     *          wait timeout in milliseconds
-     *      @returns
-     *          On Success 0 is returned
-     *          On Error an error number shall be returned to indicate the error
-     *      @errors
-     *          EINVAL: indicate hdr is not valid syncobj
-     *          ETIMEDOUT: syncobj can not acquire by timeout
-     *          EACCES: synobj is thread/mutex/rwlock, and it acquired from ISR
-     *          EDEADLK: synobj is mutex/rwlock
-     */
-extern __attribute__((nothrow))
-    int waitfor(handle_t hdl, uint32_t timeout);
+#include <rtos/user.h>
 
     struct FD_implement
     {
