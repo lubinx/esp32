@@ -21,7 +21,10 @@ int pthread_create(pthread_t *thread, pthread_attr_t const *attr, pthread_routin
     void *stack = attr ? attr->stack : NULL;
     uint32_t stack_size = attr ? attr->stack_size : CONFIG_PTHREAD_TASK_STACK_SIZE_DEFAULT;
 
-    *thread = (void *)thread_create(CONFIG_PTHREAD_TASK_PRIO_DEFAULT, routine, arg, stack, stack_size);
+    *thread = (void *)thread_create_allparam(routine, arg,
+        stack, stack_size, CONFIG_PTHREAD_TASK_PRIO_DEFAULT, THREAD_BIND_ALL_CORE
+    );
+
     if (*thread)
         return 0;
     else

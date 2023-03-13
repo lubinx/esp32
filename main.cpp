@@ -76,10 +76,9 @@ int main(void)
     writebuf(fd, "direct i/o: ", 12);
     writebuf(fd, long_text, strlen(long_text));
 
-    thread_create(5, blink_thread1, NULL, NULL, 2048);
-
     pthread_t id;
-    // pthread_create(&id, NULL, blink_thread1, NULL);
+    pthread_create(&id, NULL, blink_thread1, NULL);
+    printf("thread 1: %p\n", id);
     pthread_create(&id, NULL, blink_thread2, NULL);
     pthread_create(&id, NULL, blink_thread3, NULL);
 
@@ -108,6 +107,8 @@ int main(void)
 static void *blink_thread1(void *arg)
 {
     ARG_UNUSED(arg);
+    thread_id_t self = thread_self();
+    printf("thread_self(), thread 1: %p\n", self);
 
     while (true)
     {

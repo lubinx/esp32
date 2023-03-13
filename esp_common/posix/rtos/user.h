@@ -25,10 +25,30 @@
 
 __BEGIN_DECLS
 /***************************************************************************/
-/** generic waitfor
+/** thread
 ****************************************************************************/
+    #define THREAD_BIND_ALL_CORE                 (-1)
+
+    /**
+     *  thread_create()
+     *      by using sdkconfig default priority, and THREAD_BIND_ALL_CORE
+    */
+extern __attribute__((nothrow, nonnull(1)))
+    thread_id_t thread_create(void *(*start_rountine)(void *arg), void *arg,
+        uint32_t *stack, size_t stack_size);
+
+    /**
+     *  thread_create_allparam()
+     *      @returns
+     *          On Success 0 is returned
+     *          On error, -1 is returned, and errno is set to indicate the error
+     *      @errors
+     *          EINVAL: stack_size < CONFIG_PTHREAD_STACK_MIN or core_id > SOC_CPU_CORES_NUM
+     *          ENOMEM
+    */
 extern __attribute__((nothrow, nonnull(2)))
-    thread_id_t thread_create(unsigned priority, void *(*start_rountine)(void *arg), void *arg, uint32_t *stack, size_t stack_size);
+    thread_id_t thread_create_allparam(void *(*start_rountine)(void *arg), void *arg,
+        uint32_t *stack, size_t stack_size, unsigned priority, int core_id);
 
 extern __attribute__((nothrow))
     thread_id_t thread_self(void);

@@ -30,6 +30,7 @@
 #include "sdkconfig.h"
 #include "esp_rom_sys.h"
 
+static char const *TAG = "freertos";
 static_assert(configSUPPORT_STATIC_ALLOCATION, "FreeRTOS should be configured with static allocation support");
 
 /****************************************************************************
@@ -41,29 +42,29 @@ struct __freertos_tcb
 
 //--- thread freertos parameters
     unsigned priority;
-
-    void *task_ptr;
     bool task_is_dynamic_alloc;
     bool stack_is_dynamic_alloc;
+    // __freertos_tcb <==> __freertos_task
+    struct __freertos_task *task_ptr;
 };
 
 struct __freertos_task
 {
     StaticTask_t sinit;
+    // __freertos_tcb <==> __freertos_task
     struct __freertos_tcb *tcb;
 };
 
-struct __task_pool
+struct freertos_task_pool
 {
     spinlock_t atomic;
     glist_t freed;
-    struct __freertos_task tasks[4];
+    struct __freertos_task tasks[3];
 };
 
 /// @internal
-static struct __task_pool __task_pool = {.atomic = SPINLOCK_INITIALIZER};
-static char const *__main_argv = "freertos_start";
-static char const *__thrad_arg = "freertos_thread";
+static struct freertos_task_pool task_pool = {.atomic = SPINLOCK_INITIALIZER};
+static char const *__freertos_argv = "freertos_start";
 
 /****************************************************************************
  *  @implements: freertos tick & idle
@@ -90,7 +91,7 @@ static void __freertos_start(void *arg)
 
     extern __attribute__((noreturn)) int main(int argc, char **argv);
     // TODO: process main() exit code
-    main(1, (char **)&__main_argv);
+    main(1, (char **)&__freertos_argv);
 
     // main should not return
     vTaskDelete(NULL);
@@ -106,13 +107,17 @@ void esp_rtos_bootstrap(void)
 
    if (0 == __get_CORE_ID())
    {
-        // TODO: main task pined to core?
-        // CONFIG_ESP_MAIN_TASK_AFFINITY
-
-        xTaskCreateStatic(__freertos_start, __main_argv,
-            CONFIG_ESP_MAIN_TASK_STACK_SIZE, NULL, configMAX_PRIORITIES,
-            (void *)__main_stack, &__main_task
-        );
+        #if defined(CONFIG_ESP_MAIN_TASK_AFFINITY_NO_AFFINITY) && CONFIG_ESP_MAIN_TASK_AFFINITY_NO_AFFINITY
+            xTaskCreateStatic(__freertos_start, __freertos_argv,
+                CONFIG_ESP_MAIN_TASK_STACK_SIZE, NULL, configMAX_PRIORITIES,
+                (void *)__main_stack, &__main_task
+            );
+        #else
+            xTaskCreateStaticAffinitySet(__freertos_start, __freertos_argv,
+                CONFIG_ESP_MAIN_TASK_STACK_SIZE, NULL, configMAX_PRIORITIES,
+                (void *)__main_stack, &__main_task, CONFIG_ESP_MAIN_TASK_AFFINITY
+            );
+        #endif
 
         vTaskStartScheduler();
         abort();
@@ -139,9 +144,9 @@ static void __freertos_thread_entry(struct __freertos_tcb *tcb)
 
     if (! tcb->task_is_dynamic_alloc)
     {
-        spin_lock(&__task_pool.atomic);
-        glist_push_back(&__task_pool.freed, task);
-        spin_unlock(&__task_pool.atomic);
+        spin_lock(&task_pool.atomic);
+        glist_push_back(&task_pool.freed, task);
+        spin_unlock(&task_pool.atomic);
     }
     else
         KERNEL_mfree(task);
@@ -153,8 +158,21 @@ static void __freertos_thread_entry(struct __freertos_tcb *tcb)
     KERNEL_handle_release(tcb);
 }
 
-thread_id_t thread_create(unsigned priority, void *(*start_rountine)(void *arg), void *arg, uint32_t *stack, size_t stack_size)
+thread_id_t thread_create(void *(*start_rountine)(void *arg), void *arg,
+    uint32_t *stack, size_t stack_size)
 {
+    return thread_create_allparam(start_rountine, arg,
+        stack, stack_size, CONFIG_PTHREAD_TASK_PRIO_DEFAULT, THREAD_BIND_ALL_CORE);
+}
+
+thread_id_t thread_create_allparam(void *(*start_rountine)(void *arg), void *arg,
+    uint32_t *stack, size_t stack_size, unsigned priority, int core_id)
+{
+    if (stack_size < CONFIG_PTHREAD_STACK_MIN)
+        return __set_errno_nullptr(EINVAL);
+    if (THREAD_BIND_ALL_CORE != core_id && SOC_CPU_CORES_NUM - 1 < core_id)
+        return __set_errno_nullptr(EINVAL);
+
     void *dynamic_stack = NULL;
     if (! stack)
     {
@@ -164,16 +182,16 @@ thread_id_t thread_create(unsigned priority, void *(*start_rountine)(void *arg),
             return __set_errno_nullptr(ENOMEM);
     }
 
-    spin_lock(&__task_pool.atomic);
-    if (! glist_is_initialized(&__task_pool.freed))
+    spin_lock(&task_pool.atomic);
+    if (! glist_is_initialized(&task_pool.freed))
     {
-        glist_initialize(&__task_pool.freed);
+        glist_initialize(&task_pool.freed);
 
-        for (int i = 0; i < lengthof(__task_pool.tasks); i ++)
-            glist_push_back(&__task_pool.freed, &__task_pool.tasks[i]);
+        for (int i = 0; i < lengthof(task_pool.tasks); i ++)
+            glist_push_back(&task_pool.freed, &task_pool.tasks[i]);
     }
-    struct __freertos_task *task = glist_pop(&__task_pool.freed);
-    spin_unlock(&__task_pool.atomic);
+    struct __freertos_task *task = glist_pop(&task_pool.freed);
+    spin_unlock(&task_pool.atomic);
 
     struct __freertos_task *dynamic_task = NULL;
     if (! task)
@@ -206,18 +224,39 @@ thread_id_t thread_create(unsigned priority, void *(*start_rountine)(void *arg),
             tcb->task_is_dynamic_alloc = true;
         }
 
-        tcb->task_ptr = xTaskCreateStatic((void *)__freertos_thread_entry, NULL,
-            stack_size, tcb, priority,
-            tcb->kernel.stack_base, &task->sinit
-        );
+        TaskHandle_t hdl;
+        if (THREAD_BIND_ALL_CORE == core_id)
+        {
+            hdl = xTaskCreateStatic((void *)__freertos_thread_entry, NULL,
+                stack_size, tcb, priority,
+                tcb->kernel.stack_base, &task->sinit
+            );
+        }
+        else
+        {
+            hdl = xTaskCreateStaticAffinitySet((void *)__freertos_thread_entry, NULL,
+                stack_size, tcb, priority,
+                tcb->kernel.stack_base, &task->sinit, 1 << core_id
+            );
+        }
+
+        // NOTE: freertos xTaskCreateStatic() task should equal to task itself, this is the feature *MUST*
+        if (hdl != (void *)task)
+        {
+            ESP_LOGE(TAG, "freertos xTaskCreateStatic() task *MUST* equal to task itself, this is the feature we *REQUIRED*");
+            while (1);
+        }
+        /// circle ref: tcb->task_ptr == task->tcb
+        tcb->task_ptr = task;
+        task->tcb = tcb;
     }
     else
     {
         if (task)
         {
-            spin_lock(&__task_pool.atomic);
-            glist_push_back(&__task_pool.freed, task);
-            spin_unlock(&__task_pool.atomic);
+            spin_lock(&task_pool.atomic);
+            glist_push_back(&task_pool.freed, task);
+            spin_unlock(&task_pool.atomic);
         }
         else if (dynamic_task)
             KERNEL_mfree(task);
@@ -533,22 +572,21 @@ static int __esp_lock_impl(_LOCK_T *lock, int (*mutex_func)(mutex_t *), char con
          *      this is ...ok when freertos task scheduler is not running, none thread was dispatching
          *  REVIEW: add a atomic lock?
         */
-        ESP_EARLY_LOGW("libc", "%s() before freertos scheduler startup...%p", __function__, *lock);
+        ESP_EARLY_LOGW(TAG, "%s() before freertos scheduler startup...%p", __function__, *lock);
     }
     else
     {
         SemaphoreHandle_t hdl = (SemaphoreHandle_t)(*lock);
-        /*
         if (! hdl)
         {
-            ESP_LOGE("libc", "lock acquire CREATE... %p", lock);
+            // this should not
+            ESP_LOGE(TAG, "lock acquire CREATE... %p", lock);
 
             hdl = xSemaphoreCreateMutex();
             assert(NULL != hdl);
 
             *lock = (void *)hdl;
         }
-        */
         return mutex_func((void *)hdl);
     }
 }
