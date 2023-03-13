@@ -48,9 +48,6 @@ void __libc_retarget_init(void)
 
     __FILESYSTEM_init();
     __IO_retarget();
-
-    extern void esp_pthread_init(void);
-    esp_pthread_init();
 }
 
 int setvbuf(FILE *fp, char *buffer, int mode, size_t size)

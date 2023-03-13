@@ -32,16 +32,16 @@
 /****************************************************************************
  *  @implements: freertos main task
 *****************************************************************************/
-static char const *freertos_argv = "freertos_start";
+static char const *__argv = "freertos_start";
 
-static void __esp_freertos_start(void *arg)
+static void __freertos_start(void *arg)
 {
     ARG_UNUSED(arg);
     __esp_rtos_initialize();
 
     extern __attribute__((noreturn)) int main(int argc, char **argv);
     // TODO: process main() exit code
-    main(1, (char **)&freertos_argv);
+    main(1, (char **)&__argv);
 
     // main should not return
     vTaskDelete(NULL);
@@ -60,7 +60,7 @@ void esp_rtos_bootstrap(void)
         // TODO: main task pined to core?
         // CONFIG_ESP_MAIN_TASK_AFFINITY
 
-        xTaskCreateStatic(__esp_freertos_start, freertos_argv,
+        xTaskCreateStatic(__freertos_start, __argv,
             CONFIG_ESP_MAIN_TASK_STACK_SIZE, NULL, configMAX_PRIORITIES,
             (void *)__main_stack, &__main_task
         );
@@ -96,8 +96,14 @@ void IRAM_ATTR vApplicationIdleHook(void)
 }
 
 /****************************************************************************
- *  @implements: unistd.h sleep() / msleep() / usleep()
+ *  @implements: unistd.h sleep() / msleep() / usleep(), sched.h sched_yield()
 *****************************************************************************/
+int sched_yield(void)
+{
+    taskYIELD();
+    return 0;
+}
+
 int usleep(useconds_t us)
 {
     if (! us)
@@ -128,24 +134,6 @@ int msleep(uint32_t msec)
         taskYIELD();
 
     return 0;
-}
-
-// TODO: move to pthread.c
-int pthread_yield(void)
-{
-    taskYIELD();
-}
-
-int pthread_setcancelstate(int state, int *oldstate)
-{
-    ARG_UNUSED(state, oldstate);
-    return ENOSYS;
-}
-
-int pthread_setcanceltype(int type, int *old_type)
-{
-    ARG_UNUSED(type, old_type);
-    return ENOSYS;
 }
 
 /****************************************************************************

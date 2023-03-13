@@ -47,8 +47,11 @@ int sched_setscheduler(pid_t pid, int policy, struct sched_param const *param)
     return ENOSYS;
 }
 
+// move to _rtos_freetos_impl.c, to avoid include freertos/<etc.>
+/*
 int sched_yield(void)
 {
     taskYIELD();
     return 0;
 }
+*/

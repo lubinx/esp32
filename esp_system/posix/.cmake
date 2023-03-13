@@ -7,8 +7,6 @@ list(APPEND srcs
     "${CMAKE_CURRENT_LIST_DIR}/filesystem.c"
     "${CMAKE_CURRENT_LIST_DIR}/random.c"
     "${CMAKE_CURRENT_LIST_DIR}/pthread.c"
-    "${CMAKE_CURRENT_LIST_DIR}/pthread_local_storage.c"
-    "${CMAKE_CURRENT_LIST_DIR}/pthread_spinlock.c"
     "${CMAKE_CURRENT_LIST_DIR}/sched.c"
     "${CMAKE_CURRENT_LIST_DIR}/time.c"
 )

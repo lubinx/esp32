@@ -4,24 +4,29 @@
 #include <sys/sched.h>
 
 /***************************************************************************
- *  @def: pthread_key_t
+ *  @def: pthread_t
  ***************************************************************************/
     typedef void *(*pthread_routine_t)(void *arg);
-    typedef __uint32_t pthread_t;            /* identify a thread */
+    typedef void *                  pthread_t;
 
     struct pthread_attr_t
     {
+        int  detachstate;
+
         int stack_size;
         void *stack;
-
-        int  detachstate;
     };
     typedef struct pthread_attr_t   pthread_attr_t;
 
 /***************************************************************************
  *  @def: pthread_key_t
  ***************************************************************************/
-    typedef __uint32_t pthread_key_t;        /* thread-specific data keys */
+    struct _pthread_key_t
+    {
+        void *val;
+        void (*destructor)();
+    };
+    typedef struct _pthread_key_t * pthread_key_t;
 
 /***************************************************************************
  *  @def: pthread_condattr_t

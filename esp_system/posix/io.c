@@ -1,7 +1,7 @@
-#include <unistd.h>
-#include <sched.h>
 #include <reent.h>
+#include <sched.h>
 #include <stropts.h>
+#include <unistd.h>
 
 #include <sys/uio.h>
 #include <sys/errno.h>

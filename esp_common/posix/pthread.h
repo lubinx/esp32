@@ -196,13 +196,17 @@ extern __attribute__((nonnull, nothrow))
     int pthread_attr_setstacksize(pthread_attr_t *attr, size_t stacksize);
 
 //--------------------------------------------------------------------------
-//  pthread misc
+//  pthread
 //--------------------------------------------------------------------------
     /**
      *  pthread_create(): thread creation
      */
 extern __attribute__((nonnull(1, 3), nothrow))
     int pthread_create(pthread_t *restrict thread, pthread_attr_t const *restrict attr,
+        pthread_routine_t routine, void *restrict arg);
+
+extern __attribute__((nonnull(1, 3), nothrow))
+    int pthread_create2(pthread_t *restrict thread, pthread_attr_t const *restrict attr,
         pthread_routine_t routine, void *restrict arg);
 
     /**
