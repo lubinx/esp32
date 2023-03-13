@@ -10,64 +10,6 @@
 // #include "idf_additions_inc.h"
 
 #if CONFIG_FREERTOS_SMP || __DOXYGEN__
-
-/* ------------------------------------------------ Helper Functions ---------------------------------------------------
- *
- * ------------------------------------------------------------------------------------------------------------------ */
-
-/**
- * @brief Create a new task that is pinned to a particular core
- *
- * Helper function to create a task that is pinned to a particular core, or has no affinity. In other wrods, the created
- * task will have an affinity mask of:
- * - (1 << xCoreID) if it is pinned to a particular core
- * - Set to tskNO_AFFINITY if it has no affinity
- *
- * @param pxTaskCode Pointer to the task entry function.
- * @param pcName A descriptive name for the task.
- * @param usStackDepth The size of the task stack.
- * @param pvParameters Pointer that will be used as the parameter for the task being created.
- * @param uxPriority The priority at which the task should run.
- * @param pxCreatedTask Used to pass back a handle by which the created task can be referenced.
- * @param xCoreID The core to which the task is pinned to, or tskNO_AFFINITY if the task has no core affinity
- * @return pdPASS if the task was successfully created and added to a ready list, otherwise an error code defined in the
- *         file projdefs.h
- */
-BaseType_t xTaskCreatePinnedToCore( TaskFunction_t pxTaskCode,
-                                    const char *const pcName,
-                                    uint32_t const usStackDepth,
-                                    void *const pvParameters,
-                                    UBaseType_t uxPriority,
-                                    TaskHandle_t *const pxCreatedTask,
-                                    const BaseType_t xCoreID);
-
-
-/**
- * @brief Create a new static task that is pinned to a particular core
- *
- * This funciton is the static equivalent of xTaskCreatePinnedToCore().
- *
- * @param pxTaskCode Pointer to the task entry function.
- * @param pcName A descriptive name for the task.
- * @param ulStackDepth The size of the task stack.
- * @param pvParameters Pointer that will be used as the parameter for the task being created.
- * @param uxPriority The priority at which the task should run.
- * @param puxStackBuffer Must point to a StackType_t array that has at least ulStackDepth indexes
- * @param pxTaskBuffer Must point to a variable of type StaticTask_t, which will then be used to hold the task's data structures,
- * @param xCoreID The core to which the task is pinned to, or tskNO_AFFINITY if the task has no core affinity
- * @return The task handle if the task was created, NULL otherwise.
- */
-#if ( configSUPPORT_STATIC_ALLOCATION == 1 )
-TaskHandle_t xTaskCreateStaticPinnedToCore( TaskFunction_t pxTaskCode,
-                                            const char *const pcName,
-                                            uint32_t const ulStackDepth,
-                                            void *const pvParameters,
-                                            UBaseType_t uxPriority,
-                                            StackType_t *const puxStackBuffer,
-                                            StaticTask_t *const pxTaskBuffer,
-                                            const BaseType_t xCoreID );
-#endif /* configSUPPORT_STATIC_ALLOCATION */
-
 /**
  * @brief Get the handle of the task running on a certain core
  *

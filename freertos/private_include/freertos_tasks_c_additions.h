@@ -54,65 +54,6 @@ struct _reent *__getreent(void)
 #if CONFIG_FREERTOS_SMP
 _Static_assert(tskNO_AFFINITY == CONFIG_FREERTOS_NO_AFFINITY, "CONFIG_FREERTOS_NO_AFFINITY must be the same as tskNO_AFFINITY");
 
-BaseType_t xTaskCreatePinnedToCore( TaskFunction_t pxTaskCode,
-                                    const char *const pcName,
-                                    uint32_t const usStackDepth,
-                                    void *const pvParameters,
-                                    UBaseType_t uxPriority,
-                                    TaskHandle_t *const pxCreatedTask,
-                                    const BaseType_t xCoreID)
-{
-    BaseType_t ret;
-    #if ( ( configUSE_CORE_AFFINITY == 1 ) && ( configNUM_CORES > 1 ) )
-        {
-            // Convert xCoreID into an affinity mask
-            UBaseType_t uxCoreAffinityMask;
-            if (xCoreID == tskNO_AFFINITY) {
-                uxCoreAffinityMask = tskNO_AFFINITY;
-            } else {
-                uxCoreAffinityMask = (1 << xCoreID);
-            }
-            ret = xTaskCreateAffinitySet(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, uxCoreAffinityMask, pxCreatedTask);
-        }
-    #else /* ( ( configUSE_CORE_AFFINITY == 1 ) && ( configNUM_CORES > 1 ) ) */
-        {
-            ret = xTaskCreate(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask);
-        }
-    #endif /* ( ( configUSE_CORE_AFFINITY == 1 ) && ( configNUM_CORES > 1 ) ) */
-    return ret;
-}
-
-#if ( configSUPPORT_STATIC_ALLOCATION == 1 )
-TaskHandle_t xTaskCreateStaticPinnedToCore( TaskFunction_t pxTaskCode,
-                                            const char *const pcName,
-                                            uint32_t const ulStackDepth,
-                                            void *const pvParameters,
-                                            UBaseType_t uxPriority,
-                                            StackType_t *const puxStackBuffer,
-                                            StaticTask_t *const pxTaskBuffer,
-                                            const BaseType_t xCoreID)
-{
-    TaskHandle_t ret;
-    #if ( ( configUSE_CORE_AFFINITY == 1 ) && ( configNUM_CORES > 1 ) )
-        {
-            // Convert xCoreID into an affinity mask
-            UBaseType_t uxCoreAffinityMask;
-            if (xCoreID == tskNO_AFFINITY) {
-                uxCoreAffinityMask = tskNO_AFFINITY;
-            } else {
-                uxCoreAffinityMask = (1 << xCoreID);
-            }
-            ret = xTaskCreateStaticAffinitySet(pxTaskCode, pcName, ulStackDepth, pvParameters, uxPriority, puxStackBuffer, pxTaskBuffer, uxCoreAffinityMask);
-        }
-    #else /* ( ( configUSE_CORE_AFFINITY == 1 ) && ( configNUM_CORES > 1 ) ) */
-        {
-            ret = xTaskCreateStatic(pxTaskCode, pcName, ulStackDepth, pvParameters, uxPriority, puxStackBuffer, pxTaskBuffer);
-        }
-    #endif /* ( ( configUSE_CORE_AFFINITY == 1 ) && ( configNUM_CORES > 1 ) ) */
-    return ret;
-}
-#endif /* configSUPPORT_STATIC_ALLOCATION */
-
 TaskHandle_t xTaskGetCurrentTaskHandleForCPU( BaseType_t xCoreID )
 {
     TaskHandle_t xTaskHandleTemp;
