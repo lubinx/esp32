@@ -6,30 +6,67 @@
 #include <string.h>
 
 #include <sys/errno.h>
+#include <sys/lock.h>
+#include <sys/mutex.h>
 #include <sys/reent.h>
 #include <sys/stat.h>
 
 #include "soc.h"
 #include "esp_log.h"
 
+#include "esp_rom_caps.h"
 #include "esp_rom_sys.h"
 #include "esp_heap_caps_init.h"
 
 /****************************************************************************
  * @imports
 *****************************************************************************/
-extern void __LOCK_retarget_init(void);
-extern void __FILESYSTEM_init(void);
-extern void __IO_retarget(void);
-
 struct _reent *_global_impure_ptr;
 extern struct _reent *__getreent(void);     // freertos_tasks_c_additions.h linked by freertos
+
+/****************************************************************************
+ *  @def
+*****************************************************************************/
+// locks
+struct __lock
+{
+    mutex_t mutex;
+};
 
 /****************************************************************************
  *  @internal
 *****************************************************************************/
 // static const struct syscall_stub_table __stub_table;
 static struct _reent __reent = {0};
+// locks
+struct __lock    __lock___sinit_recursive_mutex     = {0};
+struct __lock    __lock___malloc_recursive_mutex    = {0};
+struct __lock    __lock___env_recursive_mutex       = {0};
+struct __lock    __lock___sfp_recursive_mutex       = {0};
+struct __lock    __lock___atexit_recursive_mutex    = {0};
+struct __lock    __lock___at_quick_exit_mutex       = {0};
+struct __lock    __lock___tz_mutex                  = {0};
+struct __lock    __lock___dd_hash_mutex             = {0};
+struct __lock    __lock___arc4random_mutex          = {0};
+
+#if ESP_ROM_HAS_RETARGETABLE_LOCKING
+    /* C3 and S3 ROMs are built without Newlib static lock symbols exported, and
+    * with an extra level of _LOCK_T indirection in mind.
+    * The following is a workaround for this:
+    * - on startup, we call esp_rom_newlib_init_common_mutexes to set
+    *   the two mutex pointers to magic values.
+    * - if in __retarget_lock_acquire*, we check if the argument dereferences
+    *   to the magic value. If yes, we lock the correct mutex defined in the app,
+    *   instead.
+    * Casts from &StaticSemaphore_t to _LOCK_T are okay because _LOCK_T
+    * (which is SemaphoreHandle_t) is a pointer to the corresponding
+    * StaticSemaphore_t structure.
+    */
+    #define ROM_MUTEX_MAGIC             0xbb10c433
+
+    static struct __lock    idf_common_mutex = {0};
+    static struct __lock    idf_common_recursive_mutex = {0};
+#endif
 
 /****************************************************************************
  *  @implements
@@ -41,12 +78,29 @@ void __libc_retarget_init(void)
     extern void KERNEL_init(void);
     KERNEL_init();
 
-    __LOCK_retarget_init();
+    mutex_init(&__lock___sinit_recursive_mutex.mutex, MUTEX_FLAG_RECURSIVE);
+    mutex_init(&__lock___sfp_recursive_mutex.mutex, MUTEX_FLAG_RECURSIVE);
+    mutex_init(&__lock___env_recursive_mutex.mutex, MUTEX_FLAG_RECURSIVE);
+    mutex_init(&__lock___malloc_recursive_mutex.mutex, MUTEX_FLAG_RECURSIVE);
+    mutex_init(&__lock___atexit_recursive_mutex.mutex, MUTEX_FLAG_RECURSIVE);
+
+    mutex_init(&__lock___at_quick_exit_mutex.mutex, MUTEX_FLAG_NORMAL);
+    mutex_init(&__lock___tz_mutex.mutex, MUTEX_FLAG_NORMAL);
+    mutex_init(&__lock___dd_hash_mutex.mutex, MUTEX_FLAG_NORMAL);
+    mutex_init(&__lock___arc4random_mutex.mutex, MUTEX_FLAG_NORMAL);
+
+    #if ESP_ROM_HAS_RETARGETABLE_LOCKING
+        mutex_init(&idf_common_recursive_mutex.mutex, MUTEX_FLAG_RECURSIVE);
+        mutex_init(&idf_common_mutex.mutex, MUTEX_FLAG_NORMAL);
+    #endif
 
     _GLOBAL_REENT = &__reent;
     __sinit(&__reent);
 
+    extern void __FILESYSTEM_init(void);
     __FILESYSTEM_init();
+
+    extern void __IO_retarget(void);
     __IO_retarget();
 }
 
@@ -198,6 +252,81 @@ int posix_memalign(void **out_ptr, size_t alignment, size_t size)
     }
     /* Note: error returned, not set via errno! */
     return ENOMEM;
+}
+
+/****************************************************************************
+ * @implements: locks
+*****************************************************************************/
+void __retarget_lock_init(_LOCK_T *lock)
+{
+    *lock = (_LOCK_T)mutex_create(MUTEX_FLAG_NORMAL);
+}
+
+void __retarget_lock_init_recursive(_LOCK_T *lock)
+{
+    *lock = (_LOCK_T)mutex_create(MUTEX_FLAG_RECURSIVE);
+}
+
+void __retarget_lock_close(_LOCK_T lock)
+{
+    mutex_destroy(&lock->mutex);
+}
+
+void __retarget_lock_close_recursive(_LOCK_T lock)
+    __attribute__((alias("__retarget_lock_close")));
+
+void __retarget_lock_acquire(_LOCK_T lock)
+{
+#if ESP_ROM_HAS_RETARGETABLE_LOCKING
+    if (ROM_MUTEX_MAGIC == *(int*)lock)
+        lock = &idf_common_mutex;
+#endif
+    mutex_lock(&lock->mutex);
+}
+
+void __retarget_lock_acquire_recursive(_LOCK_T lock)
+{
+#if ESP_ROM_HAS_RETARGETABLE_LOCKING
+    if (ROM_MUTEX_MAGIC == *(int *)lock)
+        lock = &idf_common_recursive_mutex;
+#endif
+    mutex_lock(&lock->mutex);
+}
+
+int __retarget_lock_try_acquire(_LOCK_T lock)
+{
+#if ESP_ROM_HAS_RETARGETABLE_LOCKING
+    if (ROM_MUTEX_MAGIC == *(int *)lock)
+        lock = &idf_common_mutex;
+#endif
+    return mutex_trylock(&lock->mutex, 0);
+}
+
+int __retarget_lock_try_acquire_recursive(_LOCK_T lock)
+{
+#if ESP_ROM_HAS_RETARGETABLE_LOCKING
+    if (ROM_MUTEX_MAGIC == *(int *)lock)
+        lock = &idf_common_recursive_mutex;
+#endif
+    return mutex_trylock(&lock->mutex, 0);
+}
+
+void __retarget_lock_release(_LOCK_T lock)
+{
+#if ESP_ROM_HAS_RETARGETABLE_LOCKING
+    if (ROM_MUTEX_MAGIC == *(int *)lock)
+        lock = &idf_common_mutex;
+#endif
+    mutex_unlock(&lock->mutex);
+}
+
+void __retarget_lock_release_recursive(_LOCK_T lock)
+{
+#if ESP_ROM_HAS_RETARGETABLE_LOCKING
+    if (ROM_MUTEX_MAGIC == *(int*)lock)
+        lock = &idf_common_recursive_mutex;
+#endif
+    mutex_unlock(&lock->mutex);
 }
 
 /****************************************************************************

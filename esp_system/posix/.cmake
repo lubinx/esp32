@@ -1,6 +1,5 @@
 list(APPEND srcs
-    "${CMAKE_CURRENT_LIST_DIR}/_retarget_init.c"
-    "${CMAKE_CURRENT_LIST_DIR}/_retarget_lock.c"
+    "${CMAKE_CURRENT_LIST_DIR}/_retarget.c"
     "${CMAKE_CURRENT_LIST_DIR}/_rtos_freertos_impl.c"
     "${CMAKE_CURRENT_LIST_DIR}/_rtos_kernel.c"
     "${CMAKE_CURRENT_LIST_DIR}/io.c"

@@ -1,9 +1,5 @@
 #include <sys/errno.h>
-
 #include <sched.h>
-
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
 
 int sched_get_priority_max(int policy)
 {

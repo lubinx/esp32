@@ -14,10 +14,6 @@
 #include "esp_log.h"
 #include "esp_heap_caps.h"
 
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
-#include <freertos/semphr.h>
-
 #pragma GCC diagnostic ignored "-Wunused-function"
 
 pthread_mutex_t mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER;
@@ -36,7 +32,6 @@ int main(void)
     printf("pll frequency: %llu MHz\n", CLK_pll_freq() / 1000000);
     printf("cpu frequency: %llu MHz\n", CLK_cpu_freq() / 1000000);
     printf("ahb frequency: %llu MHz\n", CLK_ahb_freq() / 1000000);
-    printf("sizeof(StaticTask_t): %d\n", sizeof(StaticTask_t));
 
     if (CLK_periph_is_enabled(PERIPH_UART0_MODULE))
         printf("uart0: %lu bps sclk: %llu\n", UART_get_baudrate(&UART0), CLK_uart_sclk_freq(&UART0));
