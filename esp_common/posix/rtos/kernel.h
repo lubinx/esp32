@@ -157,9 +157,9 @@ __BEGIN_DECLS
 /** kernel functions
 ****************************************************************************/
 extern __attribute__((nothrow))
-    void KERNEL_spin_lock(void);
+    void KERNEL_lock(void);
 extern __attribute__((nothrow))
-    void KERNEL_spin_unlock(void);
+    void KERNEL_unlock(void);
 
     /**
      *  KERNEL_handle_get(): create a handle
