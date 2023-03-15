@@ -2,7 +2,7 @@
 #include "esp_log.h"
 
 #include "soc.h"
-#include "clk_tree.h"
+#include "clk-tree.h"
 #include "regi2c_ctrl.h"
 
 #include "soc/dport_access.h"
@@ -13,7 +13,6 @@ static char const *TAG = "clktree";
 /****************************************************************************
  * @def
  ****************************************************************************/
-#define _MHZ                            (1000000ULL)
 // default xtal is 40M, using sdkconfig?
 #define XTAL_FREQ                       XTAL_40M
 
@@ -23,6 +22,7 @@ static char const *TAG = "clktree";
 #define PLL_DIV_TO_80M_FREQ             (80000000ULL)
 #define PLL_DIV_TO_160M_FREQ            (160000000ULL)
 #define PLL_DIV_TO_240M_FREQ            (240000000ULL)
+
 
 /****************************************************************************
  *  @internal
@@ -40,7 +40,7 @@ static uint32_t periph_rst_en_mask(PERIPH_module_t periph);
 static unsigned RC_FAST_refcount;
 
 /****************************************************************************
- * @implements hw/clk_tree.h
+ * @implements hw/clk-tree.h
  ****************************************************************************/
 void CLK_initialize(void)
 {
@@ -493,7 +493,7 @@ uint64_t CLK_rtc_freq(void)
 }
 
 /****************************************************************************
- * @implements esp32s3/clk_tree.h
+ * @implements esp32s3/clk-tree.h
  ****************************************************************************/
 unsigned CLK_SCLK_RC_FAST_ref(void)
 {

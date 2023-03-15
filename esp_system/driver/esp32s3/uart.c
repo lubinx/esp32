@@ -7,7 +7,7 @@
 #include <soc/soc_caps.h>
 #include <soc/uart_reg.h>
 
-#include "clk_tree.h"
+#include "clk-tree.h"
 #include "esp_log.h"
 #include "esp_intr_alloc.h"
 
@@ -297,13 +297,13 @@ int UART_deconfigure(uart_dev_t *dev)
     return 0;
 }
 
-/// override clk_tree.c
+/// override clk-tree.c
 void CLK_uart_sclk_updating(uart_dev_t *dev)
 {
     while (dev->status.txfifo_cnt);
 }
 
-/// override clk_tree.c
+/// override clk-tree.c
 void CLK_uart_sclk_updated(uart_dev_t *dev)
 {
     struct UART_context *context;

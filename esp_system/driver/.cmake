@@ -9,7 +9,7 @@ list(APPEND includes
 )
 
 list(APPEND srcs
-    "${CMAKE_CURRENT_LIST_DIR}/${IDF_TARGET}/clk_tree.c"
+    "${CMAKE_CURRENT_LIST_DIR}/${IDF_TARGET}/clk-tree.c"
     "${CMAKE_CURRENT_LIST_DIR}/${IDF_TARGET}/i2c.c"
     "${CMAKE_CURRENT_LIST_DIR}/${IDF_TARGET}/soc.c"
     "${CMAKE_CURRENT_LIST_DIR}/${IDF_TARGET}/true-rng.c"

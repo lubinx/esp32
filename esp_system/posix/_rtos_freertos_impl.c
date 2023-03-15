@@ -13,7 +13,7 @@
 #include <freertos/semphr.h>
 #include <rtos/kernel.h>
 
-#include <clk_tree.h>
+#include <clk-tree.h>
 
 #include <esp_attr.h>
 #include <esp_err.h>

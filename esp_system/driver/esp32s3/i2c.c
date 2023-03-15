@@ -10,7 +10,7 @@
 #include <soc/soc_caps.h>
 #include <soc/i2c_reg.h>
 
-#include "clk_tree.h"
+#include "clk-tree.h"
 #include "esp_intr_alloc.h"
 
 #include "i2c.h"
@@ -20,6 +20,8 @@
  ****************************************************************************/
 void I2C0_IntrHandler(void *arg);
 void I2C1_IntrHandler(void *arg);
+
+#define I2C_CONFIG_CLK_FREQ             (10 * _MHZ)
 
 // TODO: sdkconfig to configure i2c filter, 0: disable
 #define I2C_SCL_FILTER_APB_CYCLE        (7)
@@ -55,7 +57,7 @@ struct I2C_context
 
 struct I2C_clk_config
 {
-    uint16_t clkm_div;
+    uint16_t clk_div_10m;
     uint16_t scl_low;
     uint16_t scl_high;
     uint16_t scl_wait_high;
@@ -213,6 +215,8 @@ int I2C_configure(i2c_dev_t *dev, enum I2C_mode_t mode, uint32_t kbps)
 
     if (I2C_MASTER_MODE == mode)
     {
+        // disable before setup
+        dev->clk_conf.sclk_active = 0;
         dev->int_ena.val = 0;
         dev->int_clr.val= ~0;
         // fifo
@@ -240,17 +244,13 @@ int I2C_configure(i2c_dev_t *dev, enum I2C_mode_t mode, uint32_t kbps)
         dev->ctr.scl_force_out = 1;
         // MSB
         dev->ctr.rx_lsb_first =  dev->ctr.tx_lsb_first = 0;
-
         // bps
-        uint64_t sclk_freq = CLK_i2c_sclk_freq(dev);
-        uint32_t clkm_div = sclk_freq / (kbps * 1000 * 1024) + 1;
-        uint32_t half_cycle = sclk_freq / clkm_div / (kbps * 1000) / 2;
-
-        dev->ctr.conf_upgate = 1;
+        dev->clk_conf.sclk_div_num = CLK_i2c_sclk_freq(dev) / I2C_CONFIG_CLK_FREQ;
+        uint32_t half_cycle = I2C_CONFIG_CLK_FREQ / 1000 / kbps / 2;
 
         // update
-        // dev->clk_conf.sclk_active = 1;
-
+        dev->ctr.conf_upgate = 1;
+        dev->clk_conf.sclk_active = 1;
     }
     else
     {

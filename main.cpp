@@ -7,7 +7,7 @@
 #include <rtos/user.h>
 
 #include "soc.h"
-#include "clk_tree.h"
+#include "clk-tree.h"
 #include "gpio.h"
 #include "uart.h"
 
