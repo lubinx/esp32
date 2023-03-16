@@ -2,13 +2,11 @@
 #include <sched.h>
 #include <stropts.h>
 #include <unistd.h>
-
 #include <sys/uio.h>
-#include <sys/errno.h>
+
+#include <esp_log.h>
 
 #include <rtos/kernel.h>
-
-#include "esp_log.h"
 
 /***************************************************************************/
 /** exports

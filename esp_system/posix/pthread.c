@@ -1,16 +1,15 @@
-
-#include <errno.h>
 #include <time.h>
 #include <pthread.h>
 #include <sched.h>
 #include <string.h>
 
-#include <rtos/user.h>
 #include <sys/errno.h>
 #include <sys/mutex.h>
-#include <xtensa/spinlock.h>
 
-#include "esp_attr.h"
+#include <xtensa/spinlock.h>
+#include <rtos/user.h>
+
+#include <esp_attr.h>
 
 void __PTHREAD_introduce(void)
 {
