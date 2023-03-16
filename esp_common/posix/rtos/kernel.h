@@ -23,7 +23,9 @@
 
 #include <stdint.h>
 #include <stdarg.h>
+
 #include <sys/types.h>
+#include <sys/errno.h>
 
 #include <rtos/glist.h>
 #include <rtos/types.h>
