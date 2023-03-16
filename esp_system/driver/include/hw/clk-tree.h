@@ -59,11 +59,11 @@ extern __attribute__((nothrow, const))
 extern __attribute__((nothrow, const))
     bool CLK_periph_is_enabled(PERIPH_module_t periph);
 extern __attribute__((nothrow))
-    void CLK_periph_enable(PERIPH_module_t periph);
+    int CLK_periph_enable(PERIPH_module_t periph);
 extern __attribute__((nothrow))
-    void CLK_periph_disable(PERIPH_module_t periph);
+    int CLK_periph_disable(PERIPH_module_t periph);
 extern __attribute__((nothrow))
-    void CLK_periph_reset(PERIPH_module_t periph);
+    int CLK_periph_reset(PERIPH_module_t periph);
 
 /****************************************************************************
  *  esp-idf
