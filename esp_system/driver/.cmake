@@ -10,11 +10,19 @@ list(APPEND includes
 
 list(APPEND srcs
     "${CMAKE_CURRENT_LIST_DIR}/${IDF_TARGET}/clk-tree.c"
+    "${CMAKE_CURRENT_LIST_DIR}/${IDF_TARGET}/gpio.c"
     "${CMAKE_CURRENT_LIST_DIR}/${IDF_TARGET}/i2c.c"
     "${CMAKE_CURRENT_LIST_DIR}/${IDF_TARGET}/soc.c"
     "${CMAKE_CURRENT_LIST_DIR}/${IDF_TARGET}/true-rng.c"
     "${CMAKE_CURRENT_LIST_DIR}/${IDF_TARGET}/uart.c"
 )
+
+list(APPEND srcs
+    "${CMAKE_CURRENT_LIST_DIR}/common_gpio.c"
+    "${CMAKE_CURRENT_LIST_DIR}/common_pwm.c"
+    "${CMAKE_CURRENT_LIST_DIR}/common_timer.c"
+)
+
 
 if (CONFIG_IDF_TARGET_ESP32S3)
     list(APPEND errata_link_scripts
