@@ -3,9 +3,10 @@
 #include <features.h>
 #include <stdint.h>
 
-#include "esp_err.h"
-
 __BEGIN_DECLS
+
+// avoid esp_err.h
+typedef int esp_err_t;
 
 /****************************************************************************
  *  rtos

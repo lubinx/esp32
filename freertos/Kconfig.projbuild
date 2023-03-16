@@ -156,15 +156,6 @@ menu "FreeRTOS"
             ``vTaskList()`` and ``vTaskGetRunTimeStats()`` functions in the build (see
             configUSE_STATS_FORMATTING_FUNCTIONS documentation for more details).
 
-    config FREERTOS_VTASKLIST_INCLUDE_COREID
-        # Core affinity is supported in stats for Amazon FreeRTOS SMP by default
-        bool "Enable display of xCoreID in vTaskList"
-        depends on !FREERTOS_SMP && FREERTOS_USE_STATS_FORMATTING_FUNCTIONS
-        default n
-        help
-            If enabled, this will include an extra column when vTaskList is called to display the CoreID the task
-            is pinned to (0,1) or -1 if not pinned.
-
     config FREERTOS_USE_TICKLESS_IDLE
         # Todo: Currently not supported in SMP FreeRTOS yet (IDF-4986)
         # Todo: Consider whether this option should still be exposed (IDF-4986)
@@ -226,17 +217,6 @@ menu "FreeRTOS"
 
                 When this watchpoint is hit, gdb will stop with a SIGTRAP message. When no JTAG OCD is attached,
                 esp-idf will panic on an unhandled debug exception.
-
-        config FREERTOS_TLSP_DELETION_CALLBACKS
-            bool "Enable thread local storage pointers deletion callbacks"
-            depends on (FREERTOS_THREAD_LOCAL_STORAGE_POINTERS > 0)
-            default y
-            help
-                ESP-IDF provides users with the ability to free TLSP memory by registering TLSP deletion callbacks.
-                These callbacks are automatically called by FreeRTOS when a task is deleted. When this option is turned
-                on, the memory reserved for TLSPs in the TCB is doubled to make space for storing the deletion
-                callbacks. If the user does not wish to use TLSP deletion callbacks then this option could be turned
-                off to save space in the TCB memory.
 
         config FREERTOS_ENABLE_STATIC_TASK_CLEAN_UP
             bool "Enable static task clean up hook"
