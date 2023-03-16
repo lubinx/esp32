@@ -45,14 +45,14 @@
     #define TRIG_IS_LEVEL(TRIG)     (0 != (TRIG & 0x01))
     #define TRIG_IS_EDGE(TRIG)      (0 == (TRIG & 0x01))
 
-    enum GPIO_gatting_t
+    enum GPIO_resistor_t
     {
         HIGH_Z                      = 0,
         PULL_DOWN,
         PULL_UP
     };
 
-    enum GPIO_driven_t
+    enum GPIO_output_mode_t
     {
         PUSH_PULL                   = 0,
         PUSH_PULL_DOWN,
@@ -73,7 +73,7 @@ extern __attribute__((nothrow, nonnull))
     int GPIO_setdir_input(void *const gpio, uint32_t pins);
 
 extern __attribute__((nothrow, nonnull))
-    int GPIO_setdir_output(enum GPIO_driven_t mode, void *const gpio, uint32_t pins);
+    int GPIO_setdir_output(enum GPIO_output_mode_t mode, void *const gpio, uint32_t pins);
 
     /**
      *  GPIO debounce for INPUT mode only

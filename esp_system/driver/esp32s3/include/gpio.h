@@ -3,13 +3,4 @@
 
 #include <hw/gpio.h>
 
-struct __gpio_t
-{
-
-};
-
-extern struct __gpio_t *GPIO0;
-extern struct __gpio_t *GPIO1;
-
-
 #endif
