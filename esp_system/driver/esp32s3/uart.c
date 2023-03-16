@@ -216,6 +216,8 @@ int UART_configure(uart_dev_t *dev, uint32_t bps, enum UART_parity_t parity, enu
     else
         CLK_periph_enable(uart_module);
 
+    while (dev->id.reg_update);
+
     // uart normal
     dev->rs485_conf.val = 0;
     dev->conf0.irda_en = 0;
@@ -275,7 +277,10 @@ int UART_configure(uart_dev_t *dev, uint32_t bps, enum UART_parity_t parity, enu
         CLK_periph_disable(uart_module);
     }
     else
+    {
+        dev->id.reg_update = 1;
         retval = 0;
+    }
 
     return retval;
 }
@@ -327,8 +332,13 @@ void CLK_uart_sclk_updated(uart_dev_t *dev)
     else
         return;
 
-    if (CLK_periph_is_enabled(uart_module));
+    if (CLK_periph_is_enabled(uart_module))
+    {
+        while (dev->id.reg_update);
+
         UART_configure_context_bps(context, dev);
+        dev->id.reg_update = 1;
+    }
 }
 
 uint32_t UART_get_baudrate(uart_dev_t *dev)
@@ -441,7 +451,7 @@ static ssize_t UART_read(int fd, void *buf, size_t bufsize)
         retval = UART_fifo_read(dev, buf, bufsize);
 
         if (0 == retval)
-            retval =  __set_errno_neg(EAGAIN);
+            retval = __set_errno_neg(EAGAIN);
     }
     return retval;
 }
