@@ -296,13 +296,15 @@ void CLK_uart_sclk_updated(uart_dev_t *dev)
 
 uint32_t UART_get_baudrate(uart_dev_t *dev)
 {
-    if (CLK_periph_is_enabled(UART_periph_module(dev, NULL)))
-    {
-        return (CLK_uart_sclk_freq(dev) << 4) / ((dev->clkdiv.clkdiv << 4) | dev->clkdiv.clkdiv_frag) /
-           (dev->clk_conf.sclk_div_num + 1);
-    }
-    else
+    PERIPH_module_t module = UART_periph_module(dev, NULL);
+
+    if (PERIPH_MODULE_MAX == module)
+        return (uint32_t)__set_errno_nullptr(ENODEV);
+    if (! CLK_periph_is_enabled(module))
         return (uint32_t)__set_errno_nullptr(EACCES);
+
+    return (CLK_uart_sclk_freq(dev) << 4) / ((dev->clkdiv.clkdiv << 4) | dev->clkdiv.clkdiv_frag) /
+        (dev->clk_conf.sclk_div_num + 1);
 }
 
 /****************************************************************************
