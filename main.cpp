@@ -1,5 +1,6 @@
 #include <unistd.h>
 #include <stdio.h>
+#include <inttypes.h>
 #include <string.h>
 #include <pthread.h>
 #include <semaphore.h>
@@ -10,6 +11,7 @@
 #include "clk-tree.h"
 #include "gpio.h"
 #include "uart.h"
+#include "i2c.h"
 
 #include "esp_log.h"
 #include "esp_heap_caps.h"
@@ -33,12 +35,12 @@ int main(void)
     printf("cpu frequency: %llu MHz\n", CLK_cpu_freq() / 1000000);
     printf("ahb frequency: %llu MHz\n", CLK_ahb_freq() / 1000000);
 
-    if (CLK_periph_is_enabled(PERIPH_UART0_MODULE))
-        printf("uart0: %lu bps sclk: %llu\n", UART_get_baudrate(&UART0), CLK_uart_sclk_freq(&UART0));
-    if (CLK_periph_is_enabled(PERIPH_UART1_MODULE))
-        printf("uart1: %lu bps sclk: %llu\n", UART_get_baudrate(&UART1), CLK_uart_sclk_freq(&UART1));
-    if (CLK_periph_is_enabled(PERIPH_UART2_MODULE))
-        printf("uart2: %lu bps sclk: %llu\n", UART_get_baudrate(&UART2), CLK_uart_sclk_freq(&UART2));
+    printf("uart0: %lu bps sclk: %llu\n", UART_get_baudrate(&UART0), CLK_uart_sclk_freq(&UART0));
+    printf("uart1: %lu bps sclk: %llu\n", UART_get_baudrate(&UART1), CLK_uart_sclk_freq(&UART1));
+    printf("uart2: %lu bps sclk: %llu\n", UART_get_baudrate(&UART2), CLK_uart_sclk_freq(&UART2));
+
+    I2C_configure(&I2C0, I2C_MASTER_MODE, 333);
+    printf("i2c0: %lu bps sclk: %llu\n", I2C_get_bps(&I2C0), CLK_i2c_sclk_freq(&I2C0));
 
     printf("\nmalloc 32k test...\n");
     void *ptr = malloc(32768);
@@ -98,7 +100,6 @@ int main(void)
 
         printf("thread/cpu (0 <=> %d) tick: %llu/%llu/%llu\n", __get_CORE_ID(), t_slp, t1, t2);
         fflush(stdout);
-
 
         msleep(500);
     }
