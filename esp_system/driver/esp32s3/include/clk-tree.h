@@ -1,8 +1,8 @@
 #ifndef __ESP32S3_CLK_H
 #define __ESP32S3_CLK_H            1
 
-#include "clk_tree_defs.h"
-#include "hw/clk_tree.h"
+#include "clk-tree_defs.h"
+#include "hw/clk-tree.h"
 
 #include "soc/uart_struct.h"
 #include "soc/i2c_struct.h"

@@ -6,26 +6,24 @@
 
 #include <stddef.h>
 #include <assert.h>
-#include <sys/types.h>
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <freertos/semphr.h>
-#include <rtos/kernel.h>
 
-#include <clk_tree.h>
+#include <clk-tree.h>
 
 #include <esp_attr.h>
-#include <esp_err.h>
 #include <esp_log.h>
-#include <esp_system.h>
 #include <esp_heap_caps.h>
+
+#include "rtos/kernel.h"
+#include "sys/mutex.h"
+#include "semaphore.h"
+#include "esp_system.h"
 
 #include "hal/systimer_ll.h"
 #include "hal/systimer_hal.h"
-
-#include "sys/mutex.h"
-#include "semaphore.h"
 
 #include "sdkconfig.h"
 #include "esp_rom_sys.h"
@@ -50,7 +48,7 @@ struct __freertos_tcb
 
 struct __freertos_task
 {
-    StaticTask_t sinit;
+    StaticTask_t _sinit;
     // __freertos_tcb <==> __freertos_task
     struct __freertos_tcb *tcb;
 };
@@ -154,7 +152,7 @@ static void __freertos_thread_entry(struct __freertos_tcb *tcb)
     if (tcb->stack_is_dynamic_alloc)
         KERNEL_mfree(tcb->kernel.stack_base);
 
-    vTaskDelete((void *)&task->sinit);
+    vTaskDelete((void *)&task->_sinit);
     KERNEL_handle_release(tcb);
 }
 
@@ -229,14 +227,14 @@ thread_id_t thread_create_allparam(void *(*start_rountine)(void *arg), void *arg
         {
             hdl = xTaskCreateStatic((void *)__freertos_thread_entry, NULL,
                 stack_size, tcb, priority,
-                tcb->kernel.stack_base, &task->sinit
+                tcb->kernel.stack_base, &task->_sinit
             );
         }
         else
         {
             hdl = xTaskCreateStaticAffinitySet((void *)__freertos_thread_entry, NULL,
                 stack_size, tcb, priority,
-                tcb->kernel.stack_base, &task->sinit, 1 << core_id
+                tcb->kernel.stack_base, &task->_sinit, 1 << core_id
             );
         }
 
@@ -558,72 +556,6 @@ int sem_unlink(char const *name)
 {
     ARG_UNUSED(name);
     return __set_errno_neg(ENOSYS);
-}
-
-/****************************************************************************
- * @implements: esp-idf locks
-*****************************************************************************/
-static int __esp_lock_impl(_LOCK_T *lock, int (*mutex_func)(mutex_t *), char const *__function__)
-{
-    if (taskSCHEDULER_NOT_STARTED == xTaskGetSchedulerState())
-    {
-        /**
-         *  somehow they make this happen in esp-idf source code
-         *      this is ...ok when freertos task scheduler is not running, none thread was dispatching
-         *  REVIEW: add a atomic lock?
-        */
-        ESP_EARLY_LOGW(TAG, "%s() before freertos scheduler startup...%p", __function__, *lock);
-    }
-    else
-    {
-        SemaphoreHandle_t hdl = (SemaphoreHandle_t)(*lock);
-        if (! hdl)
-        {
-            // this should not
-            ESP_LOGE(TAG, "lock acquire CREATE... %p", lock);
-
-            hdl = xSemaphoreCreateMutex();
-            assert(NULL != hdl);
-
-            *lock = (void *)hdl;
-        }
-        return mutex_func((void *)hdl);
-    }
-}
-
-static int __mutex_trylock(mutex_t *mutex)
-{
-    return mutex_trylock(mutex, 0);
-}
-
-void _lock_acquire(_LOCK_T *lock)
-{
-    __esp_lock_impl(lock, &mutex_lock, __func__);
-}
-
-void _lock_acquire_recursive(_LOCK_T *lock)
-{
-    __esp_lock_impl(lock, &mutex_lock, __func__);
-}
-
-int _lock_try_acquire(_LOCK_T *lock)
-{
-    return __esp_lock_impl(lock, &__mutex_trylock, __func__);
-}
-
-int _lock_try_acquire_recursive(_LOCK_T *lock)
-{
-    return __esp_lock_impl(lock, &__mutex_trylock, __func__);
-}
-
-void _lock_release(_LOCK_T *lock)
-{
-    __esp_lock_impl(lock, &mutex_unlock, __func__);
-}
-
-void _lock_release_recursive(_LOCK_T *lock)
-{
-    __esp_lock_impl(lock, &mutex_unlock, __func__);
 }
 
 /****************************************************************************

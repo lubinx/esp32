@@ -7,7 +7,7 @@
 #include <soc/soc_caps.h>
 #include <soc/uart_reg.h>
 
-#include "clk_tree.h"
+#include "clk-tree.h"
 #include "esp_log.h"
 #include "esp_intr_alloc.h"
 
@@ -102,6 +102,7 @@ struct UART_context
 /****************************************************************************
  *  @internal
  ****************************************************************************/
+static PERIPH_module_t UART_periph_module(uart_dev_t *dev, struct UART_context **context);
 static void UART_configure_bps(uart_dev_t *dev, uint32_t bps);
 static void UART_configure_context_bps(struct UART_context *context, uart_dev_t *dev);
 // io
@@ -190,16 +191,9 @@ int UART_createfd(int nb, uint32_t bps, enum UART_parity_t parity, enum UART_sto
 
 int UART_configure(uart_dev_t *dev, uint32_t bps, enum UART_parity_t parity, enum UART_stopbits_t stopbits)
 {
-    PERIPH_module_t uart_module;
-    int retval;
+    PERIPH_module_t uart_module = UART_periph_module(dev, NULL);
 
-    if (&UART0 == dev)
-        uart_module = PERIPH_UART0_MODULE;
-    else if (&UART1 == dev)
-        uart_module = PERIPH_UART1_MODULE;
-    else if (&UART2 == dev)
-        uart_module = PERIPH_UART2_MODULE;
-    else
+    if (PERIPH_MODULE_MAX == uart_module)
         return ENODEV;
 
     if (CLK_periph_is_enabled(uart_module))
@@ -218,6 +212,7 @@ int UART_configure(uart_dev_t *dev, uint32_t bps, enum UART_parity_t parity, enu
 
     while (dev->id.reg_update);
 
+    int retval;
     // uart normal
     dev->rs485_conf.val = 0;
     dev->conf0.irda_en = 0;
@@ -250,7 +245,6 @@ int UART_configure(uart_dev_t *dev, uint32_t bps, enum UART_parity_t parity, enu
     default:
         retval = EINVAL;
         goto uart_configure_fail_exit;
-
     case UART_STOP_BITS_ONE:
         dev->conf0.stop_bit_num = 1;
         break;
@@ -287,55 +281,23 @@ int UART_configure(uart_dev_t *dev, uint32_t bps, enum UART_parity_t parity, enu
 
 int UART_deconfigure(uart_dev_t *dev)
 {
-    PERIPH_module_t uart_module;
-
-    if (&UART0 == dev)
-        uart_module = PERIPH_UART0_MODULE;
-    else if (&UART1 == dev)
-        uart_module = PERIPH_UART1_MODULE;
-    else if (&UART2 == dev)
-        uart_module = PERIPH_UART2_MODULE;
-    else
-        return ENODEV;
-
-    CLK_periph_disable(uart_module);
-    return 0;
+    return CLK_periph_disable(UART_periph_module(dev, NULL));
 }
 
-/// override clk_tree.c
+/// override clk-tree.c
 void CLK_uart_sclk_updating(uart_dev_t *dev)
 {
     while (dev->status.txfifo_cnt);
 }
 
-/// override clk_tree.c
+/// override clk-tree.c
 void CLK_uart_sclk_updated(uart_dev_t *dev)
 {
     struct UART_context *context;
-    PERIPH_module_t uart_module;
 
-    if (&UART0 == dev)
-    {
-        uart_module = PERIPH_UART0_MODULE;
-        context = &uart_context[0];
-    }
-    else if (&UART1 == dev)
-    {
-        uart_module = PERIPH_UART1_MODULE;
-        context = &uart_context[1];
-    }
-    else if (&UART2 == dev)
-    {
-        uart_module = PERIPH_UART2_MODULE;
-        context = &uart_context[2];
-    }
-    else
-        return;
-
-    if (CLK_periph_is_enabled(uart_module))
+    if (CLK_periph_is_enabled(UART_periph_module(dev, &context)))
     {
         while (dev->id.reg_update);
-
         UART_configure_context_bps(context, dev);
         dev->id.reg_update = 1;
     }
@@ -343,6 +305,13 @@ void CLK_uart_sclk_updated(uart_dev_t *dev)
 
 uint32_t UART_get_baudrate(uart_dev_t *dev)
 {
+    PERIPH_module_t module = UART_periph_module(dev, NULL);
+
+    if (PERIPH_MODULE_MAX == module)
+        return (uint32_t)__set_errno_nullptr(ENODEV);
+    if (! CLK_periph_is_enabled(module))
+        return (uint32_t)__set_errno_nullptr(EACCES);
+
     return (CLK_uart_sclk_freq(dev) << 4) / ((dev->clkdiv.clkdiv << 4) | dev->clkdiv.clkdiv_frag) /
         (dev->clk_conf.sclk_div_num + 1);
 }
@@ -391,19 +360,43 @@ int UART_fifo_read(uart_dev_t *dev, void *buf, unsigned bufsize)
 /****************************************************************************
  *  @internal
  ****************************************************************************/
+static PERIPH_module_t UART_periph_module(uart_dev_t *dev, struct UART_context **context)
+{
+    PERIPH_module_t module;
+
+    if (&UART0 == dev)
+    {
+        module = PERIPH_UART0_MODULE;
+        if (context)
+            *context = &uart_context[0];
+    }
+    else if (&UART1 == dev)
+    {
+        module = PERIPH_UART1_MODULE;
+        if (context)
+            *context = &uart_context[1];
+    }
+    else if (&UART2 == dev)
+    {
+        module = PERIPH_UART2_MODULE;
+        if (context)
+            *context = &uart_context[2];
+    }
+    else
+        module = PERIPH_MODULE_MAX;
+
+    return module;
+}
+
 static void UART_configure_bps(uart_dev_t *dev, uint32_t bps)
 {
     struct UART_context *context;
 
-    if (&UART0 == dev)
-        context = &uart_context[0];
-    else if (&UART1 == dev)
-        context = &uart_context[1];
-    else
-        context = &uart_context[2];
-
-    context->bps = bps;
-    UART_configure_context_bps(context, dev);
+    if (PERIPH_MODULE_MAX != UART_periph_module(dev, &context))
+    {
+        context->bps = bps;
+        UART_configure_context_bps(context, dev);
+    }
 }
 
 static void UART_configure_context_bps(struct UART_context *context, uart_dev_t *dev)

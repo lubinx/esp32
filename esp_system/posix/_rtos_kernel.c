@@ -17,7 +17,7 @@ struct KERNEL_context_t
     glist_t hdl_destroying_list;
     struct KERNEL_hdl hdl[4096 / sizeof(struct KERNEL_hdl)];
 };
-struct KERNEL_context_t KERNEL_context = { 0 };
+struct KERNEL_context_t KERNEL_context = {0};
 
 /***************************************************************************/
 /** constructor
@@ -35,12 +35,12 @@ void KERNEL_init(void)
 /***************************************************************************/
 /** @implements kernel.h
 ****************************************************************************/
-void KERNEL_spin_lock(void)
+void KERNEL_lock(void)
 {
     spin_lock(&KERNEL_context.atomic);
 }
 
-void KERNEL_spin_unlock(void)
+void KERNEL_unlock(void)
 {
     spin_unlock(&KERNEL_context.atomic);
 }
@@ -49,10 +49,10 @@ handle_t KERNEL_handle_get(uint8_t cid)
 {
     struct KERNEL_hdl *ptr;
 
-    KERNEL_spin_lock();
+    spin_lock(&KERNEL_context.atomic);
     ptr = glist_pop(&KERNEL_context.hdl_freed_list);
 
-    if (!ptr)
+    if (! ptr)
     {
         struct KERNEL_hdl *blocks =
             KERNEL_malloc(sizeof(struct KERNEL_hdl) * DYNAMIC_INC_DESCRIPTORS);
@@ -70,7 +70,7 @@ handle_t KERNEL_handle_get(uint8_t cid)
             ptr = NULL;
         }
     }
-    KERNEL_spin_unlock();
+    spin_unlock(&KERNEL_context.atomic);
 
     if (ptr)
     {
@@ -98,11 +98,12 @@ int KERNEL_handle_release(handle_t hdr)
         if (0 == retval)
         {
             /// @filesystem has ext cleanup to do
+            /*
             if (NULL != AsFD(hdr)->fs)
-                // FILESYSTEM_fd_cleanup((int)hdr);
+                FILESYSTEM_fd_cleanup((int)hdr);
+            */
 
-
-            KERNEL_spin_lock();
+            spin_lock(&KERNEL_context.atomic);
             {
                 /// preparing @recycle read_rdy hdr
                 ///     .not need to free it when ready_rdy is created by INITIALIZER
@@ -119,7 +120,7 @@ int KERNEL_handle_release(handle_t hdr)
                     glist_push_back(&KERNEL_context.hdl_destroying_list, AsFD(hdr)->write_rdy);
                 }
             }
-            KERNEL_spin_unlock();
+            spin_unlock(&KERNEL_context.atomic);
         }
         else
             retval = errno;
@@ -136,12 +137,12 @@ int KERNEL_handle_release(handle_t hdr)
 
     if (0 == retval)
     {
-        KERNEL_spin_lock();
+        spin_lock(&KERNEL_context.atomic);
         {
             AsKernelHdl(hdr)->flags |= HDL_FLAG_DESTROYING;
             glist_push_back(&KERNEL_context.hdl_destroying_list, hdr);
         }
-        KERNEL_spin_unlock();
+        spin_unlock(&KERNEL_context.atomic);
     }
     return retval;
 }
@@ -150,7 +151,7 @@ void KERNEL_handle_recycle(void)
 {
     if (! glist_is_empty(&KERNEL_context.hdl_destroying_list))
     {
-        KERNEL_spin_lock();
+        spin_lock(&KERNEL_context.atomic);
         struct KERNEL_hdl *hdl;
 
         while (NULL != (hdl = glist_pop(&KERNEL_context.hdl_destroying_list)))
@@ -160,7 +161,7 @@ void KERNEL_handle_recycle(void)
             if (HDL_FLAG_SYSMEM_MANAGED & hdl->flags)
                 glist_push_back(&KERNEL_context.hdl_freed_list, hdl);
         }
-        KERNEL_spin_unlock();
+        spin_unlock(&KERNEL_context.atomic);
     }
 }
 

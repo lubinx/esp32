@@ -1,10 +1,13 @@
-#include "soc.h"
-#include "clk_tree.h"
-#include "esp_system.h"
-#include "esp_log.h"
+#include <sys/errno.h>
+#include <esp_system.h>
+#include <esp_log.h>
 
-// TODO: remove these reqiured by ets_set_appcpu_boot_addr()
+#include "soc.h"
+#include "clk-tree.h"
+
+// TODO: remove these reqiured by esp_rom_route_intr_matrix()
 #include "esp_rom_sys.h"
+// TODO: remove these reqiured by ets_set_appcpu_boot_addr()
 #include "esp32s3/rom/ets_sys.h"
 
 static char const *TAG = "SoC";

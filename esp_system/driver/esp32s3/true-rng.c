@@ -1,7 +1,7 @@
 #include <unistd.h>
 
 #include "soc/wdev_reg.h"
-#include "clk_tree.h"
+#include "clk-tree.h"
 
 __attribute__((constructor))
 void TRNG_initialize(void)

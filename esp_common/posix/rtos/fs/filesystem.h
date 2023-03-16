@@ -69,7 +69,7 @@ extern __attribute__((nothrow))
         /// filesystem create file/directory
         int (* create)  (struct FS_ext *ext, char const *name, mode_t mode);
         /// filesystem remove file/directory
-        int (* truncate)  (struct FS_ext *ext, off_t size);
+        int (* truncate)(struct FS_ext *ext, off_t size);
         /// filesystem remove file/directory
         int (* unlink)  (struct FS_ext *ext, ino_t ino);
     };

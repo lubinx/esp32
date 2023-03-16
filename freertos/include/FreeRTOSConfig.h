@@ -14,7 +14,7 @@ This file get's pulled into assembly sources. Therefore, some includes need to b
 */
 
 #ifndef __ASSEMBLER__
-#include <assert.h>         //For configASSERT()
+    #include <assert.h>         //For configASSERT()
 #endif /* def __ASSEMBLER__ */
 
 /* Required for configuration-dependent settings. */
@@ -160,18 +160,8 @@ This file get's pulled into assembly sources. Therefore, some includes need to b
 // ----------------------- System --------------------------
 
 #define configMAX_TASK_NAME_LEN                         CONFIG_FREERTOS_MAX_TASK_NAME_LEN
+#define configNUM_THREAD_LOCAL_STORAGE_POINTERS         0
 
-#if ( CONFIG_FREERTOS_TLSP_DELETION_CALLBACKS )
-/* If thread local storage pointer deletion callbacks are registered
- * then we double the storage space reserved for the thread local
- * storage pointers in the task TCB. The first half of the storage area
- * is used to store the TLS pointers themselves while the second half
- * is used to store the respective deletion callbacks.
- */
-#define configNUM_THREAD_LOCAL_STORAGE_POINTERS         ( CONFIG_FREERTOS_THREAD_LOCAL_STORAGE_POINTERS * 2 )
-#else
-#define configNUM_THREAD_LOCAL_STORAGE_POINTERS         CONFIG_FREERTOS_THREAD_LOCAL_STORAGE_POINTERS
-#endif // CONFIG_FREERTOS_TLSP_DELETION_CALLBACKS
 #define configSTACK_DEPTH_TYPE                          uint32_t
 #define configUSE_NEWLIB_REENTRANT                      1
 #define configNEWLIB_REENTRANT_IS_DYNAMIC               1   // IDF Newlib supports dynamic reentrancy. We provide our own __getreent() function
@@ -253,10 +243,10 @@ For trace macros.
 Note: Include trace macros here and not above as trace macros are dependent on some of the FreeRTOS configs
 */
 #ifndef __ASSEMBLER__
-#if CONFIG_SYSVIEW_ENABLE
-#include "SEGGER_SYSVIEW_FreeRTOS.h"
-#undef INLINE // to avoid redefinition
-#endif //CONFIG_SYSVIEW_ENABLE
+    #if CONFIG_SYSVIEW_ENABLE
+        #include "SEGGER_SYSVIEW_FreeRTOS.h"
+        #undef INLINE // to avoid redefinition
+    #endif //CONFIG_SYSVIEW_ENABLE
 #endif /* def __ASSEMBLER__ */
 
 /*
@@ -286,18 +276,7 @@ Default values for trace macros added by ESP-IDF and are not part of Vanilla Fre
  * ------------------------------------------------------------------------------------------------------------------ */
 
 #define portNUM_PROCESSORS                              configNUM_CORES
-#ifdef CONFIG_FREERTOS_VTASKLIST_INCLUDE_COREID
-#define configTASKLIST_INCLUDE_COREID                   1
-#endif
-
-#ifndef __ASSEMBLER__
-#if CONFIG_APPTRACE_SV_ENABLE
-extern volatile uint32_t port_switch_flag[portNUM_PROCESSORS];
-#define os_task_switch_is_pended(_cpu_) (port_switch_flag[_cpu_])
-#else
-#define os_task_switch_is_pended(_cpu_) (false)
-#endif
-#endif
+#define configTASKLIST_INCLUDE_COREID                   0
 
 // -------------------- Compatibility ----------------------
 

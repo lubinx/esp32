@@ -6,11 +6,13 @@
 #include <sys/types.h>
 #include <semaphore.h>
 
+#include <esp_log.h>
+
 #include <rtos/kernel.h>
 #include <soc/soc_caps.h>
 #include <soc/i2c_reg.h>
 
-#include "clk_tree.h"
+#include "clk-tree.h"
 #include "esp_intr_alloc.h"
 
 #include "i2c.h"
@@ -21,9 +23,11 @@
 void I2C0_IntrHandler(void *arg);
 void I2C1_IntrHandler(void *arg);
 
+#define I2C_CONFIG_CLK_FREQ             (20 * _MHZ)
+
 // TODO: sdkconfig to configure i2c filter, 0: disable
-#define I2C_SCL_FILTER_APB_CYCLE        (7)
-#define I2C_SDA_FILTER_APB_CYCLE        (7)
+#define I2C_SCL_FILTER_APB_CYCLE        (10)
+#define I2C_SDA_FILTER_APB_CYCLE        (10)
 
 struct I2C_addressing
 {
@@ -55,7 +59,7 @@ struct I2C_context
 
 struct I2C_clk_config
 {
-    uint16_t clkm_div;
+    uint16_t clk_div_10m;
     uint16_t scl_low;
     uint16_t scl_high;
     uint16_t scl_wait_high;
@@ -81,7 +85,8 @@ struct I2C_fd_ext
 /***************************************************************************
  *  @internal
  ***************************************************************************/
-static void I2C_calculate_bps(i2c_dev_t *dev, struct I2C_clk_config *cfg);
+static PERIPH_module_t I2C_periph_module(i2c_dev_t *dev, struct I2C_context **context);
+static void I2C_calculate_bps(i2c_dev_t *dev, uint32_t kbps);
 
 static struct I2C_context *I2C_lock(int fd, uint32_t timeout);
 static void I2C_unlock(struct I2C_context *context);
@@ -190,20 +195,16 @@ init_context_syncobjs:
 
 int I2C_configure(i2c_dev_t *dev, enum I2C_mode_t mode, uint32_t kbps)
 {
+    int retval;
+
     if (I2C_MASTER_MODE != mode)
     {
         /// TODO: I2C slave mode
         return ENOSYS;
     }
 
-    PERIPH_module_t i2c_module;
-    int retval;
-
-    if (&I2C0 == dev)
-        i2c_module = PERIPH_I2C0_MODULE;
-    else if (&I2C1 == dev)
-        i2c_module = PERIPH_I2C1_MODULE;
-    else
+    PERIPH_module_t i2c_module = I2C_periph_module(dev, NULL);
+    if (PERIPH_MODULE_MAX == i2c_module)
         return ENODEV;
 
     if (CLK_periph_is_enabled(i2c_module))
@@ -213,6 +214,8 @@ int I2C_configure(i2c_dev_t *dev, enum I2C_mode_t mode, uint32_t kbps)
 
     if (I2C_MASTER_MODE == mode)
     {
+        // disable before setup
+        dev->clk_conf.sclk_active = 0;
         dev->int_ena.val = 0;
         dev->int_clr.val= ~0;
         // fifo
@@ -235,22 +238,16 @@ int I2C_configure(i2c_dev_t *dev, enum I2C_mode_t mode, uint32_t kbps)
         dev->ctr.val = 0;
         dev->ctr.ms_mode = 1;
         // dev->ctr.clk_en = 1; what is this?
-        // scl/sda output mode. 0 open-drain, 1 push-pull
+        // scl/sda output mode. 0: direct output; 1: open drain output.
         dev->ctr.sda_force_out = 1;
         dev->ctr.scl_force_out = 1;
         // MSB
         dev->ctr.rx_lsb_first =  dev->ctr.tx_lsb_first = 0;
-
         // bps
-        uint64_t sclk_freq = CLK_i2c_sclk_freq(dev);
-        uint32_t clkm_div = sclk_freq / (kbps * 1000 * 1024) + 1;
-        uint32_t half_cycle = sclk_freq / clkm_div / (kbps * 1000) / 2;
-
-        dev->ctr.conf_upgate = 1;
-
+        I2C_calculate_bps(dev, kbps);
         // update
-        // dev->clk_conf.sclk_active = 1;
-
+        dev->ctr.conf_upgate = 1;
+        dev->clk_conf.sclk_active = 1;
     }
     else
     {
@@ -269,22 +266,23 @@ i2c_configure_fail_exit:
 
 int I2C_deconfigure(i2c_dev_t *dev)
 {
-    PERIPH_module_t i2c_module;
-
-    if (&I2C0 == dev)
-        i2c_module = PERIPH_I2C0_MODULE;
-    else if (&I2C1 == dev)
-        i2c_module = PERIPH_I2C1_MODULE;
-    else
-        return ENODEV;
-
-    CLK_periph_disable(i2c_module);
-    return 0;
+    return CLK_periph_disable(I2C_periph_module(dev, NULL));
 }
 
-unsigned I2C_get_bps(i2c_dev_t dev)
+uint32_t I2C_get_bps(i2c_dev_t *dev)
 {
+    PERIPH_module_t module = I2C_periph_module(dev, NULL);
 
+    if (PERIPH_MODULE_MAX == module)
+        return (uint32_t)__set_errno_nullptr(ENODEV);
+    if (! CLK_periph_is_enabled(module))
+        return (uint32_t)__set_errno_nullptr(EACCES);
+
+    uint32_t cycle = dev->scl_low_period.scl_low_period + dev->scl_high_period.scl_wait_high_period + dev->scl_high_period.scl_high_period;
+    if (0 == cycle)
+        return (uint32_t)__set_errno_nullptr(EINVAL);
+
+    return CLK_i2c_sclk_freq(dev) / (dev->clk_conf.sclk_div_num + 1) / cycle;
 }
 
 /****************************************************************************
@@ -313,6 +311,55 @@ int I2C_fifo_read(i2c_dev_t *dev, void *buf, unsigned bufsize)
 /***************************************************************************
  *  @internal
  ***************************************************************************/
+static PERIPH_module_t I2C_periph_module(i2c_dev_t *dev, struct I2C_context **context)
+{
+    PERIPH_module_t module;
+
+    if (&I2C0 == dev)
+    {
+        module = PERIPH_I2C0_MODULE;
+        if (context)
+            *context = &i2c_context[0];
+    }
+    else if (&I2C1 == dev)
+    {
+        module = PERIPH_I2C1_MODULE;
+        if (context)
+            *context = &i2c_context[1];
+    }
+    else
+        module = PERIPH_MODULE_MAX;
+
+    return module;
+}
+
+static void I2C_calculate_bps(i2c_dev_t *dev, uint32_t kbps)
+{
+    dev->clk_conf.sclk_div_num = CLK_i2c_sclk_freq(dev) / I2C_CONFIG_CLK_FREQ - 1;
+    uint32_t cycle = I2C_CONFIG_CLK_FREQ / 1000 / kbps;
+    uint32_t low_cycle = cycle / 2;
+    uint32_t half_cycle = I2C_CONFIG_CLK_FREQ / 1000 == cycle * kbps ? cycle - low_cycle : cycle - low_cycle + 1;
+
+    // scl
+    dev->scl_low_period.scl_low_period = low_cycle;
+    dev->scl_high_period.scl_wait_high_period = 80 < kbps ? half_cycle / 4 : half_cycle / 3;
+    dev->scl_high_period.scl_high_period = half_cycle - dev->scl_high_period.scl_wait_high_period;
+    // sda
+    dev->sda_hold.sda_hold_time = half_cycle / 4;
+    dev->sda_sample.sda_sample_time = half_cycle / 2 + dev->scl_high_period.scl_wait_high_period;
+
+    // start
+    dev->scl_start_hold.scl_start_hold_time = half_cycle;
+    dev->scl_rstart_setup.scl_rstart_setup_time = half_cycle;
+    // stop
+    dev->scl_stop_setup.scl_stop_setup_time = half_cycle;
+    dev->scl_stop_hold.scl_stop_hold_time = half_cycle;
+
+    // timeout: 5 bits, max = 31;
+    dev->to.time_out_value = ~0;
+    dev->to.time_out_en = 1;
+}
+
 static struct I2C_context *I2C_lock(int fd, uint32_t timeout)
 {
     struct I2C_fd_ext *ext = (struct I2C_fd_ext *)AsFD(fd)->ext;
@@ -580,7 +627,6 @@ static int I2C_close(int fd)
     return 0;
 }
 
-
 /****************************************************************************
  *  intr
  ****************************************************************************/
@@ -650,7 +696,6 @@ static void I2C_IntrHandler(struct I2C_context *context)
         else
             I2C_tx_next(DEV, context);
     }
-
     */
 
 i2c_intr_exit:

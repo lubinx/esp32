@@ -2,7 +2,7 @@
 #include "esp_log.h"
 
 #include "soc.h"
-#include "clk_tree.h"
+#include "clk-tree.h"
 #include "regi2c_ctrl.h"
 
 #include "soc/dport_access.h"
@@ -13,7 +13,6 @@ static char const *TAG = "clktree";
 /****************************************************************************
  * @def
  ****************************************************************************/
-#define _MHZ                            (1000000ULL)
 // default xtal is 40M, using sdkconfig?
 #define XTAL_FREQ                       XTAL_40M
 
@@ -40,7 +39,7 @@ static uint32_t periph_rst_en_mask(PERIPH_module_t periph);
 static unsigned RC_FAST_refcount;
 
 /****************************************************************************
- * @implements hw/clk_tree.h
+ * @implements hw/clk-tree.h
  ****************************************************************************/
 void CLK_initialize(void)
 {
@@ -298,6 +297,8 @@ uint64_t CLK_pll_freq(void)
         return PLL_320M_FREQ;
     case 1:
         return PLL_480M_FREQ;
+    default:
+        return 0;
     }
 }
 
@@ -431,6 +432,8 @@ uint64_t CLK_ahb_freq(void)
     // AHB_CLK is a fixed value when CPU_CLK is clocked from PLL
     case CPU_SCLK_SEL_PLL:
         return PLL_DIV_TO_80M_FREQ;
+    default:
+        return 0;
     }
 }
 
@@ -493,7 +496,7 @@ uint64_t CLK_rtc_freq(void)
 }
 
 /****************************************************************************
- * @implements esp32s3/clk_tree.h
+ * @implements esp32s3/clk-tree.h
  ****************************************************************************/
 unsigned CLK_SCLK_RC_FAST_ref(void)
 {
@@ -592,6 +595,8 @@ uint64_t CLK_uart_sclk_freq(uart_dev_t *dev)
         return RC_FAST_FREQ;
     case UART_SCLK_SEL_XTAL:
         return XTAL_FREQ;
+    default:
+        return 0;
     }
 }
 
@@ -618,6 +623,8 @@ uint64_t CLK_i2c_sclk_freq(i2c_dev_t *dev)
         return XTAL_FREQ;
     case I2C_SCLK_SEL_RC_FAST:
         return RC_FAST_FREQ;
+    default:
+        return 0;
     }
 }
 
@@ -637,6 +644,8 @@ uint64_t CLK_i2s_rx_sclk_freq(i2s_dev_t *dev)
         return CLK_pll_freq() / 2;
     case I2S_SCLK_SEL_PLL_F160M:
         return PLL_DIV_TO_160M_FREQ;
+    default:
+        return 0;
     }
 }
 
@@ -656,6 +665,8 @@ uint64_t CLK_i2s_tx_sclk_freq(i2s_dev_t *dev)
         return CLK_pll_freq() / 2;
     case I2S_SCLK_SEL_PLL_F160M:
         return PLL_DIV_TO_160M_FREQ;
+    default:
+        return 0;
     }
 }
 
@@ -664,25 +675,40 @@ uint64_t CLK_i2s_tx_sclk_freq(i2s_dev_t *dev)
  ****************************************************************************/
 bool CLK_periph_is_enabled(PERIPH_module_t periph)
 {
-    return 0 != DPORT_GET_PERI_REG_MASK(periph_clk_en_reg(periph), periph_clk_en_mask(periph));
+    if (PERIPH_MODULE_MAX == periph)
+        return false;
+    else
+        return 0 != DPORT_GET_PERI_REG_MASK(periph_clk_en_reg(periph), periph_clk_en_mask(periph));
 }
 
-void CLK_periph_enable(PERIPH_module_t periph)
+int CLK_periph_enable(PERIPH_module_t periph)
 {
+    if (PERIPH_MODULE_MAX == periph)
+        return ENODEV;
+
     DPORT_SET_PERI_REG_MASK(periph_clk_en_reg(periph), periph_clk_en_mask(periph));
     DPORT_CLEAR_PERI_REG_MASK(periph_rst_en_reg(periph), periph_rst_en_mask(periph));
+    return 0;
 }
 
-void CLK_periph_disable(PERIPH_module_t periph)
+int CLK_periph_disable(PERIPH_module_t periph)
 {
+    if (PERIPH_MODULE_MAX == periph)
+        return ENODEV;
+
     DPORT_CLEAR_PERI_REG_MASK(periph_clk_en_reg(periph), periph_clk_en_mask(periph));
     DPORT_SET_PERI_REG_MASK(periph_rst_en_reg(periph), periph_rst_en_mask(periph));
+    return 0;
 }
 
-void CLK_periph_reset(PERIPH_module_t periph)
+int CLK_periph_reset(PERIPH_module_t periph)
 {
+    if (PERIPH_MODULE_MAX == periph)
+        return ENODEV;
+
     DPORT_SET_PERI_REG_MASK(periph_rst_en_reg(periph), periph_rst_en_mask(periph));
     DPORT_CLEAR_PERI_REG_MASK(periph_rst_en_reg(periph), periph_rst_en_mask(periph));
+    return 0;
 }
 
 /****************************************************************************

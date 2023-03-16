@@ -433,13 +433,11 @@ static void shared_intr_isr(void *arg)
     portENTER_CRITICAL_ISR(&spinlock);
     while(sh_vec) {
         if (!sh_vec->disabled) {
-            if ((sh_vec->statusreg == NULL) || (*sh_vec->statusreg & sh_vec->statusmask)) {
+            if ((sh_vec->statusreg == NULL) || (*sh_vec->statusreg & sh_vec->statusmask))
+            {
                 traceISR_ENTER(sh_vec->source + ETS_INTERNAL_INTR_SOURCE_OFF);
                 sh_vec->isr(sh_vec->arg);
-                // check if we will return to scheduler or to interrupted task after ISR
-                if (!os_task_switch_is_pended(__get_CORE_ID())) {
-                    traceISR_EXIT();
-                }
+                traceISR_EXIT();
             }
         }
         sh_vec = sh_vec->next;

@@ -42,8 +42,8 @@
         // extension
         TRIG_BY_BOTH_EDGE           = 4
     };
-    #define TRIG_IS_LEVEL(TRIG)     (0 != (TRIG & 0x01))
-    #define TRIG_IS_EDGE(TRIG)      (0 == (TRIG & 0x01))
+    #define GPIO_TRIG_IS_LEVEL(TRIG)     (0 != (TRIG & 0x01))
+    #define GPIO_TRIG_IS_EDGE(TRIG)      (0 == (TRIG & 0x01))
 
     enum GPIO_gatting_t
     {
@@ -52,7 +52,7 @@
         PULL_UP
     };
 
-    enum GPIO_driven_t
+    enum GPIO_output_mode_t
     {
         PUSH_PULL                   = 0,
         PUSH_PULL_DOWN,
@@ -70,10 +70,13 @@ __BEGIN_DECLS
 /**  GPIO @configure
 ****************************************************************************/
 extern __attribute__((nothrow, nonnull))
+    int GPIO_disable(void *const gpio, uint32_t pins);
+
+extern __attribute__((nothrow, nonnull))
     int GPIO_setdir_input(void *const gpio, uint32_t pins);
 
 extern __attribute__((nothrow, nonnull))
-    int GPIO_setdir_output(enum GPIO_driven_t mode, void *const gpio, uint32_t pins);
+    int GPIO_setdir_output(enum GPIO_output_mode_t mode, void *const gpio, uint32_t pins);
 
     /**
      *  GPIO debounce for INPUT mode only
@@ -97,10 +100,10 @@ extern __attribute__((nothrow, nonnull))
     uint32_t GPIO_peek(void *const gpio, uint32_t pins);
 
     /**
-     *  GPIO_peek_driven(): peek Output drived LEVEL
+     *  GPIO_peek_output(): peek Output drived LEVEL
      */
 extern __attribute__((nothrow, nonnull))
-    uint32_t GPIO_peek_driven(void *const gpio, uint32_t pins);
+    uint32_t GPIO_peek_output(void *const gpio, uint32_t pins);
 
     /**
      *  GPIO_toggle(): Output driven toggle LEVEL
