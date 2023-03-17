@@ -16,6 +16,9 @@
 #include "esp_log.h"
 #include "esp_heap_caps.h"
 
+#define LED1_PIN_NUM                    (8)
+#define LED2_PIN_NUM                    (9)
+
 #pragma GCC diagnostic ignored "-Wunused-function"
 
 pthread_mutex_t mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER;

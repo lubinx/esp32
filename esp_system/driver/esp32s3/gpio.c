@@ -25,6 +25,9 @@ int GPIO_setdir_input(void *const gpio, uint32_t pins)
 
 int GPIO_setdir_output(enum GPIO_output_mode_t mode, void *const gpio, uint32_t pins)
 {
+    if (OPEN_SOURCE == mode)
+        return ENOTSUP;
+
     return ENOSYS;
 }
 
