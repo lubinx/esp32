@@ -3291,8 +3291,6 @@ core 0 during startup.
 void vTaskStartSchedulerOtherCores( void );
 #endif // configNUM_CORES > 1
 
-#include "idf_additions.h"
-
 #endif //ESP_PLATFORM
 
 /* *INDENT-OFF* */

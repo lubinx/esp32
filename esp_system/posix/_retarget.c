@@ -22,7 +22,6 @@
  * @imports
 *****************************************************************************/
 struct _reent *_global_impure_ptr;
-extern struct _reent *__getreent(void);     // freertos_tasks_c_additions.h linked by freertos
 
 /****************************************************************************
  *  @def

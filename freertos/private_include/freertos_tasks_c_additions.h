@@ -1,27 +1,3 @@
-/*
- * SPDX-FileCopyrightText: 2015-2021 Espressif Systems (Shanghai) CO LTD
- *
- * SPDX-License-Identifier: Apache-2.0
- */
-
-#pragma once
-
-#include "sdkconfig.h"
-
-/**
- * This file will be included in `tasks.c` file, thus, it must NOT be included
- * by any (other) file.
- * The functions below only consist in getters for the static variables in
- * `tasks.c` file.
- * The only source files that should call these functions are the ones in
- * `/additions` directory.
- */
-
-/* ----------------------------------------------------- Newlib --------------------------------------------------------
- *
- * ------------------------------------------------------------------------------------------------------------------ */
-
-#if ( configUSE_NEWLIB_REENTRANT == 1 )
 /**
  * @brief Get reentrancy structure of the current task
  *
@@ -33,64 +9,10 @@
  */
 struct _reent *__getreent(void)
 {
-    // No lock needed because if this changes, we won't be running anymore.
     TCB_t *pxCurTask = xTaskGetCurrentTaskHandle();
-    struct _reent *ret;
-    if (pxCurTask == NULL) {
-        // No task running. Return global struct.
-        ret = _GLOBAL_REENT;
-    } else {
-        // We have a task; return its reentrant struct.
-        ret = &pxCurTask->xNewLib_reent;
-    }
-    return ret;
+
+    if (pxCurTask)
+        return &pxCurTask->xNewLib_reent;
+    else
+        return _GLOBAL_REENT;
 }
-#endif // configUSE_NEWLIB_REENTRANT == 1
-
-/* -------------------------------------------- FreeRTOS IDF API Additions ---------------------------------------------
- * FreeRTOS related API that were added by IDF
- * ------------------------------------------------------------------------------------------------------------------ */
-
-#if CONFIG_FREERTOS_SMP
-_Static_assert(tskNO_AFFINITY == CONFIG_FREERTOS_NO_AFFINITY, "CONFIG_FREERTOS_NO_AFFINITY must be the same as tskNO_AFFINITY");
-
-TaskHandle_t xTaskGetCurrentTaskHandleForCPU( BaseType_t xCoreID )
-{
-    TaskHandle_t xTaskHandleTemp;
-    assert(xCoreID >= 0 && xCoreID < configNUM_CORES);
-    taskENTER_CRITICAL();
-    xTaskHandleTemp = (TaskHandle_t) pxCurrentTCBs[xCoreID];
-    taskEXIT_CRITICAL();
-    return xTaskHandleTemp;
-}
-
-TaskHandle_t xTaskGetIdleTaskHandleForCPU( BaseType_t xCoreID )
-{
-    assert(xCoreID >= 0 && xCoreID < configNUM_CORES);
-    return (TaskHandle_t) xIdleTaskHandle[xCoreID];
-}
-
-BaseType_t xTaskGetAffinity( TaskHandle_t xTask )
-{
-    taskENTER_CRITICAL();
-    UBaseType_t uxCoreAffinityMask;
-#if ( configUSE_CORE_AFFINITY == 1 && configNUM_CORES > 1 )
-    TCB_t *pxTCB = prvGetTCBFromHandle( xTask );
-    uxCoreAffinityMask = pxTCB->uxCoreAffinityMask;
-#else
-    uxCoreAffinityMask = tskNO_AFFINITY;
-#endif
-    taskEXIT_CRITICAL();
-    BaseType_t ret;
-    // If the task is not pinned to a particular core, treat it as tskNO_AFFINITY
-    if (uxCoreAffinityMask & (uxCoreAffinityMask - 1)) {    // If more than one bit set
-        ret = tskNO_AFFINITY;
-    } else {
-        int index_plus_one = __builtin_ffs(uxCoreAffinityMask);
-        assert(index_plus_one >= 1);
-        ret = index_plus_one - 1;
-    }
-    return ret;
-}
-
-#endif // CONFIG_FREERTOS_SMP
