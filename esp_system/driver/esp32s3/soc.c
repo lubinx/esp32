@@ -1,9 +1,11 @@
 #include <sys/errno.h>
+
 #include <esp_system.h>
 #include <esp_log.h>
 
 #include "soc.h"
 #include "clk-tree.h"
+#include "gpio.h"
 
 // TODO: remove these reqiured by esp_rom_route_intr_matrix()
 #include "esp_rom_sys.h"
@@ -42,6 +44,7 @@ void SOC_initialize(void)
     if (0 == core_id)
     {
         CLK_initialize();
+        GPIO_initialize();
 
         /*
         REG_WRITE(ASSIST_DEBUG_CORE_0_RCD_PDEBUGENABLE_REG, 1);

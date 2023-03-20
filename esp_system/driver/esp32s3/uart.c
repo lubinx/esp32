@@ -84,8 +84,17 @@ enum
     UART_INTR_WAKEUP = (1 << 19),
 };
 
+struct UART_gpio_cfg
+{
+    uint8_t TXD_pin_nb;
+    uint8_t RXD_pin_nb;
+    uint8_t RTS_pin_nb;
+    uint8_t CTS_pin_nb;
+};
+
 struct UART_context
 {
+    struct UART_gpio_cfg gpio_cfg;
     uart_dev_t *dev;
     intr_handle_t intr_hdl;
 

@@ -43,7 +43,7 @@ int main(void)
     printf("uart2: %lu bps sclk: %llu\n", UART_get_baudrate(&UART2), CLK_uart_sclk_freq(&UART2));
 
     I2C_configure(&I2C0, I2C_MASTER_MODE, 333);
-    printf("i2c0: %lu bps sclk: %llu\n", I2C_get_bps(&I2C0), CLK_i2c_sclk_freq(&I2C0));
+    printf("i2c0: %lu bps sclk: %llu\n\n", I2C_get_bps(&I2C0), CLK_i2c_sclk_freq(&I2C0));
 
     GPIO_print_iomux();
 

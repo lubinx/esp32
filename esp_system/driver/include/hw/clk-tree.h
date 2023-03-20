@@ -14,9 +14,8 @@
 
 __BEGIN_DECLS
 /****************************************************************************
- *  initialization
+ *  initialization: called by SOC_initialize()
  ****************************************************************************/
-    // init
 extern __attribute__((nothrow))
     void CLK_initialize(void);
 

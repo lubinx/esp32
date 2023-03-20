@@ -3,11 +3,15 @@
 
 #include <features.h>
 
+#include "gpio.h"
 #include "hw/uart.h"
 #include "soc/uart_struct.h"
 
 __BEGIN_DECLS
 
+/****************************************************************************
+ *  configure
+ ****************************************************************************/
 extern __attribute__((nothrow, nonnull))
     int UART_configure(uart_dev_t *dev, uint32_t bps, enum UART_parity_t parity, enum UART_stopbits_t stopbits);
 extern __attribute__((nothrow, nonnull))
@@ -15,6 +19,16 @@ extern __attribute__((nothrow, nonnull))
 
 extern __attribute__((nothrow, nonnull, const))
     uint32_t UART_get_baudrate(uart_dev_t *dev);
+
+// pins
+extern __attribute__((nothrow, nonnull))
+    int UART_configure_txd_pin(void *const gpio, uint32_t pin);
+extern __attribute__((nothrow, nonnull))
+    int UART_configure_rxd_pin(void *const gpio, uint32_t pin);
+extern __attribute__((nothrow, nonnull))
+    int UART_configure_cts_pin(void *const gpio, uint32_t pin);
+extern __attribute__((nothrow, nonnull))
+    int UART_configure_rts_pin(void *const gpio, uint32_t pin);
 
 /****************************************************************************
  *  direct write UART through fifo

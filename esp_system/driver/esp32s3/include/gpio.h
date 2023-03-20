@@ -4,8 +4,8 @@
 #include <features.h>
 #include <hw/gpio.h>
 
-    #define GPIO_H                      ((void *)1UL << 31) // PIN: 26~48
     #define GPIO_L                      ((void *)1UL << 30) // PIN:  0~21
+    #define GPIO_H                      ((void *)1UL << 31) // PIN: 26~48
 
 // PIN0 ~ PIN21
     #define PIN0                        ((uintptr_t)GPIO_L | (1 << 0))
@@ -63,6 +63,12 @@
     #define GPIO_DISABLE_PULL           (PULL_UP)
 
 __BEGIN_DECLS
+/****************************************************************************
+ *  initialization: called by SOC_initialize()
+ ****************************************************************************/
+extern __attribute__((nothrow, nonnull))
+    void GPIO_initialize(void);
+
 /***************************************************************************/
 /**  GPIO io mux table console
 ****************************************************************************/
