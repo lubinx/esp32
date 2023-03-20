@@ -78,6 +78,18 @@ extern __attribute__((nothrow, nonnull))
 /***************************************************************************/
 /**  GPIO configure by PIN number
 ****************************************************************************/
+    /**
+     * replace esp_rom_gpio_connect_in_signal()
+    */
+extern __attribute__((nothrow, nonnull))
+    int GPIO_connect_in_signal(uint8_t pin_nb, uint16_t sig_idx, bool inv);
+
+    /**
+     * replace esp_rom_gpio_connect_out_signal()
+     */
+extern __attribute__((nothrow, nonnull))
+    int GPIO_connect_out_signal(uint8_t pin_nb, uint16_t sig_idx, bool inv, bool oen_inv);
+
 extern __attribute__((nothrow, nonnull))
     int GPIO_disable_pin_nb(enum GPIO_pad_pull_t pull, uint8_t pin_nb);
 

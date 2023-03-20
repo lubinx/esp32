@@ -246,6 +246,16 @@ int GPIO_hold_repeating(void *const gpio, uint32_t pins, uint32_t millisecond)
 /***************************************************************************/
 /** @implements: configure by PIN number
 ****************************************************************************/
+int GPIO_connect_in_signal(uint8_t pin_nb, uint16_t sig_idx, bool inv)
+{
+    return 0;
+}
+
+int GPIO_connect_out_signal(uint8_t pin_nb, uint16_t sig_idx, bool inv, bool oen_inv)
+{
+    return 0;
+}
+
 int GPIO_disable_pin_nb(enum GPIO_pad_pull_t pull, uint8_t pin_nb)
 {
     io_mux_reg_t *io_mux_reg = IO_MUX_REG(pin_nb);
