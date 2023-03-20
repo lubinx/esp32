@@ -45,7 +45,7 @@
     #define GPIO_TRIG_IS_LEVEL(TRIG)     (0 != (TRIG & 0x01))
     #define GPIO_TRIG_IS_EDGE(TRIG)      (0 == (TRIG & 0x01))
 
-    enum GPIO_gatting_t
+    enum GPIO_resistor_t
     {
         HIGH_Z                      = 0,
         PULL_DOWN,

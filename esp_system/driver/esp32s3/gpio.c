@@ -42,7 +42,25 @@ int GPIO_hold_repeating(void *const gpio, uint32_t pins, uint32_t millisecond)
 }
 
 /***************************************************************************/
-/** @implements: IO
+/** @implements: configure by PIN number
+****************************************************************************/
+int GPIO_disable_pin_nb(enum GPIO_resistor_t pull, uint8_t pin_nb)
+{
+
+}
+
+int GPIO_setdir_input_pin_nb(uint8_t pin_nb)
+{
+
+}
+
+int GPIO_setdir_output_pin_nb(enum GPIO_output_mode_t mode, uint8_t pin_nb)
+{
+
+}
+
+/***************************************************************************/
+/** @implements
 ****************************************************************************/
 uint32_t GPIO_peek(void *const gpio, uint32_t pins)
 {
