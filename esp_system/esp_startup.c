@@ -52,6 +52,11 @@ void Startup_Handler(void)
             tbl->dst[i] = 0;
     }
 
+    /*
+    for (uint64_t i = 0; i < 5000000; i ++)
+        (void)__get_CCOUNT();
+    */
+
     SOC_initialize();
 
     extern void __libc_retarget_init(void); //  _retarget_init.c

@@ -43,8 +43,8 @@ void SOC_initialize(void)
 
     if (0 == core_id)
     {
-        CLK_initialize();
         GPIO_initialize();
+        CLK_initialize();
 
         /*
         REG_WRITE(ASSIST_DEBUG_CORE_0_RCD_PDEBUGENABLE_REG, 1);

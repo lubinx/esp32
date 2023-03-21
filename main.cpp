@@ -92,6 +92,11 @@ int main(void)
     printf("infinite loop...\n");
     fflush(stdout);
 
+    /*
+    msleep(5000);
+    GPIO_disable_pin_nb(43, HIGH_Z);
+    GPIO_disable_pin_nb(44, HIGH_Z);
+    */
 
     while (1)
     {

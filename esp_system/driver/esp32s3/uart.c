@@ -219,6 +219,15 @@ int UART_configure(uart_dev_t *dev, uint32_t bps, enum UART_parity_t parity, enu
     else
         CLK_periph_enable(uart_module);
 
+    // io-mux configure
+    switch (uart_module)
+    {
+    case PERIPH_UART0_MODULE:
+        GPIO_setdir_input_pin_nb(44, HIGH_Z, true);
+        GPIO_setdir_output_pin_nb(43, PUSH_PULL);
+        break;
+    }
+
     while (dev->id.reg_update);
 
     int retval;
