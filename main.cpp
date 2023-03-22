@@ -45,7 +45,7 @@ int main(void)
     I2C_configure(&I2C0, I2C_MASTER_MODE, 333);
     printf("i2c0: %lu bps sclk: %llu\n\n", I2C_get_bps(&I2C0), CLK_i2c_sclk_freq(&I2C0));
 
-    GPIO_print_iomux();
+    IOMUX_print();
 
     printf("\nmalloc 32k test...\n");
     void *ptr = malloc(32768);

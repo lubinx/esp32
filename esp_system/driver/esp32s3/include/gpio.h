@@ -59,12 +59,6 @@
     #define GPIO0_VALID_MASK            ((1 << 22) - 1)
     #define GPIO1_VALID_MASK            ((1 << (48 - 26 + 1)) - 1)
 
-    // default pull-up when gpio is disabled for powersave
-    #define GPIO_DISABLE_PULL           (HIGH_Z)
-
-    // set matrix signal
-    #define SIG_BYPASS_IDX              (~0)
-
 __BEGIN_DECLS
 /****************************************************************************
  *  initialization: called by SOC_initialize()
@@ -73,10 +67,103 @@ extern __attribute__((nothrow, nonnull))
     void GPIO_initialize(void);
 
 /***************************************************************************/
-/**  GPIO io mux table console
+/**  IO mux
 ****************************************************************************/
+    enum iomux_sel
+    {
+        IOMUX_SEL0                = 0,
+        IOMUX_SEL1,
+        IOMUX_SEL2,
+        IOMUX_SEL3,
+        IOMUX_SEL4,
+        // alias
+        IOMUX_SEL_GPIO = IOMUX_SEL1,
+    };
+
+    enum iomux_def
+    {
+        // SPI
+        IOMUX_SPICLK        = (30 << 4 | IOMUX_SEL0),
+        IOMUX_SPICS0        = (29 << 4 | IOMUX_SEL0),
+        IOMUX_SPICS1        = (26 << 4 | IOMUX_SEL0),
+        IOMUX_SPIWP         = (28 << 4 | IOMUX_SEL0),
+        IOMUX_SPIHD         = (27 << 4 | IOMUX_SEL0),
+        IOMUX_SPIQ          = (31 << 4 | IOMUX_SEL0),
+        IOMUX_SPID          = (32 << 4 | IOMUX_SEL0),
+        // SPI IO4~7/DQS
+        IOMUX_SPIIO4        = (33 << 4 | IOMUX_SEL4),
+        IOMUX_SPIIO5        = (34 << 4 | IOMUX_SEL4),
+        IOMUX_SPIIO6        = (35 << 4 | IOMUX_SEL4),
+        IOMUX_SPIIO7        = (36 << 4 | IOMUX_SEL4),
+        IOMUX_SPIDQS        = (37 << 4 | IOMUX_SEL4),
+        // UART0
+        IOMUX_UART0_RTS     = (15 << 4 | IOMUX_SEL2),
+        IOMUX_UART0_CTS     = (16 << 4 | IOMUX_SEL2),
+        IOMUX_UART0_TXD     = (43 << 4 | IOMUX_SEL0),
+        IOMUX_UART0_RXD     = (44 << 4 | IOMUX_SEL0),
+        // UART1
+        IOMUX_UART1TXD      = (17 << 4 | IOMUX_SEL2),
+        IOMUX_UART1RXD      = (18 << 4 | IOMUX_SEL2),
+        IOMUX_UART1RTS      = (19 << 4 | IOMUX_SEL2),
+        IOMUX_UART1CTS      = (20 << 4 | IOMUX_SEL2),
+        //
+        IOMUX_MTCK          = (39 << 4 | IOMUX_SEL0),
+        IOMUX_MTDO          = (40 << 4 | IOMUX_SEL0),
+        IOMUX_MTDI          = (41 << 4 | IOMUX_SEL0),
+        IOMUX_MTMS          = (42 << 4 | IOMUX_SEL0),
+        //
+        IOMUX_SPICLK_P_DIFF = (47 << 4 | IOMUX_SEL0),
+        IOMUX_SPICLK_N_DIFF = (48 << 4 | IOMUX_SEL0),
+        // CLK OUT 1/2/3
+        IOMUX_P20_CLK_OUT1  = (20 << 4 | IOMUX_SEL3),
+        IOMUX_P41_CLK_OUT1  = (41 << 4 | IOMUX_SEL2),
+        IOMUX_P43_CLK_OUT1  = (43 << 4 | IOMUX_SEL2),
+        IOMUX_P19_CLK_OUT2  = (19 << 4 | IOMUX_SEL3),
+        IOMUX_P40_CLK_OUT2  = (40 << 4 | IOMUX_SEL2),
+        IOMUX_P44_CLK_OUT2  = (44 << 4 | IOMUX_SEL2),
+        IOMUX_P18_CLK_OUT3  = (18 << 4 | IOMUX_SEL3),
+        IOMUX_P39_CLK_OUT3  = (39 << 4 | IOMUX_SEL2),
+        // SUB SPI?
+        IOMUX_SUBSPICLK_P12 = (12 << 4 | IOMUX_SEL3),
+        IOMUX_SUBSPICLK_P36 = (36 << 4 | IOMUX_SEL3),
+        IOMUX_SUBSPICS0_P10 = (10 << 4 | IOMUX_SEL3),
+        IOMUX_SUBSPICS0_P34 = (34 << 4 | IOMUX_SEL3),
+        IOMUX_SUBSPICS1_P08 = ( 8 << 4 | IOMUX_SEL3),
+        IOMUX_SUBSPICS1_P39 = (39 << 4 | IOMUX_SEL3),
+        IOMUX_SUBSPIWP_P14  = (14 << 4 | IOMUX_SEL3),
+        IOMUX_SUBSPIWP_P38  = (38 << 4 | IOMUX_SEL3),
+        IOMUX_SUBSPIHD_P09  = ( 9 << 4 | IOMUX_SEL3),
+        IOMUX_SUBSPIHD_P33  = (33 << 4 | IOMUX_SEL3),
+        IOMUX_SUBSPID_P11   = (11 << 4 | IOMUX_SEL3),
+        IOMUX_SUBSPID_P35   = (35 << 4 | IOMUX_SEL3),
+        IOMUX_SUBSPIQ_P13   = (13 << 4 | IOMUX_SEL3),
+        IOMUX_SUBSPIQ_P37   = (37 << 4 | IOMUX_SEL3),
+        // F SPI?
+        IOMUX_P12_FSPICLK   = (12 << 4 | IOMUX_SEL4),
+        IOMUX_P36_FSPICLK   = (36 << 4 | IOMUX_SEL2),
+        IOMUX_P10_FSPICS0   = (10 << 4 | IOMUX_SEL4),
+        IOMUX_P34_FSPICS0   = (34 << 4 | IOMUX_SEL2),
+        IOMUX_P14_FSPIWP    = (14 << 4 | IOMUX_SEL4),
+        IOMUX_P38_FSPIWP    = (38 << 4 | IOMUX_SEL2),
+        IOMUX_P09_FSPIHD    = ( 9 << 4 | IOMUX_SEL4),
+        IOMUX_P33_FSPIHD    = (33 << 4 | IOMUX_SEL2),
+        IOMUX_P11_FSPID     = (11 << 4 | IOMUX_SEL4),
+        IOMUX_P35_FSPID     = (35 << 4 | IOMUX_SEL2),
+        IOMUX_P13_FSPIQ     = (13 << 4 | IOMUX_SEL4),
+        IOMUX_P37_FSPIQ     = (37 << 4 | IOMUX_SEL2),
+        // F SPI IO4~7/DQS
+        IOMUX_FSPIIO4       = (10 << 4 | IOMUX_SEL2),
+        IOMUX_FSPIIO5       = (11 << 4 | IOMUX_SEL2),
+        IOMUX_FSPIIO6       = (12 << 4 | IOMUX_SEL2),
+        IOMUX_FSPIIO7       = (13 << 4 | IOMUX_SEL2),
+        IOMUX_FSPIDQS       = (14 << 4 | IOMUX_SEL2),
+    };
+
 extern __attribute__((nothrow, nonnull))
-    void GPIO_print_iomux(void);
+    int IOMUX_configure(int pin_nb, enum iomux_def mux);
+
+extern __attribute__((nothrow, nonnull))
+    void IOMUX_print(void);
 
 /***************************************************************************/
 /**  GPIO configure by PIN number
@@ -109,67 +196,12 @@ extern __attribute__((nothrow, nonnull))
 extern __attribute__((nothrow, nonnull))
     int GPIO_connect_out_signal(uint8_t pin_nb, uint16_t sig_idx, bool inv, bool oen_inv);
 
-
-    enum io_mux_pin
-    {
-        IO_MUX_FUNC0                = 0,
-        IO_MUX_FUNC1,
-        IO_MUX_FUNC2,
-        IO_MUX_FUNC3,
-        IO_MUX_FUNC4,
-        // alias
-        IO_MUX_DEF = IO_MUX_FUNC0,
-        IO_MUX_GPIO = IO_MUX_FUNC1,
-        //------------------------------------------------------------------------------------------------------------------------------
-        //  FUNCTION 0/2                                FUNCTION 3                                      FUNCTION 4
-        //------------------------------------------------------------------------------------------------------------------------------
-        SPICS1_TO_P26  = (26 << 4 | IO_MUX_FUNC0),
-        SPIHD_TO_P27   = (27 << 4 | IO_MUX_FUNC0),
-        SPIWP_TO_P28   = (28 << 4 | IO_MUX_FUNC0),
-        SPICS0_TO_P29  = (29 << 4 | IO_MUX_FUNC0),
-        SPICLK_TO_P30  = (30 << 4 | IO_MUX_FUNC0),
-        SPIQ_TO_P31    = (31 << 4 | IO_MUX_FUNC0),
-        SPID_TO_P32    = (32 << 4 | IO_MUX_FUNC0),
-        MTCK_TO_P39    = (39 << 4 | IO_MUX_FUNC0),
-        MTDO_TO_P40    = (40 << 4 | IO_MUX_FUNC0),
-        MTDI_TO_P41    = (41 << 4 | IO_MUX_FUNC0),
-        MTMS_TO_P42    = (42 << 4 | IO_MUX_FUNC0),
-        U0TXD_TO_P43   = (43 << 4 | IO_MUX_FUNC0),
-        U0RXD_TO_P44   = (44 << 4 | IO_MUX_FUNC0),
-        SPICLK_P_DIFF_TO_P47 = (47 << 4 | IO_MUX_FUNC0),
-        SPICLK_N_DIFF_TO_P48 = (48 << 4 | IO_MUX_FUNC0),
-                                                        SUBSPICS1_TO_P08 = ( 8 << 4 | IO_MUX_FUNC3),
-                                                        SUBSPIHD_TO_P09  = ( 9 << 4 | IO_MUX_FUNC3),    FSPIHD_TO_P09    = ( 9 << 4 | IO_MUX_FUNC4),
-        FSPIIO4_TO_P10 = (10 << 4 | IO_MUX_FUNC2),      SUBSPICS0_TO_P10 = (10 << 4 | IO_MUX_FUNC3),    FSPICS0_TO_P10   = (10 << 4 | IO_MUX_FUNC4),
-        FSPIIO5_TO_P11 = (11 << 4 | IO_MUX_FUNC2),      SUBSPID_TO_P11   = (11 << 4 | IO_MUX_FUNC3),    FSPID_TO_P11     = (11 << 4 | IO_MUX_FUNC4),
-        FSPIIO6_TO_P12 = (12 << 4 | IO_MUX_FUNC2),      SUBSPICLK_TO_P12 = (12 << 4 | IO_MUX_FUNC3),    FSPICLK_TO_P12   = (12 << 4 | IO_MUX_FUNC4),
-        FSPIIO7_TO_P13 = (13 << 4 | IO_MUX_FUNC2),      SUBSPIQ_TO_P13   = (13 << 4 | IO_MUX_FUNC3),    FSPIQ_TO_P13     = (13 << 4 | IO_MUX_FUNC4),
-        FSPIDQS_TO_P14 = (14 << 4 | IO_MUX_FUNC2),      SUBSPIWP_TO_P14  = (14 << 4 | IO_MUX_FUNC3),    FSPIWP_TO_P14    = (14 << 4 | IO_MUX_FUNC4),
-        U0RTS_TO_P15   = (15 << 4 | IO_MUX_FUNC2),
-        U0CTS_TO_P16   = (16 << 4 | IO_MUX_FUNC2),
-        U1TXD_TO_P17   = (17 << 4 | IO_MUX_FUNC2),
-        U1RXD_TO_P18   = (18 << 4 | IO_MUX_FUNC2),      CLK_OUT3_TO_P18  = (18 << 4 | IO_MUX_FUNC3),
-        U1RTS_TO_P19   = (19 << 4 | IO_MUX_FUNC2),      CLK_OUT2_TO_P19  = (19 << 4 | IO_MUX_FUNC3),
-        U1CTS_TO_P20   = (20 << 4 | IO_MUX_FUNC2),      CLK_OUT1_TO_P20  = (20 << 4 | IO_MUX_FUNC3),
-        FSPIHD_TO_P33  = (33 << 4 | IO_MUX_FUNC2),      SUBSPIHD_TO_P33  = (33 << 4 | IO_MUX_FUNC3),    SPIIO4_TO_P33    = (33 << 4 | IO_MUX_FUNC4),
-        FSPICS0_TO_P34 = (34 << 4 | IO_MUX_FUNC2),      SUBSPICS0_TO_P34 = (34 << 4 | IO_MUX_FUNC3),    SPIIO5_TO_P34    = (34 << 4 | IO_MUX_FUNC4),
-        FSPID_TO_P35   = (35 << 4 | IO_MUX_FUNC2),      SUBSPID_TO_P35   = (35 << 4 | IO_MUX_FUNC3),    SPIIO6_TO_P35    = (35 << 4 | IO_MUX_FUNC4),
-        FSPICLK_TO_P36 = (36 << 4 | IO_MUX_FUNC2),      SUBSPICLK_TO_P36 = (36 << 4 | IO_MUX_FUNC3),    SPIIO7_TO_P36    = (36 << 4 | IO_MUX_FUNC4),
-        FSPIQ_TO_P37   = (37 << 4 | IO_MUX_FUNC2),      SUBSPIQ_TO_P37   = (37 << 4 | IO_MUX_FUNC3),    SPIDQS_TO_P37    = (37 << 4 | IO_MUX_FUNC4),
-        FSPIWP_TO_P38  = (38 << 4 | IO_MUX_FUNC2),      SUBSPIWP_TO_P38  = (38 << 4 | IO_MUX_FUNC3),
-        CLK_OUT3_TO_P39 = (39 << 4 | IO_MUX_FUNC2),     SUBSPICS1_TO_P39  = (39 << 4 | IO_MUX_FUNC3),
-        CLK_OUT2_TO_P40 = (40 << 4 | IO_MUX_FUNC2),
-        CLK_OUT1_TO_P41 = (41 << 4 | IO_MUX_FUNC2),
-        CLK_OUT1_TO_P43 = (43 << 4 | IO_MUX_FUNC2),
-        CLK_OUT2_TO_P44 = (44 << 4 | IO_MUX_FUNC2),
-    };
-
     /**
      *  GPIO_disconnect_signal()
      *      disconnect pin_nb from matrix(input & output)
      */
 extern __attribute__((nothrow, nonnull))
-    int GPIO_disconnect_signal(uint8_t pin_nb, enum io_mux_pin mux);
+    int GPIO_disconnect_signal(uint8_t pin_nb);
 
 __END_DECLS
 #endif

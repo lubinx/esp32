@@ -55,15 +55,22 @@
     enum GPIO_output_mode_t
     {
         PUSH_PULL                   = 0,
-    ///----
-        OPEN_SOURCE,
-        OPEN_DRAIN,
-    /// @alias
-        WIRED_OR = OPEN_SOURCE,
-        WIRED_AND = OPEN_DRAIN,
-    // ext.
-        PUSH_PULL_DOWN              = 0x10,
+        PUSH_PULL_DOWN,
         PUSH_PULL_UP,
+    //----
+        OPEN_SOURCE,
+        OPEN_SOURCE_WITH_PULL_DOWN,
+        WIRED_OR = OPEN_SOURCE,
+        WIRED_OR_WITH_PULL_DOWN = OPEN_SOURCE_WITH_PULL_DOWN,
+    //----
+        OPEN_DRAIN,
+        OPEN_DRAIN_WITH_PULL_UP,
+        OPEN_DRAIN_WITH_FILTER,
+        OPEN_DRAIN_WITH_PULL_UP_FILTER,
+        WIRED_AND = OPEN_DRAIN,
+        WIRED_AND_WITH_PULL_UP = OPEN_DRAIN_WITH_PULL_UP,
+        WIRED_AND_WITH_FILTER = OPEN_DRAIN_WITH_FILTER,
+        WIRED_AND_WITH_PULL_UP_FILTER = OPEN_DRAIN_WITH_PULL_UP_FILTER,
     };
 
 __BEGIN_DECLS

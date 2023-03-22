@@ -223,8 +223,12 @@ int UART_configure(uart_dev_t *dev, uint32_t bps, enum UART_parity_t parity, enu
     switch (uart_module)
     {
     case PERIPH_UART0_MODULE:
+        /*
+        IOMUX_configure(43, IOMUX_DEF);
+        IOMUX_configure(44, IOMUX_DEF);
+        */
         GPIO_setdir_input_pin_nb(44, HIGH_Z, true);
-        GPIO_setdir_output_pin_nb(43, PUSH_PULL);
+        GPIO_setdir_output_pin_nb(43, PUSH_PULL_UP);
         break;
     }
 
