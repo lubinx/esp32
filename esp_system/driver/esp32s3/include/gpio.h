@@ -56,19 +56,9 @@
     #define PIN47                       ((uintptr_t)GPIO_H | 1 << 21)
     #define PIN48                       ((uintptr_t)GPIO_H | 1 << 22)
 
-    #define GPIO0_VALID_MASK            ((1 << 22) - 1)
-    #define GPIO1_VALID_MASK            ((1 << (48 - 26 + 1)) - 1)
+    // #define GPIO0_VALID_MASK            ((1 << 22) - 1)
+    // #define GPIO1_VALID_MASK            ((1 << (48 - 26 + 1)) - 1)
 
-__BEGIN_DECLS
-/****************************************************************************
- *  initialization: called by SOC_initialize()
- ****************************************************************************/
-extern __attribute__((nothrow, nonnull))
-    void GPIO_initialize(void);
-
-/***************************************************************************/
-/**  IO mux
-****************************************************************************/
     enum iomux_sel
     {
         IOMUX_SEL0                = 0,
@@ -102,10 +92,10 @@ extern __attribute__((nothrow, nonnull))
         IOMUX_UART0_TXD     = (43 << 4 | IOMUX_SEL0),
         IOMUX_UART0_RXD     = (44 << 4 | IOMUX_SEL0),
         // UART1
-        IOMUX_UART1TXD      = (17 << 4 | IOMUX_SEL2),
-        IOMUX_UART1RXD      = (18 << 4 | IOMUX_SEL2),
-        IOMUX_UART1RTS      = (19 << 4 | IOMUX_SEL2),
-        IOMUX_UART1CTS      = (20 << 4 | IOMUX_SEL2),
+        IOMUX_UART1_TXD     = (17 << 4 | IOMUX_SEL2),
+        IOMUX_UART1_RXD     = (18 << 4 | IOMUX_SEL2),
+        IOMUX_UART1_RTS     = (19 << 4 | IOMUX_SEL2),
+        IOMUX_UART1_CTS     = (20 << 4 | IOMUX_SEL2),
         //
         IOMUX_MTCK          = (39 << 4 | IOMUX_SEL0),
         IOMUX_MTDO          = (40 << 4 | IOMUX_SEL0),
@@ -159,14 +149,59 @@ extern __attribute__((nothrow, nonnull))
         IOMUX_FSPIDQS       = (14 << 4 | IOMUX_SEL2),
     };
 
+__BEGIN_DECLS
+/****************************************************************************
+ *  initialization: called by SOC_initialize()
+ ****************************************************************************/
 extern __attribute__((nothrow, nonnull))
-    int IOMUX_configure(int pin_nb, enum iomux_def mux);
+    void GPIO_initialize(void);
+
+/***************************************************************************/
+/**  IO mux & matrix
+****************************************************************************/
+extern __attribute__((nothrow, nonnull))
+    int IOMUX_configure(enum iomux_def mux);
+
+extern __attribute__((nothrow, nonnull))
+    int IOMUX_deconfigure(enum iomux_def mux);
+
+static inline
+    uint8_t IOMUX_pin_nb(enum iomux_def mux)
+    {
+        return (uint8_t)(mux >> 4);
+    }
+
+    /**
+     *  IOMUX_matrix_route_input()
+     *      replace esp_rom_IOMUX_matrix_route_input()
+     *      connect pin_nb to input matrix
+     *  @param inv input is inverted
+    */
+extern __attribute__((nothrow, nonnull))
+    int IOMUX_matrix_route_input(uint8_t pin_nb, uint16_t sig_idx, bool inv);
+
+    /**
+     *  IOMUX_matrix_route_output()
+     *      replace esp_rom_IOMUX_matrix_route_output()
+     *      connect pin_jb to output matrix
+     *  @param inv output is inverted
+     *  @param oen_inv output enable control is inverted
+     */
+extern __attribute__((nothrow, nonnull))
+    int IOMUX_matrix_route_output(uint8_t pin_nb, uint16_t sig_idx, bool inv, bool oen_inv);
+
+    /**
+     *  IOMUX_matrix_disconnect()
+     *      disconnect pin_nb from matrix(input & output)
+     */
+extern __attribute__((nothrow, nonnull))
+    int IOMUX_matrix_disconnect(uint8_t pin_nb);
 
 extern __attribute__((nothrow, nonnull))
     void IOMUX_print(void);
 
 /***************************************************************************/
-/**  GPIO configure by PIN number
+/**  GPIO by PIN number
 ****************************************************************************/
 extern __attribute__((nothrow, nonnull))
     int GPIO_disable_pin_nb(uint8_t pin_nb, enum GPIO_pad_pull_t pp);
@@ -177,31 +212,17 @@ extern __attribute__((nothrow, nonnull))
 extern __attribute__((nothrow, nonnull))
     int GPIO_setdir_output_pin_nb(uint8_t pin_nb, enum GPIO_output_mode_t mode);
 
-    /**
-     *  GPIO_connect_in_signal()
-     *      replace esp_rom_gpio_connect_in_signal()
-     *      connect pin_nb to input matrix
-     *  @param inv input is inverted
-    */
 extern __attribute__((nothrow, nonnull))
-    int GPIO_connect_in_signal(uint8_t pin_nb, uint16_t sig_idx, bool inv);
+    int GPIO_output_set_pin_nb(uint8_t pin_nb);
 
-    /**
-     *  GPIO_connect_out_signal()
-     *      replace esp_rom_gpio_connect_out_signal()
-     *      connect pin_jb to output matrix
-     *  @param inv output is inverted
-     *  @param oen_inv output enable control is inverted
-     */
 extern __attribute__((nothrow, nonnull))
-    int GPIO_connect_out_signal(uint8_t pin_nb, uint16_t sig_idx, bool inv, bool oen_inv);
+    int GPIO_output_clear_pin_nb(uint8_t pin_nb);
 
-    /**
-     *  GPIO_disconnect_signal()
-     *      disconnect pin_nb from matrix(input & output)
-     */
 extern __attribute__((nothrow, nonnull))
-    int GPIO_disconnect_signal(uint8_t pin_nb);
+    int GPIO_output_peek_pin_nb(uint8_t pin_nb);
+
+extern __attribute__((nothrow, nonnull))
+    int GPIO_output_toggle_pin_nb(uint8_t pin_nb);
 
 __END_DECLS
 #endif

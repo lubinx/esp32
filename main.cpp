@@ -30,6 +30,9 @@ static void *blink_thread3(void *arg);
 
 int main(void)
 {
+    GPIO_setdir_output_pin_nb(8, PUSH_PULL_UP);
+    GPIO_setdir_output_pin_nb(9, PUSH_PULL_UP);
+
     int fd = UART_createfd(0, 115200, UART_PARITY_NONE, UART_STOP_BITS_ONE);
     (void)fd;
 
@@ -98,6 +101,8 @@ int main(void)
     GPIO_disable_pin_nb(44, HIGH_Z);
     */
 
+    unsigned n = 0;
+
     while (1)
     {
         sem_post(&sema);
@@ -112,6 +117,18 @@ int main(void)
         fflush(stdout);
 
         msleep(500);
+
+
+        if (n ++ & 0x1)
+        {
+            GPIO_output_set_pin_nb(8);
+            GPIO_output_clear_pin_nb(9);
+        }
+        else
+        {
+            GPIO_output_set_pin_nb(9);
+            GPIO_output_clear_pin_nb(8);
+        }
     }
 }
 

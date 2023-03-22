@@ -12,6 +12,7 @@
 #include "esp_intr_alloc.h"
 
 #include "uart.h"
+#include "sdkconfig.h"
 
 static char const *UART_TAG = "uart";
 static char const *RS485_TAG = "rs485";
@@ -223,12 +224,23 @@ int UART_configure(uart_dev_t *dev, uint32_t bps, enum UART_parity_t parity, enu
     switch (uart_module)
     {
     case PERIPH_UART0_MODULE:
-        /*
-        IOMUX_configure(43, IOMUX_DEF);
-        IOMUX_configure(44, IOMUX_DEF);
-        */
-        GPIO_setdir_input_pin_nb(44, HIGH_Z, true);
-        GPIO_setdir_output_pin_nb(43, PUSH_PULL_UP);
+        // this is not sdk configurable, always TXD = 43, RXD = 44
+        IOMUX_configure(IOMUX_UART0_TXD);
+        IOMUX_configure(IOMUX_UART0_RXD);
+        GPIO_setdir_output_pin_nb(IOMUX_pin_nb(IOMUX_UART0_TXD), PUSH_PULL_UP);
+        GPIO_setdir_input_pin_nb(IOMUX_pin_nb(IOMUX_UART0_RXD), HIGH_Z, true);
+        break;
+
+    case PERIPH_UART1_MODULE:
+        // TODO: uing sdkconfig to configure these
+        IOMUX_configure(IOMUX_UART1_TXD);
+        IOMUX_configure(IOMUX_UART1_RXD);
+        GPIO_setdir_output_pin_nb(IOMUX_pin_nb(IOMUX_UART1_TXD), PUSH_PULL_UP);
+        GPIO_setdir_input_pin_nb(IOMUX_pin_nb(IOMUX_UART1_RXD), HIGH_Z, true);
+        break;
+
+    case PERIPH_UART2_MODULE:
+        // TODO: uing sdkconfig to configure these
         break;
     }
 
