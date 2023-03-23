@@ -7,7 +7,6 @@
 #include <soc/io_mux_reg.h>
 #include <soc/gpio_struct.h>
 #include <soc/gpio_reg.h>
-#include <soc/gpio_sig_map.h>
 
 #include "gpio.h"
 #include "hw/hal/gpio_hal.h"
@@ -22,6 +21,8 @@
 #define GPIO_OUTPUT_IS_ENABLED(NB)  \
     (0 != (32 > (NB) ? (GPIO.enable & (1ULL << (NB))) : (GPIO.enable1.data & (1ULL << ((NB) - 32)))))
 
+#define GPIO_INPUT_PEEK(NB)         \
+    (32 > (NB) ? (GPIO.in & (1UL << (NB))) : (GPIO.in1.data & (1UL << ((NB) - 32))))
 #define GPIO_OUTPUT_PEEK(NB)        \
     (32 > (NB) ? (GPIO.out & (1UL << (NB))) : (GPIO.out1.data & (1UL << ((NB) - 32))))
 #define GPIO_OUTPUT_SET(NB)         \
@@ -59,8 +60,7 @@ union iomux_reg
 };
 typedef union iomux_reg             iomux_reg_t;
 // configure
-static void iomux_reg_configure(iomux_reg_t *mux, enum GPIO_pad_pull_t pp, uint8_t sel, uint8_t drv, bool ie, bool filter_en);
-static enum GPIO_pad_pull_t iomux_reg_pad_pull(iomux_reg_t *mux);
+static uint32_t iomux_reg_val(enum GPIO_pad_pull_t pp, uint8_t sel, uint8_t drv, bool ie, bool filter_en);
 
 // GPIO.pin[xx] was unnamed
 union gpio_pin_reg
@@ -186,25 +186,21 @@ void GPIO_initialize(void)
             // configure all PIN to GPIO, special configure for SPI
             switch (i)
             {
+            case 26:    // SPI CS1
+            case 27:    // SPI Half-Duplex(HD)
+            case 28:    // SPI WP
+            default:
+                mux->val = iomux_reg_val(HIGH_Z, IOMUX_SEL_GPIO, mux->func_drv, false, false);
+                break;
+
+            case 29:    // SPI CS0
             case 30:    // SPI CLK
                 mux->func_ie = 0;
                 mux->func_pd = mux->func_pu = 0;    // HighZ
                 break;
 
-            case 26:    // SPI CS1
-            case 27:    // SPI Half-Duplex(HD)
-            case 28:    // SPI WP
-            case 29:    // SPI CS0
-                mux->func_ie = 0;
-                break;
-
             case 31:    // SPI Q
             case 32:    // SPI D
-                break;
-
-            default:
-                mux->mcu_sel = IOMUX_SEL_GPIO;
-                mux->func_ie = 0;
                 break;
             }
         }
@@ -216,27 +212,42 @@ void GPIO_initialize(void)
  ****************************************************************************/
 int IOMUX_configure(enum iomux_def mux)
 {
-    struct GPIO_matrix *mat = &GPIO_matrix[mux >> 4];
+    int pin_nb = mux >> 12;
+
+    struct GPIO_matrix *mat = &GPIO_matrix[pin_nb];
     if (! mat->pin)
         return ENOTSUP;
 
-    mat->mux->mcu_sel = mux & 0xF;
+    // disconnect previous matrix connections
+    IOMUX_route_disconnect(pin_nb);
+
+    iomux_reg_t reg = {.val = mat->mux->val};
+    reg.mcu_sel = mux & 0xF;
+    // reg.func_ie = (0 != IOMUX_IS_INPUT & mux);
+    mat->mux->val = reg.val;
+
+    uint8_t mode = 0xF & (mux >> 4);
+    if (IOMUX_ARG_INPUT == mode || IOMUX_ARG_INPUT_FILTER == mode)
+        return GPIO_setdir_input_pin_nb(pin_nb, 0xF & (mux >> 8), IOMUX_ARG_INPUT_FILTER == mode);
+    else
+        return GPIO_setdir_output_pin_nb(pin_nb, mode);
 }
 
-int IOMUX_deconfigure(enum iomux_def mux)
+int IOMUX_deconfigure(enum iomux_def mux, bool pull_up)
 {
-    struct GPIO_matrix *mat = &GPIO_matrix[mux >> 4];
+    int pin_nb = mux >> 12;
+
+    struct GPIO_matrix *mat = &GPIO_matrix[pin_nb];
     if (! mat->pin)
         return ENOTSUP;
 
-    if (mat->mux->mcu_sel != mux & 0xF)
+    if (mat->mux->mcu_sel != (mux & 0xF))
         return EACCES;
 
-    mat->mux->mcu_sel = IOMUX_SEL_GPIO;
-    return 0;
+    return GPIO_disable_pin_nb(pin_nb, pull_up);
 }
 
-int IOMUX_matrix_route_input(uint8_t pin_nb, uint16_t sig_idx, bool inv)
+int IOMUX_route_input(uint8_t pin_nb, uint16_t sig_idx, bool inv, enum GPIO_pad_pull_t pp, bool filter_en)
 {
     if (sig_idx > 0x100)
         return EINVAL;
@@ -246,7 +257,7 @@ int IOMUX_matrix_route_input(uint8_t pin_nb, uint16_t sig_idx, bool inv)
         return ENOTSUP;
 
     // disconnect previous matrix connections
-    IOMUX_matrix_disconnect(pin_nb);
+    IOMUX_route_disconnect(pin_nb);
 
     iomux_matrix_in_t mat_in = {0};
     mat_in.func_sel = pin_nb;
@@ -257,10 +268,11 @@ int IOMUX_matrix_route_input(uint8_t pin_nb, uint16_t sig_idx, bool inv)
     cfg->val = mat_in.val;
 
     mat->mat_in = cfg;
+    mat->mux->val = iomux_reg_val(pp, IOMUX_SEL_GPIO, mat->mux->func_drv, true, filter_en);
     return 0;
 }
 
-int IOMUX_matrix_route_output(uint8_t pin_nb, uint16_t sig_idx, bool inv, bool oen_inv)
+int IOMUX_route_output(uint8_t pin_nb, uint16_t sig_idx, enum GPIO_output_mode_t mode, bool inv, bool oen_inv)
 {
     if (sig_idx > 0x100)
         return EINVAL;
@@ -269,20 +281,32 @@ int IOMUX_matrix_route_output(uint8_t pin_nb, uint16_t sig_idx, bool inv, bool o
     if (! mat->pin)
         return ENOTSUP;
 
-    // disconnect previous matrix connections
-    IOMUX_matrix_disconnect(pin_nb);
+    mat->mux->mcu_sel = IOMUX_SEL_GPIO;     // select IOMUX to gpio
+    GPIO_setdir_output_pin_nb(pin_nb, mode);
 
     iomux_matrix_out_t mat_out = {0};
     mat_out.func_sel = sig_idx;
     mat_out.inv_sel = inv;
     mat_out.oen_inv_sel = oen_inv;
     mat_out.oen_sel = IOMUX_MATRIX_OUT_EN;
-
     mat->mat_out->val = mat_out.val;
-    return 0;
+
+    // open-drian: route input
+    if (mat->pin->pad_driver)
+    {
+        iomux_matrix_in_t mat_in = {0};
+        mat_in.func_sel = pin_nb;
+        mat_in.sig_in_inv = inv;
+        mat_in.sig_in_sel = IOMUX_MATRIX_IN_EN;
+
+        iomux_matrix_in_t *cfg = (void *)&GPIO.func_in_sel_cfg[sig_idx];
+        cfg->val = mat_in.val;
+
+        mat->mat_in = cfg;
+    }
 }
 
-int IOMUX_matrix_disconnect(uint8_t pin_nb)
+int IOMUX_route_disconnect(uint8_t pin_nb)
 {
     struct GPIO_matrix *mat = &GPIO_matrix[pin_nb];
     if (! mat->pin)
@@ -304,18 +328,18 @@ void IOMUX_print(void)
 {
     printf("GPIO matrix: \n");
 
-    printf("\t+-----+-----------+------+-----------------+----------------------+-----+\n");
-    printf("\t|     |           |      | Matrix INPUT    | Matrix OUTPUT        |     |\n");
-    printf("\t| PIN | PAD-Pull  | MUX  +-----------+-----+-----------+----+-----+ SLP |\n");
-    printf("\t|     |           |      | EN => MAT | FLT | EN => MAT | OD | DRV |     |\n");
-    printf("\t+-----+-----------+------+-----------+-----+-----------+----+-----+-----+\n");
+    printf("\t+-----+-----------+------+-----------------+----------------------------+-----+\n");
+    printf("\t|     |           |      | Matrix INPUT    | Matrix OUTPUT              |     |\n");
+    printf("\t| PIN | PAD-Pull  | MUX  +-----------+-----+-----------+-----+----+-----+ SLP |\n");
+    printf("\t|     |           |      | EN => MAT | FLT | EN => MAT | LVL | OD | DRV |     |\n");
+    printf("\t+-----+-----------+------+-----------+-----+-----------+-----+----+-----+-----+\n");
 
 
     for (int i = 0; i < 49; i ++)
     {
         if (22 == i)
         {
-            printf("\t+-----+-----------+------+-----------+-----+-----------+----+-----+-----+ ...22~25 is reserved\n");
+            printf("\t+-----+-----------+------+-----------+-----+-----------+----+-----+-----+-----+ ...22~25 is reserved\n");
             continue;
         }
         struct GPIO_matrix *mat = &GPIO_matrix[i];
@@ -338,7 +362,7 @@ void IOMUX_print(void)
             if (input_en)
             {
                 if (mat->mat_in)
-                    printf("| ✔️ => %3u ",  mat->mat_in->sig_in_sel);
+                    printf("| ✔️ ==> %03u ",  mat->mat_in - (iomux_matrix_in_t *)GPIO.func_in_sel_cfg);
                 else
                     printf("| => MUX    ");
             }
@@ -349,27 +373,29 @@ void IOMUX_print(void)
 
         // output
         {
-            bool out_by_matrix = (IOMUX_MATRIX_OUT_EN == mat->mat_out->oen_sel) && ! mat->mat_in;
-            bool output_en = ! input_en && (out_by_matrix || (mux_is_gpio ? GPIO_OUTPUT_IS_ENABLED(i) : true));
+            bool out_by_matrix = IOMUX_MATRIX_OUT_EN == mat->mat_out->oen_sel;
+            bool output_en = out_by_matrix || (mux_is_gpio ? GPIO_OUTPUT_IS_ENABLED(i) : mat->pin->pad_driver || ! input_en);
 
             if (output_en)
             {
                 if (out_by_matrix)
-                    printf("| ✔️ => %3u ", mat->mat_out->func_sel);
+                    printf("| ✔️ ==> %03u ", mat->mat_out->func_sel);
                 else
                     printf("| => MUX    ");
             }
             else
                 printf("| ❌         ");
         }
-        printf("| %s  |%2d mA", mat->pin->pad_driver ? "✔️" : "❌",
+        printf("|  %d  | %s  |%2d mA",
+            0 != GPIO_OUTPUT_PEEK(i),
+            mat->pin->pad_driver ? "✔️" : "❌",
             0 == mat->mux->func_drv ? 5 : (1 == mat->mux->func_drv ? 10 : (2 == mat->mux->func_drv ? 20 : 30))
         );
         // sleep en
         printf("| %s   |\n", mat->mux->slp_sel ? "✔️" : "❌");
     }
 
-    printf("\t+-----+-----------+------+-----------+-----+-----------+----+-----+-----+\n");
+    printf("\t+-----+-----------+------+-----------+-----+-----------+----+-----+-----+-----+\n");
     printf(" * ref Table 6-3. IO MUX Pin Functions\n");
     printf(" * MAT(INPUT/OUTPUT) => XXX: definitions in soc/gpio_sig_map.h\n");
     printf(" * MAT may bypass => MUX: definitions in esp32s3/include/gpio.h\n");
@@ -378,12 +404,12 @@ void IOMUX_print(void)
 /***************************************************************************/
 /** @implements
 ****************************************************************************/
-int GPIO_disable(void *const gpio, uint32_t pins)
+int GPIO_disable(void *const gpio, uint32_t pins, bool pull_up)
 {
     return ENOSYS;
 }
 
-int GPIO_setdir_input(void *const gpio, uint32_t pins)
+int GPIO_setdir_input(void *const gpio, uint32_t pins, bool filter_en)
 {
     return ENOSYS;
 }
@@ -440,7 +466,7 @@ void GPIO_clear(void *const gpio, uint32_t pins)
 /***************************************************************************/
 /** @implements: by PIN number
 ****************************************************************************/
-int GPIO_disable_pin_nb(uint8_t pin_nb, enum GPIO_pad_pull_t pp)
+int GPIO_disable_pin_nb(uint8_t pin_nb, bool pull_up)
 {
     struct GPIO_matrix *mat = &GPIO_matrix[pin_nb];
     if (! mat->pin)
@@ -449,11 +475,8 @@ int GPIO_disable_pin_nb(uint8_t pin_nb, enum GPIO_pad_pull_t pp)
     mat->pin->val = 0;
     GPIO_OUTPUT_DISABLE(pin_nb);
 
-    iomux_reg_t mux = {0};
-    iomux_reg_configure(&mux, pp, IOMUX_SEL_GPIO, mat->mux->func_drv, 0, false);
-    mat->mux->val = mux.val;
-
-    IOMUX_matrix_disconnect(pin_nb);
+    mat->mux->val = iomux_reg_val(pull_up ? PULL_UP : HIGH_Z, IOMUX_SEL_GPIO, mat->mux->func_drv, false, false);
+    IOMUX_route_disconnect(pin_nb);
 }
 
 int GPIO_setdir_input_pin_nb(uint8_t pin_nb, enum GPIO_pad_pull_t pp, bool filter_en)
@@ -463,11 +486,9 @@ int GPIO_setdir_input_pin_nb(uint8_t pin_nb, enum GPIO_pad_pull_t pp, bool filte
         return ENOTSUP;
 
     // disconnect matrix connections
-    IOMUX_matrix_disconnect(pin_nb);
+    IOMUX_route_disconnect(pin_nb);
 
-    iomux_reg_t mux = {0};
-    iomux_reg_configure(&mux, pp, mat->mux->mcu_sel, mat->mux->func_drv, true, filter_en);
-    mat->mux->val = mux.val;
+    mat->mux->val = iomux_reg_val(pp, mat->mux->mcu_sel, mat->mux->func_drv, true, filter_en);
 
     // disable output when output is not open-drain
     if (! mat->pin->pad_driver)
@@ -481,8 +502,8 @@ int GPIO_setdir_output_pin_nb(uint8_t pin_nb, enum GPIO_output_mode_t mode)
         return ENOTSUP;
 
     enum GPIO_pad_pull_t pp;
+    bool od = false;
     bool filter_en = false;
-    // bool dout =
 
     switch (mode)
     {
@@ -506,6 +527,7 @@ push_pull:
 
     case OPEN_DRAIN:
 open_drain:
+        od = true;
         pp = HIGH_Z;
         break;
 
@@ -515,24 +537,46 @@ open_drain:
 
     case OPEN_DRAIN_WITH_PULL_UP:
 open_drain_with_pull_up:
+        od = true;
         pp = PULL_UP;
         break;
 
+/*
     case OPEN_SOURCE:
+        pp = HIGH_Z;
+        break;
     case OPEN_SOURCE_WITH_PULL_DOWN:
-        // pp = PULL_DOWN;
+        pp = PULL_DOWN;
+        break;
+*/
     default:
         return ENOTSUP;
     }
 
     // disconnect matrix connections
-    IOMUX_matrix_disconnect(pin_nb);
+    IOMUX_route_disconnect(pin_nb);
 
-    iomux_reg_t mux = {0};
-    iomux_reg_configure(&mux, pp, mat->mux->mcu_sel, mat->mux->func_drv, mat->pin->pad_driver, filter_en);
-    mat->mux->val = mux.val;
-
+    mat->pin->pad_driver = od;
+    mat->mux->val = iomux_reg_val(pp, mat->mux->mcu_sel, mat->mux->func_drv, od, filter_en);
     GPIO_OUTPUT_ENABLE(pin_nb);
+}
+
+int GPIO_input_peek_pin_nb(uint8_t pin_nb)
+{
+    struct GPIO_matrix *mat = &GPIO_matrix[pin_nb];
+    if (! mat->pin)
+        return ENOTSUP;
+
+    return GPIO_INPUT_PEEK(pin_nb);
+}
+
+int GPIO_output_peek_pin_nb(uint8_t pin_nb)
+{
+    struct GPIO_matrix *mat = &GPIO_matrix[pin_nb];
+    if (! mat->pin)
+        return ENOTSUP;
+
+    return GPIO_OUTPUT_PEEK(pin_nb);
 }
 
 int GPIO_output_set_pin_nb(uint8_t pin_nb)
@@ -553,15 +597,6 @@ int GPIO_output_clear_pin_nb(uint8_t pin_nb)
 
     GPIO_OUTPUT_CLEAR(pin_nb);
     return 0;
-}
-
-int GPIO_output_peek_pin_nb(uint8_t pin_nb)
-{
-    struct GPIO_matrix *mat = &GPIO_matrix[pin_nb];
-    if (! mat->pin)
-        return ENOTSUP;
-
-    return GPIO_OUTPUT_PEEK(pin_nb);
 }
 
 int GPIO_output_toggle_pin_nb(uint8_t pin_nb)
@@ -591,36 +626,20 @@ void GPIO_HAL_intr_disable(void *const gpio, uint32_t pins)
 /***************************************************************************/
 /** @internal
 ****************************************************************************/
-static void iomux_reg_configure(iomux_reg_t *mux, enum GPIO_pad_pull_t pp, uint8_t sel, uint8_t drv, bool ie, bool filter_en)
+static uint32_t iomux_reg_val(enum GPIO_pad_pull_t pp, uint8_t sel, uint8_t drv, bool ie, bool filter_en)
 {
-    switch (pp)
+    iomux_reg_t reg =
     {
-    case HIGH_Z:
-        mux->func_pd = 0;
-        mux->func_pu = 0;
-        break;
-    case PULL_DOWN:
-        mux->func_pu = 0;
-        mux->func_pd = 1;
-        break;
-    case PULL_UP:
-        mux->func_pd = 0;
-        mux->func_pu = 1;
-        break;
-    }
-
-    mux->mcu_sel = sel;
-    mux->func_ie = ie;
-    mux->func_drv = drv;
-    mux->filter_en = filter_en;
-}
-
-static enum GPIO_pad_pull_t iomux_reg_pad_pull(iomux_reg_t *mux)
-{
-    if (0 == mux->func_pd && 0 == mux->func_pu)
-        return HIGH_Z;
-    else if (1 == mux->func_pd)
-        return PULL_DOWN;
-    else
-        return PULL_UP;
+        .slp_ie = ie,
+        .slp_pd = (pp == PULL_DOWN),
+        .slp_pu = (PULL_UP == pp),
+        .slp_drv = drv,
+        .func_pd = (pp == PULL_DOWN),
+        .func_pu = (PULL_UP == pp),
+        .func_drv = drv,
+        .func_ie = ie,
+        .mcu_sel = sel, .func_ie = ie,
+        .filter_en = filter_en,
+    };
+    return reg.val;
 }

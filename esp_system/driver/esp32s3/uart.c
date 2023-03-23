@@ -211,6 +211,10 @@ int UART_configure(uart_dev_t *dev, uint32_t bps, enum UART_parity_t parity, enu
         // UART0 is default esp-idf enabled debug tracing port, it always enabled, but still we need to taking control
         if (PERIPH_UART0_MODULE == uart_module)
         {
+            // this is not sdk configurable, always TXD = 43, RXD = 44
+            IOMUX_configure(IOMUX_UART0_TXD);
+            IOMUX_configure(IOMUX_UART0_RXD);
+
             dev->int_ena.val = 0;
             while (0 != dev->status.txfifo_cnt) sched_yield();
         }
@@ -220,30 +224,7 @@ int UART_configure(uart_dev_t *dev, uint32_t bps, enum UART_parity_t parity, enu
     else
         CLK_periph_enable(uart_module);
 
-    // io-mux configure
-    switch (uart_module)
-    {
-    case PERIPH_UART0_MODULE:
-        // this is not sdk configurable, always TXD = 43, RXD = 44
-        IOMUX_configure(IOMUX_UART0_TXD);
-        IOMUX_configure(IOMUX_UART0_RXD);
-        GPIO_setdir_output_pin_nb(IOMUX_pin_nb(IOMUX_UART0_TXD), PUSH_PULL_UP);
-        GPIO_setdir_input_pin_nb(IOMUX_pin_nb(IOMUX_UART0_RXD), HIGH_Z, true);
-        break;
-
-    case PERIPH_UART1_MODULE:
-        // TODO: uing sdkconfig to configure these
-        IOMUX_configure(IOMUX_UART1_TXD);
-        IOMUX_configure(IOMUX_UART1_RXD);
-        GPIO_setdir_output_pin_nb(IOMUX_pin_nb(IOMUX_UART1_TXD), PUSH_PULL_UP);
-        GPIO_setdir_input_pin_nb(IOMUX_pin_nb(IOMUX_UART1_RXD), HIGH_Z, true);
-        break;
-
-    case PERIPH_UART2_MODULE:
-        // TODO: uing sdkconfig to configure these
-        break;
-    }
-
+    // TODO: uing sdkconfig to configure UART1/UART2 pins
     while (dev->id.reg_update);
 
     int retval;

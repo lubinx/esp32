@@ -18,8 +18,8 @@
 #include <features.h>
 #include <stdint.h>
 
-    #define GPIO_ALL_PORT           ((void *)0xFFFFFFFFUL)
-    #define GPIO_ALL_PIN            (0xFFFFFFFFUL)
+    #define GPIO_ALL_PORT               ((void *)0xFFFFFFFFUL)
+    #define GPIO_ALL_PIN                (0xFFFFFFFFUL)
 
     enum GPIO_trig_t
     {
@@ -42,14 +42,16 @@
         // extension
         TRIG_BY_BOTH_EDGE           = 4
     };
-    #define GPIO_TRIG_IS_LEVEL(TRIG)     (0 != (TRIG & 0x01))
-    #define GPIO_TRIG_IS_EDGE(TRIG)      (0 == (TRIG & 0x01))
+    #define GPIO_TRIG_IS_LEVEL(TRIG)    (0 != (TRIG & 0x01))
+    #define GPIO_TRIG_IS_EDGE(TRIG)     (0 == (TRIG & 0x01))
 
     enum GPIO_pad_pull_t
     {
         HIGH_Z                      = 0,
         PULL_DOWN,
-        PULL_UP
+        PULL_UP,
+        // alias
+        FLOATING  = HIGH_Z
     };
 
     enum GPIO_output_mode_t
@@ -57,16 +59,15 @@
         PUSH_PULL                   = 0,
         PUSH_PULL_DOWN,
         PUSH_PULL_UP,
-    //----
         OPEN_SOURCE,
         OPEN_SOURCE_WITH_PULL_DOWN,
-        WIRED_OR = OPEN_SOURCE,
-        WIRED_OR_WITH_PULL_DOWN = OPEN_SOURCE_WITH_PULL_DOWN,
-    //----
         OPEN_DRAIN,
         OPEN_DRAIN_WITH_PULL_UP,
         OPEN_DRAIN_WITH_FILTER,
         OPEN_DRAIN_WITH_PULL_UP_FILTER,
+    // alias
+        WIRED_OR = OPEN_SOURCE,
+        WIRED_OR_WITH_PULL_DOWN = OPEN_SOURCE_WITH_PULL_DOWN,
         WIRED_AND = OPEN_DRAIN,
         WIRED_AND_WITH_PULL_UP = OPEN_DRAIN_WITH_PULL_UP,
         WIRED_AND_WITH_FILTER = OPEN_DRAIN_WITH_FILTER,
@@ -78,10 +79,10 @@ __BEGIN_DECLS
 /**  GPIO @configure
 ****************************************************************************/
 extern __attribute__((nothrow, nonnull))
-    int GPIO_disable(void *const gpio, uint32_t pins);
+    int GPIO_disable(void *const gpio, uint32_t pins, bool pull_up);
 
 extern __attribute__((nothrow, nonnull))
-    int GPIO_setdir_input(void *const gpio, uint32_t pins);
+    int GPIO_setdir_input(void *const gpio, uint32_t pins, bool filter_en);
 
 extern __attribute__((nothrow, nonnull))
     int GPIO_setdir_output(enum GPIO_output_mode_t mode, void *const gpio, uint32_t pins);

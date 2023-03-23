@@ -3,6 +3,7 @@
 
 #include <features.h>
 #include <hw/gpio.h>
+#include <soc/gpio_sig_map.h>
 
     #define GPIO_L                      ((void *)1UL << 30) // PIN:  0~21
     #define GPIO_H                      ((void *)1UL << 31) // PIN: 26~48
@@ -56,9 +57,6 @@
     #define PIN47                       ((uintptr_t)GPIO_H | 1 << 21)
     #define PIN48                       ((uintptr_t)GPIO_H | 1 << 22)
 
-    // #define GPIO0_VALID_MASK            ((1 << 22) - 1)
-    // #define GPIO1_VALID_MASK            ((1 << (48 - 26 + 1)) - 1)
-
     enum iomux_sel
     {
         IOMUX_SEL0                = 0,
@@ -70,83 +68,88 @@
         IOMUX_SEL_GPIO = IOMUX_SEL1,
     };
 
+    #define IOMUX_ARG_INPUT             (0xE)
+    #define IOMUX_ARG_INPUT_FILTER      (0xF)
+    #define IOMUX_ARG(PP, MODE)         ((PP) << 8 | (MODE) << 4)
+
     enum iomux_def
     {
+        // TODO: complete iomux pins is input & output
         // SPI
-        IOMUX_SPICLK        = (30 << 4 | IOMUX_SEL0),
-        IOMUX_SPICS0        = (29 << 4 | IOMUX_SEL0),
-        IOMUX_SPICS1        = (26 << 4 | IOMUX_SEL0),
-        IOMUX_SPIWP         = (28 << 4 | IOMUX_SEL0),
-        IOMUX_SPIHD         = (27 << 4 | IOMUX_SEL0),
-        IOMUX_SPIQ          = (31 << 4 | IOMUX_SEL0),
-        IOMUX_SPID          = (32 << 4 | IOMUX_SEL0),
+        IOMUX_SPICLK        = (30 << 12 | IOMUX_SEL0 | IOMUX_ARG(HIGH_Z, PUSH_PULL)),
+        IOMUX_SPICS0        = (29 << 12 | IOMUX_SEL0 | IOMUX_ARG(HIGH_Z, PUSH_PULL_UP)),
+        IOMUX_SPICS1        = (26 << 12 | IOMUX_SEL0 | IOMUX_ARG(PULL_UP, IOMUX_ARG_INPUT)),
+        IOMUX_SPIWP         = (28 << 12 | IOMUX_SEL0 | IOMUX_ARG(PULL_UP, IOMUX_ARG_INPUT)),
+        IOMUX_SPIHD         = (27 << 12 | IOMUX_SEL0 | IOMUX_ARG(PULL_UP, IOMUX_ARG_INPUT)),
+        IOMUX_SPIQ          = (31 << 12 | IOMUX_SEL0 | IOMUX_ARG(PULL_UP, IOMUX_ARG_INPUT)),
+        IOMUX_SPID          = (32 << 12 | IOMUX_SEL0 | IOMUX_ARG(PULL_UP, IOMUX_ARG_INPUT)),
         // SPI IO4~7/DQS
-        IOMUX_SPIIO4        = (33 << 4 | IOMUX_SEL4),
-        IOMUX_SPIIO5        = (34 << 4 | IOMUX_SEL4),
-        IOMUX_SPIIO6        = (35 << 4 | IOMUX_SEL4),
-        IOMUX_SPIIO7        = (36 << 4 | IOMUX_SEL4),
-        IOMUX_SPIDQS        = (37 << 4 | IOMUX_SEL4),
+        IOMUX_SPIIO4        = (33 << 12 | IOMUX_SEL4),
+        IOMUX_SPIIO5        = (34 << 12 | IOMUX_SEL4),
+        IOMUX_SPIIO6        = (35 << 12 | IOMUX_SEL4),
+        IOMUX_SPIIO7        = (36 << 12 | IOMUX_SEL4),
+        IOMUX_SPIDQS        = (37 << 12 | IOMUX_SEL4),
         // UART0
-        IOMUX_UART0_RTS     = (15 << 4 | IOMUX_SEL2),
-        IOMUX_UART0_CTS     = (16 << 4 | IOMUX_SEL2),
-        IOMUX_UART0_TXD     = (43 << 4 | IOMUX_SEL0),
-        IOMUX_UART0_RXD     = (44 << 4 | IOMUX_SEL0),
+        IOMUX_UART0_TXD     = (43 << 12 | IOMUX_SEL0 | IOMUX_ARG(HIGH_Z, PUSH_PULL_UP)),
+        IOMUX_UART0_RTS     = (15 << 12 | IOMUX_SEL2 | IOMUX_ARG(HIGH_Z, PUSH_PULL_UP)),
+        IOMUX_UART0_RXD     = (44 << 12 | IOMUX_SEL0 | IOMUX_ARG(HIGH_Z, IOMUX_ARG_INPUT_FILTER)),
+        IOMUX_UART0_CTS     = (16 << 12 | IOMUX_SEL2 | IOMUX_ARG(HIGH_Z, IOMUX_ARG_INPUT_FILTER)),
         // UART1
-        IOMUX_UART1_TXD     = (17 << 4 | IOMUX_SEL2),
-        IOMUX_UART1_RXD     = (18 << 4 | IOMUX_SEL2),
-        IOMUX_UART1_RTS     = (19 << 4 | IOMUX_SEL2),
-        IOMUX_UART1_CTS     = (20 << 4 | IOMUX_SEL2),
+        IOMUX_UART1_TXD     = (17 << 12 | IOMUX_SEL2 | IOMUX_ARG(HIGH_Z, PUSH_PULL_UP)),
+        IOMUX_UART1_RTS     = (19 << 12 | IOMUX_SEL2 | IOMUX_ARG(HIGH_Z, PUSH_PULL)),
+        IOMUX_UART1_RXD     = (18 << 12 | IOMUX_SEL2 | IOMUX_ARG(HIGH_Z, IOMUX_ARG_INPUT_FILTER)),
+        IOMUX_UART1_CTS     = (20 << 12 | IOMUX_SEL2 | IOMUX_ARG(HIGH_Z, IOMUX_ARG_INPUT_FILTER)),
         //
-        IOMUX_MTCK          = (39 << 4 | IOMUX_SEL0),
-        IOMUX_MTDO          = (40 << 4 | IOMUX_SEL0),
-        IOMUX_MTDI          = (41 << 4 | IOMUX_SEL0),
-        IOMUX_MTMS          = (42 << 4 | IOMUX_SEL0),
+        IOMUX_MTCK          = (39 << 12 | IOMUX_SEL0),
+        IOMUX_MTDO          = (40 << 12 | IOMUX_SEL0),
+        IOMUX_MTDI          = (41 << 12 | IOMUX_SEL0),
+        IOMUX_MTMS          = (42 << 12 | IOMUX_SEL0),
         //
-        IOMUX_SPICLK_P_DIFF = (47 << 4 | IOMUX_SEL0),
-        IOMUX_SPICLK_N_DIFF = (48 << 4 | IOMUX_SEL0),
+        IOMUX_SPICLK_P_DIFF = (47 << 12 | IOMUX_SEL0),
+        IOMUX_SPICLK_N_DIFF = (48 << 12 | IOMUX_SEL0),
         // CLK OUT 1/2/3
-        IOMUX_P20_CLK_OUT1  = (20 << 4 | IOMUX_SEL3),
-        IOMUX_P41_CLK_OUT1  = (41 << 4 | IOMUX_SEL2),
-        IOMUX_P43_CLK_OUT1  = (43 << 4 | IOMUX_SEL2),
-        IOMUX_P19_CLK_OUT2  = (19 << 4 | IOMUX_SEL3),
-        IOMUX_P40_CLK_OUT2  = (40 << 4 | IOMUX_SEL2),
-        IOMUX_P44_CLK_OUT2  = (44 << 4 | IOMUX_SEL2),
-        IOMUX_P18_CLK_OUT3  = (18 << 4 | IOMUX_SEL3),
-        IOMUX_P39_CLK_OUT3  = (39 << 4 | IOMUX_SEL2),
+        IOMUX_P20_CLK_OUT1  = (20 << 12 | IOMUX_SEL3 | IOMUX_ARG(HIGH_Z, PUSH_PULL_DOWN)),
+        IOMUX_P41_CLK_OUT1  = (41 << 12 | IOMUX_SEL2 | IOMUX_ARG(HIGH_Z, PUSH_PULL_DOWN)),
+        IOMUX_P43_CLK_OUT1  = (43 << 12 | IOMUX_SEL2 | IOMUX_ARG(HIGH_Z, PUSH_PULL_DOWN)),
+        IOMUX_P19_CLK_OUT2  = (19 << 12 | IOMUX_SEL3 | IOMUX_ARG(HIGH_Z, PUSH_PULL_DOWN)),
+        IOMUX_P40_CLK_OUT2  = (40 << 12 | IOMUX_SEL2 | IOMUX_ARG(HIGH_Z, PUSH_PULL_DOWN)),
+        IOMUX_P44_CLK_OUT2  = (44 << 12 | IOMUX_SEL2 | IOMUX_ARG(HIGH_Z, PUSH_PULL_DOWN)),
+        IOMUX_P18_CLK_OUT3  = (18 << 12 | IOMUX_SEL3 | IOMUX_ARG(HIGH_Z, PUSH_PULL_DOWN)),
+        IOMUX_P39_CLK_OUT3  = (39 << 12 | IOMUX_SEL2 | IOMUX_ARG(HIGH_Z, PUSH_PULL_DOWN)),
         // SUB SPI?
-        IOMUX_SUBSPICLK_P12 = (12 << 4 | IOMUX_SEL3),
-        IOMUX_SUBSPICLK_P36 = (36 << 4 | IOMUX_SEL3),
-        IOMUX_SUBSPICS0_P10 = (10 << 4 | IOMUX_SEL3),
-        IOMUX_SUBSPICS0_P34 = (34 << 4 | IOMUX_SEL3),
-        IOMUX_SUBSPICS1_P08 = ( 8 << 4 | IOMUX_SEL3),
-        IOMUX_SUBSPICS1_P39 = (39 << 4 | IOMUX_SEL3),
-        IOMUX_SUBSPIWP_P14  = (14 << 4 | IOMUX_SEL3),
-        IOMUX_SUBSPIWP_P38  = (38 << 4 | IOMUX_SEL3),
-        IOMUX_SUBSPIHD_P09  = ( 9 << 4 | IOMUX_SEL3),
-        IOMUX_SUBSPIHD_P33  = (33 << 4 | IOMUX_SEL3),
-        IOMUX_SUBSPID_P11   = (11 << 4 | IOMUX_SEL3),
-        IOMUX_SUBSPID_P35   = (35 << 4 | IOMUX_SEL3),
-        IOMUX_SUBSPIQ_P13   = (13 << 4 | IOMUX_SEL3),
-        IOMUX_SUBSPIQ_P37   = (37 << 4 | IOMUX_SEL3),
+        IOMUX_SUBSPICLK_P12 = (12 << 12 | IOMUX_SEL3),
+        IOMUX_SUBSPICLK_P36 = (36 << 12 | IOMUX_SEL3),
+        IOMUX_SUBSPICS0_P10 = (10 << 12 | IOMUX_SEL3),
+        IOMUX_SUBSPICS0_P34 = (34 << 12 | IOMUX_SEL3),
+        IOMUX_SUBSPICS1_P08 = ( 8 << 12 | IOMUX_SEL3),
+        IOMUX_SUBSPICS1_P39 = (39 << 12 | IOMUX_SEL3),
+        IOMUX_SUBSPIWP_P14  = (14 << 12 | IOMUX_SEL3),
+        IOMUX_SUBSPIWP_P38  = (38 << 12 | IOMUX_SEL3),
+        IOMUX_SUBSPIHD_P09  = ( 9 << 12 | IOMUX_SEL3),
+        IOMUX_SUBSPIHD_P33  = (33 << 12 | IOMUX_SEL3),
+        IOMUX_SUBSPID_P11   = (11 << 12 | IOMUX_SEL3),
+        IOMUX_SUBSPID_P35   = (35 << 12 | IOMUX_SEL3),
+        IOMUX_SUBSPIQ_P13   = (13 << 12 | IOMUX_SEL3),
+        IOMUX_SUBSPIQ_P37   = (37 << 12 | IOMUX_SEL3),
         // F SPI?
-        IOMUX_P12_FSPICLK   = (12 << 4 | IOMUX_SEL4),
-        IOMUX_P36_FSPICLK   = (36 << 4 | IOMUX_SEL2),
-        IOMUX_P10_FSPICS0   = (10 << 4 | IOMUX_SEL4),
-        IOMUX_P34_FSPICS0   = (34 << 4 | IOMUX_SEL2),
-        IOMUX_P14_FSPIWP    = (14 << 4 | IOMUX_SEL4),
-        IOMUX_P38_FSPIWP    = (38 << 4 | IOMUX_SEL2),
-        IOMUX_P09_FSPIHD    = ( 9 << 4 | IOMUX_SEL4),
-        IOMUX_P33_FSPIHD    = (33 << 4 | IOMUX_SEL2),
-        IOMUX_P11_FSPID     = (11 << 4 | IOMUX_SEL4),
-        IOMUX_P35_FSPID     = (35 << 4 | IOMUX_SEL2),
-        IOMUX_P13_FSPIQ     = (13 << 4 | IOMUX_SEL4),
-        IOMUX_P37_FSPIQ     = (37 << 4 | IOMUX_SEL2),
+        IOMUX_P12_FSPICLK   = (12 << 12 | IOMUX_SEL4),
+        IOMUX_P36_FSPICLK   = (36 << 12 | IOMUX_SEL2),
+        IOMUX_P10_FSPICS0   = (10 << 12 | IOMUX_SEL4),
+        IOMUX_P34_FSPICS0   = (34 << 12 | IOMUX_SEL2),
+        IOMUX_P14_FSPIWP    = (14 << 12 | IOMUX_SEL4),
+        IOMUX_P38_FSPIWP    = (38 << 12 | IOMUX_SEL2),
+        IOMUX_P09_FSPIHD    = ( 9 << 12 | IOMUX_SEL4),
+        IOMUX_P33_FSPIHD    = (33 << 12 | IOMUX_SEL2),
+        IOMUX_P11_FSPID     = (11 << 12 | IOMUX_SEL4),
+        IOMUX_P35_FSPID     = (35 << 12 | IOMUX_SEL2),
+        IOMUX_P13_FSPIQ     = (13 << 12 | IOMUX_SEL4),
+        IOMUX_P37_FSPIQ     = (37 << 12 | IOMUX_SEL2),
         // F SPI IO4~7/DQS
-        IOMUX_FSPIIO4       = (10 << 4 | IOMUX_SEL2),
-        IOMUX_FSPIIO5       = (11 << 4 | IOMUX_SEL2),
-        IOMUX_FSPIIO6       = (12 << 4 | IOMUX_SEL2),
-        IOMUX_FSPIIO7       = (13 << 4 | IOMUX_SEL2),
-        IOMUX_FSPIDQS       = (14 << 4 | IOMUX_SEL2),
+        IOMUX_FSPIIO4       = (10 << 12 | IOMUX_SEL2),
+        IOMUX_FSPIIO5       = (11 << 12 | IOMUX_SEL2),
+        IOMUX_FSPIIO6       = (12 << 12 | IOMUX_SEL2),
+        IOMUX_FSPIIO7       = (13 << 12 | IOMUX_SEL2),
+        IOMUX_FSPIDQS       = (14 << 12 | IOMUX_SEL2),
     };
 
 __BEGIN_DECLS
@@ -162,40 +165,41 @@ extern __attribute__((nothrow, nonnull))
 extern __attribute__((nothrow, nonnull))
     int IOMUX_configure(enum iomux_def mux);
 
-extern __attribute__((nothrow, nonnull))
-    int IOMUX_deconfigure(enum iomux_def mux);
-
-static inline
-    uint8_t IOMUX_pin_nb(enum iomux_def mux)
-    {
-        return (uint8_t)(mux >> 4);
-    }
-
     /**
-     *  IOMUX_matrix_route_input()
-     *      replace esp_rom_IOMUX_matrix_route_input()
-     *      connect pin_nb to input matrix
-     *  @param inv input is inverted
+     *  deconfigure previous configured mux
+     *      the related PIN number will goes to disabled..so if pull_up must to known
     */
 extern __attribute__((nothrow, nonnull))
-    int IOMUX_matrix_route_input(uint8_t pin_nb, uint16_t sig_idx, bool inv);
+    int IOMUX_deconfigure(enum iomux_def mux, bool pull_up);
 
     /**
-     *  IOMUX_matrix_route_output()
+     *  IOMUX_route_input()
+     *      replace esp_rom_IOMUX_matrix_route_input()
+     *      connect pin_nb to input matrix
+     *  @param inv
+     *      peripherial input is inverted
+    */
+extern __attribute__((nothrow, nonnull))
+    int IOMUX_route_input(uint8_t pin_nb, uint16_t sig_idx, bool inv, enum GPIO_pad_pull_t pp, bool filter_en);
+
+    /**
+     *  IOMUX_route_output()
      *      replace esp_rom_IOMUX_matrix_route_output()
      *      connect pin_jb to output matrix
-     *  @param inv output is inverted
-     *  @param oen_inv output enable control is inverted
+     *  @param inv
+     *      output is inverted to the peripherial
+     *  @param oen_inv
+     *      indicate peripherial output enable control is inverted
      */
 extern __attribute__((nothrow, nonnull))
-    int IOMUX_matrix_route_output(uint8_t pin_nb, uint16_t sig_idx, bool inv, bool oen_inv);
+    int IOMUX_route_output(uint8_t pin_nb, uint16_t sig_idx, enum GPIO_output_mode_t mode, bool inv, bool oen_inv);
 
     /**
-     *  IOMUX_matrix_disconnect()
+     *  IOMUX_route_disconnect()
      *      disconnect pin_nb from matrix(input & output)
      */
 extern __attribute__((nothrow, nonnull))
-    int IOMUX_matrix_disconnect(uint8_t pin_nb);
+    int IOMUX_route_disconnect(uint8_t pin_nb);
 
 extern __attribute__((nothrow, nonnull))
     void IOMUX_print(void);
@@ -204,7 +208,7 @@ extern __attribute__((nothrow, nonnull))
 /**  GPIO by PIN number
 ****************************************************************************/
 extern __attribute__((nothrow, nonnull))
-    int GPIO_disable_pin_nb(uint8_t pin_nb, enum GPIO_pad_pull_t pp);
+    int GPIO_disable_pin_nb(uint8_t pin_nb, bool pull_up);
 
 extern __attribute__((nothrow, nonnull))
     int GPIO_setdir_input_pin_nb(uint8_t pin_nb, enum GPIO_pad_pull_t pp, bool filter_en);
@@ -213,13 +217,16 @@ extern __attribute__((nothrow, nonnull))
     int GPIO_setdir_output_pin_nb(uint8_t pin_nb, enum GPIO_output_mode_t mode);
 
 extern __attribute__((nothrow, nonnull))
+    int GPIO_input_peek_pin_nb(uint8_t pin_nb);
+
+extern __attribute__((nothrow, nonnull))
+    int GPIO_output_peek_pin_nb(uint8_t pin_nb);
+
+extern __attribute__((nothrow, nonnull))
     int GPIO_output_set_pin_nb(uint8_t pin_nb);
 
 extern __attribute__((nothrow, nonnull))
     int GPIO_output_clear_pin_nb(uint8_t pin_nb);
-
-extern __attribute__((nothrow, nonnull))
-    int GPIO_output_peek_pin_nb(uint8_t pin_nb);
 
 extern __attribute__((nothrow, nonnull))
     int GPIO_output_toggle_pin_nb(uint8_t pin_nb);

@@ -20,16 +20,6 @@ extern __attribute__((nothrow, nonnull))
 extern __attribute__((nothrow, nonnull, const))
     uint32_t UART_get_baudrate(uart_dev_t *dev);
 
-// pins
-extern __attribute__((nothrow, nonnull))
-    int UART_configure_txd_pin(void *const gpio, uint32_t pin);
-extern __attribute__((nothrow, nonnull))
-    int UART_configure_rxd_pin(void *const gpio, uint32_t pin);
-extern __attribute__((nothrow, nonnull))
-    int UART_configure_cts_pin(void *const gpio, uint32_t pin);
-extern __attribute__((nothrow, nonnull))
-    int UART_configure_rts_pin(void *const gpio, uint32_t pin);
-
 /****************************************************************************
  *  direct write UART through fifo
  ****************************************************************************/

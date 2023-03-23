@@ -30,8 +30,11 @@ static void *blink_thread3(void *arg);
 
 int main(void)
 {
-    GPIO_setdir_output_pin_nb(8, PUSH_PULL_UP);
-    GPIO_setdir_output_pin_nb(9, PUSH_PULL_UP);
+    GPIO_setdir_output_pin_nb(LED1_PIN_NUM, PUSH_PULL_UP);
+    GPIO_setdir_output_pin_nb(LED2_PIN_NUM, PUSH_PULL_UP);
+
+    IOMUX_route_output(17, I2CEXT0_SDA_IN_IDX, OPEN_DRAIN_WITH_PULL_UP, false, false);
+    IOMUX_route_output(18, I2CEXT0_SCL_IN_IDX, OPEN_DRAIN_WITH_PULL_UP, false, false);
 
     int fd = UART_createfd(0, 115200, UART_PARITY_NONE, UART_STOP_BITS_ONE);
     (void)fd;
@@ -121,13 +124,13 @@ int main(void)
 
         if (n ++ & 0x1)
         {
-            GPIO_output_set_pin_nb(8);
-            GPIO_output_clear_pin_nb(9);
+            GPIO_output_set_pin_nb(LED1_PIN_NUM);
+            GPIO_output_clear_pin_nb(LED2_PIN_NUM);
         }
         else
         {
-            GPIO_output_set_pin_nb(9);
-            GPIO_output_clear_pin_nb(8);
+            GPIO_output_set_pin_nb(LED2_PIN_NUM);
+            GPIO_output_clear_pin_nb(LED1_PIN_NUM);
         }
     }
 }
