@@ -304,9 +304,6 @@ void IOMUX_print(void)
 {
     printf("GPIO matrix: \n");
 
-    #define _PAD_PULL(PU, PD)       ((! PU && ! PD) ? "High-Z" : (PU ? "Pull-Up" : (PD ? "Pull-Down" : "Error")))
-    #define _DRV_MA(DRV)            (0 == DRV ? 5 : (1 == DRV ? 10 : (2 == DRV ? 20 : 30)))
-
     printf("\t+-----+-----------+------+-----------------+----------------------+-----+\n");
     printf("\t|     |           |      | Matrix INPUT    | Matrix OUTPUT        |     |\n");
     printf("\t| PIN | PAD-Pull  | MUX  +-----------+-----+-----------+----+-----+ SLP |\n");
@@ -327,7 +324,9 @@ void IOMUX_print(void)
 
         bool mux_is_gpio = IOMUX_IS_GPIO(i, mat->mux->mcu_sel);
 
-        printf("\t| %02d  | %-9s |", i, _PAD_PULL(mat->mux->func_pu, mat->mux->func_pd));
+        printf("\t| %02d  | %-9s |", i,
+            ! mat->mux->func_pu && ! mat->mux->func_pd ? "High-Z" : (mat->mux->func_pu ? "Pull-Up" : (mat->mux->func_pd ? "Pull-Down" : "Error"))
+        );
         if (IOMUX_IS_GPIO(i, mat->mux->mcu_sel))
             printf(" GPIO ");
         else
@@ -363,8 +362,9 @@ void IOMUX_print(void)
             else
                 printf("| ❌         ");
         }
-        printf("| %s  |%2d mA", mat->pin->pad_driver ? "✔️" : "❌", _DRV_MA(mat->mux->func_drv));
-
+        printf("| %s  |%2d mA", mat->pin->pad_driver ? "✔️" : "❌",
+            0 == mat->mux->func_drv ? 5 : (1 == mat->mux->func_drv ? 10 : (2 == mat->mux->func_drv ? 20 : 30))
+        );
         // sleep en
         printf("| %s   |\n", mat->mux->slp_sel ? "✔️" : "❌");
     }
@@ -373,9 +373,6 @@ void IOMUX_print(void)
     printf(" * ref Table 6-3. IO MUX Pin Functions\n");
     printf(" * MAT(INPUT/OUTPUT) => XXX: definitions in soc/gpio_sig_map.h\n");
     printf(" * MAT may bypass => MUX: definitions in esp32s3/include/gpio.h\n");
-
-    #undef _PAD_PULL
-    #undef _DRV_MA
 }
 
 /***************************************************************************/
