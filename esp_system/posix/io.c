@@ -17,7 +17,7 @@ int __stderr_fd = -1;
 
 void __IO_introduce(void)
 {
-    // nothing to do but import retarget functions
+    // introduce unit, nothing to do
 }
 
 __attribute__((weak))

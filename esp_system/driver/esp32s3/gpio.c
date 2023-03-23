@@ -227,8 +227,8 @@ int IOMUX_configure(enum iomux_def mux)
     mat->mux->val = reg.val;
 
     uint8_t mode = 0xF & (mux >> 4);
-    if (IOMUX_ARG_INPUT == mode || IOMUX_ARG_INPUT_FILTER == mode)
-        return GPIO_setdir_input_pin_nb(pin_nb, 0xF & (mux >> 8), IOMUX_ARG_INPUT_FILTER == mode);
+    if (MODE_INPUT == mode || MODE_INPUT_WITH_FILTER == mode)
+        return GPIO_setdir_input_pin_nb(pin_nb, 0xF & (mux >> 8), MODE_INPUT_WITH_FILTER == mode);
     else
         return GPIO_setdir_output_pin_nb(pin_nb, mode);
 }

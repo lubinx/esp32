@@ -18,7 +18,7 @@ static char const *TAG = "filesystem";
 ****************************************************************************/
 void __FILESYSTEM_introduce(void)
 {
-    // nothing to do but import retarget functions
+    // introduce unit, nothing to do
 }
 
 /***************************************************************************/

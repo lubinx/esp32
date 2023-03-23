@@ -68,45 +68,24 @@
         IOMUX_SEL_GPIO = IOMUX_SEL1,
     };
 
-    #define IOMUX_ARG_INPUT             (0xE)
-    #define IOMUX_ARG_INPUT_FILTER      (0xF)
-    #define IOMUX_ARG(PP, MODE)         ((PP) << 8 | (MODE) << 4)
+    #define IOMUX_ARG(PP, MODE)         ((PP << 8) | (MODE << 4))
+    // ext. enum GPIO_output_mode_t
+    #define MODE_INPUT                  (0xE)
+    #define MODE_INPUT_WITH_FILTER      (0xF)
 
     enum iomux_def
     {
-        // TODO: complete iomux pins is input & output
-        // SPI
-        IOMUX_SPICLK        = (30 << 12 | IOMUX_SEL0 | IOMUX_ARG(HIGH_Z, PUSH_PULL)),
-        IOMUX_SPICS0        = (29 << 12 | IOMUX_SEL0 | IOMUX_ARG(HIGH_Z, PUSH_PULL_UP)),
-        IOMUX_SPICS1        = (26 << 12 | IOMUX_SEL0 | IOMUX_ARG(PULL_UP, IOMUX_ARG_INPUT)),
-        IOMUX_SPIWP         = (28 << 12 | IOMUX_SEL0 | IOMUX_ARG(PULL_UP, IOMUX_ARG_INPUT)),
-        IOMUX_SPIHD         = (27 << 12 | IOMUX_SEL0 | IOMUX_ARG(PULL_UP, IOMUX_ARG_INPUT)),
-        IOMUX_SPIQ          = (31 << 12 | IOMUX_SEL0 | IOMUX_ARG(PULL_UP, IOMUX_ARG_INPUT)),
-        IOMUX_SPID          = (32 << 12 | IOMUX_SEL0 | IOMUX_ARG(PULL_UP, IOMUX_ARG_INPUT)),
-        // SPI IO4~7/DQS
-        IOMUX_SPIIO4        = (33 << 12 | IOMUX_SEL4),
-        IOMUX_SPIIO5        = (34 << 12 | IOMUX_SEL4),
-        IOMUX_SPIIO6        = (35 << 12 | IOMUX_SEL4),
-        IOMUX_SPIIO7        = (36 << 12 | IOMUX_SEL4),
-        IOMUX_SPIDQS        = (37 << 12 | IOMUX_SEL4),
+        // TODO: complete iomux pins arguments
         // UART0
         IOMUX_UART0_TXD     = (43 << 12 | IOMUX_SEL0 | IOMUX_ARG(HIGH_Z, PUSH_PULL_UP)),
         IOMUX_UART0_RTS     = (15 << 12 | IOMUX_SEL2 | IOMUX_ARG(HIGH_Z, PUSH_PULL_UP)),
-        IOMUX_UART0_RXD     = (44 << 12 | IOMUX_SEL0 | IOMUX_ARG(HIGH_Z, IOMUX_ARG_INPUT_FILTER)),
-        IOMUX_UART0_CTS     = (16 << 12 | IOMUX_SEL2 | IOMUX_ARG(HIGH_Z, IOMUX_ARG_INPUT_FILTER)),
+        IOMUX_UART0_RXD     = (44 << 12 | IOMUX_SEL0 | IOMUX_ARG(HIGH_Z, MODE_INPUT_WITH_FILTER)),
+        IOMUX_UART0_CTS     = (16 << 12 | IOMUX_SEL2 | IOMUX_ARG(HIGH_Z, MODE_INPUT_WITH_FILTER)),
         // UART1
         IOMUX_UART1_TXD     = (17 << 12 | IOMUX_SEL2 | IOMUX_ARG(HIGH_Z, PUSH_PULL_UP)),
         IOMUX_UART1_RTS     = (19 << 12 | IOMUX_SEL2 | IOMUX_ARG(HIGH_Z, PUSH_PULL)),
-        IOMUX_UART1_RXD     = (18 << 12 | IOMUX_SEL2 | IOMUX_ARG(HIGH_Z, IOMUX_ARG_INPUT_FILTER)),
-        IOMUX_UART1_CTS     = (20 << 12 | IOMUX_SEL2 | IOMUX_ARG(HIGH_Z, IOMUX_ARG_INPUT_FILTER)),
-        //
-        IOMUX_MTCK          = (39 << 12 | IOMUX_SEL0),
-        IOMUX_MTDO          = (40 << 12 | IOMUX_SEL0),
-        IOMUX_MTDI          = (41 << 12 | IOMUX_SEL0),
-        IOMUX_MTMS          = (42 << 12 | IOMUX_SEL0),
-        //
-        IOMUX_SPICLK_P_DIFF = (47 << 12 | IOMUX_SEL0),
-        IOMUX_SPICLK_N_DIFF = (48 << 12 | IOMUX_SEL0),
+        IOMUX_UART1_RXD     = (18 << 12 | IOMUX_SEL2 | IOMUX_ARG(HIGH_Z, MODE_INPUT_WITH_FILTER)),
+        IOMUX_UART1_CTS     = (20 << 12 | IOMUX_SEL2 | IOMUX_ARG(HIGH_Z, MODE_INPUT_WITH_FILTER)),
         // CLK OUT 1/2/3
         IOMUX_P20_CLK_OUT1  = (20 << 12 | IOMUX_SEL3 | IOMUX_ARG(HIGH_Z, PUSH_PULL_DOWN)),
         IOMUX_P41_CLK_OUT1  = (41 << 12 | IOMUX_SEL2 | IOMUX_ARG(HIGH_Z, PUSH_PULL_DOWN)),
@@ -116,6 +95,29 @@
         IOMUX_P44_CLK_OUT2  = (44 << 12 | IOMUX_SEL2 | IOMUX_ARG(HIGH_Z, PUSH_PULL_DOWN)),
         IOMUX_P18_CLK_OUT3  = (18 << 12 | IOMUX_SEL3 | IOMUX_ARG(HIGH_Z, PUSH_PULL_DOWN)),
         IOMUX_P39_CLK_OUT3  = (39 << 12 | IOMUX_SEL2 | IOMUX_ARG(HIGH_Z, PUSH_PULL_DOWN)),
+        // SPI
+        IOMUX_SPICLK        = (30 << 12 | IOMUX_SEL0 | IOMUX_ARG(HIGH_Z, PUSH_PULL)),
+        IOMUX_SPICS0        = (29 << 12 | IOMUX_SEL0 | IOMUX_ARG(HIGH_Z, PUSH_PULL_UP)),
+        IOMUX_SPICS1        = (26 << 12 | IOMUX_SEL0 | IOMUX_ARG(PULL_UP, MODE_INPUT)),
+        IOMUX_SPIWP         = (28 << 12 | IOMUX_SEL0 | IOMUX_ARG(PULL_UP, MODE_INPUT)),
+        IOMUX_SPIHD         = (27 << 12 | IOMUX_SEL0 | IOMUX_ARG(PULL_UP, MODE_INPUT)),
+        IOMUX_SPIQ          = (31 << 12 | IOMUX_SEL0 | IOMUX_ARG(PULL_UP, MODE_INPUT)),
+        IOMUX_SPID          = (32 << 12 | IOMUX_SEL0 | IOMUX_ARG(PULL_UP, MODE_INPUT)),
+        /*
+        // SPI IO4~7/DQS
+        IOMUX_SPIIO4        = (33 << 12 | IOMUX_SEL4),
+        IOMUX_SPIIO5        = (34 << 12 | IOMUX_SEL4),
+        IOMUX_SPIIO6        = (35 << 12 | IOMUX_SEL4),
+        IOMUX_SPIIO7        = (36 << 12 | IOMUX_SEL4),
+        IOMUX_SPIDQS        = (37 << 12 | IOMUX_SEL4),
+        // MT?
+        IOMUX_MTCK          = (39 << 12 | IOMUX_SEL0),
+        IOMUX_MTDO          = (40 << 12 | IOMUX_SEL0),
+        IOMUX_MTDI          = (41 << 12 | IOMUX_SEL0),
+        IOMUX_MTMS          = (42 << 12 | IOMUX_SEL0),
+        // SPI CLK DIFF ?
+        IOMUX_SPICLK_P_DIFF = (47 << 12 | IOMUX_SEL0),
+        IOMUX_SPICLK_N_DIFF = (48 << 12 | IOMUX_SEL0),
         // SUB SPI?
         IOMUX_SUBSPICLK_P12 = (12 << 12 | IOMUX_SEL3),
         IOMUX_SUBSPICLK_P36 = (36 << 12 | IOMUX_SEL3),
@@ -150,6 +152,7 @@
         IOMUX_FSPIIO6       = (12 << 12 | IOMUX_SEL2),
         IOMUX_FSPIIO7       = (13 << 12 | IOMUX_SEL2),
         IOMUX_FSPIDQS       = (14 << 12 | IOMUX_SEL2),
+        */
     };
 
 __BEGIN_DECLS

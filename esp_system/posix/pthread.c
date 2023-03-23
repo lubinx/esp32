@@ -13,6 +13,7 @@
 
 void __PTHREAD_introduce(void)
 {
+    // introduce unit, nothing to do
 }
 
 int pthread_create(pthread_t *thread, pthread_attr_t const *attr, pthread_routine_t routine, void *arg)

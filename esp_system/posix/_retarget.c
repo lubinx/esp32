@@ -72,8 +72,6 @@ struct __lock    __lock___arc4random_mutex          = {0};
 *****************************************************************************/
 void __libc_retarget_init(void)
 {
-    heap_caps_init();
-
     extern void KERNEL_init(void);
     KERNEL_init();
 
@@ -93,9 +91,6 @@ void __libc_retarget_init(void)
         mutex_init(&idf_common_mutex.mutex, MUTEX_FLAG_NORMAL);
     #endif
 
-    _GLOBAL_REENT = &__reent;
-    __sinit(&__reent);
-
     extern void __FILESYSTEM_introduce(void);
     __FILESYSTEM_introduce();
 
@@ -104,6 +99,9 @@ void __libc_retarget_init(void)
 
     extern void __PTHREAD_introduce(void);
     __PTHREAD_introduce();
+
+    _GLOBAL_REENT = &__reent;
+    heap_caps_init();
 }
 
 int setvbuf(FILE *fp, char *buffer, int mode, size_t size)
