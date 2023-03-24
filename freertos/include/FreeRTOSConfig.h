@@ -86,12 +86,7 @@ This file get's pulled into assembly sources. Therefore, some includes need to b
 #define STACK_OVERHEAD_WATCHPOINT                       0
 #endif
 
-#define configSTACK_OVERHEAD_TOTAL (                              \
-                                    STACK_OVERHEAD_CHECKER +      \
-                                    STACK_OVERHEAD_OPTIMIZATION + \
-                                    STACK_OVERHEAD_APPTRACE +     \
-                                    STACK_OVERHEAD_WATCHPOINT     \
-                                                            )
+#define configSTACK_OVERHEAD_TOTAL (STACK_OVERHEAD_CHECKER + STACK_OVERHEAD_OPTIMIZATION + STACK_OVERHEAD_APPTRACE + STACK_OVERHEAD_WATCHPOINT)
 
 /* ----------------------------------------------------- Helpers -------------------------------------------------------
  * - Macros that the FreeRTOS configuration macros depend on
@@ -125,8 +120,8 @@ This file get's pulled into assembly sources. Therefore, some includes need to b
 #define configUSE_TICKLESS_IDLE                         0
 #define configCPU_CLOCK_HZ                              (CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ * 1000000)
 #define configTICK_RATE_HZ                              CONFIG_FREERTOS_HZ
-#define configMAX_PRIORITIES                            ( 25 )  //This has impact on speed of search for highest priority
-#define configMINIMAL_STACK_SIZE                        ( CONFIG_FREERTOS_IDLE_TASK_STACKSIZE + configSTACK_OVERHEAD_TOTAL )
+#define configMAX_PRIORITIES                            (5)  //This has impact on speed of search for highest priority
+#define configMINIMAL_STACK_SIZE                        (CONFIG_FREERTOS_IDLE_TASK_STACKSIZE + configSTACK_OVERHEAD_TOTAL)
 #define configUSE_TIME_SLICING                          1
 #define configUSE_16_BIT_TICKS                          0
 #define configIDLE_SHOULD_YIELD                         0   //Todo: Check this
@@ -175,7 +170,7 @@ This file get's pulled into assembly sources. Therefore, some includes need to b
 #define configSUPPORT_DYNAMIC_ALLOCATION                1
 //We define the heap to span all of the non-statically-allocated shared RAM. ToDo: Make sure there
 //is some space left for the app and main cpu when running outside of a thread.
-#define configTOTAL_HEAP_SIZE                           (&_heap_end - &_heap_start)//( ( size_t ) (64 * 1024) )
+#define configTOTAL_HEAP_SIZE                           (&_heap_end - &_heap_start)//((size_t) (64 * 1024))
 #define configAPPLICATION_ALLOCATED_HEAP                1
 #define configSTACK_ALLOCATION_FROM_SEPARATE_HEAP       0   //Todo: Check this
 
@@ -260,15 +255,15 @@ Default values for trace macros added by ESP-IDF and are not part of Vanilla Fre
 #endif
 
 #ifndef traceQUEUE_GIVE_FROM_ISR
-    #define traceQUEUE_GIVE_FROM_ISR( pxQueue )
+    #define traceQUEUE_GIVE_FROM_ISR(pxQueue)
 #endif
 
 #ifndef traceQUEUE_GIVE_FROM_ISR_FAILED
-    #define traceQUEUE_GIVE_FROM_ISR_FAILED( pxQueue )
+    #define traceQUEUE_GIVE_FROM_ISR_FAILED(pxQueue)
 #endif
 
 #ifndef traceQUEUE_SEMAPHORE_RECEIVE
-    #define traceQUEUE_SEMAPHORE_RECEIVE( pxQueue )
+    #define traceQUEUE_SEMAPHORE_RECEIVE(pxQueue)
 #endif
 
 /* ------------------------------------------------ IDF Compatibility --------------------------------------------------

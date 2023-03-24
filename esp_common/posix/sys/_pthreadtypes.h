@@ -12,10 +12,11 @@
 
     struct pthread_attr_t
     {
+        unsigned priority;
         int  detachstate;
 
-        int stack_size;
         void *stack;
+        int stack_size;
     };
     typedef struct pthread_attr_t   pthread_attr_t;
 

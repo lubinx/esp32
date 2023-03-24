@@ -37,24 +37,6 @@ config VFS_SEMIHOSTFS_MAX_MOUNT_POINTS
 menu "ESP System Settings"
     rsource "driver/$IDF_TARGET/Kconfig.cpu"
 
-    config ESP_SYSTEM_RTC_EXT_XTAL_BOOTSTRAP_CYCLES
-        int "Bootstrap cycles for external 32kHz crystal"
-        depends on ESP_SYSTEM_RTC_EXT_XTAL
-        default 5 if IDF_TARGET_ESP32
-        default 0
-        range 0 32768
-        help
-            To reduce the startup time of an external RTC crystal,
-            we bootstrap it with a 32kHz square wave for a fixed number of cycles.
-            Setting 0 will disable bootstrapping (if disabled, the crystal may take
-            longer to start up or fail to oscillate under some conditions).
-
-            If this value is too high, a faulty crystal may initially start and then fail.
-            If this value is too low, an otherwise good crystal may not start.
-
-            To accurately determine if the crystal has started,
-            set a larger "Number of cycles for RTC_SLOW_CLK calibration" (about 3000).
-
     config ESP_SYSTEM_RTC_FAST_MEM_AS_HEAP_DEPCHECK
         bool
         default y if IDF_TARGET_ESP32 && FREERTOS_UNICORE
@@ -75,18 +57,6 @@ menu "ESP System Settings"
             similar to that of DRAM region but without DMA. This memory will be consumed first per
             heap initialization order by early startup services and scheduler related code. Speed
             wise RTC fast memory operates on APB clock and hence does not have much performance impact.
-
-    config ESP_SYSTEM_USE_EH_FRAME
-        bool "Generate and use eh_frame for backtracing"
-        default n
-        depends on IDF_TARGET_ARCH_RISCV
-        help
-            Generate DWARF information for each function of the project. These information will parsed and used to
-            perform backtracing when panics occur. Activating this option will activate asynchronous frame unwinding
-            and generation of both .eh_frame and .eh_frame_hdr sections, resulting in a bigger binary size (20% to
-            100% larger). The main purpose of this option is to be able to have a backtrace parsed and printed by
-            the program itself, regardless of the serial monitor used.
-            This option shall NOT be used for production.
 
     config ESP_SYSTEM_EVENT_QUEUE_SIZE
         int "System event queue size"
@@ -129,54 +99,4 @@ menu "ESP System Settings"
         default 0x0 if ESP_MAIN_TASK_AFFINITY_CPU0
         default 0x1 if ESP_MAIN_TASK_AFFINITY_CPU1
         default FREERTOS_NO_AFFINITY if ESP_MAIN_TASK_AFFINITY_NO_AFFINITY
-endmenu
-
-menu "POSIX"
-    menu "pthread"
-        config PTHREAD_TASK_PRIO_DEFAULT
-            int "Default task priority"
-            range 0 255
-            default 5
-            help
-                Priority used to create new tasks with default pthread parameters.
-
-        config PTHREAD_TASK_STACK_SIZE_DEFAULT
-            int "Default task stack size"
-            default 3072
-            help
-                Stack size used to create new tasks with default pthread parameters.
-
-        config PTHREAD_STACK_MIN
-            int "Minimum allowed pthread stack size"
-            default 768
-            help
-                Minimum allowed pthread stack size set in attributes passed to pthread_create
-
-        choice PTHREAD_TASK_CORE_DEFAULT
-            bool "Default pthread core affinity"
-            default PTHREAD_DEFAULT_CORE_NO_AFFINITY
-            depends on !FREERTOS_UNICORE
-            help
-                The default core to which pthreads are pinned.
-
-            config PTHREAD_DEFAULT_CORE_NO_AFFINITY
-                bool "No affinity"
-            config PTHREAD_DEFAULT_CORE_0
-                bool "Core 0"
-            config PTHREAD_DEFAULT_CORE_1
-                bool "Core 1"
-        endchoice
-
-        config PTHREAD_TASK_CORE_DEFAULT
-            int
-            default -1 if PTHREAD_DEFAULT_CORE_NO_AFFINITY || FREERTOS_UNICORE
-            default 0 if PTHREAD_DEFAULT_CORE_0
-            default 1 if PTHREAD_DEFAULT_CORE_1
-
-        config PTHREAD_TASK_NAME_DEFAULT
-            string "Default name of pthreads"
-            default "pthread"
-            help
-                The default name of pthreads.
-    endmenu
 endmenu

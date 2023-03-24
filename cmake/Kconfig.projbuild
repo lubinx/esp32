@@ -98,7 +98,7 @@ config IDF_FIRMWARE_CHIP_ID
     default 0x000E if IDF_TARGET_ESP32H4_BETA_VERSION_2 # ESP32-TODO: IDF-3475
     default 0xFFFF
 
-orsource "$IDF_PATH/components/soc/$IDF_TARGET/include/soc/Kconfig.soc_caps.in"
+# orsource "$IDF_PATH/components/soc/$IDF_TARGET/include/soc/Kconfig.soc_caps.in"
 
 menu "Bootloader"
     choice BOOTLOADER_COMPILER_OPTIMIZATION

@@ -156,17 +156,17 @@ static void __freertos_thread_entry(struct __freertos_tcb *tcb)
     KERNEL_handle_release(tcb);
 }
 
-thread_id_t thread_create(void *(*start_rountine)(void *arg), void *arg,
+thread_id_t thread_create(unsigned priority, void *(*start_rountine)(void *arg), void *arg,
     uint32_t *stack, size_t stack_size)
 {
-    return thread_create_allparam(start_rountine, arg,
-        stack, stack_size, CONFIG_PTHREAD_TASK_PRIO_DEFAULT, THREAD_BIND_ALL_CORE);
+    return thread_create_at_core(priority, start_rountine, arg,
+        stack, stack_size, THREAD_BIND_ALL_CORE);
 }
 
-thread_id_t thread_create_allparam(void *(*start_rountine)(void *arg), void *arg,
-    uint32_t *stack, size_t stack_size, unsigned priority, int core_id)
+thread_id_t thread_create_at_core(unsigned priority, void *(*start_rountine)(void *arg), void *arg,
+    uint32_t *stack, size_t stack_size, int core_id)
 {
-    if (stack_size < CONFIG_PTHREAD_STACK_MIN)
+    if (stack_size < THREAD_MINIMAL_STACK_SIZE)
         return __set_errno_nullptr(EINVAL);
     if (THREAD_BIND_ALL_CORE != core_id && SOC_CPU_CORES_NUM - 1 < core_id)
         return __set_errno_nullptr(EINVAL);

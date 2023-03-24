@@ -19,10 +19,11 @@ void __PTHREAD_introduce(void)
 int pthread_create(pthread_t *thread, pthread_attr_t const *attr, pthread_routine_t routine, void *arg)
 {
     void *stack = attr ? attr->stack : NULL;
-    uint32_t stack_size = attr ? attr->stack_size : CONFIG_PTHREAD_TASK_STACK_SIZE_DEFAULT;
+    uint32_t stack_size = attr ? attr->stack_size : THREAD_DEFAULT_STACK_SIZE;
+    unsigned priority = attr ? attr->priority : THREAD_DEF_PRIORITY;
 
-    *thread = (void *)thread_create_allparam(routine, arg,
-        stack, stack_size, CONFIG_PTHREAD_TASK_PRIO_DEFAULT, THREAD_BIND_ALL_CORE
+    *thread = (void *)thread_create_at_core(priority, routine, arg,
+        stack, stack_size, THREAD_BIND_ALL_CORE
     );
 
     if (*thread)
@@ -74,9 +75,10 @@ int pthread_setcanceltype(int type, int *old_type)
 int pthread_attr_init(pthread_attr_t *attr)
 {
     memset(attr, 0, sizeof(*attr));
-    attr->stack_size   = CONFIG_PTHREAD_TASK_STACK_SIZE_DEFAULT;
-    attr->detachstate = PTHREAD_CREATE_JOINABLE;
 
+    attr->detachstate = PTHREAD_CREATE_JOINABLE;
+    attr->priority = THREAD_DEF_PRIORITY;
+    attr->stack_size = THREAD_DEFAULT_STACK_SIZE;
     return 0;
 }
 
@@ -93,7 +95,7 @@ int pthread_attr_getstacksize(pthread_attr_t const *attr, size_t *stacksize)
 
 int pthread_attr_setstacksize(pthread_attr_t *attr, size_t stacksize)
 {
-    if (stacksize < CONFIG_PTHREAD_STACK_MIN)
+    if (stacksize < THREAD_MINIMAL_STACK_SIZE)
         return EINVAL;
 
     attr->stack_size = stacksize;
@@ -160,7 +162,7 @@ int pthread_spin_destroy(pthread_spinlock_t *lock)
     return 0;
 }
 
-int pthread_spin_lock(pthread_spinlock_t *lock)
+int IRAM_ATTR pthread_spin_lock(pthread_spinlock_t *lock)
 {
     pthread_t curr = pthread_self();
 
@@ -173,7 +175,7 @@ int pthread_spin_lock(pthread_spinlock_t *lock)
     return 0;
 }
 
-int pthread_spin_trylock(pthread_spinlock_t *lock)
+int IRAM_ATTR pthread_spin_trylock(pthread_spinlock_t *lock)
 {
     pthread_t curr = pthread_self();
 
@@ -186,7 +188,7 @@ int pthread_spin_trylock(pthread_spinlock_t *lock)
         return EBUSY;
 }
 
-int pthread_spin_unlock(pthread_spinlock_t *lock)
+int IRAM_ATTR pthread_spin_unlock(pthread_spinlock_t *lock)
 {
     if (lock->owner == pthread_self())
     {

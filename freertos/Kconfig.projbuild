@@ -72,7 +72,7 @@ menu "FreeRTOS"
     config FREERTOS_IDLE_TASK_STACKSIZE
         int "configMINIMAL_STACK_SIZE (Idle task stack size)"
         range 768 32768
-        default 1536
+        default 768
         help
             Sets the idle task stack size in bytes (see configMINIMAL_STACK_SIZE documentation for more details).
             Note:
