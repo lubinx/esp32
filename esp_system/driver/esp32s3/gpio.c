@@ -409,7 +409,7 @@ int GPIO_disable(void *const gpio, uint32_t pins, bool pull_up)
     return ENOSYS;
 }
 
-int GPIO_setdir_input(void *const gpio, uint32_t pins, bool filter_en)
+int GPIO_setdir_input(void *const gpio, uint32_t pins, enum GPIO_pad_pull_t pp, bool filter_en)
 {
     return ENOSYS;
 }

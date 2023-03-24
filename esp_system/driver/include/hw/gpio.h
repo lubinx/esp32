@@ -82,7 +82,7 @@ extern __attribute__((nothrow, nonnull))
     int GPIO_disable(void *const gpio, uint32_t pins, bool pull_up);
 
 extern __attribute__((nothrow, nonnull))
-    int GPIO_setdir_input(void *const gpio, uint32_t pins, bool filter_en);
+    int GPIO_setdir_input(void *const gpio, uint32_t pins, enum GPIO_pad_pull_t pp, bool filter_en);
 
 extern __attribute__((nothrow, nonnull))
     int GPIO_setdir_output(enum GPIO_output_mode_t mode, void *const gpio, uint32_t pins);
