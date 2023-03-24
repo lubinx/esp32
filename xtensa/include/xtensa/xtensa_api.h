@@ -69,7 +69,7 @@ extern xt_exc_handler xt_set_exception_handler(int n, xt_exc_handler f);
     arg      - Argument to be passed to handler.
 -------------------------------------------------------------------------------
 */
-extern xt_handler xt_set_interrupt_handler(int n, xt_handler f, void * arg);
+extern xt_handler xt_set_interrupt_handler(unsigned int intr, xt_handler handler, void * arg);
 
 
 /*
@@ -133,6 +133,6 @@ extern void * xt_get_interrupt_handler_arg(int n);
     cpu        - cpu number.
 -------------------------------------------------------------------------------
 */
-bool xt_int_has_handler(int intr, int cpu);
+bool xt_int_has_handler(unsigned int intr, unsigned int cpu);
 
 #endif /* __XTENSA_API_H__ */

@@ -53,7 +53,7 @@ static inline __attribute__((always_inline))
     {
         // Initialize DBREAKC bits (see Table 4–143 or isa_rm.pdf)
         unsigned dbreakc_reg = 0x3F;
-        dbreakc_reg = dbreakc_reg << (__builtin_ffs(size) - 1);
+        dbreakc_reg = dbreakc_reg << (__builtin_ffs((int)size) - 1);
         dbreakc_reg = dbreakc_reg & 0x3F;
         if (on_read)
             dbreakc_reg |= (1U << 30);

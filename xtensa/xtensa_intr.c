@@ -98,7 +98,7 @@
     }
 
     //Returns true if handler for interrupt is not the default unhandled interrupt handler
-    bool xt_int_has_handler(int intr, int cpu)
+    bool xt_int_has_handler(unsigned int intr, unsigned int cpu)
     {
         return (_xt_interrupt_table[intr * SOC_CPU_CORES_NUM + cpu].handler != xt_unhandled_interrupt);
     }
@@ -109,7 +109,7 @@
     invoked. The function returns the address of the previous handler.
     On error, it returns 0.
     */
-    xt_handler xt_set_interrupt_handler(int n, xt_handler f, void * arg)
+    xt_handler xt_set_interrupt_handler(unsigned int n, xt_handler f, void * arg)
     {
         xt_handler_table_entry * entry;
         xt_handler               old;

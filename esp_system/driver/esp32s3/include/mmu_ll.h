@@ -200,7 +200,7 @@ static inline uint32_t mmu_ll_read_entry(uint32_t entry_id)
  * @param entry_id MMU entry ID
  */
 __attribute__((always_inline))
-static inline void mmu_ll_set_entry_invalid(uint32_t entry_id)
+static inline void mmu_ll_set_entry_invalid(unsigned int entry_id)
 {
     assert(entry_id < MMU_ENTRY_NUM);
 
@@ -213,7 +213,7 @@ static inline void mmu_ll_set_entry_invalid(uint32_t entry_id)
 __attribute__((always_inline))
 static inline void mmu_ll_unmap_all()
 {
-    for (int i = 0; i < MMU_ENTRY_NUM; i++) {
+    for (unsigned i = 0; i < MMU_ENTRY_NUM; i++) {
         mmu_ll_set_entry_invalid(i);
     }
 }
@@ -273,16 +273,17 @@ static inline uint32_t mmu_ll_entry_id_to_paddr_base(uint32_t entry_id)
  */
 static inline int mmu_ll_find_entry_id_based_on_map_value(uint32_t mmu_val, mmu_target_t target)
 {
-    for (int i = 0; i < MMU_ENTRY_NUM; i++) {
-        if (mmu_ll_check_entry_valid(i)) {
-            if (mmu_ll_get_entry_target(i) == target) {
-                if (((*(uint32_t *)(DR_REG_MMU_TABLE + i * 4)) & MMU_VALID_VAL_MASK) == mmu_val) {
-                    return i;
-                }
+    for (unsigned i = 0; i < MMU_ENTRY_NUM; i++)
+    {
+        if (mmu_ll_check_entry_valid(i))
+        {
+            if (mmu_ll_get_entry_target(i) == target)
+            {
+                if (((*(uint32_t *)(DR_REG_MMU_TABLE + i * 4)) & MMU_VALID_VAL_MASK) == mmu_val)
+                    return (int)i;
             }
         }
     }
-
     return -1;
 }
 

@@ -55,7 +55,8 @@ list(APPEND COMPILE_OPTIONS
     "-Wextra"
     "-Wconversion"
     "-Wformat"
-    # "-Wundef" cause too many errors due to sdkconfig.h
+    "-Wunused"
+    "-Wundef" # cause too many errors due to sdkconfig.h
     "-Wshadow"
     "-Wwrite-strings"
 )
@@ -94,9 +95,7 @@ list(APPEND IDF_COMPILE_DEFINITIONS
 # extra / override compile options for esp-idf'components only
 list(APPEND IDF_COMPILE_OPTIONS
     "-Wno-array-bounds"         # freertos
-    "-Wno-conversion"
     "-Wno-format"
-    # "-Wno-unused-parameter"
     # "-fno-jump-tables"
     # "-fno-tree-switch-conversion"
     "$<$<COMPILE_LANGUAGE:C>:-fstrict-volatile-bitfields>"
