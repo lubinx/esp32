@@ -4,7 +4,7 @@
 
 #include "soc.h"
 
-#include "esp_app_format.h"
+#include "esp_image.h"
 #include "esp_rom_sys.h"
 #include "esp_rom_uart.h"
 #include "esp_log.h"
@@ -12,6 +12,8 @@
 #include "cache_ll.h"
 #include "mmu_ll.h"
 #include "esp32s3/rom/cache.h"
+
+#include "sdkconfig.h"
 
 static char const *TAG = "bootloader";
 
@@ -48,7 +50,7 @@ typedef void __attribute__((noreturn)) (*kernel_entry_t)(void);
 struct flash_segment_t
 {
     uintptr_t location;
-    esp_image_segment_header_t hdr;
+    esp_segment_hdr_t hdr;
 
     uintptr_t aligned_vaddr;
     size_t aligned_size;
@@ -73,6 +75,7 @@ void __attribute__((noreturn)) Reset_Handler(void)
     memset(&__bss_start__, 0, (uintptr_t)(&__bss_end__ - &__bss_start__) * sizeof(__bss_start__));
 
     // efuse esp_efuse_set_rom_log_scheme(): this will permanently disable logs before enter bootloader
+    /*
     #if CONFIG_BOOT_ROM_LOG_ALWAYS_OFF
         #define ROM_LOG_MODE                ESP_EFUSE_ROM_LOG_ALWAYS_OFF
     #elif CONFIG_BOOT_ROM_LOG_ON_GPIO_LOW
@@ -83,6 +86,7 @@ void __attribute__((noreturn)) Reset_Handler(void)
     #ifdef ROM_LOG_MODE
         esp_efuse_set_rom_log_scheme(ROM_LOG_MODE);
     #endif
+    */
 
     #if CONFIG_BOOTLOADER_LOG_LEVEL
         esp_rom_install_uart_printf();
@@ -105,8 +109,7 @@ void __attribute__((noreturn)) Reset_Handler(void)
 
     cache_hal_init();
 
-    #if CONFIG_ESP32S2_INSTRUCTION_CACHE_WRAP || CONFIG_ESP32S2_DATA_CACHE_WRAP || \
-        CONFIG_ESP32S3_INSTRUCTION_CACHE_WRAP || CONFIG_ESP32S3_DATA_CACHE_WRAP
+    #if defined(CONFIG_ESP32S3_INSTRUCTION_CACHE_WRAP) || defined(CONFIG_ESP32S3_DATA_CACHE_WRAP)
         uint32_t icache_wrap_enable =
             #if CONFIG_ESP32S2_INSTRUCTION_CACHE_WRAP || CONFIG_ESP32S3_INSTRUCTION_CACHE_WRAP
                 1;
@@ -190,7 +193,7 @@ static void cache_hal_disable(enum cache_type_t type)
 
 static kernel_entry_t KERNEL_load(uintptr_t flash_location)
 {
-    esp_image_header_t hdr;
+    esp_image_hdr_t hdr;
     struct flash_segment_t ro_seg = {0};
     struct flash_segment_t text_seg = {0};
 
@@ -206,7 +209,7 @@ static kernel_entry_t KERNEL_load(uintptr_t flash_location)
 
     for (int i = 0; i < hdr.segment_count; i ++)
     {
-        esp_image_segment_header_t seg;
+        esp_segment_hdr_t seg;
 
         FLASH_read(flash_location, &seg, sizeof(seg));
         flash_location += sizeof(seg);
