@@ -29,11 +29,72 @@ void I2C1_IntrHandler(void *arg);
 #define I2C_SCL_FILTER_APB_CYCLE        (10)
 #define I2C_SDA_FILTER_APB_CYCLE        (10)
 
+// I2C command
+enum i2c_command
+{
+    I2C_CMD_WRITE       = 1,
+    I2C_CMD_STOP,
+    I2C_CMD_READ,
+    I2C_CMD_END,
+    I2C_CMD_RESTART     = 6,
+};
+
+#define I2C_ACK                         (0)
+#define I2C_NACK                        (1)
+
+union i2c_cmd_reg
+{
+    struct
+    {
+        uint32_t bytes_count    : 8;
+        uint32_t ack_check_en   : 1;
+        uint32_t ack_exp        : 1;
+        uint32_t ack_value      : 1;
+        uint32_t op_code        : 3;
+        uint32_t reserved       : 17;
+        uint32_t done           : 1;
+    };
+    uint32_t val;
+};
+typedef union i2c_cmd_reg           i2c_cmd_reg_t;
+static_assert(sizeof(i2c_cmd_reg_t) == sizeof(uint32_t), "sizeof(i2c_cmd_reg_t) *must == sizeof(uint32_t)");
+
+enum i2c_master_intr_t
+{
+    I2C_INTR_NACK = (1 << 10),
+    I2C_INTR_TIMEOUT = (1 << 8),
+    I2C_INTR_MST_COMPLETE = (1 << 7),
+    I2C_INTR_ARBITRATION = (1 << 5),
+    I2C_INTR_END_DETECT = (1 << 3),
+    I2C_INTR_ST_TO = (1 << 13),
+};
+
+enum i2c_slave_intr_t
+{
+    I2C_INTR_TXFIFO_WM = (1 << 1),
+    I2C_INTR_RXFIFO_WM = (1 << 0),
+    I2C_INTR_SLV_COMPLETE = (1 << 7),
+    I2C_INTR_START = (1 << 15),
+};
+
 struct I2C_addressing
 {
     uint16_t da;                    // address of device
     uint8_t ridx_bytes;             // bytes of sub address been used: 0, 1, 2, 3
     uint8_t ridx[4];                // sub addresses of device (highest REGISTER no)
+};
+
+struct I2C_clk_config
+{
+    uint16_t clk_div_10m;
+    uint16_t scl_low;
+    uint16_t scl_high;
+    uint16_t scl_wait_high;
+    uint16_t sda_hold;
+    uint16_t sda_sample;
+    uint16_t setup;             // start/stop setup period
+    uint16_t hold;              // start/stop hold period
+    uint16_t tout;              // bus timeout
 };
 
 struct I2C_context
@@ -50,24 +111,10 @@ struct I2C_context
     struct I2C_addressing addressing;
     uint8_t ridx_wpos;
     uint8_t page_size;
-    bool ridx_sending;
     bool hi_testing;
 
     uint8_t *buf;
     uint32_t bufsize;
-};
-
-struct I2C_clk_config
-{
-    uint16_t clk_div_10m;
-    uint16_t scl_low;
-    uint16_t scl_high;
-    uint16_t scl_wait_high;
-    uint16_t sda_hold;
-    uint16_t sda_sample;
-    uint16_t setup;             // start/stop setup period
-    uint16_t hold;              // start/stop hold period
-    uint16_t tout;              // bus timeout
 };
 
 struct I2C_fd_ext
@@ -86,11 +133,21 @@ struct I2C_fd_ext
  *  @internal
  ***************************************************************************/
 static PERIPH_module_t I2C_periph_module(i2c_dev_t *dev, struct I2C_context **context);
-static void I2C_calculate_bps(i2c_dev_t *dev, uint32_t kbps);
+static void I2C_configure_bps(i2c_dev_t *dev, uint32_t kbps);
 
 static struct I2C_context *I2C_lock(int fd, uint32_t timeout);
 static void I2C_unlock(struct I2C_context *context);
 static void I2C_addressing(int fd, struct I2C_fd_ext *ext);
+
+// command
+static void I2C_command_start(i2c_dev_t *dev, uint8_t *idx, uint16_t da);
+static void I2C_command_read(i2c_dev_t *dev, uint8_t *idx, uint8_t count, bool done);
+static void I2C_command_write(i2c_dev_t *dev, uint8_t *idx, uint8_t *buf, uint8_t count, bool done);
+static void I2C_command(i2c_dev_t *dev, uint8_t *idx, enum i2c_command cmd);
+
+// fifo
+static int I2C_fifo_write(i2c_dev_t *dev, void const *buf, unsigned count);
+static int I2C_fifo_read(i2c_dev_t *dev, void *buf, unsigned bufsize);
 
 static ssize_t I2C_read(int fd, void *buf, size_t count);
 static ssize_t I2C_write(int fd, void const *buf, size_t count);
@@ -197,12 +254,6 @@ int I2C_configure(i2c_dev_t *dev, enum I2C_mode_t mode, uint32_t kbps)
 {
     int retval;
 
-    if (I2C_MASTER_MODE != mode)
-    {
-        /// TODO: I2C slave mode
-        return ENOSYS;
-    }
-
     PERIPH_module_t i2c_module = I2C_periph_module(dev, NULL);
     if (PERIPH_MODULE_MAX == i2c_module)
         return ENODEV;
@@ -244,13 +295,20 @@ int I2C_configure(i2c_dev_t *dev, enum I2C_mode_t mode, uint32_t kbps)
         // MSB
         dev->ctr.rx_lsb_first =  dev->ctr.tx_lsb_first = 0;
         // bps
-        I2C_calculate_bps(dev, kbps);
+        I2C_configure_bps(dev, kbps);
         // update
         dev->ctr.conf_upgate = 1;
         dev->clk_conf.sclk_active = 1;
+
+        dev->int_ena.val = I2C_NACK_INT_ENA_M | I2C_ARBITRATION_LOST_INT_ENA_M | I2C_TIME_OUT_INT_ENA_M |
+            I2C_TRANS_COMPLETE_INT_ENA_M | I2C_END_DETECT_INT_ENA_M;
     }
     else
     {
+        // dev->int_ena.val = I2C_RXFIFO_WM_INT_ENA_M | I2C_TRANS_COMPLETE_INT_ENA_M | I2C_TXFIFO_WM_INT_ENA_M;
+        /// TODO: I2C slave mode
+        retval = ENOSYS;
+        goto i2c_configure_fail_exit;
     }
 
     if (false)
@@ -285,29 +343,6 @@ uint32_t I2C_get_bps(i2c_dev_t *dev)
     return CLK_i2c_sclk_freq(dev) / (dev->clk_conf.sclk_div_num + 1) / cycle;
 }
 
-/****************************************************************************
- *  @implements: direct I2C start/stop
- ****************************************************************************/
-void I2C_start(i2c_dev_t *dev)
-{
-}
-
-void I2C_stop(i2c_dev_t *dev)
-{
-}
-
-/****************************************************************************
- *  @implements: direct I2C fifo I/O
- ****************************************************************************/
-int I2C_fifo_write(i2c_dev_t *dev, void const *buf, unsigned count)
-{
-    dev->data.fifo_rdata = *(uint8_t *)buf;
-}
-
-int I2C_fifo_read(i2c_dev_t *dev, void *buf, unsigned bufsize)
-{
-}
-
 /***************************************************************************
  *  @internal
  ***************************************************************************/
@@ -333,7 +368,7 @@ static PERIPH_module_t I2C_periph_module(i2c_dev_t *dev, struct I2C_context **co
     return module;
 }
 
-static void I2C_calculate_bps(i2c_dev_t *dev, uint32_t kbps)
+static void I2C_configure_bps(i2c_dev_t *dev, uint32_t kbps)
 {
     dev->clk_conf.sclk_div_num = CLK_i2c_sclk_freq(dev) / I2C_CONFIG_CLK_FREQ - 1;
     uint32_t cycle = I2C_CONFIG_CLK_FREQ / 1000 / kbps;
@@ -356,7 +391,7 @@ static void I2C_calculate_bps(i2c_dev_t *dev, uint32_t kbps)
     dev->scl_stop_hold.scl_stop_hold_time = half_cycle;
 
     // timeout: 5 bits, max = 31;
-    dev->to.time_out_value = ~0;
+    dev->to.time_out_value = 20;
     dev->to.time_out_en = 1;
 }
 
@@ -397,24 +432,6 @@ static void I2C_unlock(struct I2C_context *context)
 {
     if (0 == mutex_unlock(&context->lock))
     {
-        /*
-        I2C_TypeDef *DEV = context->dev;
-
-        if (I2C_STATE_BUSY & DEV->STATE)
-            DEV->CMD = I2C_CMD_CLEARPC | I2C_CMD_CLEARTX;
-        (void)(DEV->RXDATA);  // clear RX fifo
-
-        DEV->CTRL = 0;
-        DEV->IEN = 0;
-        DEV->EN = 0;
-
-        if (I2C0 == DEV)
-            CMU->CLKEN0_CLR = CMU_CLKEN0_I2C0;
-        else if (I2C1 == DEV)
-            CMU->CLKEN0_CLR = CMU_CLKEN0_I2C1;
-        else
-            ASSERT_BKPT("NODEV");
-        */
     }
 }
 
@@ -447,6 +464,53 @@ fall_through_1:
     }
 }
 
+/***************************************************************************
+ *  @internal: command
+ ***************************************************************************/
+void I2C_command_start(i2c_dev_t *dev, uint8_t *idx, uint16_t da)
+{
+    dev->fifo_conf.tx_fifo_rst = dev->fifo_conf.rx_fifo_rst = 1;
+    dev->fifo_conf.tx_fifo_rst = dev->fifo_conf.rx_fifo_rst = 0;
+
+    dev->slave_addr.slave_addr = da;
+    dev->slave_addr.addr_10bit_en = I2C_10BITS_DA_MASK & da;
+    dev->ctr.conf_upgate = 1;
+
+    I2C_command(dev, idx, da);
+}
+
+void I2C_command_read(i2c_dev_t *dev, uint8_t *idx, uint8_t count, bool done)
+{
+    i2c_cmd_reg_t reg = {.op_code = I2C_CMD_READ, .bytes_count = count};
+    (&dev->comd0)[*idx].val = reg.val;
+
+    (*idx) ++;
+}
+
+void I2C_command_write(i2c_dev_t *dev, uint8_t *idx, uint8_t *buf, uint8_t count, bool done)
+{
+}
+
+static void I2C_command(i2c_dev_t *dev, uint8_t *idx, enum i2c_command cmd)
+{
+    i2c_cmd_reg_t reg = {.op_code = cmd};
+    (&dev->comd0)[*idx].val = reg.val;
+
+    (*idx) ++;
+}
+
+static int I2C_fifo_write(i2c_dev_t *dev, void const *buf, unsigned count)
+{
+    dev->data.fifo_rdata = *(uint8_t *)buf;
+}
+
+static int I2C_fifo_read(i2c_dev_t *dev, void *buf, unsigned bufsize)
+{
+}
+
+/***************************************************************************
+ *  @internal: fd IO
+ ***************************************************************************/
 static ssize_t I2C_read(int fd, void *buf, size_t count)
 {
     uint32_t timeout = AsFD(fd)->read_timeo;
@@ -464,7 +528,6 @@ static ssize_t I2C_read(int fd, void *buf, size_t count)
     if (context->addressing.ridx_bytes > 0)
     {
         // seek I2C before reading
-        context->ridx_sending = true;
         // context->dev->TXDATA = context->addressing.da & ~0x01UL;
     }
     else
@@ -521,7 +584,6 @@ static ssize_t I2C_write(int fd, void const *buf, size_t count)
 
     // starting
     context->addressing.da &= (uint16_t)~0x01U;
-    context->ridx_sending = context->addressing.ridx_bytes > 0;
 
     /*
     context->dev->TXDATA = context->addressing.da;
@@ -619,7 +681,7 @@ static int I2C_close(int fd)
     if (0 == -- context->fd_count)
     {
         // release GPIO to DISABLED when no fd is required?
-    I2C_deconfigure(context->dev);
+        I2C_deconfigure(context->dev);
         // I2C_config(context->dev, false);
     }
 
@@ -633,73 +695,50 @@ static int I2C_close(int fd)
 static void I2C_IntrHandler(struct I2C_context *context)
 {
     i2c_dev_t *dev = context->dev;
-    uint32_t flags = dev->int_status.val;
-    /*
-    uint32_t flags = DEV->IF;
+    i2c_int_status_reg_t status = {.val = dev->int_status.val};
 
-    if (I2C_IF_ERRORS & flags)
-    {
-        DEV->CMD = I2C_CMD_ABORT | I2C_CMD_CLEARPC | I2C_CMD_CLEARTX;
-
-        context->err = EIO;
-        event_signal(&context->evt);
-        goto i2c_exit;
-    }
-    if (I2C_IF_MSTOP & flags)
-    {
-        context->err = 0;
-        event_signal(&context->evt);
-        goto i2c_exit;
-    }
-
-    // device has responsed
     context->hi_testing = true;
 
-    if (0 == context->bufsize)
-    {
-        DEV->CMD = I2C_CMD_STOP;
-        goto i2c_exit;
-    }
-
-    if (I2C_IF_RXDATAV & flags)
-    {
-        *context->buf ++ = (uint8_t)DEV->RXDATA;
-        context->bufsize --;
-
-        DEV->IF_CLR = I2C_IF_RXDATAV;
-
-        if (0 == context->bufsize)
-            DEV->CMD = I2C_CMD_NACK;
-        else
-            DEV->CMD = I2C_CMD_ACK;
-    }
-    else if ((I2C_IF_TXC & flags) && (! (0x01 & context->addressing.da) || context->ridx_sending))
-    {
-        if (context->ridx_sending)
-        {
-            if (context->ridx_wpos == context->addressing.ridx_bytes)
-            {
-                context->ridx_sending = false;
-
-                // restarting to reading
-                if (0x01 & context->addressing.da)
-                {
-                    DEV->CMD = I2C_CMD_START;
-                    DEV->TXDATA = context->addressing.da;
-                }
-                else
-                    I2C_tx_next(DEV, context);
-            }
-            else
-                DEV->TXDATA = context->addressing.ridx[context->ridx_wpos ++];
-        }
-        else
-            I2C_tx_next(DEV, context);
-    }
+    /*
+        dev->int_ena.val = I2C_NACK_INT_ENA_M | I2C_ARBITRATION_LOST_INT_ENA_M | I2C_TIME_OUT_INT_ENA_M |
+            I2C_TRANS_COMPLETE_INT_ENA_M | I2C_END_DETECT_INT_ENA_M;
     */
+    if (status.arbitration_lost_int_st)
+    {
+        context->err = ENXIO;
+        goto i2c_intr_exit_done;
+    }
 
-i2c_intr_exit:
-    dev->int_clr.val = flags;
+    if (status.nack_int_st)
+    {
+        context->err = 0;
+        goto i2c_intr_exit_done;
+    }
+
+    if (status.time_out_int_st)
+    {
+        context->err = ETIMEDOUT;
+        goto i2c_intr_exit_done;
+    }
+
+    if (status.end_detect_int_st)
+    {
+        context->err = 0;
+        goto i2c_intr_exit_done;
+    }
+
+    if (status.trans_complete_int_st)
+    {
+        context->err = 0;
+        goto i2c_intr_exit_done;
+    }
+
+    if (false)
+    {
+i2c_intr_exit_done:
+
+    }
+    dev->int_clr.val = status.val;
 }
 
 void I2C0_IntrHandler(void *arg)
@@ -707,3 +746,9 @@ void I2C0_IntrHandler(void *arg)
 
 void I2C1_IntrHandler(void *arg)
     __attribute__((alias("I2C_IntrHandler")));
+
+
+int I2C_test(void)
+{
+    return 0;
+}

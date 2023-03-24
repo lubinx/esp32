@@ -406,7 +406,7 @@ void IOMUX_print(void)
     printf("\t+-----+-----------+------+-----------+-----+-----------+----+-----+-----+-----+\n");
     printf(" * ref Table 6-3. IO MUX Pin Functions\n");
     printf(" * MAT(INPUT/OUTPUT) => XXX: definitions in soc/gpio_sig_map.h\n");
-    printf(" * MAT may bypass => MUX: definitions in esp32s3/include/gpio.h\n");
+    printf(" * MAT may bypass => MUX: definitions in esp32s3/include/gpio.h\n\n");
 }
 
 /***************************************************************************/

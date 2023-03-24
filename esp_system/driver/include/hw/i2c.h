@@ -18,6 +18,8 @@
 #include <features.h>
 #include <stdint.h>
 
+#define I2C_10BITS_DA_MASK              (0x8000U)
+
 __BEGIN_DECLS
 
 /****************************************************************************
