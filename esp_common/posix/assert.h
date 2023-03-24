@@ -32,5 +32,5 @@
 #if defined(NDEBUG)
     #define assert(__e) ((void)(__e))
 #else
-    #define assert(__e) (__builtin_expect(!!(__e), 1) ? (void)0 : __assert_func (__FILENAME__, __LINE__, __ASSERT_FUNC, #__e))
+    #define assert(__e) (__builtin_expect(!!(__e), 1) ? (void)0 : __assert_func(__FILENAME__, __LINE__, __ASSERT_FUNC, #__e))
 #endif

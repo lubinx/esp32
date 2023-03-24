@@ -3,12 +3,75 @@
 #include <sys/features.h>
 #include <sys/cdefs.h>
 
-    #ifndef STRINGIFY
-        #define STRINGIFY(val)              #val
+/* extention for gnuc compatible */
+    #if defined(__GNUC__) && defined(__GNUC_MINOR__)
+        #define __GNUC_PREREQ(maj, min) ((__GNUC__ << 16) + __GNUC_MINOR__ >= ((maj) << 16) + (min))
+    #else
+        #define __GNUC_PREREQ(maj, min) 0
     #endif
 
-    // REVIEW: restrict keyword not defined?
-    #define restrict
+/* c features */
+    #ifdef __STDC__
+        #ifdef __cplusplus
+            #define restrict
+            // #define static_assert           _Static_assert
+        #else
+            /* before C99 */
+            #if __STDC_VERSION__ < 199901L
+                #define restrict
+            #endif
+
+            /* before C11/C2011 */
+            #if __STDC_VERSION__ < 201112L
+            #endif
+        #endif
+    #else
+        #error "You need a ISO C conforming compiler"
+    #endif
+
+/* c/c++ features */
+    #ifdef __cplusplus
+        #define __BEGIN_DECLS           extern "C" {
+        #define __END_DECLS             }
+
+        #define __BEGIN_NAMESPACE_STD   namespace std {
+        #define __END_NAMESPACE_STD     }
+        #define __USING_NAMESPACE_STD(name) using std::name;
+        #define __NAMESPACE_STD(name)   std::name
+
+        #define __BEGIN_NAMESPACE_C99   namespace __c99 {
+        #define __END_NAMESPACE_C99     }
+        #define __USING_NAMESPACE_C99(name) using __c99::name;
+        #define __NAMESPACE_C99(name)   __c99::name
+
+        /* before c++ 2011 */
+        #if __cplusplus < 201103L
+            #define nullptr             (0)
+            #define override
+            #define final
+        #else
+            #define __cplusplus_11      (1)
+        #endif
+
+        /* before c++ 2014 */
+        #if __cplusplus < 201402L
+        #else
+            #define __cplusplus_14      (1)
+        #endif
+    #else
+        #define __BEGIN_DECLS
+        #define __END_DECLS
+
+        #define __BEGIN_NAMESPACE_STD
+        #define __END_NAMESPACE_STD
+        #define __USING_NAMESPACE_STD(name)
+        #define __NAMESPACE_STD(name)
+
+        #define __BEGIN_NAMESPACE_C99
+        #define __END_NAMESPACE_C99
+        #define __USING_NAMESPACE_C99(name)
+        #define __NAMESPACE_C99(name)
+    #endif
 
     #define ARG_UNUSED(...)             __ARG_UNUSED_TEARDOWN(__VA_ARGS__,  \
             __ARG_UNUSED_15, __ARG_UNUSED_14, __ARG_UNUSED_13, __ARG_UNUSED_12, __ARG_UNUSED_11,    \
@@ -126,6 +189,10 @@
             __MIN_2(__MIN_13(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13), p14)
         #define __MIN_15(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15)   \
             __MIN_2(__MIN_14(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14), p15)
+    #endif
+
+    #ifndef STRINGIFY
+        #define STRINGIFY(val)              #val
     #endif
 
     #ifndef ABS
