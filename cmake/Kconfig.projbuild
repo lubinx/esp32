@@ -249,7 +249,7 @@ menu "Bootloader"
 
         choice ESP32S3_DATA_CACHE_SIZE
             prompt "Data cache size"
-            default ESP32S3_DATA_CACHE_64KB
+            default ESP32S3_DATA_CACHE_32KB
             help
                 Data cache size to be set on application startup.
                 If you use 32KB data cache rather than 64KB data cache,
