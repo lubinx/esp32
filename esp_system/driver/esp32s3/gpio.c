@@ -59,6 +59,8 @@ union iomux_reg
     uint32_t val;
 };
 typedef union iomux_reg             iomux_reg_t;
+static_assert(sizeof(iomux_reg_t) == sizeof(uint32_t), "sizeof(iomux_reg_t) *must == sizeof(uint32_t)");
+
 // configure
 static uint32_t iomux_reg_val(enum GPIO_pad_pull_t pp, uint8_t sel, uint8_t drv, bool ie, bool filter_en);
 
@@ -80,6 +82,7 @@ union gpio_pin_reg
     uint32_t val;
 };
 typedef union gpio_pin_reg          gpio_pin_reg_t;
+static_assert(sizeof(gpio_pin_reg_t) == sizeof(uint32_t), "sizeof(gpio_pin_reg_t) *must == sizeof(uint32_t)");
 
 // GPIO.func_in_sel_cfg was unnamed
 union gpio_func_in_sel_cfg
@@ -94,6 +97,8 @@ union gpio_func_in_sel_cfg
     uint32_t val;
 };
 typedef union gpio_func_in_sel_cfg  iomux_matrix_in_t;  // alias to matrix in
+static_assert(sizeof(iomux_matrix_in_t) == sizeof(uint32_t), "sizeof(iomux_matrix_in_t) *must == sizeof(uint32_t)");
+
 #define IOMUX_MATRIX_IN_EN          (1)
 #define IOMUX_MATRIX_IN_BYPASS      (0)
 
@@ -112,6 +117,8 @@ union gpio_func_out_sel_cfg
     uint32_t val;
 };
 typedef union gpio_func_out_sel_cfg iomux_matrix_out_t; // alias to matrix out
+static_assert(sizeof(iomux_matrix_out_t) == sizeof(uint32_t), "sizeof(iomux_matrix_out_t) *must == sizeof(uint32_t)");
+
 #define IOMUX_MATRIX_OUT_EN         (0)
 #define IOMUX_MATRIX_OUT_BYPASS     (1)
 
@@ -125,6 +132,7 @@ enum gpio_pin_inttype
     PIN_INTR_TRIG_LOW_LEVEL,
     PIN_INTR_TRIG_HIGH_LEVEL,
 };
+
 static enum gpio_pin_inttype const GPIO_intr_trig_xlat[] =
 {
     [TRIG_BY_FALLING_EDGE]  = PIN_INTR_TRIG_FALLING_EDGE,
