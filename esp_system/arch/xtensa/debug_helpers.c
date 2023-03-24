@@ -14,7 +14,6 @@
 #include "esp_private/panic_internal.h"
 
 #include "xtensa/xtensa_context.h"
-#include "esp_rom_sys.h"
 
 bool IRAM_ATTR esp_backtrace_get_next_frame(esp_backtrace_frame_t *frame)
 {
@@ -30,23 +29,15 @@ bool IRAM_ATTR esp_backtrace_get_next_frame(esp_backtrace_frame_t *frame)
 
 static void IRAM_ATTR print_entry(uint32_t pc, uint32_t sp, bool panic)
 {
-    if (panic) {
-        panic_print_str(" 0x");
-        panic_print_hex(pc);
-        panic_print_str(":0x");
-        panic_print_hex(sp);
-    } else {
-        esp_rom_printf(" 0x%08X:0x%08X", pc, sp);
-    }
+    panic_print_str(" 0x");
+    panic_print_hex(pc);
+    panic_print_str(":0x");
+    panic_print_hex(sp);
 }
 
 static void IRAM_ATTR print_str(const char *str, bool panic)
 {
-    if (panic) {
-        panic_print_str(str);
-    } else {
-        esp_rom_printf(str);
-    }
+    panic_print_str(str);
 }
 
 esp_err_t IRAM_ATTR esp_backtrace_print_from_frame(int depth, const esp_backtrace_frame_t* frame, bool panic)

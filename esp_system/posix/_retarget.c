@@ -15,7 +15,6 @@
 #include "esp_log.h"
 
 #include "esp_rom_caps.h"
-#include "esp_rom_sys.h"
 #include "esp_heap_caps_init.h"
 
 /****************************************************************************

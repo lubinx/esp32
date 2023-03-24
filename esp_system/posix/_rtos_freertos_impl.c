@@ -26,7 +26,6 @@
 #include "hal/systimer_hal.h"
 
 #include "sdkconfig.h"
-#include "esp_rom_sys.h"
 
 static char const *TAG = "freertos";
 static_assert(configSUPPORT_STATIC_ALLOCATION, "FreeRTOS should be configured with static allocation support");
@@ -73,7 +72,7 @@ void IRAM_ATTR vApplicationTickHook(void)
     // nothing to do
 }
 
-void vApplicationIdleHook(void)
+void IRAM_ATTR vApplicationIdleHook(void)
 {
     KERNEL_handle_recycle();
     __WFI();
@@ -301,7 +300,10 @@ int usleep(useconds_t us)
         return 0;
     }
 
-    esp_rom_delay_us(us);
+    uint32_t tick_start = __get_CCOUNT();
+    uint32_t ticks = us * (CLK_cpu_freq() / _MHZ);
+
+    while ((uint32_t)(__get_CCOUNT() - tick_start) < ticks) {}
     return 0;
 }
 

@@ -13,7 +13,6 @@
 #include "uart.h"
 
 #include "esp_private/panic_internal.h"
-#include "esp_rom_sys.h"
 
 bool g_panic_abort = false;
 static char *s_panic_abort_details = NULL;

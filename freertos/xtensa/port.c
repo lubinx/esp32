@@ -19,7 +19,6 @@
 
 #include "esp_attr.h"
 #include "esp_heap_caps.h"
-#include "esp_rom_sys.h"
 #include "systimer.h"
 
 #include "esp_intr_alloc.h"

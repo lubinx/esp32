@@ -14,7 +14,6 @@
 #include "soc/rtc.h"
 
 #include "sdkconfig.h"
-#include "esp_rom_sys.h"
 
 #include "esp_private/panic_internal.h"
 #include "esp_private/panic_reason.h"
