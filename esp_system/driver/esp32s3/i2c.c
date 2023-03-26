@@ -48,7 +48,7 @@ union i2c_cmd_reg
     {
         uint32_t io_bytes           : 8;
         uint32_t ack_check_en       : 1;
-        uint32_t ack_expect_nack    : 1;
+        uint32_t ack_expect_nack    : 1;    // basicly always expect ACK: 0
         uint32_t ack_nack           : 1;
         uint32_t op_code            : 3;
         uint32_t reserved           : 17;
@@ -246,18 +246,18 @@ int I2C_test(void)
     for (int i = 0; i < 8; i ++)
     {
         i2c_cmd_reg_t reg = {reg.val = cmd[i].val};
-        printf("idx: %d, val: %08x, cmd: %d, bytes:%d, ack_en: %d done: %d\n", i, reg.val, reg.op_code, reg.io_bytes, reg.ack_check_en, reg.done);
+        printf("idx: %d, cmd: %d, bytes:%d, ack_en: %d done: %d\n", i, reg.op_code, reg.io_bytes, reg.ack_check_en, reg.done);
     }
     printf("---------------tx fifo: %d\n", dev->sr.txfifo_cnt);
 
     dev->ctr.trans_start = 1;
     sem_wait(&context->evt);
 
-    printf("---------------tx fifo: %d\n", dev->sr.txfifo_cnt);
+    printf("\n---------------tx fifo: %d\n", dev->sr.txfifo_cnt);
     for (int i = 0; i < 8; i ++)
     {
         i2c_cmd_reg_t reg = {reg.val = cmd[i].val};
-        printf("idx: %d, val: %08x, cmd: %d, bytes:%d, ack_en: %d done: %d\n", i, reg.val, reg.op_code, reg.io_bytes, reg.ack_check_en, reg.done);
+        printf("idx: %d, cmd: %d, bytes:%d, ack_en: %d done: %d\n", i, reg.op_code, reg.io_bytes, reg.ack_check_en, reg.done);
     }
 
     I2C_deconfigure(dev);
