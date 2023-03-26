@@ -545,6 +545,7 @@ open_drain:
 
     case OPEN_DRAIN_WITH_PULL_UP:
 open_drain_with_pull_up:
+        GPIO_OUTPUT_SET(pin_nb);
         od = true;
         pp = PULL_UP;
         break;
