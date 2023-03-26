@@ -1,6 +1,5 @@
 #include <string.h>
 
-#include <xtensa/spinlock.h>
 #include <sys/errno.h>
 #include <esp_log.h>
 
