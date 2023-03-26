@@ -349,12 +349,13 @@ uint8_t UART_fifo_rx(uart_dev_t *dev)
 int UART_fifo_write(uart_dev_t *dev, void const *buf, unsigned count)
 {
     unsigned written = 0;
-    while (written < count)
+
+    while (written < count && SOC_UART_FIFO_LEN > dev->status.txfifo_cnt)
     {
-        if (SOC_UART_FIFO_LEN == dev->status.txfifo_cnt)
-            break;
-        dev->fifo.rxfifo_rd_byte = *((uint8_t *)buf + written);
-        written++;
+        dev->fifo.rxfifo_rd_byte = *(uint8_t *)buf;
+
+        (uint8_t *)buf ++;
+        written ++;
     }
     return written;
 }
@@ -362,12 +363,13 @@ int UART_fifo_write(uart_dev_t *dev, void const *buf, unsigned count)
 int UART_fifo_read(uart_dev_t *dev, void *buf, unsigned bufsize)
 {
     unsigned readed = 0;
-    while (readed < bufsize)
+
+    while (readed < bufsize && 0 != dev->status.rxfifo_cnt)
     {
-        if (0 == dev->status.rxfifo_cnt)
-            break;
-        *((uint8_t *)buf + readed) = (uint8_t)dev->fifo.rxfifo_rd_byte;
-        readed++;
+        *(uint8_t *)buf = (uint8_t)dev->fifo.rxfifo_rd_byte;
+
+        (uint8_t *)buf ++;
+        readed ++;
     }
     return readed;
 }
