@@ -15,6 +15,7 @@
     {
         unsigned volatile core_id;
         unsigned lock_count;
+        unsigned irq_status;
     };
     typedef struct xt_spinlock_t    spinlock_t;
 
@@ -41,30 +42,30 @@ static inline __attribute__((nonnull, nothrow))
 static inline __attribute__((nonnull, nothrow))
     void spin_lock(spinlock_t *lock)
     {
-        // uint32_t irq_status = XTOS_SET_INTLEVEL(XCHAL_EXCM_LEVEL);
+        uint32_t irq_status = XTOS_SET_INTLEVEL(XCHAL_EXCM_LEVEL);
         unsigned core_id = 1U << __get_CORE_ID();
 
         if (lock->core_id != core_id)
         {
             while (! __sync_bool_compare_and_swap(&lock->core_id, 0, core_id));
+
             lock->lock_count ++;
+            lock->irq_status = irq_status;
         }
         else
             lock->lock_count ++;
-
-        // XTOS_RESTORE_INTLEVEL(irq_status);
     }
 
 static inline __attribute__((nonnull, nothrow))
     void spin_unlock(spinlock_t *lock)
     {
         assert(lock->core_id == (1U << __get_CORE_ID()));
-        // uint32_t irq_status = XTOS_SET_INTLEVEL(XCHAL_EXCM_LEVEL);
 
         if (0 == __sync_sub_and_fetch(&lock->lock_count, 1))
+        {
             lock->core_id = 0;
-
-        // XTOS_RESTORE_INTLEVEL(irq_status);
+            XTOS_RESTORE_INTLEVEL(lock->irq_status);
+        }
     }
 
 // for esp-idf compatiable

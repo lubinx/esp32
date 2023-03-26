@@ -374,8 +374,6 @@ static int SVC_mq_find(char const *name, bool extract)
     if (NULL == name)
         return -1;
 
-    esp_rom_printf("name != null");
-
     int retval = -1;
     spin_lock(&MQ_atomic);
 
