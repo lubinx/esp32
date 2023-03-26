@@ -370,7 +370,7 @@ void IOMUX_print(void)
             if (input_en)
             {
                 if (mat->mat_in)
-                    printf("| ✔️ <=%c %03u ",  mat->mat_in->sig_in_inv ? '~' : '=', mat->mat_in - (iomux_matrix_in_t *)GPIO.func_in_sel_cfg);
+                    printf("| ✔️ <=%c %03u ",  mat->mat_in->sig_in_inv ? '!' : '=', mat->mat_in - (iomux_matrix_in_t *)GPIO.func_in_sel_cfg);
                 else
                     printf("| <= MUX    ");
             }
@@ -387,7 +387,7 @@ void IOMUX_print(void)
             if (output_en)
             {
                 if (out_by_matrix)
-                    printf("| ✔️ %c=> %03u ", mat->mat_out->inv_sel ? '~' : '=', mat->mat_out->func_sel);
+                    printf("| ✔️ %c=> %03u ", mat->mat_out->inv_sel ? '!' : '=', mat->mat_out->func_sel);
                 else
                     printf("| => MUX    ");
             }
