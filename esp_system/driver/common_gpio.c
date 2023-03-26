@@ -13,7 +13,6 @@
   the specific language governing rights and limitations under the License.
 ****************************************************************************/
 #include <rtos/kernel.h>
-#include <xtensa/spinlock.h>
 
 #include "hw/gpio.h"
 #include "hw/hal/gpio_hal.h"

@@ -6,9 +6,7 @@
 #include <sys/errno.h>
 #include <sys/mutex.h>
 
-#include <xtensa/spinlock.h>
-#include <rtos/user.h>
-
+#include <rtos/kernel.h>
 #include <esp_attr.h>
 
 void __PTHREAD_introduce(void)

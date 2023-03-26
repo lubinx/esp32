@@ -13,7 +13,6 @@
   the specific language governing rights and limitations under the License.
 ****************************************************************************/
 #include <rtos/kernel.h>
-#include <xtensa/spinlock.h>
 
 #include "hw/timer.h"
 #include "hw/hal/timer_hal.h"
@@ -73,7 +72,7 @@ static struct TIMER_config PREALLOC[8];
     #pragma GCC diagnostic ignored "-Wmissing-prototypes"
 #endif
 
-__attribute__((constructor(102)))
+__attribute__((constructor))
 static void TIMER_initialize(void)
 {
     glist_initialize(&MATCH_config_pool);

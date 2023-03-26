@@ -29,6 +29,8 @@
 #include <rtos/types.h>
 #include <rtos/user.h>
 
+#include <xtensa/spinlock.h>
+
 /***************************************************************************/
 /** @TCB
 ****************************************************************************/
@@ -79,6 +81,9 @@
     #define FD_TAG_SOCKET               (1U << 6)
     // virtual fd
     #define FD_TAG_VFD                  (1U << 7)
+    // mqd
+    #define FD_TAG_MQD                  (FD_TAG_VFD | FD_TAG_BLOCK | FD_TAG_FIFO)
+
 
     struct KERNEL_fd
     {
@@ -87,21 +92,21 @@
         uint8_t     flags;
         uint16_t    tag;
     ///----
-        /// fd'io implement
+        // fd'io implement
         struct FD_implement const *implement;
-        /// ext parameters
-        ///     struct FS_ext * when fs is not NULL
-        ///     otherwise pointer to fd's customize data
+        // ext parameters
+        //     struct FS_ext * when fs is not NULL
+        //     otherwise pointer to fd's customize data
         void *ext;
-        /// more detail see @filesystem.h
-        ///     fs will contain a none NULL struct FS_implement when fd is opened by filesystem
+        // more detail see @filesystem.h
+        //     fs will contain a none NULL struct FS_implement when fd is opened by filesystem
         //      and ext will point to a valid struct FS_ext
         struct FS_implement const *fs;
-        // + 4
+        //
         handle_t read_rdy;
         handle_t write_rdy;
 
-        /// +6 changing by seek
+        // changing by seek
         uintptr_t position;
         uint32_t read_timeo, write_timeo;
     };
@@ -116,14 +121,14 @@
         uint8_t     cid;
         uint8_t     flags;
         uint16_t    tag;
-    ///---- fd
+    //---- fd
         struct FD_implement const *implement;
         void *ext;
         struct FS_implement const *fs;
         handle_t read_rdy;
         handle_t write_rdy;
         uintptr_t position;
-    ///----
+    //----
         uint32_t size;                  // read_timeo => size
     };
     #define AsVFD(handle)               ((struct CORE_vfd *)handle)
@@ -133,7 +138,7 @@
 ****************************************************************************/
     struct KERNEL_mqd
     {
-        void        *glist_next;
+        struct KERNEL_mqd *glist_next;
         uint8_t     cid;
         uint8_t     flags;
         uint16_t    tag;
@@ -142,10 +147,9 @@
         void *ext;
 
         char const *name;               // fs => name: posix compatiable
-        struct MQ_list *queued;         // read_rdy => queued
-        struct MQ_list *freed;          // write_rdy => freed
-        uint16_t msg_size;              // position => msg_size & msg_max
-        uint16_t msg_max;
+        handle_t read_rdy;
+        handle_t write_rdy;
+        void *rsv;
     ///----
         uint32_t read_timeo, write_timeo;
     };
