@@ -13,6 +13,7 @@
   the specific language governing rights and limitations under the License.
 ****************************************************************************/
 #include <rtos/kernel.h>
+#include <xtensa/spinlock.h>
 
 #include "hw/gpio.h"
 #include "hw/hal/gpio_hal.h"
@@ -22,6 +23,8 @@
 ****************************************************************************/
 struct GPIO_common_context
 {
+    spinlock_t atomic;
+
     /// @debounce
     /*
     timeout_t *debounce_timeout_id;
@@ -116,7 +119,7 @@ int GPIO_intr_enable(void *const gpio, uint32_t pins, enum GPIO_trig_t trig, GPI
 {
     int retval = 0;
     struct GPIO_callback_context *ctx = NULL;
-    KERNEL_lock();
+    spin_lock(&GPIO_context.atomic);
 
     struct GPIO_callback_context **iter = glist_iter_begin(&callback_list);
     while(iter != glist_iter_end(&callback_list))
@@ -168,14 +171,14 @@ int GPIO_intr_enable(void *const gpio, uint32_t pins, enum GPIO_trig_t trig, GPI
     if (0 == retval && pins)
         GPIO_HAL_intr_enable(gpio, pins, trig);
 
-    KERNEL_unlock();
+    spin_unlock(&GPIO_context.atomic);
     return retval;
 }
 
 __attribute__((weak))
 void GPIO_intr_disable(void *const gpio, uint32_t pins)
 {
-    KERNEL_lock();
+    spin_lock(&GPIO_context.atomic);
 
     struct GPIO_callback_context **iter = glist_iter_begin(&callback_list);
     while(iter != glist_iter_end(&callback_list))
@@ -204,13 +207,14 @@ iterate_next:
     }
 
     GPIO_HAL_intr_disable(gpio, pins);
-    KERNEL_unlock();
+    spin_unlock(&GPIO_context.atomic);
 }
 
 __attribute__((weak))
 void GPIO_intr_disable_cb(GPIO_callback_t callback)
 {
-    KERNEL_lock();
+    spin_lock(&GPIO_context.atomic);
+
 
     struct GPIO_callback_context **iter = glist_iter_begin(&callback_list);
     while(iter != glist_iter_end(&callback_list))
@@ -227,7 +231,7 @@ void GPIO_intr_disable_cb(GPIO_callback_t callback)
         else
             iter = glist_iter_next(&callback_list, iter);
     }
-    KERNEL_unlock();
+    spin_unlock(&GPIO_context.atomic);
 }
 
 /***************************************************************************/

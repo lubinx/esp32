@@ -13,6 +13,8 @@ struct KERNEL_context_t
 {
     spinlock_t atomic;
 
+    glist_t mounted_dev;
+
     glist_t hdl_freed_list;
     glist_t hdl_destroying_list;
     struct KERNEL_hdl hdl[4096 / sizeof(struct KERNEL_hdl)];
@@ -25,6 +27,7 @@ struct KERNEL_context_t KERNEL_context = {0};
 void KERNEL_init(void)
 {
     spin_lock_init(&KERNEL_context.atomic);
+    glist_initialize(&KERNEL_context.mounted_dev);
     glist_initialize(&KERNEL_context.hdl_freed_list);
     glist_initialize(&KERNEL_context.hdl_destroying_list);
 
@@ -35,16 +38,6 @@ void KERNEL_init(void)
 /***************************************************************************/
 /** @implements kernel.h
 ****************************************************************************/
-void KERNEL_lock(void)
-{
-    spin_lock(&KERNEL_context.atomic);
-}
-
-void KERNEL_unlock(void)
-{
-    spin_unlock(&KERNEL_context.atomic);
-}
-
 handle_t KERNEL_handle_get(uint8_t cid)
 {
     struct KERNEL_hdl *ptr;

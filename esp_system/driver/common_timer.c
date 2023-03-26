@@ -13,6 +13,7 @@
   the specific language governing rights and limitations under the License.
 ****************************************************************************/
 #include <rtos/kernel.h>
+#include <xtensa/spinlock.h>
 
 #include "hw/timer.h"
 #include "hw/hal/timer_hal.h"
@@ -60,6 +61,7 @@ struct TIMER_match_point
 static void *TIMER_MATCH_config_get(void);
 static bool CTX_match_load_next(struct TIMER_context *ctx);
 
+static spinlock_t TIMER_atomic;
 static glist_t MATCH_config_pool;
 static struct TIMER_config PREALLOC[8];
 
@@ -95,7 +97,7 @@ int TIMER_configure(int nb, uint32_t const freq, enum TIMER_mode_t mode, TIMER_c
 
     struct TIMER_context *ctx = &TIMER_context[nb];
     int retval;
-    KERNEL_lock();
+    spin_lock(&TIMER_atomic);
 
     if (TIMER_UNCONFIGURED != ctx->mode)
     {
@@ -119,7 +121,7 @@ int TIMER_configure(int nb, uint32_t const freq, enum TIMER_mode_t mode, TIMER_c
     }
 
 timer_configure_exit:
-    KERNEL_unlock();
+    spin_unlock(&TIMER_atomic);
     return retval;
 }
 
@@ -175,7 +177,7 @@ int TIMER_start(int nb)
         return EACCES;
 
     int retval = 0;
-    KERNEL_lock();
+    spin_lock(&TIMER_atomic);
 
     switch(ctx->mode)
     {
@@ -216,7 +218,7 @@ int TIMER_start(int nb)
         ctx->curr_repeating = 0;
         TIMER_HAL_start(ctx->dev);
     }
-    KERNEL_unlock();
+    spin_unlock(&TIMER_atomic);
     return retval;
 }
 
@@ -288,7 +290,7 @@ int TIMER_match_clear(int nb)
     if (TIMER_MATCH != ctx->mode || TIMER_HAL_is_running(TIMER_context[nb].dev))
         return EPERM;
 
-    KERNEL_lock();
+    spin_lock(&TIMER_atomic);
 
     if (ctx->config.MATCH.section_executing)
         glist_push_back(&ctx->config.MATCH.list, ctx->config.MATCH.section_executing);
@@ -314,7 +316,7 @@ int TIMER_match_clear(int nb)
     ctx->config.MATCH.curr = NULL;
     ctx->config.MATCH.tick_shift = 0;
 
-    KERNEL_unlock();
+    spin_unlock(&TIMER_atomic);
     return 0;
 }
 
@@ -339,13 +341,13 @@ int TIMER_match_section(int nb, uint16_t id, uint32_t repeat)
     else
         return ENOMEM;
 
-    KERNEL_lock();
+    spin_lock(&TIMER_atomic);
     ctx->config.MATCH.section_pushing = section;
 
     glist_push_back(&ctx->config.MATCH.list, section);
     ctx->config.MATCH.list_count ++;
 
-    KERNEL_unlock();
+    spin_unlock(&TIMER_atomic);
     return 0;
 }
 
@@ -372,7 +374,7 @@ int TIMER_match(int nb, uint16_t id, uint32_t val, void *arg)
     if (! ctx->config.MATCH.section_pushing)
         TIMER_match_section(nb, (uint16_t)-1, INFINITE);
 
-    KERNEL_lock();
+    spin_lock(&TIMER_atomic);
     struct TIMER_match_section *section = ctx->config.MATCH.section_pushing;
     struct TIMER_match_point **iter = &section->match_entry;
 
@@ -388,7 +390,7 @@ int TIMER_match(int nb, uint16_t id, uint32_t val, void *arg)
     *iter = ptr;
     section->match_count ++;
 
-    KERNEL_unlock();
+    spin_unlock(&TIMER_atomic);
     return 0;
 }
 
@@ -405,7 +407,7 @@ uint32_t TIMER_match_cached_sections(int nb)
  ***************************************************************************/
 int TIMER_PWM_get(uint32_t const freq, void *const gpio, uint32_t pin, TIMER_callback_t callback)
 {
-    KERNEL_lock();
+    spin_lock(&TIMER_atomic);
     int retval = TIMER_PWM_HAL_get_channel(gpio, pin);
 
     if (-1 != retval)
@@ -426,7 +428,7 @@ int TIMER_PWM_get(uint32_t const freq, void *const gpio, uint32_t pin, TIMER_cal
         }
     }
 
-    KERNEL_unlock();
+    spin_unlock(&TIMER_atomic);
     return retval;
 }
 
@@ -463,7 +465,7 @@ int TIMER_PWM_update_duty(int nb, uint32_t duty)
  ***************************************************************************/
 static void *TIMER_MATCH_config_get(void)
 {
-    KERNEL_lock();
+    spin_lock(&TIMER_atomic);
     if (glist_is_empty(&MATCH_config_pool))
     {
         struct TIMER_config *ptr = KERNEL_malloc(sizeof(PREALLOC));
@@ -475,7 +477,7 @@ static void *TIMER_MATCH_config_get(void)
     }
     struct TIMER_config *retval = glist_pop(&MATCH_config_pool);
 
-    KERNEL_unlock();
+    spin_unlock(&TIMER_atomic);
     return retval;
 }
 
