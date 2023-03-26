@@ -27,6 +27,31 @@
 #include <rtos/types.h>
 
 __BEGIN_DECLS
+
+/***************************************************************************/
+/** generic waitfor
+****************************************************************************/
+    // infinite timeout
+    #define INFINITE                    (0xFFFFFFFFUL)
+
+    /**
+     *  waitfor() generic waitfor synchronize objects
+     *      @param hdr
+     *          Semaphore/Event/Mutex and Thread
+     *      @param timeout
+     *          wait timeout in milliseconds
+     *      @returns
+     *          On Success 0 is returned
+     *          On Error an error number shall be returned to indicate the error
+     *      @errors
+     *          EINVAL: indicate hdr is not valid syncobj
+     *          ETIMEDOUT: syncobj can not acquire by timeout
+     *          EACCES: synobj is thread/mutex/rwlock, and it acquired from ISR
+     *          EDEADLK: synobj is mutex/rwlock
+     */
+extern __attribute__((nothrow))
+    int waitfor(handle_t hdl, uint32_t timeout);
+
 /***************************************************************************/
 /** thread
 ****************************************************************************/
@@ -67,28 +92,68 @@ extern __attribute__((nothrow, nonnull))
     int thread_detach(thread_id_t thread);
 
 /***************************************************************************/
-/** generic waitfor
+/** @mqueue
 ****************************************************************************/
-    // infinite timeout
-    #define INFINITE                    (0xFFFFFFFFUL)
+    #define MQUEUE_MAX_MSG_SIZE         (1024)
+    #define MQUEUE_MAX_MSG              (128)
 
     /**
-     *  waitfor() generic waitfor synchronize objects
-     *      @param hdr
-     *          Semaphore/Event/Mutex and Thread
-     *      @param timeout
-     *          wait timeout in milliseconds
+     *  mqueue_create(): create a mqueue
+     *      @returns
+     *          On Success hdr to mqueue is returned
+     *          On error, -1 is returned, and errno is set to indicate the error
+     *      @errors
+     *          ENOMEM
+     *          EEXIST
+     */
+extern __attribute__((nothrow))
+    int mqueue_create(uint16_t msg_size, uint16_t msg_count);
+
+    /**
+     *  mqueue_destroy()
      *      @returns
      *          On Success 0 is returned
      *          On Error an error number shall be returned to indicate the error
      *      @errors
-     *          EINVAL: indicate hdr is not valid syncobj
-     *          ETIMEDOUT: syncobj can not acquire by timeout
-     *          EACCES: synobj is thread/mutex/rwlock, and it acquired from ISR
-     *          EDEADLK: synobj is mutex/rwlock
+     *          EBADF
      */
 extern __attribute__((nothrow))
-    int waitfor(handle_t hdl, uint32_t timeout);
+    int mqueue_destroy(int mqd);
+
+    /**
+     *  mqueue_queued()
+     */
+extern __attribute__((nothrow))
+    int mqueue_queued(int mqd);
+
+    /**
+     *  mqueue_flush(): flush all messages from mqueue
+     *      @returns
+     *          On Success 0 is returned
+     *          On Error an error number shall be returned to indicate the error
+     *      @errors
+     *          EBADF
+     */
+extern __attribute__((nothrow))
+    int mqueue_flush(int mqd);
+
+    /**
+     *  mqueue_recv() / mqueue_timedrecv()
+     *      detail see unistd.h read()
+     */
+extern __attribute__((nonnull(2), nothrow))
+    ssize_t mqueue_recv(int mqd, void *restrict msg, unsigned int *restrict prio);
+extern __attribute__((nonnull(2), nothrow))
+    ssize_t mqueue_timedrecv(int mqd, void *restrict msg, uint32_t timeout, unsigned int *restrict prio);
+
+    /**
+     *  mqueue_send() / mqueue_timedsend()
+     *      detail see unistd.h write()
+     */
+extern __attribute__((nonnull, nothrow))
+    ssize_t mqueue_send(int mqd, void const *msg, unsigned int prio);
+extern __attribute__((nonnull, nothrow))
+    ssize_t mqueue_timedsend(int mqd, void const *msg, uint32_t timeout, unsigned int prio);
 
 __END_DECLS
 #endif
