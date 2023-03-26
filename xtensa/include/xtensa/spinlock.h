@@ -29,7 +29,10 @@ static inline __attribute__((nonnull, nothrow))
         lock->lock_count = 0;
     }
 
-static inline
+static inline __attribute__((nonnull, nothrow))
+    void spinlock_init(spinlock_t *lock) __attribute((alias("spin_lock_init")));
+
+static inline __attribute__((nonnull, nothrow))
     bool spin_is_locked(spinlock_t *lock)
     {
         return 0 != lock->core_id;
