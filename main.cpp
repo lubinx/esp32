@@ -4,6 +4,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <mqueue.h>
 
 #include <rtos/user.h>
 
@@ -22,7 +23,7 @@
 #pragma GCC diagnostic ignored "-Wunused-function"
 
 pthread_mutex_t mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER;
-static sem_t sema = SEMA_INITIALIZER(0, 100);
+int mqd;
 
 extern "C" int I2C_test(void);
 static void *blink_thread(void *arg);
@@ -37,7 +38,8 @@ int main(void)
 
     IOMUX_route_output(17, I2CEXT0_SDA_IN_IDX, OPEN_DRAIN_WITH_PULL_UP, false, false);
     IOMUX_route_output(18, I2CEXT0_SCL_IN_IDX, OPEN_DRAIN_WITH_PULL_UP, false, false);
-    I2C_configure(&I2C0, I2C_MASTER_MODE, 400);
+
+    // I2C_configure(&I2C0, I2C_MASTER_MODE, 400);
 
     printf("pll frequency: %llu MHz\n", CLK_pll_freq() / 1000000);
     printf("cpu frequency: %llu MHz\n", CLK_cpu_freq() / 1000000);
@@ -46,17 +48,16 @@ int main(void)
     printf("uart0: %lu bps sclk: %llu\n", UART_get_baudrate(&UART0), CLK_uart_sclk_freq(&UART0));
     printf("uart1: %lu bps sclk: %llu\n", UART_get_baudrate(&UART1), CLK_uart_sclk_freq(&UART1));
     printf("uart2: %lu bps sclk: %llu\n", UART_get_baudrate(&UART2), CLK_uart_sclk_freq(&UART2));
-    printf("i2c0: %lu bps sclk: %llu\n", I2C_get_bps(&I2C0), CLK_i2c_sclk_freq(&I2C0));
+    // printf("i2c0: %lu bps sclk: %llu\n", I2C_get_bps(&I2C0), CLK_i2c_sclk_freq(&I2C0));
+
+    IOMUX_print();
+    printf("I2C test result: %d\n\n", I2C_test());
 
     printf("\nMinimum free heap size: %d bytes\n", heap_caps_get_minimum_free_size(MALLOC_CAP_DEFAULT));
     printf("malloc 32k test...\n");
     void *ptr = malloc(32768);
     printf("\t%p\n", ptr);
     free(ptr);
-
-    printf("I2C test result: %d\n\n", I2C_test());
-
-    IOMUX_print();
 
     printf("\nrandom generator test...\n");
     for (int i = 0; i < 10; i ++)
@@ -72,6 +73,9 @@ int main(void)
         printf("catched c++ exception: %s\n\n", e);
         fflush(stdout);
     }
+
+    mqd = mqueue_create(NULL, 4, 16);
+    printf("mqd: %d\n", mqd);
 
     pthread_t id;
     pthread_create(&id, NULL, blink_thread, NULL);
@@ -89,10 +93,13 @@ int main(void)
 static void *sema_thread(void *arg)
 {
     ARG_UNUSED(arg);
+    int step = 0;
 
     while (true)
     {
-        sem_post(&sema);
+        mqueue_send(mqd, &step, 0);
+        step ++;
+
         msleep(500);
     }
 }
@@ -100,13 +107,16 @@ static void *sema_thread(void *arg)
 static void *blink_thread(void *arg)
 {
     ARG_UNUSED(arg);
-    unsigned step = 0;
+    int step = 0;
 
     while (true)
     {
-        sem_wait(&sema);
+        mqueue_recv(mqd, &step, 0);
 
-        if (step ++ & 0x1)
+        printf("mq recv: %d\n", step);
+        fflush(stdout);
+
+        if (step & 0x1)
         {
             GPIO_output_set_pin_nb(LED1_PIN_NUM);
             GPIO_output_clear_pin_nb(LED2_PIN_NUM);

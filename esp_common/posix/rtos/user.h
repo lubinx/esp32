@@ -107,7 +107,7 @@ extern __attribute__((nothrow, nonnull))
      *          EEXIST
      */
 extern __attribute__((nothrow))
-    int mqueue_create(uint16_t msg_size, uint16_t msg_count);
+    int mqueue_create(char const *name, uint16_t msg_size, uint16_t msg_count);
 
     /**
      *  mqueue_destroy()
