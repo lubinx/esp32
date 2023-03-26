@@ -469,13 +469,18 @@ int IRAM_ATTR mutex_unlock(mutex_t *mutex)
  ***************************************************************************/
 int sem_init(sem_t *sema, int pshared, unsigned int value)
 {
+    return sem_init_np(sema, pshared, value, SEM_VALUE_MAX);
+}
+
+int sem_init_np(sem_t *sema, int pshared, unsigned int value, unsigned int max)
+{
     if (pshared)
         return __set_errno_neg(ENOSYS);
     if (SEM_VALUE_MAX < value)
         return __set_errno_neg(EINVAL);
 
-    sema->init_sem.max_count = value;
-    sema->init_sem.initial_count = 0;
+    sema->init_sem.max_count = max;
+    sema->init_sem.initial_count = value;
 
     int retval = __freertos_hdl_init(sema, CID_SEMAPHORE, 0);
 

@@ -178,8 +178,8 @@ int UART_createfd(int nb, uint32_t bps, enum UART_parity_t parity, enum UART_sto
         break;
     }
 
-    sem_init(&context->read_rdy, 0, 1);
-    sem_init(&context->write_rdy, 0, 1);
+    sem_init_np(&context->read_rdy, 0, 0, 1);
+    sem_init_np(&context->write_rdy, 0, 0, 1);
 
     int retval = UART_configure(dev, bps, parity, stopbits);
 

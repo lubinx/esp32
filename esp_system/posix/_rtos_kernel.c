@@ -26,6 +26,7 @@ struct KERNEL_context_t KERNEL_context = {0};
 void KERNEL_init(void)
 {
     spin_lock_init(&KERNEL_context.atomic);
+
     glist_initialize(&KERNEL_context.mounted_dev);
     glist_initialize(&KERNEL_context.hdl_freed_list);
     glist_initialize(&KERNEL_context.hdl_destroying_list);

@@ -33,10 +33,17 @@
 __BEGIN_DECLS
 
     /**
-     * sem_init(): initialize an unnamed semaphore
+     *  sem_init(): initialize an unnamed semaphore
      */
 extern __attribute__((nonnull, nothrow))
     int sem_init(sem_t *sema, int pshared, unsigned int value);
+
+    /**
+     *  none-portable
+     *      bcuz sem_init() always has no limit to max
+     */
+extern __attribute__((nonnull, nothrow))
+    int sem_init_np(sem_t *sema, int pshared, unsigned int value, unsigned int max);
 
     /**
      *  sem_destroy(): destroy an unnamed semaphore

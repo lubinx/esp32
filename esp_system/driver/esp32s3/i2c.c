@@ -173,7 +173,7 @@ void I2C_initialize()
         context->dev = &I2C0;
 
         mutex_init(&context->lock, MUTEX_FLAG_RECURSIVE);
-        sem_init(&context->evt, 0, 1);
+        sem_init_np(&context->evt, 0, 0, 1);
         esp_intr_alloc(ETS_I2C_EXT0_INTR_SOURCE, 0, I2C0_IntrHandler, context, &context->intr_hdl);
     }
 
@@ -182,7 +182,7 @@ void I2C_initialize()
         context->dev = &I2C1;
 
         mutex_init(&context->lock, MUTEX_FLAG_RECURSIVE);
-        sem_init(&context->evt, 0, 1);
+        sem_init_np(&context->evt, 0, 0, 1);
         esp_intr_alloc(ETS_I2C_EXT1_INTR_SOURCE, 0, I2C1_IntrHandler, context, &context->intr_hdl);
     }
 
