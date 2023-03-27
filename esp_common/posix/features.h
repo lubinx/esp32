@@ -213,3 +213,6 @@
 /* helper to get struct member's sizeof */
     #define sizeof_member(STRUCT_TYPE, MEMBER)  \
         sizeof(((STRUCT_TYPE *)0)->MEMBER)
+
+
+#define BIT_FIELD(WIDTH, VAL)           (((1ULL << (WIDTH)) - 1) & (VAL))

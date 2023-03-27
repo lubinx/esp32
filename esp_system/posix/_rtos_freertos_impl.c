@@ -184,7 +184,7 @@ thread_id_t thread_create_at_core(unsigned priority, void *(*start_rountine)(voi
     {
         glist_initialize(&task_pool.freed);
 
-        for (int i = 0; i < lengthof(task_pool.tasks); i ++)
+        for (unsigned i = 0; i < lengthof(task_pool.tasks); i ++)
             glist_push_back(&task_pool.freed, &task_pool.tasks[i]);
     }
     struct __freertos_task *task = glist_pop(&task_pool.freed);
@@ -271,11 +271,13 @@ thread_id_t thread_self(void)
 
 int thread_join(thread_id_t thread)
 {
+    ARG_UNUSED(thread);
     return 0;
 }
 
 int thread_detach(thread_id_t thread)
 {
+    ARG_UNUSED(thread);
     return 0;
 }
 
@@ -300,10 +302,10 @@ int usleep(useconds_t us)
         return 0;
     }
 
-    uint32_t tick_start = __get_CCOUNT();
-    uint32_t ticks = us * (CLK_cpu_freq() / _MHZ);
+    unsigned tick_start = __get_CCOUNT();
+    unsigned ticks = us * (unsigned)(CLK_cpu_freq() / _MHZ);
 
-    while ((uint32_t)(__get_CCOUNT() - tick_start) < ticks) {}
+    while ((unsigned)(__get_CCOUNT() - tick_start) < ticks) {}
     return 0;
 }
 
@@ -363,7 +365,7 @@ static int __freertos_hdl_init(struct KERNEL_hdl *hdl, uint8_t cid, uint8_t flag
     }
 
     hdl->cid = cid;
-    hdl->flags = flags & ~(HDL_FLAG_INITIALIZER);
+    hdl->flags = flags & (uint8_t)(~(HDL_FLAG_INITIALIZER));
     return 0;
 }
 
@@ -433,14 +435,14 @@ mutex_t *mutex_create(int flags)
 {
     mutex_t *mutex = KERNEL_handle_get(CID_MUTEX);
     if (mutex)
-        __freertos_hdl_init(mutex, CID_MUTEX, HDL_FLAG_NO_INTR | flags | mutex->flags);
+        __freertos_hdl_init(mutex, CID_MUTEX, HDL_FLAG_NO_INTR | (uint8_t)flags | mutex->flags);
 
     return mutex;
 }
 
 int mutex_init(mutex_t *mutex, int flags)
 {
-    return __freertos_hdl_init(mutex, CID_MUTEX, HDL_FLAG_NO_INTR | flags);
+    return __freertos_hdl_init(mutex, CID_MUTEX, HDL_FLAG_NO_INTR | (uint8_t)flags);
 }
 
 int mutex_destroy(mutex_t *mutex)
@@ -513,7 +515,8 @@ int IRAM_ATTR sem_wait(sem_t *sema)
 
 int IRAM_ATTR sem_timedwait(sem_t *sema, struct timespec const *abs_timeout)
 {
-    int retval = __freertos_hdl_acquire(sema, CID_SEMAPHORE, (abs_timeout->tv_sec * 1000 + abs_timeout->tv_nsec / 1000000) / portTICK_PERIOD_MS);
+    int retval = __freertos_hdl_acquire(sema, CID_SEMAPHORE,
+        (uint32_t)((abs_timeout->tv_sec * 1000 + abs_timeout->tv_nsec / 1000000) / portTICK_PERIOD_MS));
 
     if (retval)
         return __set_errno_neg(retval);
@@ -662,6 +665,9 @@ uint64_t systimer_hal_get_counter_value(systimer_hal_context_t *hal, uint32_t co
 
 void systimer_hal_counter_value_advance(systimer_hal_context_t *hal, uint32_t counter_id, int64_t time_us)
 {
-    systimer_ll_set_counter_value(hal->dev, counter_id, systimer_hal_get_counter_value(hal, counter_id) + hal->us_to_ticks(time_us));
+    systimer_ll_set_counter_value(hal->dev, counter_id,
+        systimer_hal_get_counter_value(hal, counter_id) +
+        hal->us_to_ticks((uint64_t)time_us)
+    );
     systimer_ll_apply_counter_value(hal->dev, counter_id);
 }

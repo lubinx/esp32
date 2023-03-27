@@ -36,17 +36,21 @@ char const *esp_err_to_name(esp_err_t code)
         return "esp mesh error";
     if (code >= ESP_ERR_WIFI_BASE)
         return "esp wifi error";
-    if (code >= ESP_ERR_BASE)
+
+    // if (code >= ESP_ERR_BASE)
         return "esp error";
 }
 
-char *strerror(int err)
+static inline char const *__strerror(int err)
 {
     if (err >= ESP_ERR_BASE)
-        return (char *)esp_err_to_name((esp_err_t)err);
+        return esp_err_to_name((esp_err_t)err);
 
     switch (err)
     {
+    default:
+        return "unkonwn error";
+
 /* esp error base */
     case ESP_ERR_INVALID_STATE:
         return "esp error invalid state";
@@ -329,4 +333,9 @@ char *strerror(int err)
     case EHWPOISON:
         return "Memory page has hardware error";
     }
+}
+
+char *strerror(int err)
+{
+    return (char *)__strerror(err);
 }

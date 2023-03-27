@@ -50,13 +50,13 @@ list(APPEND COMPILE_OPTIONS
     "$<$<COMPILE_LANGUAGE:CXX>:-std=gnu++11>"
     "-ffunction-sections"
     "-fdata-sections"
+    # "-Werror=all"
     "-Wall"
-    "-Werror=all"
     "-Wextra"
     "-Wconversion"
     "-Wformat"
     "-Wunused"
-    "-Wundef"
+    # "-Wundef"
     "-Wshadow"
     "-Wwrite-strings"
 )
@@ -502,7 +502,7 @@ function(__inherited_component_register component_target)
         get_optimization_level(optimize)
         target_compile_options(${component_lib} PRIVATE ${optimize})
         idf_build_get_property(compile_options COMPILE_OPTIONS GENERATOR_EXPRESSION)
-        target_compile_options(${component_lib} PRIVATE ${compile_options})
+        target_compile_options(${component_lib} PRIVATE ${COMPILE_OPTIONS})
 
         idf_build_get_property(compile_definitions COMPILE_DEFINITIONS GENERATOR_EXPRESSION)
         target_compile_definitions(${component_lib} PRIVATE "${compile_definitions}")

@@ -32,7 +32,7 @@ static inline
         if (can) {
             dev->conf.val |= 1 << ((28 - counter_id * 2) - cpu_id);
         } else {
-            dev->conf.val &= ~(1 << ((28 - counter_id * 2) - cpu_id));
+            dev->conf.val &= (uint32_t)(~(1 << ((28 - counter_id * 2) - cpu_id)));
         }
     }
 
@@ -51,7 +51,7 @@ static inline
 static inline
     void systimer_ll_set_counter_value(systimer_dev_t *dev, uint32_t counter_id, uint64_t value)
     {
-        dev->unit_load_val[counter_id].hi.timer_unit_load_hi = value >> 32;
+        dev->unit_load_val[counter_id].hi.timer_unit_load_hi = BIT_FIELD(20, value >> 32);
         dev->unit_load_val[counter_id].lo.timer_unit_load_lo = value & 0xFFFFFFFF;
     }
 
@@ -76,7 +76,7 @@ static inline
 static inline
     void systimer_ll_set_alarm_target(systimer_dev_t *dev, uint32_t alarm_id, uint64_t value)
     {
-        dev->target_val[alarm_id].hi.timer_target_hi = value >> 32;
+        dev->target_val[alarm_id].hi.timer_target_hi = BIT_FIELD(20, value >> 32);
         dev->target_val[alarm_id].lo.timer_target_lo = value & 0xFFFFFFFF;
     }
 
@@ -89,7 +89,7 @@ static inline
 static inline
     void systimer_ll_connect_alarm_counter(systimer_dev_t *dev, uint32_t alarm_id, uint32_t counter_id)
     {
-        dev->target_conf[alarm_id].target_timer_unit_sel = counter_id;
+        dev->target_conf[alarm_id].target_timer_unit_sel = BIT_FIELD(1, counter_id);
     }
 
 static inline
@@ -107,7 +107,7 @@ static inline
 static inline
     void systimer_ll_set_alarm_period(systimer_dev_t *dev, uint32_t alarm_id, uint32_t period)
     {
-        dev->target_conf[alarm_id].target_period = period;
+        dev->target_conf[alarm_id].target_period = BIT_FIELD(26, period);
     }
 
 static inline

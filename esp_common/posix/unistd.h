@@ -314,7 +314,7 @@ extern __attribute__((nothrow))
 extern __attribute__((nothrow))
     char *crypt(char const *key, char const *salt);
 extern __attribute__((nothrow))
-    void encrypt(char block[64], int edflag);
+    void encrypt(char *block, int edflag); // void encrypt(char block[64], int edflag);
 
 extern __attribute__((nothrow))
     char *ctermid(char *s);

@@ -17,6 +17,7 @@
 #include "esp_rom_caps.h"
 #include "esp_heap_caps_init.h"
 
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 /****************************************************************************
  * @imports
 *****************************************************************************/
@@ -126,8 +127,8 @@ void __assert_func(char const *file, int line, char const *func, char const *fai
 
 void _exit(int status)
 {
-    int core_id = __get_CORE_ID();
-    for (uint32_t i = 0; i < SOC_CPU_CORES_NUM; i ++)
+    unsigned core_id = __get_CORE_ID();
+    for (unsigned i = 0; i < SOC_CPU_CORES_NUM; i ++)
     {
         if (i != core_id)
             SOC_acquire_core(i);
@@ -277,7 +278,7 @@ void __retarget_lock_close_recursive(_LOCK_T lock)
 void __retarget_lock_acquire(_LOCK_T lock)
 {
 #if ESP_ROM_HAS_RETARGETABLE_LOCKING
-    if (ROM_MUTEX_MAGIC == *(int*)lock)
+    if (ROM_MUTEX_MAGIC == *(uintptr_t *)lock)
         lock = &idf_common_mutex;
 #endif
     mutex_lock(&lock->mutex);
@@ -286,7 +287,7 @@ void __retarget_lock_acquire(_LOCK_T lock)
 void __retarget_lock_acquire_recursive(_LOCK_T lock)
 {
 #if ESP_ROM_HAS_RETARGETABLE_LOCKING
-    if (ROM_MUTEX_MAGIC == *(int *)lock)
+    if (ROM_MUTEX_MAGIC == *(uintptr_t *)lock)
         lock = &idf_common_recursive_mutex;
 #endif
     mutex_lock(&lock->mutex);
@@ -295,7 +296,7 @@ void __retarget_lock_acquire_recursive(_LOCK_T lock)
 int __retarget_lock_try_acquire(_LOCK_T lock)
 {
 #if ESP_ROM_HAS_RETARGETABLE_LOCKING
-    if (ROM_MUTEX_MAGIC == *(int *)lock)
+    if (ROM_MUTEX_MAGIC == *(uintptr_t *)lock)
         lock = &idf_common_mutex;
 #endif
     return mutex_trylock(&lock->mutex, 0);
@@ -304,7 +305,7 @@ int __retarget_lock_try_acquire(_LOCK_T lock)
 int __retarget_lock_try_acquire_recursive(_LOCK_T lock)
 {
 #if ESP_ROM_HAS_RETARGETABLE_LOCKING
-    if (ROM_MUTEX_MAGIC == *(int *)lock)
+    if (ROM_MUTEX_MAGIC == *(uintptr_t *)lock)
         lock = &idf_common_recursive_mutex;
 #endif
     return mutex_trylock(&lock->mutex, 0);
@@ -313,7 +314,7 @@ int __retarget_lock_try_acquire_recursive(_LOCK_T lock)
 void __retarget_lock_release(_LOCK_T lock)
 {
 #if ESP_ROM_HAS_RETARGETABLE_LOCKING
-    if (ROM_MUTEX_MAGIC == *(int *)lock)
+    if (ROM_MUTEX_MAGIC == *(uintptr_t *)lock)
         lock = &idf_common_mutex;
 #endif
     mutex_unlock(&lock->mutex);
@@ -322,7 +323,7 @@ void __retarget_lock_release(_LOCK_T lock)
 void __retarget_lock_release_recursive(_LOCK_T lock)
 {
 #if ESP_ROM_HAS_RETARGETABLE_LOCKING
-    if (ROM_MUTEX_MAGIC == *(int*)lock)
+    if (ROM_MUTEX_MAGIC == *(uintptr_t *)lock)
         lock = &idf_common_recursive_mutex;
 #endif
     mutex_unlock(&lock->mutex);
