@@ -55,7 +55,7 @@ void glist_iter_insert(glist_t *list, glist_iter_t iter, glist_node_t node)
 void glist_iter_insert_after(glist_t *list, glist_iter_t iter, glist_node_t node)
 {
     if (iter == list->extry)
-        list->extry = (struct glist_hdr_t **)&node;
+        list->extry = &((struct glist_hdr_t *)node)->link_next;
 
     ((struct glist_hdr_t *)node)->link_next = (*(struct glist_hdr_t **)iter)->link_next;
     *(struct glist_hdr_t **)iter = node;

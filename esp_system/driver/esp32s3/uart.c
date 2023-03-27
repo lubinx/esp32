@@ -14,9 +14,11 @@
 #include "uart.h"
 #include "sdkconfig.h"
 
+/*
 static char const *UART_TAG = "uart";
 static char const *RS485_TAG = "rs485";
 static char const *IRDA_TAG = "irda";
+*/
 
 /****************************************************************************
  *  @def
@@ -167,6 +169,7 @@ int UART_createfd(int nb, uint32_t bps, enum UART_parity_t parity, enum UART_sto
 
     switch (nb)
     {
+    default:
     case 0:
         dev = &UART0;
         break;
@@ -308,7 +311,7 @@ void CLK_uart_sclk_updating(uart_dev_t *dev)
 /// override clk-tree.c
 void CLK_uart_sclk_updated(uart_dev_t *dev)
 {
-    struct UART_context *context;
+    struct UART_context *context = NULL;
 
     if (CLK_periph_is_enabled(UART_periph_module(dev, &context)))
     {
@@ -535,6 +538,8 @@ static void UART_IntrHandler(struct UART_context *context)
 {
     uart_dev_t *dev = context->dev;
     uint32_t flags = dev->int_st.val;
+
+    /*
     char const *TAG = dev->rs485_conf.rs485_en ? RS485_TAG : UART_TAG;
 
     if (UART_INTR_RS485_CLASH & flags)
@@ -553,6 +558,7 @@ static void UART_IntrHandler(struct UART_context *context)
     {
         ESP_LOGW(TAG, "rx fifo overflow");
     }
+    */
 
     if (UART_INTR_RXFIFO_FULL & flags)
     {
