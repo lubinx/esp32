@@ -24,19 +24,10 @@
 __BEGIN_DECLS
 
 static inline __attribute__((nonnull, nothrow))
-    void spin_lock_init(spinlock_t *lock)
+    void spinlock_init(spinlock_t *lock)
     {
         lock->core_id = 0;
         lock->lock_count = 0;
-    }
-
-static inline __attribute__((nonnull, nothrow))
-    void spinlock_init(spinlock_t *lock) __attribute((alias("spin_lock_init")));
-
-static inline __attribute__((nonnull, nothrow))
-    bool spin_is_locked(spinlock_t *lock)
-    {
-        return 0 != lock->core_id;
     }
 
 static inline __attribute__((nonnull, nothrow))
@@ -70,9 +61,6 @@ static inline __attribute__((nonnull, nothrow))
 
 // for esp-idf compatiable
     #define SPINLOCK_WAIT_FOREVER       ((unsigned)(-1))
-
-static inline __attribute__((nonnull, nothrow))
-    void spinlock_initialize(spinlock_t *lock) __attribute__((alias("spin_lock_init")));
 
 static inline __attribute__((nonnull, nothrow))
     bool spinlock_acquire(spinlock_t *lock, unsigned timeout)
