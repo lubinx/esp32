@@ -31,6 +31,9 @@ static inline __attribute__((nonnull, nothrow))
     }
 
 static inline __attribute__((nonnull, nothrow))
+    void spin_lock_init(spinlock_t *lock) __attribute((alias("spinlock_init")));
+
+static inline __attribute__((nonnull, nothrow))
     void spin_lock(spinlock_t *lock)
     {
         uint32_t irq_status = XTOS_SET_INTLEVEL(XCHAL_EXCM_LEVEL);
