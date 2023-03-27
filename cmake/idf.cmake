@@ -46,8 +46,8 @@ set(CMAKE_TOOLCHAIN_FILE ${IDF_CMAKE_PATH}/toolchain-${IDF_TARGET}.cmake)
 
 # compile options for project source & esp-idf'components
 list(APPEND COMPILE_OPTIONS
-    "$<$<COMPILE_LANGUAGE:C>:-std=gnu17>"
-    "$<$<COMPILE_LANGUAGE:CXX>:-std=gnu++20>"
+    "$<$<COMPILE_LANGUAGE:C>:-std=gnu11>"
+    "$<$<COMPILE_LANGUAGE:CXX>:-std=gnu++11>"
     "-ffunction-sections"
     "-fdata-sections"
     "-Wall"
@@ -56,7 +56,7 @@ list(APPEND COMPILE_OPTIONS
     "-Wconversion"
     "-Wformat"
     "-Wunused"
-    "-Wundef" # cause too many errors due to sdkconfig.h
+    "-Wundef"
     "-Wshadow"
     "-Wwrite-strings"
 )

@@ -2,7 +2,6 @@
 #include <stdbool.h>
 #include <sys/errno.h>
 
-#include <rtos/glist.h>
 #include <soc/soc_caps.h>
 #include <soc/io_mux_reg.h>
 #include <soc/gpio_struct.h>

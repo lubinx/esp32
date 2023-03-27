@@ -23,11 +23,9 @@
 void I2C0_IntrHandler(void *arg);
 void I2C1_IntrHandler(void *arg);
 
-#define I2C_CONFIG_CLK_FREQ             (20 * _MHZ)
-
 // TODO: sdkconfig to configure i2c filter, 0: disable
-#define I2C_SCL_FILTER_APB_CYCLE        (10)
-#define I2C_SDA_FILTER_APB_CYCLE        (10)
+#define I2C_SCL_FILTER_CYCLE        (5)
+#define I2C_SDA_FILTER_CYCLE        (5)
 
 // I2C ext. errno, NEED to process before return to caller
 #define I2C_ERR_NACK                    (ESP_ERR_BASE + 1)
@@ -58,24 +56,6 @@ union i2c_cmd_reg
 };
 typedef union i2c_cmd_reg           i2c_cmd_reg_t;
 static_assert(sizeof(i2c_cmd_reg_t) == sizeof(uint32_t), "sizeof(i2c_cmd_reg_t) *must == sizeof(uint32_t)");
-
-enum i2c_master_intr_t
-{
-    I2C_INTR_NACK = (1 << 10),
-    I2C_INTR_TIMEOUT = (1 << 8),
-    I2C_INTR_MST_COMPLETE = (1 << 7),
-    I2C_INTR_ARBITRATION = (1 << 5),
-    I2C_INTR_END_DETECT = (1 << 3),
-    I2C_INTR_ST_TO = (1 << 13),
-};
-
-enum i2c_slave_intr_t
-{
-    I2C_INTR_TXFIFO_WM = (1 << 1),
-    I2C_INTR_RXFIFO_WM = (1 << 0),
-    I2C_INTR_SLV_COMPLETE = (1 << 7),
-    I2C_INTR_START = (1 << 15),
-};
 
 struct I2C_addressing
 {
@@ -188,15 +168,13 @@ void I2C_initialize()
 
 }
 
-int I2C_test(void)
+#define I2C_SLV_DA                  (0x44)
+
+void I2C_test_start(void)
 {
-    #define FM_24C512C_DA               (0x50)
 
     struct I2C_context *context = &i2c_context[0];
     i2c_dev_t *dev = context->dev;
-
-    I2C_configure(dev, I2C_MASTER_MODE, 200);
-
     uint8_t idx = 0;
 
     dev->fifo_conf.tx_fifo_rst = dev->fifo_conf.rx_fifo_rst = 1;
@@ -209,32 +187,24 @@ int I2C_test(void)
 
         /*
         dev->slave_addr.addr_10bit_en = 0;
-        dev->slave_addr.val = FM_24C512C_DA;
+        dev->slave_addr.val = I2C_SLV_DA;
         dev->ctr.conf_upgate = 1;
         */
     }
     // send da
     {
-        i2c_cmd_reg_t reg = {.op_code = I2C_CMD_WRITE, .io_bytes = 1, .ack_check_en = 1};
-        uint8_t da = (FM_24C512C_DA << 1) & 0x0;
-
+        uint8_t da = (I2C_SLV_DA << 1) & 0x0;
         I2C_fifo_write(dev, &da, 1);
-        I2C_command_val(dev, &idx, reg.val);
-    }
-    // end
-    {
-        i2c_cmd_reg_t reg = {.op_code = I2C_CMD_END};
-        I2C_command_val(dev, &idx, reg.val);
-    }
-    // send seek
-    {
-        /*
-        i2c_cmd_reg_t reg = {.op_code = I2C_CMD_WRITE, .io_bytes = 2, .ack_en = 1};
-        uint8_t sa[2] = {0x01, 0x00};
 
-        I2C_fifo_write(dev, &sa, 2);
+        i2c_cmd_reg_t reg = {.op_code = I2C_CMD_WRITE, .io_bytes = 1, .ack_check_en = 1};
         I2C_command_val(dev, &idx, reg.val);
-        */
+    }
+    {
+        uint8_t cmd = 0xFD;
+        I2C_fifo_write(dev, &cmd, 1);
+
+        i2c_cmd_reg_t reg = {.op_code = I2C_CMD_WRITE, .io_bytes = 1, .ack_check_en = 1};
+        I2C_command_val(dev, &idx, reg.val);
     }
     // stop
     {
@@ -242,26 +212,129 @@ int I2C_test(void)
         I2C_command_val(dev, &idx, reg.val);
     }
 
+    printf("\ni2c test start----------------------\n");
+    context->err = 0;
+    dev->ctr.trans_start = 1;
+    sem_wait(&context->evt);
+}
+
+void I2C_test_read(void)
+{
+    struct I2C_context *context = &i2c_context[0];
+    i2c_dev_t *dev = context->dev;
+    uint8_t idx = 0;
+
+    dev->fifo_conf.tx_fifo_rst = dev->fifo_conf.rx_fifo_rst = 1;
+    dev->fifo_conf.tx_fifo_rst = dev->fifo_conf.rx_fifo_rst = 0;
+
+    // start
+    {
+        i2c_cmd_reg_t reg = {.op_code = I2C_CMD_RESTART};
+        I2C_command_val(dev, &idx, reg.val);
+
+        /*
+        dev->slave_addr.addr_10bit_en = 0;
+        dev->slave_addr.val = I2C_SLV_DA;
+        dev->ctr.conf_upgate = 1;
+        */
+    }
+    // send da
+    {
+        uint8_t da = (I2C_SLV_DA << 1) & 0x0;
+        I2C_fifo_write(dev, &da, 1);
+
+        i2c_cmd_reg_t reg = {.op_code = I2C_CMD_WRITE, .io_bytes = 1, .ack_check_en = 1};
+        I2C_command_val(dev, &idx, reg.val);
+    }
+    {
+        i2c_cmd_reg_t reg = {.op_code = I2C_CMD_READ, .io_bytes = 1, .ack_check_en = 1};
+        I2C_command_val(dev, &idx, reg.val);
+
+        reg.ack_nack = true;
+        I2C_command_val(dev, &idx, reg.val);
+    }
+    // stop
+    {
+        i2c_cmd_reg_t reg = {.op_code = I2C_CMD_STOP};
+        I2C_command_val(dev, &idx, reg.val);
+    }
+
+    printf("\ni2c test read----------------------\n");
+
     i2c_cmd_reg_t *cmd = (void *)&dev->comd0;
     for (int i = 0; i < 8; i ++)
     {
-        i2c_cmd_reg_t reg = {reg.val = cmd[i].val};
+        i2c_cmd_reg_t reg = {.val = cmd[i].val};
         printf("idx: %d, cmd: %d, bytes:%d, ack_en: %d done: %d\n", i, reg.op_code, reg.io_bytes, reg.ack_check_en, reg.done);
     }
     printf("---------------tx fifo: %d\n", dev->sr.txfifo_cnt);
 
+    context->err = 0;
     dev->ctr.trans_start = 1;
     sem_wait(&context->evt);
 
-    printf("\n---------------tx fifo: %d\n", dev->sr.txfifo_cnt);
+    if (dev->sr.rxfifo_cnt)
+    {
+        printf("i2c rx: 0x");
+        while ((dev->sr.rxfifo_cnt))
+        {
+            uint8_t ch = (uint8_t)dev->data.fifo_rdata;
+            printf("%02x", ch);
+        }
+        printf("\n");
+    }
+
+    printf("---------------err: %d tx fifo: %d, rx fifo: %d\n", context->err, dev->sr.txfifo_cnt, dev->sr.rxfifo_cnt);
     for (int i = 0; i < 8; i ++)
     {
         i2c_cmd_reg_t reg = {reg.val = cmd[i].val};
         printf("idx: %d, cmd: %d, bytes:%d, ack_en: %d done: %d\n", i, reg.op_code, reg.io_bytes, reg.ack_check_en, reg.done);
     }
 
-    I2C_deconfigure(dev);
-    return context->err;
+    fflush(stdout);
+}
+
+static void I2C_IntrHandler(struct I2C_context *context)
+{
+    i2c_dev_t *dev = context->dev;
+    i2c_int_status_reg_t status = {.val = dev->int_status.val};
+
+    if (status.arbitration_lost_int_st)
+    {
+        esp_rom_printf("arbitration_lost_int_st\n");
+        context->err = ENXIO;
+        goto i2c_transfer_done;
+    }
+    if (status.time_out_int_st)
+    {
+        esp_rom_printf("time_out_int_st\n");
+        context->err = ETIMEDOUT;
+        goto i2c_transfer_done;
+    }
+    if (status.trans_complete_int_st)
+    {
+        esp_rom_printf("trans_complete_int_st\n");
+        goto i2c_transfer_done;
+    }
+    if (status.end_detect_int_st)
+    {
+        esp_rom_printf("end_detect_int_st\n");
+        goto i2c_transfer_done;
+    }
+
+    if (status.nack_int_st)
+    {
+        esp_rom_printf("nack_int_st\n");
+        context->err = ENXIO;
+    }
+
+    if (false)
+    {
+i2c_transfer_done:
+        sem_post(&context->evt);
+    }
+
+    dev->int_clr.val = status.val;
 }
 
 /****************************************************************************
@@ -333,20 +406,22 @@ int I2C_configure(i2c_dev_t *dev, enum I2C_mode_t mode, uint32_t kbps)
         dev->fifo_conf.tx_fifo_rst = dev->fifo_conf.rx_fifo_rst = 1;
         dev->fifo_conf.tx_fifo_rst = dev->fifo_conf.rx_fifo_rst = 0;
         // filter
-        if (I2C_SCL_FILTER_APB_CYCLE)
+        if (I2C_SCL_FILTER_CYCLE)
         {
             dev->filter_cfg.scl_filter_en = 1;
-            dev->filter_cfg.scl_filter_thres = I2C_SCL_FILTER_APB_CYCLE;
+            dev->filter_cfg.scl_filter_thres = I2C_SCL_FILTER_CYCLE;
         }
-        if (I2C_SDA_FILTER_APB_CYCLE)
+        if (I2C_SDA_FILTER_CYCLE)
         {
             dev->filter_cfg.sda_filter_en = 1;
-            dev->filter_cfg.sda_filter_thres = I2C_SDA_FILTER_APB_CYCLE;
+            dev->filter_cfg.sda_filter_thres = I2C_SDA_FILTER_CYCLE;
         }
 
         // i2c ctr master
         dev->ctr.val = 0;
         dev->ctr.ms_mode = 1;
+        dev->ctr.clk_en = 1;
+        dev->ctr.arbitration_en = 1;
         // dev->ctr.clk_en = 1; what is this?
         // scl/sda output mode. 0: direct output; 1: open drain output.
         dev->ctr.sda_force_out = 1;
@@ -355,11 +430,9 @@ int I2C_configure(i2c_dev_t *dev, enum I2C_mode_t mode, uint32_t kbps)
         dev->ctr.rx_lsb_first =  dev->ctr.tx_lsb_first = 0;
         // bps
         I2C_configure_bps(dev, kbps);
-
         // update
         dev->ctr.conf_upgate = 1;
         dev->clk_conf.sclk_active = 1;
-
         // intr
         dev->int_ena.val = I2C_NACK_INT_ENA_M | I2C_ARBITRATION_LOST_INT_ENA_M | I2C_TIME_OUT_INT_ENA_M |
             I2C_TRANS_COMPLETE_INT_ENA_M | I2C_END_DETECT_INT_ENA_M;
@@ -441,17 +514,27 @@ static PERIPH_module_t I2C_periph_module(i2c_dev_t *dev, struct I2C_context **co
 
 static void I2C_configure_bps(i2c_dev_t *dev, uint32_t kbps)
 {
-    dev->clk_conf.sclk_div_num = CLK_i2c_sclk_freq(dev) / I2C_CONFIG_CLK_FREQ - 1;
-    uint32_t cycle = I2C_CONFIG_CLK_FREQ / 1000 / kbps;
+    uint32_t clk_freq = (uint32_t)CLK_i2c_sclk_freq(dev);
+    uint32_t div = clk_freq / _MHZ / kbps;
+
+    if (div > 0)
+    {
+        clk_freq = clk_freq / div;
+        dev->clk_conf.sclk_div_num = div - 1;
+    }
+    else
+        dev->clk_conf.sclk_div_num = 0;
+
+    uint32_t cycle = clk_freq / 1000 / kbps;
     uint32_t low_cycle = cycle / 2;
-    uint32_t half_cycle = I2C_CONFIG_CLK_FREQ / 1000 == cycle * kbps ? cycle - low_cycle : cycle - low_cycle + 1;
+    uint32_t half_cycle = clk_freq / 1000 == cycle * kbps ? cycle - low_cycle : cycle - low_cycle + 1;
 
     // scl
     dev->scl_low_period.scl_low_period = low_cycle;
     dev->scl_high_period.scl_wait_high_period = 80 < kbps ? half_cycle / 4 : half_cycle / 3;
     dev->scl_high_period.scl_high_period = half_cycle - dev->scl_high_period.scl_wait_high_period;
     // sda
-    dev->sda_hold.sda_hold_time = half_cycle / 4;
+    dev->sda_hold.sda_hold_time = half_cycle / 2;
     dev->sda_sample.sda_sample_time = half_cycle / 2 + dev->scl_high_period.scl_wait_high_period;
 
     // start
@@ -756,63 +839,6 @@ static int I2C_close(int fd)
 /****************************************************************************
  *  intr
  ****************************************************************************/
-static void I2C_IntrHandler(struct I2C_context *context)
-{
-    i2c_dev_t *dev = context->dev;
-    i2c_int_status_reg_t status = {.val = dev->int_status.val};
-
-    /*
-        dev->int_ena.val = I2C_NACK_INT_ENA_M | I2C_ARBITRATION_LOST_INT_ENA_M | I2C_TIME_OUT_INT_ENA_M |
-            I2C_TRANS_COMPLETE_INT_ENA_M | I2C_END_DETECT_INT_ENA_M;
-    */
-    if (status.arbitration_lost_int_st)
-    {
-        esp_rom_printf("arbitration_lost_int_st\n");
-        context->err = ENXIO;
-        goto i2c_transfer_done;
-    }
-
-    if (status.nack_int_st)
-    {
-        esp_rom_printf("nack_int_st\n");
-        context->err = 2;
-        goto i2c_transfer_done;
-    }
-
-    if (status.time_out_int_st)
-    {
-        esp_rom_printf("time_out_int_st\n");
-        context->err = ETIMEDOUT;
-        goto i2c_transfer_done;
-    }
-
-    if (status.end_detect_int_st)
-    {
-        esp_rom_printf("end_detect_int_st\n");
-        context->err = 0;
-        goto i2c_transfer_done;
-    }
-
-    if (status.trans_complete_int_st)
-    {
-        esp_rom_printf("trans_complete_int_st\n");
-        context->err = 0;
-        goto i2c_transfer_done;
-    }
-
-    if (0 != status.val)
-    {
-        esp_rom_printf("status %x\n", status.val);
-    }
-
-    if (false)
-    {
-i2c_transfer_done:
-        sem_post(&context->evt);
-    }
-    dev->int_clr.val = status.val;
-}
-
 void I2C0_IntrHandler(void *arg)
     __attribute__((alias("I2C_IntrHandler")));
 
