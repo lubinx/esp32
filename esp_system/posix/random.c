@@ -54,11 +54,8 @@ ssize_t getrandom(void *buf, size_t buflen, unsigned int flags)
 {
     ARG_UNUSED(flags);
 
-    if (NULL == buf)
-        return __set_errno_neg(EFAULT);
-
     size_t len = buflen;
-    int align_offset = (uintptr_t)buf & (sizeof(int) - 1);
+    unsigned align_offset = (uintptr_t)buf & (sizeof(int) - 1);
 
     if (align_offset)
     {
@@ -95,4 +92,4 @@ uint32_t esp_random(void)
     __attribute__((alias("rand")));
 
 int esp_fill_random(void *buf, size_t len)
-    __attribute__((alias("getrandom")));
+    __attribute__((nonnull, alias("getrandom")));

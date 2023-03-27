@@ -23,7 +23,8 @@ void __IO_introduce(void)
 __attribute__((weak))
 ssize_t console_write(void const *buf, size_t count)
 {
-    return count;
+    ARG_UNUSED(buf);
+    return (ssize_t)count;
 }
 
 /***************************************************************************/

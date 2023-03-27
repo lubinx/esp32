@@ -17,7 +17,7 @@ void __PTHREAD_introduce(void)
 int pthread_create(pthread_t *thread, pthread_attr_t const *attr, pthread_routine_t routine, void *arg)
 {
     void *stack = attr ? attr->stack : NULL;
-    uint32_t stack_size = attr ? attr->stack_size : THREAD_DEFAULT_STACK_SIZE;
+    size_t stack_size = attr ? attr->stack_size : THREAD_DEFAULT_STACK_SIZE;
     unsigned priority = attr ? attr->priority : THREAD_DEF_PRIORITY;
 
     *thread = (void *)thread_create_at_core(priority, routine, arg,
@@ -32,16 +32,19 @@ int pthread_create(pthread_t *thread, pthread_attr_t const *attr, pthread_routin
 
 int pthread_join(pthread_t thread, void **retval)
 {
+    ARG_UNUSED(thread, retval);
     return 0;
 }
 
 int pthread_detach(pthread_t thread)
 {
+    ARG_UNUSED(thread);
     return 0;
 }
 
 int pthread_cancel(pthread_t thread)
 {
+    ARG_UNUSED(thread);
     return ENOSYS;
 }
 
@@ -52,7 +55,7 @@ pthread_t pthread_self(void)
 
 int pthread_equal(pthread_t t1, pthread_t t2)
 {
-    return ((uintptr_t)t1 - (uintptr_t)t2);
+    return (int)((uintptr_t)t1 - (uintptr_t)t2);
 }
 
 int pthread_setcancelstate(int state, int *oldstate)
@@ -82,6 +85,7 @@ int pthread_attr_init(pthread_attr_t *attr)
 
 int pthread_attr_destroy(pthread_attr_t *attr)
 {
+    ARG_UNUSED(attr);
     return 0;
 }
 
@@ -130,6 +134,7 @@ int pthread_key_delete(pthread_key_t key)
 {
     key->destructor();
     free(key);
+    return 0;
 }
 
 void *pthread_getspecific(pthread_key_t key)

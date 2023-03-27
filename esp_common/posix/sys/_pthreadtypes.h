@@ -16,7 +16,7 @@
         int  detachstate;
 
         void *stack;
-        int stack_size;
+        size_t stack_size;
     };
     typedef struct pthread_attr_t   pthread_attr_t;
 

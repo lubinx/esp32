@@ -337,8 +337,9 @@ ssize_t mq_timedreceive(mqd_t mqd, char *restrict ptr, size_t len, unsigned int 
         return __set_errno_neg(ETIMEDOUT);
 
     return mqueue_timedrecv(mqd, ptr,
-        (ts->tv_sec - 1) * 1000 + (time_t)ts->tv_nsec / 1000,
-        prio);
+        (uint32_t)((ts->tv_sec - 1) * 1000 + (ts->tv_nsec / 1000)),
+        prio
+    );
 }
 
 int mq_send(mqd_t mqd, char const *ptr, size_t len, unsigned int prio)
@@ -362,7 +363,7 @@ int mq_timedsend(mqd_t mqd, char const *ptr, size_t len, unsigned int prio,
         return __set_errno_neg(ETIMEDOUT);
 
     return mqueue_timedsend(mqd, ptr,
-        (ts->tv_sec - 1) * 1000 + (time_t)ts->tv_nsec / 1000,
+        (uint32_t)((ts->tv_sec - 1) * 1000 + (time_t)ts->tv_nsec / 1000),
         prio);
 }
 

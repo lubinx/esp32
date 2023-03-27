@@ -9,10 +9,6 @@
 #include <sys/fcntl.h>
 #include <sys/ioctl.h>
 
-#include "esp_log.h"
-
-static char const *TAG = "filesystem";
-
 /***************************************************************************/
 /** exports
 ****************************************************************************/
@@ -26,6 +22,7 @@ void __FILESYSTEM_introduce(void)
 ****************************************************************************/
 int _fcntl_r(struct _reent *r, int fd, int cmd, int arg)
 {
+    ARG_UNUSED(fd, cmd, arg);
     return __set_errno_r_neg(r, ENOSYS);
 }
 
@@ -44,6 +41,7 @@ int _fstat_r(struct _reent *r, int fd, struct stat *st)
 
 int _open_r(struct _reent *r, char const *path, int flags, int mode)
 {
+    ARG_UNUSED(path, flags, mode);
     return __set_errno_r_neg(r, ENOSYS);
 }
 
