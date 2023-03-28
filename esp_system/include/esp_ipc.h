@@ -27,6 +27,8 @@ static inline
     esp_err_t esp_ipc_call(uint32_t cpu_id, esp_ipc_func_t func, void *arg)
     {
         func(arg);
+
+        ARG_UNUSED(cpu_id);
         return ESP_OK;
     }
 
@@ -34,6 +36,8 @@ static inline
     esp_err_t esp_ipc_call_blocking(uint32_t cpu_id, esp_ipc_func_t func, void *arg)
     {
         func(arg);
+
+        ARG_UNUSED(cpu_id);
         return ESP_OK;
     }
 

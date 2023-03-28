@@ -17,6 +17,7 @@
 #include "hw/gpio.h"
 #include "hw/hal/gpio_hal.h"
 
+#pragma GCC diagnostic ignored "-Wunused-function"
 /***************************************************************************/
 /** @declaration
 ****************************************************************************/
@@ -285,6 +286,8 @@ void GPIO_HAL_execute_callback(void *const gpio, uint32_t pins, void *arg)
             timeout_stop(GPIO_context.hold_timeout_id);
     }
     */
+
+    ARG_UNUSED(arg);
 }
 
 /***************************************************************************/

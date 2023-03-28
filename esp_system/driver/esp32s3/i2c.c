@@ -310,6 +310,8 @@ int I2C_deconfigure(i2c_dev_t *dev)
             IOMUX_route_disconnect_signal(I2CEXT1_SDA_OUT_IDX);
         }
     }
+
+    return retval;
 }
 
 uint32_t I2C_get_bps(i2c_dev_t *dev)
