@@ -60,14 +60,14 @@ void Startup_Handler(void)
     extern void __libc_retarget_init(void); //  _retarget_init.c
     __libc_retarget_init();
 
-    #ifdef CONFIG_COMPILER_CXX_EXCEPTIONS
+    // REVIEW: soo..always attach this? #ifdef CONFIG_COMPILER_CXX_EXCEPTIONS
         struct object { long placeholder[10]; };
         extern void __register_frame_info(void const *begin, struct object *ob);
         extern char __eh_frame[];
 
         static struct object ob;
         __register_frame_info(__eh_frame, &ob);
-    #endif
+    // #endif
 
     // gcc ctors
     for (void (**p)(void) = &__init_array_start;

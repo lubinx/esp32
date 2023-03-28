@@ -15,6 +15,7 @@
 #include "esp_private/panic_internal.h"
 
 #pragma GCC diagnostic ignored "-Wconversion"
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 
 bool g_panic_abort = false;
 static char *s_panic_abort_details = NULL;

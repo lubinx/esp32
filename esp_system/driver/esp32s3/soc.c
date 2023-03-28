@@ -260,7 +260,7 @@ static void SOC_cache_err_init(unsigned core_id)
     // We do not register a handler for the interrupt because it is interrupt
     // level 4 which is not serviceable from C. Instead, xtensa_vectors.S has
     // a call to the panic handler for this interrupt.
-    esp_rom_route_intr_matrix(core_id, ETS_CACHE_IA_INTR_SOURCE, ETS_CACHEERR_INUM);
+    esp_rom_route_intr_matrix((int)core_id, ETS_CACHE_IA_INTR_SOURCE, ETS_CACHEERR_INUM);
 
     // Enable invalid cache access interrupt when the cache is disabled.
     // When the interrupt happens, we can not determine the CPU where the
@@ -295,7 +295,7 @@ static void SOC_cache_err_init(unsigned core_id)
 
     if (0 == core_id)
     {
-        esp_rom_route_intr_matrix(core_id, ETS_CACHE_CORE0_ACS_INTR_SOURCE, ETS_CACHEERR_INUM);
+        esp_rom_route_intr_matrix((int)core_id, ETS_CACHE_CORE0_ACS_INTR_SOURCE, ETS_CACHEERR_INUM);
 
         EXTMEM.core0_acs_cache_int_clr.val = EXTMEM_CORE0_IBUS_ACS_MSK_IC_INT_CLR |
             EXTMEM_CORE0_IBUS_WR_IC_INT_CLR |
@@ -312,7 +312,7 @@ static void SOC_cache_err_init(unsigned core_id)
     }
     else
     {
-        esp_rom_route_intr_matrix(core_id, ETS_CACHE_CORE1_ACS_INTR_SOURCE, ETS_CACHEERR_INUM);
+        esp_rom_route_intr_matrix((int)core_id, ETS_CACHE_CORE1_ACS_INTR_SOURCE, ETS_CACHEERR_INUM);
 
         EXTMEM.core1_acs_cache_int_clr.val = EXTMEM_CORE1_IBUS_ACS_MSK_IC_INT_CLR |
             EXTMEM_CORE1_IBUS_WR_IC_INT_CLR |
