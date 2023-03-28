@@ -193,16 +193,23 @@ extern __attribute__((nothrow, nonnull))
      *      output is inverted to the peripherial
      *  @param oen_inv
      *      indicate peripherial output enable control is inverted
-     */
+    */
 extern __attribute__((nothrow, nonnull))
     int IOMUX_route_output(uint8_t pin_nb, uint16_t sig_idx, enum GPIO_output_mode_t mode, bool inv, bool oen_inv);
 
     /**
      *  IOMUX_route_disconnect()
-     *      disconnect pin_nb from matrix(input & output)
-     */
+     *      disconnect pin_nb from matrix (input & output)
+    */
 extern __attribute__((nothrow, nonnull))
     int IOMUX_route_disconnect(uint8_t pin_nb);
+
+    /**
+     *  IOMUX_route_disconnect_signal()
+     *      disconnect signal from matrix (all pins)
+    */
+extern __attribute__((nothrow, nonnull))
+    int IOMUX_route_disconnect_signal(uint16_t sig_idx);
 
 extern __attribute__((nothrow, nonnull))
     void IOMUX_print(void);

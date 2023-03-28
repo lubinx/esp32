@@ -334,6 +334,24 @@ int IOMUX_route_disconnect(uint8_t pin_nb)
     return 0;
 }
 
+int IOMUX_route_disconnect_signal(uint16_t sig_idx)
+{
+    for (unsigned i = 0; i < lengthof(GPIO_matrix); i ++)
+    {
+        struct GPIO_matrix *mat = &GPIO_matrix[i];
+
+        if (mat->mat_in && sig_idx == mat->mat_in - (iomux_matrix_in_t *)GPIO.func_in_sel_cfg)
+        {
+            mat->mat_in->sig_in_sel = IOMUX_MATRIX_IN_BYPASS;
+            mat->mat_in = NULL;
+        }
+
+        if (IOMUX_MATRIX_OUT_EN == mat->mat_out->oen_sel && sig_idx == mat->mat_out->func_sel)
+            mat->mat_out->oen_sel = IOMUX_MATRIX_OUT_BYPASS;
+    }
+    return 0;
+}
+
 void IOMUX_print(void)
 {
     printf("GPIO matrix: \n");
