@@ -32,7 +32,7 @@ typedef struct {
     uint32_t pc;       /* PC of the current frame */
     uint32_t sp;       /* SP of the current frame */
     uint32_t next_pc;  /* PC of the current frame's caller */
-    const void *exc_frame;  /* Pointer to the full frame data structure, if applicable */
+    void const *exc_frame;  /* Pointer to the full frame data structure, if applicable */
 } esp_backtrace_frame_t;
 
 /**

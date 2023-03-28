@@ -29,6 +29,9 @@
     #include "esp_ipc.h"
 #endif
 
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#pragma GCC diagnostic ignored "-Wconversion"
+#pragma GCC diagnostic ignored "-Wsign-conversion"
 static const char *TAG = "intr_alloc";
 
 #define ETS_INTERNAL_TIMER0_INTR_NO 6

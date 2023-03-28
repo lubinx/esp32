@@ -136,7 +136,7 @@ RingbufHandle_t xRingbufferCreateStatic(size_t xBufferSize,
  *      - pdFALSE on time-out or when the data is larger than the maximum permissible size of the buffer
  */
 BaseType_t xRingbufferSend(RingbufHandle_t xRingbuffer,
-                           const void *pvItem,
+                           void const *pvItem,
                            size_t xItemSize,
                            TickType_t xTicksToWait);
 
@@ -165,7 +165,7 @@ BaseType_t xRingbufferSend(RingbufHandle_t xRingbuffer,
  *      - pdFALSE when the ring buffer does not have space.
  */
 BaseType_t xRingbufferSendFromISR(RingbufHandle_t xRingbuffer,
-                                  const void *pvItem,
+                                  void const *pvItem,
                                   size_t xItemSize,
                                   BaseType_t *pxHigherPriorityTaskWoken);
 

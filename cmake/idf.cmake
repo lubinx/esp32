@@ -57,6 +57,7 @@ list(APPEND COMPILE_OPTIONS
     "-Wconversion"
     "-Wformat"
     "-Wunused"
+    "-Wunused-parameter"
     # "-Wundef"
 )
 

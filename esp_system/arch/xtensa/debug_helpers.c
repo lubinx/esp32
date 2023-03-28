@@ -15,6 +15,9 @@
 
 #include "xtensa/xtensa_context.h"
 
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wsign-conversion"
+
 bool IRAM_ATTR esp_backtrace_get_next_frame(esp_backtrace_frame_t *frame)
 {
     //Use frame(i-1)'s BS area located below frame(i)'s sp to get frame(i-1)'s sp and frame(i-2)'s pc

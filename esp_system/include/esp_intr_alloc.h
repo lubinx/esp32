@@ -58,7 +58,7 @@ extern "C" {
      * @param[out] intr_desc_ret The interrupt's descriptor
      */
 extern __attribute__((nonnull, nothrow))
-    void esp_cpu_intr_get_desc(int core_id, int intr_nb, esp_cpu_intr_desc_t *intr_desc_ret);
+    void esp_cpu_intr_get_desc(unsigned core_id, int intr_nb, esp_cpu_intr_desc_t *intr_desc_ret);
 
 
 /** @addtogroup Intr_Alloc

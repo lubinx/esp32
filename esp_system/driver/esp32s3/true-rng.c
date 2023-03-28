@@ -29,10 +29,10 @@ int rand(void)
 
     // mix pesudo-rng and true-rng
     if (rand_seed)
-        retval = (int)((uint64_t)rng * rand_seed) ^ rand_seed;
+        retval = (int)(((uint64_t)rng * rand_seed) ^ rand_seed);
     else
         retval = rng;
 
-    rand_seed = rng;
+    rand_seed = (unsigned)rng;
     return retval;
 }

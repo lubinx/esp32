@@ -12,8 +12,6 @@
 // TODO: remove these reqiured by ets_set_appcpu_boot_addr()
 #include "esp32s3/rom/ets_sys.h"
 
-static char const *TAG = "SoC";
-
 /****************************************************************************
  *  imports
 *****************************************************************************/
@@ -25,7 +23,7 @@ extern struct __esp_init_fn _esp_system_init_fn_array_end;
 /****************************************************************************
  *  @internal
  ****************************************************************************/
-static void SOC_cache_err_init(int core_id);
+static void SOC_cache_err_init(unsigned core_id);
 
 /****************************************************************************
  *  @implements
@@ -34,10 +32,10 @@ void SOC_initialize(void)
 {
     __set_VECBASE(&_vector_table);
 
-    int core_id = __get_CORE_ID();
+    unsigned core_id = __get_CORE_ID();
     // clear intr matrix?
-    for (int i = 0; i < ETS_MAX_INTR_SOURCE; i++)
-        esp_rom_route_intr_matrix(core_id, i, ETS_INVALID_INUM);
+    for (unsigned i = 0; i < ETS_MAX_INTR_SOURCE; i++)
+        esp_rom_route_intr_matrix((int)core_id, i, ETS_INVALID_INUM);
 
     SOC_cache_err_init(core_id);
 
@@ -62,7 +60,7 @@ void SOC_initialize(void)
 
 static void do_system_init_fn(void)
 {
-    int core_id = __get_CORE_ID();
+    unsigned core_id = __get_CORE_ID();
 
     for (struct __esp_init_fn *p = &_esp_system_init_fn_array_start;
         p < &_esp_system_init_fn_array_end;
@@ -117,7 +115,7 @@ unsigned SOC_cache_err_core_id(void)
         return 1;
     }
 
-    return -1;
+    return (unsigned)~0;
 }
 
 void SOC_reset(void)
@@ -126,7 +124,7 @@ void SOC_reset(void)
     while (1);
 }
 
-void SOC_reset_core(int core_id)
+void SOC_reset_core(unsigned core_id)
 {
     assert((unsigned)core_id < SOC_CPU_CORES_NUM);
     /*
@@ -138,7 +136,7 @@ void SOC_reset_core(int core_id)
     SET_PERI_REG_MASK(RTC_CNTL_OPTIONS0_REG, rtc_cntl_rst_m);
 }
 
-void SOC_acquire_core(int core_id)
+void SOC_acquire_core(unsigned core_id)
 {
     assert((unsigned)core_id < SOC_CPU_CORES_NUM);
     /*
@@ -171,7 +169,7 @@ void SOC_acquire_core(int core_id)
     }
 }
 
-void SOC_release_core(int core_id)
+void SOC_release_core(unsigned core_id)
 {
     assert((unsigned)core_id < SOC_CPU_CORES_NUM);
     /*
@@ -243,7 +241,7 @@ static intr_desc_t const intr_desc_table[SOC_CPU_INTR_NUM] =
     {5, ESP_CPU_INTR_TYPE_LEVEL,    {ESP_CPU_INTR_DESC_FLAG_RESVD,      ESP_CPU_INTR_DESC_FLAG_RESVD    }}, //31
 };
 
-void esp_cpu_intr_get_desc(int core_id, int intr_nb, esp_cpu_intr_desc_t *intr_desc_ret)
+void esp_cpu_intr_get_desc(unsigned core_id, int intr_nb, esp_cpu_intr_desc_t *intr_desc_ret)
 {
     assert((unsigned)core_id < SOC_CPU_CORES_NUM);
 
@@ -255,7 +253,7 @@ void esp_cpu_intr_get_desc(int core_id, int intr_nb, esp_cpu_intr_desc_t *intr_d
 /****************************************************************************
  *  @internal
  ****************************************************************************/
-static void SOC_cache_err_init(int core_id)
+static void SOC_cache_err_init(unsigned core_id)
 {
     SOC_disable_intr_nb(ETS_CACHEERR_INUM);
 

@@ -38,171 +38,143 @@
  *
  * $FreeBSD$
  */
+#ifndef __ENDIAN_H
+#define __ENDIAN_H                      (1)
 
-#pragma once
-
+#include <features.h>
 #include <stdint.h>
-
-/*
- * This is a compatibility header for <endian.h>.
- * In xtensa-newlib distribution it is located in <machine/endian.h>
- * but most program expect to be plain <endian.h>.
- */
 #include <machine/endian.h>
 
-#ifdef __cplusplus
-extern "C" {
+    #define	bswap16(x)	                __bswap16(x)
+    #define	bswap32(x)	                __bswap32(x)
+    #define	bswap64(x)	                __bswap64(x)
+
+#if _BYTE_ORDER == _LITTLE_ENDIAN
+    #define	htobe16(x)	                bswap16((x))
+    #define	htobe32(x)                  bswap32((x))
+    #define	htobe64(x)                  bswap64((x))
+    #define	htole16(x)                  ((uint16_t)(x))
+    #define	htole32(x)                  ((uint32_t)(x))
+    #define	htole64(x)                  ((uint64_t)(x))
+
+    #define	be16toh(x)                  bswap16((x))
+    #define	be32toh(x)                  bswap32((x))
+    #define	be64toh(x)                  bswap64((x))
+    #define	le16toh(x)                  ((uint16_t)(x))
+    #define	le32toh(x)                  ((uint32_t)(x))
+    #define	le64toh(x)                  ((uint64_t)(x))
+#else
+    #define	htobe16(x)                  ((uint16_t)(x))
+    #define	htobe32(x)                  ((uint32_t)(x))
+    #define	htobe64(x)                  ((uint64_t)(x))
+    #define	htole16(x)                  bswap16((x))
+    #define	htole32(x)                  bswap32((x))
+    #define	htole64(x)                  bswap64((x))
+
+    #define	be16toh(x)                  ((uint16_t)(x))
+    #define	be32toh(x)                  ((uint32_t)(x))
+    #define	be64toh(x)                  ((uint64_t)(x))
+    #define	le16toh(x)                  bswap16((x))
+    #define	le32toh(x)                  bswap32((x))
+    #define	le64toh(x)                  bswap64((x))
 #endif
 
-/*
- * General byte order swapping functions.
- */
-#define	bswap16(x)	__bswap16(x)
-#define	bswap32(x)	__bswap32(x)
-#define	bswap64(x)	__bswap64(x)
+__BEGIN_DECLS
 
-/*
- * Host to big endian, host to little endian, big endian to host, and little
- * endian to host byte order functions as detailed in byteorder(9).
- */
-#if _BYTE_ORDER == _LITTLE_ENDIAN
-#define	htobe16(x)	bswap16((x))
-#define	htobe32(x)	bswap32((x))
-#define	htobe64(x)	bswap64((x))
-#define	htole16(x)	((uint16_t)(x))
-#define	htole32(x)	((uint32_t)(x))
-#define	htole64(x)	((uint64_t)(x))
+static inline
+    uint16_t be16dec(void const *pp)
+    {
+        uint8_t const *p = (uint8_t const *)pp;
+        return ((p[0] << 8) | p[1]);
+    }
 
-#define	be16toh(x)	bswap16((x))
-#define	be32toh(x)	bswap32((x))
-#define	be64toh(x)	bswap64((x))
-#define	le16toh(x)	((uint16_t)(x))
-#define	le32toh(x)	((uint32_t)(x))
-#define	le64toh(x)	((uint64_t)(x))
-#else /* _BYTE_ORDER != _LITTLE_ENDIAN */
-#define	htobe16(x)	((uint16_t)(x))
-#define	htobe32(x)	((uint32_t)(x))
-#define	htobe64(x)	((uint64_t)(x))
-#define	htole16(x)	bswap16((x))
-#define	htole32(x)	bswap32((x))
-#define	htole64(x)	bswap64((x))
+static inline
+    uint32_t be32dec(void const *pp)
+    {
+        uint8_t const *p = (uint8_t const *)pp;
+        return (((unsigned)p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3]);
+    }
 
-#define	be16toh(x)	((uint16_t)(x))
-#define	be32toh(x)	((uint32_t)(x))
-#define	be64toh(x)	((uint64_t)(x))
-#define	le16toh(x)	bswap16((x))
-#define	le32toh(x)	bswap32((x))
-#define	le64toh(x)	bswap64((x))
-#endif /* _BYTE_ORDER == _LITTLE_ENDIAN */
+static inline
+    uint64_t be64dec(void const *pp)
+    {
+        uint8_t const *p = (uint8_t const *)pp;
+        return (((uint64_t)be32dec(p) << 32) | be32dec(p + 4));
+    }
 
-/* Alignment-agnostic encode/decode bytestream to/from little/big endian. */
+static inline
+    uint16_t le16dec(void const *pp)
+    {
+        uint8_t const *p = (uint8_t const *)pp;
+        return ((p[1] << 8) | p[0]);
+    }
 
-static __inline uint16_t
-be16dec(const void *pp)
-{
-	uint8_t const *p = (uint8_t const *)pp;
+static inline
+    uint32_t le32dec(void const *pp)
+    {
+        uint8_t const *p = (uint8_t const *)pp;
+        return (((unsigned)p[3] << 24) | (p[2] << 16) | (p[1] << 8) | p[0]);
+    }
 
-	return ((p[0] << 8) | p[1]);
-}
+static inline
+    uint64_t le64dec(void const *pp)
+    {
+        uint8_t const *p = (uint8_t const *)pp;
+        return (((uint64_t)le32dec(p + 4) << 32) | le32dec(p));
+    }
 
-static __inline uint32_t
-be32dec(const void *pp)
-{
-	uint8_t const *p = (uint8_t const *)pp;
+static inline
+    void be16enc(void *pp, uint16_t u)
+    {
+        uint8_t *p = (uint8_t *)pp;
+        p[0] = ((u >> 8) & 0xFFU);
+        p[1] = u & 0xFFU;
+    }
 
-	return (((unsigned)p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3]);
-}
+static inline
+    void be32enc(void *pp, uint32_t u)
+    {
+        uint8_t *p = (uint8_t *)pp;
+        p[0] = (uint8_t)(u >> 24);
+        p[1] = (u >> 16) & 0xFFU;
+        p[2] = (u >> 8) & 0xFFU;
+        p[3] = u & 0xFFU;
+    }
 
-static __inline uint64_t
-be64dec(const void *pp)
-{
-	uint8_t const *p = (uint8_t const *)pp;
+static inline
+    void be64enc(void *pp, uint64_t u)
+    {
+        uint8_t *p = (uint8_t *)pp;
+        be32enc(p, (uint32_t)(u >> 32));
+        be32enc(p + 4, (uint32_t)(u & 0xffffffffU));
+    }
 
-	return (((uint64_t)be32dec(p) << 32) | be32dec(p + 4));
-}
+static inline
+    void le16enc(void *pp, uint16_t u)
+    {
+        uint8_t *p = (uint8_t *)pp;
+        p[0] = u & 0xFFU;
+        p[1] = (u >> 8) & 0xFFU;
+    }
 
-static __inline uint16_t
-le16dec(const void *pp)
-{
-	uint8_t const *p = (uint8_t const *)pp;
+static inline
+    void le32enc(void *pp, uint32_t u)
+    {
+        uint8_t *p = (uint8_t *)pp;
+        p[0] = u & 0xFFU;
+        p[1] = (u >> 8) & 0xFFU;
+        p[2] = (u >> 16) & 0xFFU;
+        p[3] = (uint8_t)(u >> 24);
+    }
 
-	return ((p[1] << 8) | p[0]);
-}
+static inline
+    void le64enc(void *pp, uint64_t u)
+    {
+        uint8_t *p = (uint8_t *)pp;
 
-static __inline uint32_t
-le32dec(const void *pp)
-{
-	uint8_t const *p = (uint8_t const *)pp;
+        le32enc(p, (uint32_t)(u & 0xffffffffU));
+        le32enc(p + 4, (uint32_t)(u >> 32));
+    }
 
-	return (((unsigned)p[3] << 24) | (p[2] << 16) | (p[1] << 8) | p[0]);
-}
-
-static __inline uint64_t
-le64dec(const void *pp)
-{
-	uint8_t const *p = (uint8_t const *)pp;
-
-	return (((uint64_t)le32dec(p + 4) << 32) | le32dec(p));
-}
-
-static __inline void
-be16enc(void *pp, uint16_t u)
-{
-	uint8_t *p = (uint8_t *)pp;
-
-	p[0] = (u >> 8) & 0xff;
-	p[1] = u & 0xff;
-}
-
-static __inline void
-be32enc(void *pp, uint32_t u)
-{
-	uint8_t *p = (uint8_t *)pp;
-
-	p[0] = (u >> 24) & 0xff;
-	p[1] = (u >> 16) & 0xff;
-	p[2] = (u >> 8) & 0xff;
-	p[3] = u & 0xff;
-}
-
-static __inline void
-be64enc(void *pp, uint64_t u)
-{
-	uint8_t *p = (uint8_t *)pp;
-
-	be32enc(p, (uint32_t)(u >> 32));
-	be32enc(p + 4, (uint32_t)(u & 0xffffffffU));
-}
-
-static __inline void
-le16enc(void *pp, uint16_t u)
-{
-	uint8_t *p = (uint8_t *)pp;
-
-	p[0] = u & 0xff;
-	p[1] = (u >> 8) & 0xff;
-}
-
-static __inline void
-le32enc(void *pp, uint32_t u)
-{
-	uint8_t *p = (uint8_t *)pp;
-
-	p[0] = u & 0xff;
-	p[1] = (u >> 8) & 0xff;
-	p[2] = (u >> 16) & 0xff;
-	p[3] = (u >> 24) & 0xff;
-}
-
-static __inline void
-le64enc(void *pp, uint64_t u)
-{
-	uint8_t *p = (uint8_t *)pp;
-
-	le32enc(p, (uint32_t)(u & 0xffffffffU));
-	le32enc(p + 4, (uint32_t)(u >> 32));
-}
-
-#ifdef __cplusplus
-}
+__END_DECLS
 #endif

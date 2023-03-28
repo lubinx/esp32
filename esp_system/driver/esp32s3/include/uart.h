@@ -21,7 +21,7 @@ extern __attribute__((nothrow, nonnull, const))
     uint32_t UART_get_baudrate(uart_dev_t *dev);
 
 /****************************************************************************
- *  direct write UART through fifo
+ *  direct IO UART through fifo
  ****************************************************************************/
     /**
      *  fifo tx a char
@@ -43,7 +43,7 @@ extern __attribute__((nothrow, nonnull))
      *      @note possiable return 0
     */
 extern __attribute__((nothrow, nonnull))
-    int UART_fifo_write(uart_dev_t *dev, void const *buf, unsigned count);
+    unsigned UART_fifo_write(uart_dev_t *dev, void const *buf, unsigned count);
 
     /**
      *  read fifo buffer
@@ -51,7 +51,7 @@ extern __attribute__((nothrow, nonnull))
      *      @note possiable return 0
     */
 extern __attribute__((nothrow, nonnull))
-    int UART_fifo_read(uart_dev_t *dev, void *buf, unsigned bufsize);
+    unsigned UART_fifo_read(uart_dev_t *dev, void *buf, unsigned bufsize);
 
 __END_DECLS
 #endif

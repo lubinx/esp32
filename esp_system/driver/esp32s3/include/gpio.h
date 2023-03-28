@@ -220,10 +220,10 @@ extern __attribute__((nothrow, nonnull))
     int GPIO_setdir_output_pin_nb(uint8_t pin_nb, enum GPIO_output_mode_t mode);
 
 extern __attribute__((nothrow, nonnull))
-    int GPIO_input_peek_pin_nb(uint8_t pin_nb);
+    uint32_t GPIO_input_peek_pin_nb(uint8_t pin_nb);
 
 extern __attribute__((nothrow, nonnull))
-    int GPIO_output_peek_pin_nb(uint8_t pin_nb);
+    uint32_t GPIO_output_peek_pin_nb(uint8_t pin_nb);
 
 extern __attribute__((nothrow, nonnull))
     int GPIO_output_set_pin_nb(uint8_t pin_nb);

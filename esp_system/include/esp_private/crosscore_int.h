@@ -34,7 +34,7 @@ void esp_crosscore_int_init(void);
  *
  * @param core_id Core that should do the yielding
  */
-void esp_crosscore_int_send_yield(int core_id);
+void esp_crosscore_int_send_yield(unsigned core_id);
 
 
 /**
@@ -46,9 +46,9 @@ void esp_crosscore_int_send_yield(int core_id);
  *
  * @param core_id Core that should update its CCOMPARE1 value
  */
-void esp_crosscore_int_send_freq_switch(int core_id);
+void esp_crosscore_int_send_freq_switch(unsigned core_id);
 
-void esp_crosscore_int_send_gdb_call(int core_id);
+void esp_crosscore_int_send_gdb_call(unsigned core_id);
 
 #if !CONFIG_IDF_TARGET_ESP32C3 && !CONFIG_IDF_TARGET_ESP32H4 && !CONFIG_IDF_TARGET_ESP32C2 && !CONFIG_IDF_TARGET_ESP32C6 && !CONFIG_IDF_TARGET_ESP32H2
 /**
@@ -59,7 +59,7 @@ void esp_crosscore_int_send_gdb_call(int core_id);
  *
  * @param core_id Core that should print its backtrace
  */
-void esp_crosscore_int_send_print_backtrace(int core_id);
+void esp_crosscore_int_send_print_backtrace(unsigned core_id);
 
 #endif // !CONFIG_IDF_TARGET_ESP32C3 && !CONFIG_IDF_TARGET_ESP32H4 && !CONFIG_IDF_TARGET_ESP32C2 && !CONFIG_IDF_TARGET_ESP32C6
 

@@ -175,7 +175,7 @@ Generic function used to send or acquire an item/buffer.
 - If acquiring, set pvItem to NULL. ppvItem remains unchanged on failure.
 */
 static BaseType_t prvSendAcquireGeneric(Ringbuffer_t *pxRingbuffer,
-                                        const void *pvItem,
+                                        void const *pvItem,
                                         void **ppvItem,
                                         size_t xItemSize,
                                         TickType_t xTicksToWait);
@@ -743,7 +743,7 @@ static size_t prvGetCurMaxSizeByteBuf(Ringbuffer_t *pxRingbuffer)
 }
 
 static BaseType_t prvSendAcquireGeneric(Ringbuffer_t *pxRingbuffer,
-                                        const void *pvItem,
+                                        void const *pvItem,
                                         void **ppvItem,
                                         size_t xItemSize,
                                         TickType_t xTicksToWait)
@@ -1029,7 +1029,7 @@ BaseType_t xRingbufferSendComplete(RingbufHandle_t xRingbuffer, void *pvItem)
 }
 
 BaseType_t xRingbufferSend(RingbufHandle_t xRingbuffer,
-                           const void *pvItem,
+                           void const *pvItem,
                            size_t xItemSize,
                            TickType_t xTicksToWait)
 {
@@ -1049,7 +1049,7 @@ BaseType_t xRingbufferSend(RingbufHandle_t xRingbuffer,
 }
 
 BaseType_t xRingbufferSendFromISR(RingbufHandle_t xRingbuffer,
-                                  const void *pvItem,
+                                  void const *pvItem,
                                   size_t xItemSize,
                                   BaseType_t *pxHigherPriorityTaskWoken)
 {

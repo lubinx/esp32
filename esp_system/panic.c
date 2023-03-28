@@ -14,8 +14,11 @@
 
 #include "esp_private/panic_internal.h"
 
+#pragma GCC diagnostic ignored "-Wconversion"
+
 bool g_panic_abort = false;
 static char *s_panic_abort_details = NULL;
+
 
 void panic_print_char(char const c)
 {
@@ -59,7 +62,7 @@ void panic_print_dec(int d)
     panic_print_char(n1 + '0');
 }
 
-static void print_abort_details(const void *f)
+static void print_abort_details(void const *f)
 {
     panic_print_str(s_panic_abort_details);
 }

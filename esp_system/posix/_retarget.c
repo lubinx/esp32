@@ -367,7 +367,7 @@ static const struct syscall_stub_table __stub_table =
     ._exit_r = NULL,    // never called in ROM
     ._close_r = &_close_r,
     ._open_r = &_open_r,
-    ._write_r = (int (*)(struct _reent *r, int, const void *, int)) &_write_r,
+    ._write_r = (int (*)(struct _reent *r, int, void const *, int)) &_write_r,
     ._lseek_r = (int (*)(struct _reent *r, int, int, int)) &_lseek_r,
     ._read_r = (int (*)(struct _reent *r, int, void *, int)) &_read_r,
 #if ESP_ROM_HAS_RETARGETABLE_LOCKING

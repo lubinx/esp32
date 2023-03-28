@@ -55,23 +55,21 @@
     The function returns the address of the previous handler.
     On error, it returns 0.
     */
-    xt_exc_handler xt_set_exception_handler(int n, xt_exc_handler f)
+    xt_exc_handler xt_set_exception_handler(unsigned int intr, xt_exc_handler f)
     {
         xt_exc_handler old;
 
-        if( n < 0 || n >= XCHAL_EXCCAUSE_NUM )
-            return 0;       /* invalid exception number */
+        if (intr >= XCHAL_EXCCAUSE_NUM )
+            return 0;
 
         /* Convert exception number to _xt_exception_table name */
-        n = n * SOC_CPU_CORES_NUM + __get_CORE_ID();
-        old = _xt_exception_table[n];
+        intr = SOC_CPU_CORES_NUM * intr + __get_CORE_ID();
+        old = _xt_exception_table[intr];
 
-        if (f) {
-            _xt_exception_table[n] = f;
-        }
-        else {
-            _xt_exception_table[n] = &xt_unhandled_exception;
-        }
+        if (f)
+            _xt_exception_table[intr] = f;
+        else
+            _xt_exception_table[intr] = &xt_unhandled_exception;
 
         return ((old == &xt_unhandled_exception) ? 0 : old);
     }
@@ -82,8 +80,8 @@
 
     typedef struct xt_handler_table_entry
     {
-        void * handler;
-        void * arg;
+        void *handler;
+        void *arg;
     } xt_handler_table_entry;
 
     extern xt_handler_table_entry _xt_interrupt_table[XCHAL_NUM_INTERRUPTS * SOC_CPU_CORES_NUM];
@@ -92,8 +90,9 @@
     Default handler for unhandled interrupts.
     */
     __attribute__((weak))
-    void xt_unhandled_interrupt(void * arg)
+    void xt_unhandled_interrupt(void *arg)
     {
+        (void)arg;
         // esp_rom_printf("Unhandled interrupt %d on cpu %d!\n", (int)arg, __get_CORE_ID());
     }
 
@@ -109,7 +108,7 @@
     invoked. The function returns the address of the previous handler.
     On error, it returns 0.
     */
-    xt_handler xt_set_interrupt_handler(unsigned int n, xt_handler f, void * arg)
+    xt_handler xt_set_interrupt_handler(unsigned int n, xt_handler f, void *arg)
     {
         xt_handler_table_entry * entry;
         xt_handler               old;

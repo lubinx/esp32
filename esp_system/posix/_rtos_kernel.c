@@ -5,7 +5,9 @@
 
 #include <rtos/kernel.h>
 
-static char const *TAG = "kernel";
+/***************************************************************************/
+/** @def
+****************************************************************************/
 #define DYNAMIC_INC_DESCRIPTORS         (1024 / sizeof(sizeof(struct KERNEL_hdl)))
 
 struct KERNEL_context_t

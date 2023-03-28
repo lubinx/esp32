@@ -19,12 +19,12 @@
 // -------------------- Heap Related -----------------------
 
 #if !CONFIG_FREERTOS_SMP    // IDF-3997
-bool xPortCheckValidTCBMem(const void *ptr)
+bool xPortCheckValidTCBMem(void const *ptr)
 {
     return esp_ptr_internal(ptr) && esp_ptr_byte_accessible(ptr);
 }
 
-bool xPortcheckValidStackMem(const void *ptr)
+bool xPortcheckValidStackMem(void const *ptr)
 {
 #ifdef CONFIG_SPIRAM_ALLOW_STACK_EXTERNAL_MEMORY
     return esp_ptr_byte_accessible(ptr);

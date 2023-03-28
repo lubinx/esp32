@@ -132,7 +132,7 @@ extern "C" {
             #define _REENT_INIT_PTR             _init_reent
             #define _impure_ptr                 _reent_ptr
 
-            void _reclaim_reent(void * ptr);
+            void _reclaim_reent(void *ptr);
         #endif
     #elif XSHAL_CLIB == XTHAL_CLIB_NEWLIB
         #define XT_HAVE_THREAD_SAFE_CLIB    1

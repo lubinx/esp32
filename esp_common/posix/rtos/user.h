@@ -59,7 +59,7 @@ extern __attribute__((nothrow))
     #define THREAD_MINIMAL_STACK_SIZE           (768)   // see FreeRTOSConfig.h => configMINIMAL_STACK_SIZE
 
     #define THREAD_DEF_PRIORITY                 (3)     // see FreeRTOSConfig.h => configMAX_PRIORITIES
-    #define THREAD_BIND_ALL_CORE                (-1)
+    #define THREAD_BIND_ALL_CORE                ((unsigned)~0)
 
     /**
      *  thread_create()
@@ -80,7 +80,7 @@ extern __attribute__((nothrow, nonnull(2)))
     */
 extern __attribute__((nothrow, nonnull(2)))
     thread_id_t thread_create_at_core(unsigned priority, void *(*start_rountine)(void *arg), void *arg,
-        uint32_t *stack, size_t stack_size, int core_id);
+        uint32_t *stack, size_t stack_size, unsigned core_id);
 
 extern __attribute__((nothrow))
     thread_id_t thread_self(void);

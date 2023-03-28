@@ -163,7 +163,7 @@ thread_id_t thread_create(unsigned priority, void *(*start_rountine)(void *arg),
 }
 
 thread_id_t thread_create_at_core(unsigned priority, void *(*start_rountine)(void *arg), void *arg,
-    uint32_t *stack, size_t stack_size, int core_id)
+    uint32_t *stack, size_t stack_size, unsigned core_id)
 {
     if (stack_size < THREAD_MINIMAL_STACK_SIZE)
         return __set_errno_nullptr(EINVAL);
@@ -578,6 +578,7 @@ esp_err_t esp_register_shutdown_handler(void (*func_ptr)(void))
 
 esp_err_t esp_unregister_shutdown_handler(void (*func_ptr)(void))
 {
+    ARG_UNUSED(func_ptr);
     return ESP_OK;
 }
 
@@ -618,7 +619,7 @@ void systimer_hal_connect_alarm_counter(systimer_hal_context_t *hal, uint32_t al
 void systimer_hal_set_alarm_period(systimer_hal_context_t *hal, uint32_t alarm_id, uint32_t period)
 {
     systimer_ll_enable_alarm(hal->dev, alarm_id, false);
-    systimer_ll_set_alarm_period(hal->dev, alarm_id, hal->us_to_ticks(period));
+    systimer_ll_set_alarm_period(hal->dev, alarm_id, (uint32_t)hal->us_to_ticks(period));
     systimer_ll_apply_alarm_value(hal->dev, alarm_id);
     systimer_ll_enable_alarm(hal->dev, alarm_id, true);
 }

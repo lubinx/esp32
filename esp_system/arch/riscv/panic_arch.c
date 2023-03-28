@@ -66,7 +66,7 @@ static inline bool test_and_print_register_bits(uint32_t const status,
  * Function called when a cache error occurs. It prints details such as the
  * explanation of why the panic occured.
  */
-static inline void print_cache_err_details(const void *frame)
+static inline void print_cache_err_details(void const *frame)
 {
 #if !CONFIG_IDF_TARGET_ESP32C6 && !CONFIG_IDF_TARGET_ESP32H2 // ESP32C6-TODO, ESP32H2-TODO: IDF-5657
     /* Define the array that contains the status (bits) to test on the register
@@ -144,7 +144,7 @@ static inline void print_cache_err_details(const void *frame)
 #endif
 }
 
-void panic_print_registers(const void *f, int core)
+void panic_print_registers(void const *f, int core)
 {
     uint32_t *regs = (uint32_t *)f;
 
@@ -262,7 +262,7 @@ void panic_arch_fill_info(void *frame, panic_info_t *info)
     info->frame = &regs;
 }
 
-static void panic_print_basic_backtrace(const void *frame, int core)
+static void panic_print_basic_backtrace(void const *frame, int core)
 {
     // Basic backtrace
     panic_print_str("\r\nStack memory:\r\n");
@@ -280,7 +280,7 @@ static void panic_print_basic_backtrace(const void *frame, int core)
     }
 }
 
-void panic_print_backtrace(const void *frame, int core)
+void panic_print_backtrace(void const *frame, int core)
 {
 #if CONFIG_ESP_SYSTEM_USE_EH_FRAME
     if (!spi_flash_cache_enabled()) {
@@ -295,12 +295,12 @@ void panic_print_backtrace(const void *frame, int core)
 #endif
 }
 
-uint32_t panic_get_address(const void *f)
+uint32_t panic_get_address(void const *f)
 {
     return ((RvExcFrame *)f)->mepc;
 }
 
-uint32_t panic_get_cause(const void *f)
+uint32_t panic_get_cause(void const *f)
 {
     return ((RvExcFrame *)f)->mcause;
 }

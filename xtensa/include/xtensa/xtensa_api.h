@@ -56,7 +56,7 @@ typedef void (*xt_exc_handler)(XtExcFrame *);
   of the exception frame structure see xtensa_context.h.
 -------------------------------------------------------------------------------
 */
-extern xt_exc_handler xt_set_exception_handler(int n, xt_exc_handler f);
+extern xt_exc_handler xt_set_exception_handler(unsigned int intr, xt_exc_handler f);
 
 
 /*
@@ -69,7 +69,7 @@ extern xt_exc_handler xt_set_exception_handler(int n, xt_exc_handler f);
     arg      - Argument to be passed to handler.
 -------------------------------------------------------------------------------
 */
-extern xt_handler xt_set_interrupt_handler(unsigned int intr, xt_handler handler, void * arg);
+extern xt_handler xt_set_interrupt_handler(unsigned int intr, xt_handler handler, void *arg);
 
 
 /*
@@ -123,7 +123,7 @@ static inline void xt_set_intclear(unsigned int arg)
     n        - Interrupt number.
 -------------------------------------------------------------------------------
 */
-extern void * xt_get_interrupt_handler_arg(int n);
+extern void *xt_get_interrupt_handler_arg(int n);
 
 /*
 -------------------------------------------------------------------------------

@@ -106,7 +106,7 @@ void esp_crosscore_int_init(void) {
     ESP_ERROR_CHECK(err);
 }
 
-static void IRAM_ATTR esp_crosscore_int_send(int core_id, uint32_t reason_mask) {
+static void IRAM_ATTR esp_crosscore_int_send(unsigned core_id, uint32_t reason_mask) {
     assert(core_id < portNUM_PROCESSORS);
     //Mark the reason we interrupt the other CPU
     portENTER_CRITICAL_ISR(&reason_spinlock);
@@ -134,23 +134,23 @@ static void IRAM_ATTR esp_crosscore_int_send(int core_id, uint32_t reason_mask) 
 #endif
 }
 
-void IRAM_ATTR esp_crosscore_int_send_yield(int core_id)
+void IRAM_ATTR esp_crosscore_int_send_yield(unsigned core_id)
 {
     esp_crosscore_int_send(core_id, REASON_YIELD);
 }
 
-void IRAM_ATTR esp_crosscore_int_send_freq_switch(int core_id)
+void IRAM_ATTR esp_crosscore_int_send_freq_switch(unsigned core_id)
 {
     esp_crosscore_int_send(core_id, REASON_FREQ_SWITCH);
 }
 
-void IRAM_ATTR esp_crosscore_int_send_gdb_call(int core_id)
+void IRAM_ATTR esp_crosscore_int_send_gdb_call(unsigned core_id)
 {
     esp_crosscore_int_send(core_id, REASON_GDB_CALL);
 }
 
 #if !CONFIG_IDF_TARGET_ESP32C3 && !CONFIG_IDF_TARGET_ESP32H4 && !IDF_TARGET_ESP32C2 && !IDF_TARGET_ESP32C6 && !CONFIG_IDF_TARGET_ESP32H2
-void IRAM_ATTR esp_crosscore_int_send_print_backtrace(int core_id)
+void IRAM_ATTR esp_crosscore_int_send_print_backtrace(unsigned core_id)
 {
     esp_crosscore_int_send(core_id, REASON_PRINT_BACKTRACE);
 }

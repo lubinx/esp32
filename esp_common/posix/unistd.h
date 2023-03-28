@@ -400,7 +400,7 @@ extern __attribute__((nothrow))
     int nice(int incr);
 
 extern __attribute__((nothrow))
-    void swab(const void *src, void *dest, ssize_t nbytes);
+    void swab(void const *src, void *dest, ssize_t nbytes);
 
 extern __attribute__((nothrow))
     pid_t tcgetpgrp(int fildes);
@@ -474,9 +474,9 @@ extern __attribute__((nothrow))
     ssize_t read(int fildes, void *buf, size_t nbyte);
 
 extern __attribute__((nothrow))
-    ssize_t pwrite(int fildes, const void *buf, size_t nbyte, off_t offset);
+    ssize_t pwrite(int fildes, void const *buf, size_t nbyte, off_t offset);
 extern __attribute__((nothrow))
-    ssize_t write(int fildes, const void *buf, size_t nbyte);
+    ssize_t write(int fildes, void const *buf, size_t nbyte);
 
 extern __attribute__((nothrow))
     int isatty(int fildes);

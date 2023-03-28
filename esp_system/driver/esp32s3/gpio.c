@@ -132,6 +132,7 @@ enum gpio_pin_inttype
     PIN_INTR_TRIG_HIGH_LEVEL,
 };
 
+/*
 static enum gpio_pin_inttype const GPIO_intr_trig_xlat[] =
 {
     [TRIG_BY_FALLING_EDGE]  = PIN_INTR_TRIG_FALLING_EDGE,
@@ -140,6 +141,7 @@ static enum gpio_pin_inttype const GPIO_intr_trig_xlat[] =
     [TRIG_BY_HIGH_LEVEL]    = PIN_INTR_TRIG_HIGH_LEVEL,
     [TRIG_BY_BOTH_EDGE]     = PIN_INTR_TRIG_BOTH_EDGE,
 };
+*/
 
 /***************************************************************************/
 /** @internal
@@ -167,14 +169,14 @@ static struct GPIO_matrix GPIO_matrix[SOC_GPIO_PIN_COUNT] = {0};
 void GPIO_initialize(void)
 {
     // GPIO initial direct-INPUT is on
-    for (int i = 0; i < lengthof(GPIO.func_in_sel_cfg); i ++)
+    for (unsigned i = 0; i < lengthof(GPIO.func_in_sel_cfg); i ++)
         GPIO.func_in_sel_cfg[i].val = 0;
 
     // GPIO initial direct-OUTPUT is off
     GPIO.enable = 0;
     GPIO.enable1.data = 0;
 
-    for (int i = 0; i < SOC_GPIO_PIN_COUNT; i ++)
+    for (unsigned i = 0; i < SOC_GPIO_PIN_COUNT; i ++)
     {
         iomux_reg_t *mux;
 
@@ -219,7 +221,7 @@ void GPIO_initialize(void)
  ****************************************************************************/
 int IOMUX_configure(enum iomux_def mux)
 {
-    int pin_nb = mux >> 12;
+    uint8_t pin_nb = (uint8_t)(mux >> 12);
 
     struct GPIO_matrix *mat = &GPIO_matrix[pin_nb];
     if (! mat->pin)
@@ -229,7 +231,7 @@ int IOMUX_configure(enum iomux_def mux)
     IOMUX_route_disconnect(pin_nb);
 
     iomux_reg_t reg = {.val = mat->mux->val};
-    reg.mcu_sel = mux & 0xF;
+    reg.mcu_sel = BIT_FIELD(3, mux);
     // reg.func_ie = (0 != IOMUX_IS_INPUT & mux);
     mat->mux->val = reg.val;
 
@@ -242,7 +244,7 @@ int IOMUX_configure(enum iomux_def mux)
 
 int IOMUX_deconfigure(enum iomux_def mux, bool pull_up)
 {
-    int pin_nb = mux >> 12;
+    uint8_t pin_nb = (uint8_t)(mux >> 12);
 
     struct GPIO_matrix *mat = &GPIO_matrix[pin_nb];
     if (! mat->pin)
@@ -267,7 +269,7 @@ int IOMUX_route_input(uint8_t pin_nb, uint16_t sig_idx, bool inv, enum GPIO_pad_
     IOMUX_route_disconnect(pin_nb);
 
     iomux_matrix_in_t mat_in = {0};
-    mat_in.func_sel = pin_nb;
+    mat_in.func_sel = BIT_FIELD(6, pin_nb);
     mat_in.sig_in_inv = inv;
     mat_in.sig_in_sel = IOMUX_MATRIX_IN_EN;
 
@@ -292,7 +294,7 @@ int IOMUX_route_output(uint8_t pin_nb, uint16_t sig_idx, enum GPIO_output_mode_t
     GPIO_setdir_output_pin_nb(pin_nb, mode);
 
     iomux_matrix_out_t mat_out = {0};
-    mat_out.func_sel = sig_idx;
+    mat_out.func_sel = BIT_FIELD(9, sig_idx);
     mat_out.inv_sel = inv;
     mat_out.oen_inv_sel = oen_inv;
     mat_out.oen_sel = IOMUX_MATRIX_OUT_EN;
@@ -302,7 +304,7 @@ int IOMUX_route_output(uint8_t pin_nb, uint16_t sig_idx, enum GPIO_output_mode_t
     if (mat->pin->pad_driver)
     {
         iomux_matrix_in_t mat_in = {0};
-        mat_in.func_sel = pin_nb;
+        mat_in.func_sel = BIT_FIELD(6, pin_nb);
         mat_in.sig_in_inv = inv;
         mat_in.sig_in_sel = IOMUX_MATRIX_IN_EN;
 
@@ -311,6 +313,7 @@ int IOMUX_route_output(uint8_t pin_nb, uint16_t sig_idx, enum GPIO_output_mode_t
 
         mat->mat_in = cfg;
     }
+    return 0;
 }
 
 int IOMUX_route_disconnect(uint8_t pin_nb)
@@ -413,16 +416,20 @@ void IOMUX_print(void)
 ****************************************************************************/
 int GPIO_disable(void *const gpio, uint32_t pins, bool pull_up)
 {
+    ARG_UNUSED(gpio, pins, pull_up);
     return ENOSYS;
 }
 
 int GPIO_setdir_input(void *const gpio, uint32_t pins, enum GPIO_pad_pull_t pp, bool filter_en)
 {
+    ARG_UNUSED(gpio, pins, pp, filter_en);
     return ENOSYS;
 }
 
 int GPIO_setdir_output(enum GPIO_output_mode_t mode, void *const gpio, uint32_t pins)
 {
+    ARG_UNUSED(gpio, pins);
+
     if (OPEN_SOURCE == mode)
         return ENOTSUP;
 
@@ -431,42 +438,47 @@ int GPIO_setdir_output(enum GPIO_output_mode_t mode, void *const gpio, uint32_t 
 
 int GPIO_debounce(void *const gpio, uint32_t pins, uint32_t millisecond)
 {
+    ARG_UNUSED(gpio, pins, millisecond);
     return ENOSYS;
 }
 
 int GPIO_hold_repeating(void *const gpio, uint32_t pins, uint32_t millisecond)
 {
+    ARG_UNUSED(gpio, pins, millisecond);
     return ENOSYS;
 }
 
 uint32_t GPIO_peek(void *const gpio, uint32_t pins)
 {
-    if ((uintptr_t)gpio != (uintptr_t)gpio & pins)
+    if ((uintptr_t)gpio != ((uintptr_t)gpio & pins))
         return (uint32_t)__set_errno_nullptr(EINVAL);
+
+    return 0;
 }
 
 uint32_t GPIO_peek_output(void *const gpio, uint32_t pins)
 {
-    if ((uintptr_t)gpio != (uintptr_t)gpio & pins)
+    if ((uintptr_t)gpio != ((uintptr_t)gpio & pins))
         return (uint32_t)__set_errno_nullptr(EINVAL);
+
+    return 0;
 }
 
 void GPIO_toggle(void *const gpio, uint32_t pins)
 {
-    if ((uintptr_t)gpio != (uintptr_t)gpio & pins)
+    if ((uintptr_t)gpio != ((uintptr_t)gpio & pins))
         return (void)__set_errno_nullptr(EINVAL);
 }
 
 void GPIO_set(void *const gpio, uint32_t pins)
 {
-    if ((uintptr_t)gpio != (uintptr_t)gpio & pins)
+    if ((uintptr_t)gpio != ((uintptr_t)gpio & pins))
         return (void)__set_errno_nullptr(EINVAL);
-
 }
 
 void GPIO_clear(void *const gpio, uint32_t pins)
 {
-    if ((uintptr_t)gpio != (uintptr_t)gpio & pins)
+    if ((uintptr_t)gpio != ((uintptr_t)gpio & pins))
         return (void)__set_errno_nullptr(EINVAL);
 }
 
@@ -483,7 +495,7 @@ int GPIO_disable_pin_nb(uint8_t pin_nb, bool pull_up)
     GPIO_OUTPUT_DISABLE(pin_nb);
 
     mat->mux->val = iomux_reg_val(pull_up ? PULL_UP : HIGH_Z, IOMUX_SEL_GPIO, mat->mux->func_drv, false, false);
-    IOMUX_route_disconnect(pin_nb);
+    return IOMUX_route_disconnect(pin_nb);
 }
 
 int GPIO_setdir_input_pin_nb(uint8_t pin_nb, enum GPIO_pad_pull_t pp, bool filter_en)
@@ -494,12 +506,13 @@ int GPIO_setdir_input_pin_nb(uint8_t pin_nb, enum GPIO_pad_pull_t pp, bool filte
 
     // disconnect matrix connections
     IOMUX_route_disconnect(pin_nb);
-
     mat->mux->val = iomux_reg_val(pp, mat->mux->mcu_sel, mat->mux->func_drv, true, filter_en);
 
     // disable output when output is not open-drain
     if (! mat->pin->pad_driver)
         GPIO_OUTPUT_DISABLE(pin_nb);
+
+    return 0;
 }
 
 int GPIO_setdir_output_pin_nb(uint8_t pin_nb, enum GPIO_output_mode_t mode)
@@ -566,25 +579,27 @@ open_drain_with_pull_up:
 
     mat->pin->pad_driver = od;
     mat->mux->val = iomux_reg_val(pp, mat->mux->mcu_sel, mat->mux->func_drv, od, filter_en);
+
     GPIO_OUTPUT_ENABLE(pin_nb);
+    return 0;
 }
 
-int GPIO_input_peek_pin_nb(uint8_t pin_nb)
+uint32_t GPIO_input_peek_pin_nb(uint8_t pin_nb)
 {
     struct GPIO_matrix *mat = &GPIO_matrix[pin_nb];
-    if (! mat->pin)
-        return ENOTSUP;
-
-    return GPIO_INPUT_PEEK(pin_nb);
+    if (mat->pin)
+        return GPIO_INPUT_PEEK(pin_nb);
+    else
+        return (unsigned)__set_errno_nullptr(ENOTSUP);
 }
 
-int GPIO_output_peek_pin_nb(uint8_t pin_nb)
+uint32_t GPIO_output_peek_pin_nb(uint8_t pin_nb)
 {
     struct GPIO_matrix *mat = &GPIO_matrix[pin_nb];
-    if (! mat->pin)
-        return ENOTSUP;
-
-    return GPIO_OUTPUT_PEEK(pin_nb);
+    if (mat->pin)
+        return GPIO_OUTPUT_PEEK(pin_nb);
+    else
+        return (unsigned)__set_errno_nullptr(ENOTSUP);
 }
 
 int GPIO_output_set_pin_nb(uint8_t pin_nb)
@@ -617,6 +632,8 @@ int GPIO_output_toggle_pin_nb(uint8_t pin_nb)
         GPIO_OUTPUT_CLEAR(pin_nb);
     else
         GPIO_OUTPUT_SET(pin_nb);
+
+    return 0;
 }
 
 /***************************************************************************/
@@ -624,11 +641,12 @@ int GPIO_output_toggle_pin_nb(uint8_t pin_nb)
 ****************************************************************************/
 void GPIO_HAL_intr_enable(void *const gpio, uint32_t pins, enum GPIO_trig_t trig)
 {
+    ARG_UNUSED(gpio, pins, trig);
 }
 
 void GPIO_HAL_intr_disable(void *const gpio, uint32_t pins)
 {
-
+    ARG_UNUSED(gpio, pins);
 }
 
 /***************************************************************************/
@@ -641,12 +659,12 @@ static uint32_t iomux_reg_val(enum GPIO_pad_pull_t pp, uint8_t sel, uint8_t drv,
         .slp_ie = ie,
         .slp_pd = (pp == PULL_DOWN),
         .slp_pu = (PULL_UP == pp),
-        .slp_drv = drv,
+        .slp_drv = BIT_FIELD(2, drv),
         .func_pd = (pp == PULL_DOWN),
         .func_pu = (PULL_UP == pp),
-        .func_drv = drv,
+        .func_drv = BIT_FIELD(2, drv),
         .func_ie = ie,
-        .mcu_sel = sel, .func_ie = ie,
+        .mcu_sel = BIT_FIELD(3, sel),
         .filter_en = filter_en,
     };
     return reg.val;

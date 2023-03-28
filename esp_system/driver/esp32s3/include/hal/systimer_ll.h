@@ -22,7 +22,7 @@ static inline
         if (en) {
             dev->conf.val |= 1 << (30 - counter_id);
         } else {
-            dev->conf.val &= ~(1 << (30 - counter_id));
+            dev->conf.val &= (uint32_t)~(1 << (30 - counter_id));
         }
     }
 
@@ -128,7 +128,7 @@ static inline
         if (en) {
             dev->conf.val |= 1 << (24 - alarm_id);
         } else {
-            dev->conf.val &= ~(1 << (24 - alarm_id));
+            dev->conf.val &= (uint32_t)~(1 << (24 - alarm_id));
         }
     }
 
@@ -140,7 +140,7 @@ static inline
         if (en) {
             dev->int_ena.val |= 1 << alarm_id;
         } else {
-            dev->int_ena.val &= ~(1 << alarm_id);
+            dev->int_ena.val &= (uint32_t)~(1 << alarm_id);
         }
     }
 

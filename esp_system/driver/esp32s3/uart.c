@@ -138,11 +138,12 @@ static struct UART_context uart_context[SOC_UART_NUM] = {0};
  ****************************************************************************/
 ssize_t console_write(void const *buf, size_t count)
 {
-    int written = 0;
-    while (written < count)
-        written += UART_fifo_write(&UART0, (uint8_t *)buf + written, count - written);
+    size_t written = 0;
 
-    return count;
+    while (written < count)
+        written += (size_t)UART_fifo_write(&UART0, (uint8_t *)buf + written, count - written);
+
+    return (ssize_t)count;
 }
 
 /****************************************************************************
@@ -214,12 +215,13 @@ int UART_configure(uart_dev_t *dev, uint32_t bps, enum UART_parity_t parity, enu
         // UART0 is default esp-idf enabled debug tracing port, it always enabled, but still we need to taking control
         if (PERIPH_UART0_MODULE == uart_module)
         {
+            dev->int_ena.val = 0;
+            dev->int_clr.val = (uint32_t)~0;
+            while (0 != dev->status.txfifo_cnt) sched_yield();
+
             // this is not sdk configurable, always TXD = 43, RXD = 44
             IOMUX_configure(IOMUX_UART0_TXD);
             IOMUX_configure(IOMUX_UART0_RXD);
-
-            dev->int_ena.val = 0;
-            while (0 != dev->status.txfifo_cnt) sched_yield();
         }
         else
             return EBUSY;
@@ -330,8 +332,8 @@ uint32_t UART_get_baudrate(uart_dev_t *dev)
     if (! CLK_periph_is_enabled(module))
         return (uint32_t)__set_errno_nullptr(EACCES);
 
-    return (CLK_uart_sclk_freq(dev) << 4) / ((dev->clkdiv.clkdiv << 4) | dev->clkdiv.clkdiv_frag) /
-        (dev->clk_conf.sclk_div_num + 1);
+    return (uint32_t)((CLK_uart_sclk_freq(dev) << 4) / ((dev->clkdiv.clkdiv << 4) | dev->clkdiv.clkdiv_frag) /
+        (dev->clk_conf.sclk_div_num + 1));
 }
 
 /****************************************************************************
@@ -349,7 +351,7 @@ uint8_t UART_fifo_rx(uart_dev_t *dev)
     return (uint8_t)dev->fifo.rxfifo_rd_byte;
 }
 
-int UART_fifo_write(uart_dev_t *dev, void const *buf, unsigned count)
+unsigned UART_fifo_write(uart_dev_t *dev, void const *buf, unsigned count)
 {
     unsigned written = 0;
 
@@ -363,7 +365,7 @@ int UART_fifo_write(uart_dev_t *dev, void const *buf, unsigned count)
     return written;
 }
 
-int UART_fifo_read(uart_dev_t *dev, void *buf, unsigned bufsize)
+unsigned UART_fifo_read(uart_dev_t *dev, void *buf, unsigned bufsize)
 {
     unsigned readed = 0;
 
@@ -424,12 +426,12 @@ static void UART_configure_context_bps(struct UART_context *context, uart_dev_t 
     uint64_t sclk_freq = CLK_uart_sclk_freq(dev);
 
     // calucate baudrate: UART_CLKDIV_V = 12bits int = 0xFFF = 4095
-    int sclk_div = (sclk_freq + UART_CLKDIV_V * context->bps - 1) / (UART_CLKDIV_V * context->bps);
-    uint32_t clk_div = ((sclk_freq) << 4) / (context->bps * sclk_div);
+    uint32_t sclk_div = (uint32_t)((sclk_freq + UART_CLKDIV_V * context->bps - 1) / (UART_CLKDIV_V * context->bps));
+    uint32_t clk_div = (uint32_t)(((sclk_freq) << 4) / (context->bps * sclk_div));
     // baud rate configuration register is divided into // an integer part and a fractional part.
-    dev->clkdiv.clkdiv = clk_div >> 4;
+    dev->clkdiv.clkdiv = BIT_FIELD(12, clk_div >> 4);
     dev->clkdiv.clkdiv_frag = clk_div & 0xF;
-    dev->clk_conf.sclk_div_num = sclk_div - 1;
+    dev->clk_conf.sclk_div_num = BIT_FIELD(8, sclk_div - 1);
 }
 
 static ssize_t UART_read(int fd, void *buf, size_t bufsize)
@@ -461,7 +463,7 @@ static ssize_t UART_read(int fd, void *buf, size_t bufsize)
 
     if (0 == retval)
     {
-        retval = UART_fifo_read(dev, buf, bufsize);
+        retval = (int)UART_fifo_read(dev, buf, bufsize);
 
         if (0 == retval)
             retval = __set_errno_neg(EAGAIN);
@@ -488,13 +490,14 @@ static ssize_t UART_write(int fd, void const *buf, size_t count)
     retval = sem_timedwait_ms(&context->write_rdy, timeo);
     if (0 == retval)
     {
-        int written = UART_fifo_write(dev, buf, count);
+        size_t written = UART_fifo_write(dev, buf, count);
+
         if (written < count)
         {
             if (FD_FLAG_NONBLOCK & AsFD(fd)->flags)
             {
                 if (written)
-                    retval = written;
+                    retval = (int)written;
                 else
                     retval = __set_errno_neg(EAGAIN);
             }
@@ -506,11 +509,11 @@ static ssize_t UART_write(int fd, void const *buf, size_t count)
                 dev->int_ena.tx_done_int_ena = 1;
                 sem_wait(&context->write_rdy);
 
-                retval = count;
+                retval = (ssize_t)count;
             }
         }
         else
-            retval = written;
+            retval = (int)written;
 
         sem_post(&context->write_rdy);
     }
@@ -570,7 +573,7 @@ static void UART_IntrHandler(struct UART_context *context)
     {
         if (context->tx_ptr)
         {
-            context->tx_ptr += UART_fifo_write(dev, context->tx_ptr, context->tx_end - context->tx_ptr);
+            context->tx_ptr += UART_fifo_write(dev, context->tx_ptr, (unsigned)(context->tx_end - context->tx_ptr));
 
             if (context->tx_ptr == context->tx_end)
             {

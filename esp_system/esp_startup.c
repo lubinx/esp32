@@ -3,8 +3,6 @@
 
 #include "sdkconfig.h"
 
-static char const *TAG = "startup";
-
 /****************************************************************************
  *  imports
 *****************************************************************************/
@@ -64,7 +62,7 @@ void Startup_Handler(void)
 
     #ifdef CONFIG_COMPILER_CXX_EXCEPTIONS
         struct object { long placeholder[10]; };
-        extern void __register_frame_info(const void *begin, struct object *ob);
+        extern void __register_frame_info(void const *begin, struct object *ob);
         extern char __eh_frame[];
 
         static struct object ob;

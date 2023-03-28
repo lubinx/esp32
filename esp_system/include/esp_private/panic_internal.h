@@ -34,7 +34,7 @@ extern "C" {
     // and backtrace field of panic_info_t. These functions should limit themselves
     // to printing to the console and should do other more involved processing,
     // and must be aware that the main logic in panic.c has a watchdog timer active.
-    typedef void (*panic_info_dump_fn_t)(const void *frame);
+    typedef void (*panic_info_dump_fn_t)(void const *frame);
 
     // Non architecture specific exceptions (generally valid for all targets).
     // Can be used to convey to the main logic what exception is being
@@ -55,8 +55,8 @@ extern "C" {
         char const *description;                // short description of the exception
         panic_info_dump_fn_t details;           // more details on the exception
         panic_info_dump_fn_t state;             // processor state, usually the contents of the registers
-        const void *addr;                       // instruction address that triggered the exception
-        const void *frame;                      // reference to the frame
+        void const *addr;                       // instruction address that triggered the exception
+        void const *frame;                      // reference to the frame
         bool pseudo_excause;                    // flag indicating that exception cause has special meaning
     } panic_info_t;
 
@@ -82,15 +82,15 @@ extern "C" {
 
     void panic_soc_fill_info(void *frame, panic_info_t *info);
 
-    void panic_print_registers(const void *frame, int core);
+    void panic_print_registers(void const *frame, int core);
 
-    void panic_print_backtrace(const void *frame, int core);
+    void panic_print_backtrace(void const *frame, int core);
 
-    uint32_t panic_get_address(const void *frame);
+    uint32_t panic_get_address(void const *frame);
 
     void panic_set_address(void *frame, uint32_t addr);
 
-    uint32_t panic_get_cause(const void *frame);
+    uint32_t panic_get_cause(void const *frame);
 
 #ifdef __cplusplus
 }

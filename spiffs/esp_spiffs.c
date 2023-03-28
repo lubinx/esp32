@@ -53,8 +53,8 @@ typedef struct {
 
 static int spiffs_res_to_errno(s32_t fr);
 static int vfs_spiffs_open(void *ctx, const char *path, int flags, int mode);
-static ssize_t vfs_spiffs_write(void *ctx, int fd, const void * data, size_t size);
-static ssize_t vfs_spiffs_read(void *ctx, int fd, void * dst, size_t size);
+static ssize_t vfs_spiffs_write(void *ctx, int fd, void const *data, size_t size);
+static ssize_t vfs_spiffs_read(void *ctx, int fd, void *dst, size_t size);
 static int vfs_spiffs_close(void *ctx, int fd);
 static off_t vfs_spiffs_lseek(void *ctx, int fd, off_t offset, int mode);
 static int vfs_spiffs_fstat(void *ctx, int fd, struct stat * st);
@@ -543,7 +543,7 @@ static int vfs_spiffs_open(void *ctx, const char *path, int flags, int mode)
     return fd;
 }
 
-static ssize_t vfs_spiffs_write(void *ctx, int fd, const void * data, size_t size)
+static ssize_t vfs_spiffs_write(void *ctx, int fd, void const *data, size_t size)
 {
     esp_spiffs_t * efs = (esp_spiffs_t *)ctx;
     ssize_t res = SPIFFS_write(efs->fs, fd, (void *)data, size);
@@ -555,7 +555,7 @@ static ssize_t vfs_spiffs_write(void *ctx, int fd, const void * data, size_t siz
     return res;
 }
 
-static ssize_t vfs_spiffs_read(void *ctx, int fd, void * dst, size_t size)
+static ssize_t vfs_spiffs_read(void *ctx, int fd, void *dst, size_t size)
 {
     esp_spiffs_t * efs = (esp_spiffs_t *)ctx;
     ssize_t res = SPIFFS_read(efs->fs, fd, dst, size);

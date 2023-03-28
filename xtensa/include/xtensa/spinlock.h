@@ -63,12 +63,12 @@ static inline __attribute__((nonnull, nothrow))
     }
 
 // for esp-idf compatiable
-    #define SPINLOCK_WAIT_FOREVER       ((unsigned)(-1))
+    #define SPINLOCK_WAIT_FOREVER       (~0)
 
 static inline __attribute__((nonnull, nothrow))
     bool spinlock_acquire(spinlock_t *lock, unsigned timeout)
     {
-        assert(timeout == SPINLOCK_WAIT_FOREVER);
+        assert(timeout == (unsigned)SPINLOCK_WAIT_FOREVER);
         spin_lock(lock);
         return true;
     }

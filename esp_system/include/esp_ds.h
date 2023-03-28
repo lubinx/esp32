@@ -129,7 +129,7 @@ typedef struct {
  *      - ESP_ERR_HW_CRYPTO_DS_INVALID_PADDING if the message padding is incorrect, the signature can be read though
  *        since the message digest matches.
  */
-esp_err_t esp_ds_sign(const void *message,
+esp_err_t esp_ds_sign(void const *message,
         const esp_ds_data_t *data,
         hmac_key_id_t key_id,
         void *signature);
@@ -169,7 +169,7 @@ esp_err_t esp_ds_sign(const void *message,
  *      - ESP_ERR_NO_MEM if there hasn't been enough memory to allocate the context object
  *      - ESP_ERR_HW_CRYPTO_DS_INVALID_KEY if there's a problem with passing the HMAC key to the DS component
  */
-esp_err_t esp_ds_start_sign(const void *message,
+esp_err_t esp_ds_start_sign(void const *message,
         const esp_ds_data_t *data,
         hmac_key_id_t key_id,
         esp_ds_context_t **esp_ds_ctx);
@@ -225,9 +225,9 @@ esp_err_t esp_ds_finish_sign(void *signature, esp_ds_context_t *esp_ds_ctx);
  *      - ESP_ERR_INVALID_ARG if one of the parameters is NULL or p_data->rsa_length is too long
  */
 esp_err_t esp_ds_encrypt_params(esp_ds_data_t *data,
-        const void *iv,
+        void const *iv,
         const esp_ds_p_data_t *p_data,
-        const void *key);
+        void const *key);
 
 #ifdef __cplusplus
 }

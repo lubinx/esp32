@@ -8,12 +8,15 @@
 #include "sdkconfig.h"
 
 #if ! CONFIG_IDF_TARGET_ESP32
-#include "soc/extmem_reg.h"
-#include "soc/ext_mem_defs.h"
-#include "soc/rtc_cntl_reg.h"
+    #include "soc/extmem_reg.h"
+    #include "soc/ext_mem_defs.h"
+    #include "soc/rtc_cntl_reg.h"
 #endif
 
-void panic_print_registers(const void *f, int core)
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wsign-conversion"
+
+void panic_print_registers(void const *f, int core)
 {
     XtExcFrame *frame = (XtExcFrame *)f;
     int *regs = (int *)frame;
@@ -72,7 +75,7 @@ void panic_print_registers(const void *f, int core)
     }
 }
 
-static void print_illegal_instruction_details(const void *f)
+static void print_illegal_instruction_details(void const *f)
 {
     XtExcFrame *frame = (XtExcFrame *)f;
     /* Print out memory around the instruction word */
@@ -98,7 +101,7 @@ static void print_illegal_instruction_details(const void *f)
 }
 
 
-static void print_debug_exception_details(const void *f)
+static void print_debug_exception_details(void const *f)
 {
     int debug_rsn;
     asm("rsr.debugcause %0":"=r"(debug_rsn));
@@ -130,7 +133,7 @@ static void print_debug_exception_details(const void *f)
 }
 
 #if CONFIG_IDF_TARGET_ESP32S2
-    static inline void print_cache_err_details(const void *f)
+    static inline void print_cache_err_details(void const *f)
     {
         uint32_t vaddr = 0, size = 0;
         uint32_t status[2];
@@ -217,7 +220,7 @@ static void print_debug_exception_details(const void *f)
         }
     }
 #elif CONFIG_IDF_TARGET_ESP32S3
-    static inline void print_cache_err_details(const void *f)
+    static inline void print_cache_err_details(void const *f)
     {
         uint32_t vaddr = 0, size = 0;
         uint32_t status;
@@ -371,12 +374,12 @@ void panic_soc_fill_info(void *f, panic_info_t *info)
 #endif
 }
 
-uint32_t panic_get_address(const void *f)
+uint32_t panic_get_address(void const *f)
 {
     return ((XtExcFrame *)f)->pc;
 }
 
-uint32_t panic_get_cause(const void *f)
+uint32_t panic_get_cause(void const *f)
 {
     return ((XtExcFrame *)f)->exccause;
 }
@@ -386,7 +389,7 @@ void panic_set_address(void *f, uint32_t addr)
     ((XtExcFrame *)f)->pc = addr;
 }
 
-void panic_print_backtrace(const void *f, int core)
+void panic_print_backtrace(void const *f, int core)
 {
     XtExcFrame *xt_frame = (XtExcFrame *)f;
     esp_backtrace_frame_t frame = { .pc = xt_frame->pc, .sp = xt_frame->a1, .next_pc = xt_frame->a0, .exc_frame = xt_frame };

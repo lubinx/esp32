@@ -378,8 +378,8 @@ extern int xthal_disassemble_size( unsigned char *instr_buf );
 			Instruction/Data RAM/ROM Access
   ----------------------------------------------------------------------*/
 
-extern void* xthal_memcpy(void *dst, const void *src, unsigned len);
-extern void* xthal_bcopy(const void *src, void *dst, unsigned len);
+extern void* xthal_memcpy(void *dst, void const *src, unsigned len);
+extern void* xthal_bcopy(void const *src, void *dst, unsigned len);
 
 
 /*----------------------------------------------------------------------

@@ -18,6 +18,7 @@
 #include "esp_private/panic_internal.h"
 #include "esp_private/panic_reason.h"
 
+#pragma GCC diagnostic ignored "-Wsign-conversion"
 extern int _invalid_pc_placeholder;
 
 extern void esp_panic_handler(panic_info_t *);
@@ -32,7 +33,7 @@ void *g_exc_frames[SOC_CPU_CORES_NUM] = { NULL };
 /*
   Note: The linker script will put everything in this file in IRAM/DRAM, so it also works with flash cache disabled.
 */
-static void print_state_for_core(const void *f, int core)
+static void print_state_for_core(void const *f, int core)
 {
     /* On Xtensa (with Window ABI), register dump is not required for backtracing.
      * Don't print it on abort to reduce clutter.
@@ -50,7 +51,7 @@ static void print_state_for_core(const void *f, int core)
     panic_print_backtrace(f, core);
     }
 
-static void print_state(const void *f)
+static void print_state(void const *f)
 {
     int err_core = f == g_exc_frames[0] ? 0 : 1;
 
@@ -95,7 +96,7 @@ static void panic_handler(void *frame, bool pseudo_excause)
      * Setup environment and perform necessary architecture/chip specific
      * steps here prior to the system panic handler.
      * */
-    int core_id = __get_CORE_ID();
+    unsigned core_id = __get_CORE_ID();
 
     // If multiple cores arrive at panic handler, save frames for all of them
     g_exc_frames[core_id] = frame;
@@ -104,8 +105,9 @@ static void panic_handler(void *frame, bool pseudo_excause)
     // only one core proceeds to the system panic handler.
     if (pseudo_excause)
     {
-        while (panic_get_cause(frame) == PANIC_RSN_INTWDT_CPU0 && core_id == 1 ||
-            panic_get_cause(frame) == PANIC_RSN_INTWDT_CPU1 && core_id == 0
+        while (
+            (panic_get_cause(frame) == PANIC_RSN_INTWDT_CPU0 && core_id == 1) ||
+            (panic_get_cause(frame) == PANIC_RSN_INTWDT_CPU1 && core_id == 0)
         );
 
         // For cache error, pause the non-offending core - offending core handles panic
