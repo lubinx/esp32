@@ -157,7 +157,7 @@ Note: XTOS_RESTORE_INTLEVEL() will overwrite entire PS register on XEA2. So we n
 #define portRESTORE_INTERRUPTS(x)           ({ \
     unsigned int ps_reg; \
     RSR(PS, ps_reg); \
-    ps_reg = (ps_reg & ~XCHAL_PS_INTLEVEL_MASK); \
+    ps_reg = (ps_reg & (uint32_t)~XCHAL_PS_INTLEVEL_MASK); \
     ps_reg |= ((x << XCHAL_PS_INTLEVEL_SHIFT) & XCHAL_PS_INTLEVEL_MASK); \
     XTOS_RESTORE_INTLEVEL(ps_reg); \
 })
@@ -238,7 +238,7 @@ extern void _frxt_setup_switch( void );     //Defined in portasm.S
 
 static inline void __attribute__((always_inline)) vPortYieldCore( BaseType_t xCoreID )
 {
-    esp_crosscore_int_send_yield( xCoreID );
+    esp_crosscore_int_send_yield((unsigned)xCoreID);
 }
 
 static inline void __attribute__((always_inline)) vPortYieldFromISR( void )
@@ -276,7 +276,7 @@ static inline void vPortClearInterruptMaskFromISR(UBaseType_t prev_level)
 
 static inline bool __attribute__((always_inline)) vPortCPUAcquireMutexTimeout(portMUX_TYPE *mux, int timeout)
 {
-    return (spinlock_acquire(mux, timeout));
+    return (spinlock_acquire(mux, (unsigned)timeout));
 }
 
 static inline void __attribute__((always_inline)) vPortCPUReleaseMutex(portMUX_TYPE *mux)

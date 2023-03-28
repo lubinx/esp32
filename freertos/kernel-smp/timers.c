@@ -24,6 +24,9 @@
  *
  */
 
+#pragma GCC diagnostic ignored "-Wsign-conversion"
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+
 /* Standard includes. */
 #include <stdlib.h>
 

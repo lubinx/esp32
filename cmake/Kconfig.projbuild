@@ -402,18 +402,6 @@ menu "Compile options"
         default !COMPILER_STACK_CHECK_MODE_NONE
         help
             Stack smashing protection.
-
-    config COMPILER_SAVE_RESTORE_LIBCALLS
-        bool "Enable -msave-restore flag to reduce code size"
-        depends on IDF_TARGET_ARCH_RISCV
-        help
-            Adds -msave-restore to C/C++ compilation flags.
-
-            When this flag is enabled, compiler will call library functions to
-            save/restore registers in function prologues/epilogues. This results
-            in lower overall code size, at the expense of slightly reduced performance.
-
-            This option can be enabled for RISC-V targets only.
 endmenu
 
 source "$COMPONENT_KCONFIGS_PROJBUILD_SOURCE_FILE"

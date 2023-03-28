@@ -47,7 +47,7 @@ void xt_trax_start_trace_words(void)
 
 void xt_trax_trigger_traceend_after_delay(int delay)
 {
-    __WER(ERI_TRAX_DELAYCNT, delay);
+    __WER(ERI_TRAX_DELAYCNT, (uint32_t)delay);
     __WER(ERI_TRAX_TRAXCTRL, __RER(ERI_TRAX_TRAXCTRL) | TRAXCTRL_TRSTP);
     //ToDo: This will probably trigger a trace done interrupt. ToDo: Fix, but how? -JD
     __WER(ERI_TRAX_TRAXCTRL, 0);

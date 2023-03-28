@@ -48,6 +48,7 @@ set(CMAKE_TOOLCHAIN_FILE ${IDF_CMAKE_PATH}/toolchain-${IDF_TARGET}.cmake)
 list(APPEND COMPILE_OPTIONS
     "$<$<COMPILE_LANGUAGE:C>:-std=gnu11>"
     "$<$<COMPILE_LANGUAGE:CXX>:-std=gnu++11>"
+    "$<$<COMPILE_LANGUAGE:C>:-fstrict-volatile-bitfields>"  # otherwise bitfields lost volatile
     "-ffunction-sections"
     "-fdata-sections"
     "-Wshadow"
@@ -101,7 +102,6 @@ list(APPEND IDF_COMPILE_OPTIONS
     "-Wno-sign-conversion"
     # "-fno-jump-tables"
     # "-fno-tree-switch-conversion"
-    "$<$<COMPILE_LANGUAGE:C>:-fstrict-volatile-bitfields>"
     "$<$<COMPILE_LANGUAGE:C>:-Wno-old-style-declaration>"
 )
 
@@ -332,10 +332,14 @@ function(idf_component_add name_or_dir) # optional: prefix
         get_filename_component(component_dir ${name_or_dir} ABSOLUTE BASE_DIR ${CMAKE_CURRENT_LIST_DIR})
         get_filename_component(__parent_dir ${component_dir} DIRECTORY)
         get_filename_component(component_name ${component_dir} NAME)
+
+        set(idf_managed_component 0)
     else()
         set(component_dir "${IDF_PATH}/components/${name_or_dir}")
         set(__parent_dir "${IDF_PATH}/components")
         set(component_name ${name_or_dir})
+
+        set(idf_managed_component 1)
     endif()
 
     if (${__parent_dir} STREQUAL "${IDF_PATH}/components")
@@ -376,6 +380,7 @@ function(idf_component_add name_or_dir) # optional: prefix
     __component_set_property(${component_target} COMPONENT_NAME ${component_name})
     __component_set_property(${component_target} COMPONENT_LIB ${component_lib})
     __component_set_property(${component_target} COMPONENT_DIR ${component_dir})
+    __component_set_property(${component_target} IDF_MANAGED_COMPONENT ${idf_managed_component})
 
     # Set Kconfig related properties on the component
     function (__kconfig_add_component component_dir)
@@ -505,7 +510,11 @@ function(__inherited_component_register component_target)
         get_optimization_level(optimize)
         target_compile_options(${component_lib} PRIVATE ${optimize})
 
-        target_compile_options(${component_lib} PRIVATE ${COMPILE_OPTIONS})
+        __component_get_property(idf_managed_component ${component_target} IDF_MANAGED_COMPONENT)
+        if (idf_managed_component)
+            target_compile_options(${component_lib} PRIVATE ${IDF_COMPILE_OPTIONS})
+        endif()
+
         idf_build_get_property(compile_options COMPILE_OPTIONS GENERATOR_EXPRESSION)
         target_compile_options(${component_lib} PRIVATE ${compile_options})
 
@@ -576,9 +585,13 @@ function(idf_build)
     endif()
     idf_build_set_property(TIME_T_SIZE ${TIME_T_SIZE})
 
+    # global compile options & link options
+    add_compile_options(${COMPILE_OPTIONS})
+    add_link_options(${LINK_OPTIONS})
+
     # attach esp-idf'components compile options
     idf_build_set_property(COMPILE_DEFINITIONS "${IDF_COMPILE_DEFINITIONS}" APPEND)
-    idf_build_set_property(COMPILE_OPTIONS "${IDF_COMPILE_OPTIONS}" APPEND)
+    # idf_build_set_property(COMPILE_OPTIONS "${IDF_COMPILE_OPTIONS}" APPEND)
 
     message("💡 Resolve dependencies")
     list(INSERT IDF_KERNEL_COMPONENTS 0 ${IDF_TARGET_ARCH})
@@ -651,10 +664,6 @@ function(idf_build)
             add_link_options("-Wl,--eh-frame-hdr" )
         endif()
 
-        if(CONFIG_COMPILER_SAVE_RESTORE_LIBCALLS)
-            idf_build_set_property(COMPILE_OPTIONS "-msave-restore" APPEND)
-        endif()
-
         # TODO: what about these?
         if(CONFIG_COMPILER_HIDE_PATHS_MACROS)
         endif()
@@ -707,10 +716,6 @@ function(idf_build)
 
     get_optimization_level(optimize)
     target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE ${optimize})
-    add_compile_options(${COMPILE_OPTIONS})
-    add_link_options(${LINK_OPTIONS})
-
-    target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE ${COMPILE_OPTIONS})
     target_link_options(${PROJECT_NAME} PRIVATE ${LINK_OPTIONS})
 
     # show size after build

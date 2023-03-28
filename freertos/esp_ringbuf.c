@@ -12,6 +12,9 @@
 #include "freertos/queue.h"
 #include "freertos/ringbuf.h"
 
+#pragma GCC diagnostic ignored "-Wsign-conversion"
+#pragma GCC diagnostic ignored "-Wunused-function"
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 // ------------------------------------------------- Macros and Types --------------------------------------------------
 
 //32-bit alignment macros
