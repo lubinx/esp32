@@ -8,6 +8,9 @@
 
 __BEGIN_DECLS
 
+/****************************************************************************
+ *  configure
+ ****************************************************************************/
     enum I2C_mode_t
     {
         I2C_MASTER_MODE,
@@ -21,6 +24,27 @@ extern __attribute__((nothrow, nonnull))
 
 extern __attribute__((nothrow, const))
     uint32_t I2C_get_bps(i2c_dev_t *dev);
+
+/****************************************************************************
+ *  I2C dev IO
+ ****************************************************************************/
+extern __attribute__((nothrow, nonnull))
+    int I2C_dev_pread(i2c_dev_t *dev, uint16_t da, uint8_t *sa, uint8_t sa_bytes, void *buf, size_t bufsize);
+
+static inline
+    int I2C_dev_read(i2c_dev_t *dev, uint16_t da, void *buf, size_t bufsize)
+    {
+        return I2C_dev_pread(dev, da, 0, 0, buf, bufsize);
+    }
+
+extern __attribute__((nothrow, nonnull))
+    int I2C_dev_pwrite(i2c_dev_t *dev, uint16_t da, uint8_t *sa, uint8_t sa_bytes, void const *buf, size_t count);
+
+static inline
+    int I2C_dev_write(i2c_dev_t *dev, uint16_t da, void *buf, size_t bufsize)
+    {
+        return I2C_dev_pwrite(dev, da, 0, 0, buf, bufsize);
+    }
 
 __END_DECLS
 #endif
