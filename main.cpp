@@ -13,6 +13,7 @@
 #include "gpio.h"
 #include "uart.h"
 #include "i2c.h"
+#include "led.h"
 
 #include "esp_log.h"
 #include "esp_heap_caps.h"
@@ -68,8 +69,11 @@ int main(void)
         fflush(stdout);
     }
 
-    I2C_configure(&I2C0, I2C_MASTER_MODE, 100);
+
+    //int i2c_fd = I2C_createfd(0, 0x44, 100, 0, 0);
+    LED_init_default();
     printf("i2c0: %lu bps sclk: %llu\n\n", I2C_get_bps(&I2C0), CLK_i2c_sclk_freq(&I2C0));
+    LED_test();
 
     mqd = mqueue_create(NULL, 4, 16);
     printf("\ninfinite loop...mqd: %d\n", mqd);
@@ -81,29 +85,19 @@ int main(void)
 
     while (1)
     {
+        /*
         uint8_t cmd = 0xFD;
-        if (sizeof(cmd) == I2C_dev_write(&I2C0, 0x44, &cmd, sizeof(cmd)))
+        if (sizeof(cmd) == write(i2c_fd, &cmd, sizeof(cmd)))
         {
-            msleep(500);
+            msleep(1000);
 
             uint8_t bytes[2];
-            if (sizeof(bytes) == I2C_dev_read(&I2C0, 0x44, &bytes, sizeof(bytes)))
+            if (sizeof(bytes) == read(i2c_fd, &bytes, sizeof(bytes)))
             {
                 int d1 = bytes[0] << 8 | bytes[1];
                 int tmpr = (d1 * 1750 / 65535 - 450);
                 printf("raw: %x, tmpr: %d\n", d1, tmpr);
-
             }
-        }
-
-        /*
-        uint8_t bytes[2];
-        if (sizeof(bytes) == I2C_dev_pread(&I2C0, 0x44, 1, 0XFD, &bytes, sizeof(bytes)))
-        {
-            int d1 = bytes[0] << 8 | bytes[1];
-            int tmpr = (d1 * 1750 / 65535 - 450);
-            printf("raw: %x, tmpr: %d\n", d1, tmpr);
-
         }
         */
 
@@ -146,87 +140,3 @@ static void *blink_thread(void *arg)
         }
     }
 }
-
-/*
-write................
-i2c_ll_txfifo_rst()
-i2c_ll_txfifo_rst()
-        idx: 0, cmd: 6, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 1, cmd: 1, bytes:1, ack_en: 1 ack_nack: 0, expect nack: 0, done: 0
-        idx: 2, cmd: 4, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 0, cmd: 1, bytes:1, ack_en: 1 ack_nack: 0, expect nack: 0, done: 0
-        idx: 1, cmd: 4, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 0, cmd: 2, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-
-
-        idx: 0, cmd: 6, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 1, cmd: 1, bytes:1, ack_en: 1 ack_nack: 0, expect nack: 0, done: 0
-        idx: 2, cmd: 4, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 3, cmd: 0, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 4, cmd: 0, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 5, cmd: 0, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 6, cmd: 0, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 7, cmd: 0, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-
-        idx: 0, cmd: 1, bytes:1, ack_en: 1 ack_nack: 0, expect nack: 0, done: 0
-        idx: 1, cmd: 4, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 2, cmd: 4, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 1
-        idx: 3, cmd: 0, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 4, cmd: 0, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 5, cmd: 0, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 6, cmd: 0, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 7, cmd: 0, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-
-        idx: 0, cmd: 2, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 1, cmd: 4, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 1
-        idx: 2, cmd: 4, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 1
-        idx: 3, cmd: 0, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 4, cmd: 0, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 5, cmd: 0, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 6, cmd: 0, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 7, cmd: 0, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-
-
-I (482) i2c-simple-example: i2c_master_write_to_device(): ret 0
-
-read................
-i2c_ll_txfifo_rst()
-i2c_ll_txfifo_rst()
-        idx: 0, cmd: 6, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 1, cmd: 1, bytes:1, ack_en: 1 ack_nack: 0, expect nack: 0, done: 0
-        idx: 2, cmd: 4, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 3, cmd: 0, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 4, cmd: 0, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 5, cmd: 0, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 6, cmd: 0, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 7, cmd: 0, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-
-        idx: 0, cmd: 3, bytes:1, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 1, cmd: 4, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 2, cmd: 4, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 1
-        idx: 3, cmd: 0, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 4, cmd: 0, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 5, cmd: 0, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 6, cmd: 0, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 7, cmd: 0, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-
-        idx: 0, cmd: 3, bytes:1, ack_en: 0 ack_nack: 1, expect nack: 0, done: 0
-        idx: 1, cmd: 4, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 2, cmd: 4, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 1
-        idx: 3, cmd: 0, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 4, cmd: 0, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 5, cmd: 0, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 6, cmd: 0, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 7, cmd: 0, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-
-        idx: 0, cmd: 2, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 1, cmd: 4, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 1
-        idx: 2, cmd: 4, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 1
-        idx: 3, cmd: 0, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 4, cmd: 0, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 5, cmd: 0, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 6, cmd: 0, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-        idx: 7, cmd: 0, bytes:0, ack_en: 0 ack_nack: 0, expect nack: 0, done: 0
-
-I (1692) i2c-simple-example: ret 0, val: 243
-*/
