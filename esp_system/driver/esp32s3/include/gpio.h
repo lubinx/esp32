@@ -2,6 +2,8 @@
 #define __ESP32S3_GPIO_H                1
 
 #include <features.h>
+#include <stdbool.h>
+
 #include <hw/gpio.h>
 #include <soc/gpio_sig_map.h>
 
