@@ -11,14 +11,14 @@
 /***************************************************************************/
 /** exports
 ****************************************************************************/
-int __stdin_fd = -1;
-int __stdout_fd = -1;
-int __stderr_fd = -1;
-
 void __IO_introduce(void)
 {
     // introduce unit, nothing to do
 }
+
+int __stdin_fd = -1;
+int __stdout_fd = -1;
+int __stderr_fd = -1;
 
 __attribute__((weak))
 ssize_t console_write(void const *buf, size_t count)
