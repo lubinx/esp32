@@ -8,9 +8,6 @@
 
 __BEGIN_DECLS
 
-__attribute__((nothrow))
-    uint64_t RTC_tickcount(void);
-
 __END_DECLS
-
 #endif
+

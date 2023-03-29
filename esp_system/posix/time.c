@@ -1,24 +1,16 @@
 #include <sys/errno.h>
 #include <sys/reent.h>
 
+#include <time.h>
 #include <sys/time.h>
 #include <sys/times.h>
 
+/****************************************************************************
+* @implements
+****************************************************************************/
 int adjtime(const struct timeval *delta, struct timeval *outdelta)
 {
     ARG_UNUSED(delta, outdelta);
-    return __set_errno_neg(ENOSYS);
-}
-
-clock_t _times_r(struct _reent *r, struct tms *ptms)
-{
-    ARG_UNUSED(r, ptms);
-    return 0;
-}
-
-int _gettimeofday_r(struct _reent *r, struct timeval *tv, void *tz)
-{
-    ARG_UNUSED(r, tv, tz);
     return __set_errno_neg(ENOSYS);
 }
 

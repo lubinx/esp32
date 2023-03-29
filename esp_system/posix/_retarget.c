@@ -92,12 +92,12 @@ void __libc_retarget_init(void)
     #endif
 
     extern void __FILESYSTEM_introduce(void);
-    __FILESYSTEM_introduce();
-
     extern void __IO_introduce(void);
-    __IO_introduce();
-
     extern void __PTHREAD_introduce(void);
+    extern void __TIME_introduce(void);
+
+    __FILESYSTEM_introduce();
+    __IO_introduce();
     __PTHREAD_introduce();
 
     _GLOBAL_REENT = &__reent;
@@ -160,7 +160,7 @@ int atexit(void (*function)(void))
 #define __WEAK                          __attribute__((weak))
 
 __WEAK int _system_r(struct _reent *r, char const *str)                             __ENOSYS;
-
+// filesystem
 __WEAK int _isatty_r(struct _reent *r, int fd)                                      __ENOSYS;
 __WEAK int _open_r(struct _reent *r, char const *path, int flags, int mode)         __ENOSYS;
 __WEAK int _close_r(struct _reent *r, int fd)                                       __ENOSYS;
@@ -170,10 +170,12 @@ __WEAK int _stat_r(struct _reent *r, char const *path, struct stat * st)        
 __WEAK int _link_r(struct _reent *r, const char *n1, const char *n2)                __ENOSYS;
 __WEAK int _unlink_r(struct _reent *r, char const *path)                            __ENOSYS;
 __WEAK int _rename_r(struct _reent *r, char const *src, char const *dst)            __ENOSYS;
-
+// io
 __WEAK off_t _lseek_r(struct _reent *r, int fd, off_t offset, int origin)           __ENOSYS;
 __WEAK ssize_t _read_r(struct _reent *r, int fd, void *buf, size_t bufsize)         __ENOSYS;
 __WEAK ssize_t _write_r(struct _reent *r, int fd, void const *buf, size_t count)    __ENOSYS;
+// time
+__WEAK int _gettimeofday_r(struct _reent *r, struct timeval *tv, void *_tz)         __ENOSYS;
 
 /****************************************************************************
  *  @implements: heap
@@ -327,6 +329,21 @@ void __retarget_lock_release_recursive(_LOCK_T lock)
         lock = &idf_common_recursive_mutex;
 #endif
     mutex_unlock(&lock->mutex);
+}
+
+/****************************************************************************
+ *  @implements: misc redirect esp-idf
+*****************************************************************************/
+__attribute__((weak))   // overrided in _rtos_freertos_impl.c
+clock_t clock(void)
+{
+    return 0;
+}
+
+__attribute__((weak))   // overrided in common_rtc.c
+time_t time(time_t *timep)
+{
+    return -1;
 }
 
 /****************************************************************************

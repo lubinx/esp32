@@ -6,21 +6,21 @@
 
 #include <stddef.h>
 #include <assert.h>
-
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
-#include <freertos/semphr.h>
+#include <semaphore.h>
+#include <sys/mutex.h>
+#include <sys/times.h>
 
 #include <clk-tree.h>
+#include <rtos/kernel.h>
 
+#include <esp_system.h>
 #include <esp_attr.h>
 #include <esp_log.h>
 #include <esp_heap_caps.h>
 
-#include "rtos/kernel.h"
-#include "sys/mutex.h"
-#include "semaphore.h"
-#include "esp_system.h"
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <freertos/semphr.h>
 
 #include "hal/systimer_ll.h"
 #include "hal/systimer_hal.h"
@@ -282,8 +282,13 @@ int thread_detach(thread_id_t thread)
 }
 
 /****************************************************************************
- *  @implements: unistd.h sleep() / msleep() / usleep(), sched.h sched_yield()
+ *  @implements: clock & sleep
 *****************************************************************************/
+clock_t clock(void)
+{
+    return xTaskGetTickCount() * portTICK_PERIOD_MS;
+}
+
 int sched_yield(void)
 {
     taskYIELD();
@@ -292,8 +297,12 @@ int sched_yield(void)
 
 int usleep(useconds_t us)
 {
-    if (! us)
+    unsigned tick_start = __get_CCOUNT();
+
+    if (0 == us)
         return 0;
+    if (1000000 < (unsigned)us)
+        return EINVAL;
 
     uint32_t us_per_tick = portTICK_PERIOD_MS * 1000;
     if (us > us_per_tick)
@@ -301,12 +310,13 @@ int usleep(useconds_t us)
         vTaskDelay((us + us_per_tick - 1) / us_per_tick);
         return 0;
     }
+    else
+    {
+        unsigned ticks = us * (unsigned)(CLK_cpu_freq() / _MHZ);
 
-    unsigned tick_start = __get_CCOUNT();
-    unsigned ticks = us * (unsigned)(CLK_cpu_freq() / _MHZ);
-
-    while ((unsigned)(__get_CCOUNT() - tick_start) < ticks) {}
-    return 0;
+        while ((unsigned)(__get_CCOUNT() - tick_start) < ticks) {}
+        return 0;
+    }
 }
 
 unsigned int sleep(unsigned int seconds)
@@ -330,7 +340,7 @@ int msleep(uint32_t msec)
 *****************************************************************************/
 int waitfor(handle_t hdl, uint32_t timeout)
 {
-    UBaseType_t retval;
+    int retval;
     if (HDL_FLAG_RECURSIVE_MUTEX & AsKernelHdl(hdl)->flags)
         retval = xSemaphoreTakeRecursive((void *)&AsKernelHdl(hdl)->padding, timeout / portTICK_PERIOD_MS);
     else
@@ -395,7 +405,7 @@ static IRAM_ATTR int __freertos_hdl_acquire(struct KERNEL_hdl *hdl, uint8_t cid,
     if (HDL_FLAG_INITIALIZER & hdl->flags)
         __freertos_hdl_initializer(hdl);
 
-    UBaseType_t retval;
+    int retval;
     if (HDL_FLAG_RECURSIVE_MUTEX & hdl->flags)
         retval = xSemaphoreTakeRecursive((void *)&hdl->padding, os_ticks);
     else
@@ -416,7 +426,7 @@ static IRAM_ATTR int __freertos_hdl_release(struct KERNEL_hdl *hdl, uint8_t cid)
     if (HDL_FLAG_INITIALIZER & hdl->flags)
         __freertos_hdl_initializer(hdl);
 
-    UBaseType_t retval;
+    int retval;
     if (HDL_FLAG_RECURSIVE_MUTEX & hdl->flags)
         retval = xSemaphoreGiveRecursive((void *)&hdl->padding);
     else
@@ -546,7 +556,7 @@ int IRAM_ATTR sem_post(sem_t *sema)
 
 int IRAM_ATTR sem_getvalue(sem_t *sema, int *val)
 {
-    *val = uxSemaphoreGetCount(&sema->padding);
+    *val = (int)uxSemaphoreGetCount(&sema->padding);
     return 0;
 }
 
