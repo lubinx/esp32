@@ -1,8 +1,5 @@
 #include <string.h>
-
 #include <sys/errno.h>
-#include <esp_log.h>
-
 #include <rtos/kernel.h>
 
 /***************************************************************************/
@@ -12,29 +9,28 @@
 
 struct KERNEL_context_t
 {
-    spinlock_t atomic;
-
+    spinlock_t lock;
     glist_t mounted_dev;
 
     glist_t hdl_freed_list;
     glist_t hdl_destroying_list;
-    struct KERNEL_hdl hdl[4096 / sizeof(struct KERNEL_hdl)];
 };
-struct KERNEL_context_t KERNEL_context = {0};
+static struct KERNEL_context_t KERNEL_context = {0};
+static struct KERNEL_hdl statical_hdl[(4096 - sizeof(struct KERNEL_context_t))  / sizeof(struct KERNEL_hdl)];
 
 /***************************************************************************/
 /** constructor
 ****************************************************************************/
 void KERNEL_init(void)
 {
-    spinlock_init(&KERNEL_context.atomic);
+    spinlock_init(&KERNEL_context.lock);
 
     glist_initialize(&KERNEL_context.mounted_dev);
     glist_initialize(&KERNEL_context.hdl_freed_list);
     glist_initialize(&KERNEL_context.hdl_destroying_list);
 
-    for (unsigned I = 0; I < lengthof(KERNEL_context.hdl); I++)
-        glist_push_back(&KERNEL_context.hdl_freed_list, &KERNEL_context.hdl[I]);
+    for (unsigned I = 0; I < lengthof(statical_hdl); I++)
+        glist_push_back(&KERNEL_context.hdl_freed_list, &statical_hdl[I]);
 }
 
 /***************************************************************************/
@@ -44,7 +40,7 @@ handle_t KERNEL_handle_get(uint8_t cid)
 {
     struct KERNEL_hdl *ptr;
 
-    spin_lock(&KERNEL_context.atomic);
+    spin_lock(&KERNEL_context.lock);
     ptr = glist_pop(&KERNEL_context.hdl_freed_list);
 
     if (! ptr)
@@ -65,7 +61,7 @@ handle_t KERNEL_handle_get(uint8_t cid)
             ptr = NULL;
         }
     }
-    spin_unlock(&KERNEL_context.atomic);
+    spin_unlock(&KERNEL_context.lock);
 
     if (ptr)
     {
@@ -98,7 +94,7 @@ int KERNEL_handle_release(handle_t hdr)
                 FILESYSTEM_fd_cleanup((int)hdr);
             */
 
-            spin_lock(&KERNEL_context.atomic);
+            spin_lock(&KERNEL_context.lock);
             {
                 /// preparing @recycle read_rdy hdr
                 ///     .not need to free it when ready_rdy is created by INITIALIZER
@@ -115,7 +111,7 @@ int KERNEL_handle_release(handle_t hdr)
                     glist_push_back(&KERNEL_context.hdl_destroying_list, AsFD(hdr)->write_rdy);
                 }
             }
-            spin_unlock(&KERNEL_context.atomic);
+            spin_unlock(&KERNEL_context.lock);
         }
         else
             retval = errno;
@@ -132,12 +128,12 @@ int KERNEL_handle_release(handle_t hdr)
 
     if (0 == retval)
     {
-        spin_lock(&KERNEL_context.atomic);
+        spin_lock(&KERNEL_context.lock);
         {
             AsKernelHdl(hdr)->flags |= HDL_FLAG_DESTROYING;
             glist_push_back(&KERNEL_context.hdl_destroying_list, hdr);
         }
-        spin_unlock(&KERNEL_context.atomic);
+        spin_unlock(&KERNEL_context.lock);
     }
     return retval;
 }
@@ -146,7 +142,7 @@ void KERNEL_handle_recycle(void)
 {
     if (! glist_is_empty(&KERNEL_context.hdl_destroying_list))
     {
-        spin_lock(&KERNEL_context.atomic);
+        spin_lock(&KERNEL_context.lock);
         struct KERNEL_hdl *hdl;
 
         while (NULL != (hdl = glist_pop(&KERNEL_context.hdl_destroying_list)))
@@ -156,7 +152,7 @@ void KERNEL_handle_recycle(void)
             if (HDL_FLAG_SYSMEM_MANAGED & hdl->flags)
                 glist_push_back(&KERNEL_context.hdl_freed_list, hdl);
         }
-        spin_unlock(&KERNEL_context.atomic);
+        spin_unlock(&KERNEL_context.lock);
     }
 }
 
