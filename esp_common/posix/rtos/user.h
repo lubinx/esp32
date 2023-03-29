@@ -20,10 +20,10 @@
 #define __RTOS_USER_H                   1
 
 #include <features.h>
+#include <unistd.h>
 
 #include <sys/types.h>
 #include <sys/errno.h>
-
 #include <rtos/types.h>
 
 __BEGIN_DECLS
