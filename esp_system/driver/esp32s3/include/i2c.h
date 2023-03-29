@@ -29,7 +29,7 @@ extern __attribute__((nothrow, const))
  *  I2C dev IO
  ****************************************************************************/
 extern __attribute__((nothrow, nonnull(1, 5)))
-    int I2C_dev_pread(i2c_dev_t *dev, uint16_t da, uint8_t *sa, uint8_t sa_bytes, void *buf, size_t bufsize);
+    ssize_t I2C_dev_pread(i2c_dev_t *dev, uint16_t da, uint8_t sa_bytes, uint32_t sa, void *buf, size_t bufsize);
 
 static inline __attribute__((nothrow, nonnull))
     int I2C_dev_read(i2c_dev_t *dev, uint16_t da, void *buf, size_t bufsize)
@@ -38,7 +38,7 @@ static inline __attribute__((nothrow, nonnull))
     }
 
 extern __attribute__((nothrow, nonnull(1, 5)))
-    int I2C_dev_pwrite(i2c_dev_t *dev, uint16_t da, uint8_t *sa, uint8_t sa_bytes, void const *buf, size_t count);
+    ssize_t I2C_dev_pwrite(i2c_dev_t *dev, uint16_t da, uint8_t sa_bytes, uint32_t sa, void const *buf, size_t count);
 
 static inline __attribute__((nothrow, nonnull))
     int I2C_dev_write(i2c_dev_t *dev, uint16_t da, void *buf, size_t bufsize)

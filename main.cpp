@@ -22,8 +22,6 @@
 
 int mqd;
 
-extern "C" void I2C_test(void);
-
 static void *blink_thread(void *arg);
 static void *sema_thread(void *arg);
 
@@ -70,7 +68,7 @@ int main(void)
         fflush(stdout);
     }
 
-    I2C_configure(&I2C0, I2C_MASTER_MODE, 1);
+    I2C_configure(&I2C0, I2C_MASTER_MODE, 100);
     printf("i2c0: %lu bps sclk: %llu\n\n", I2C_get_bps(&I2C0), CLK_i2c_sclk_freq(&I2C0));
 
     mqd = mqueue_create(NULL, 4, 16);
@@ -84,16 +82,29 @@ int main(void)
     while (1)
     {
         uint8_t cmd = 0xFD;
-        I2C_dev_write(&I2C0, 0x44, &cmd, sizeof(cmd));
-        msleep(500);
+        if (sizeof(cmd) == I2C_dev_write(&I2C0, 0x44, &cmd, sizeof(cmd)))
+        {
+            msleep(500);
+
+            uint8_t bytes[2];
+            if (sizeof(bytes) == I2C_dev_read(&I2C0, 0x44, &bytes, sizeof(bytes)))
+            {
+                int d1 = bytes[0] << 8 | bytes[1];
+                int tmpr = (d1 * 1750 / 65535 - 450);
+                printf("raw: %x, tmpr: %d\n", d1, tmpr);
+
+            }
+        }
 
         /*
         uint8_t bytes[2];
-        I2C_dev_read(&I2C0, 0x44, &bytes, sizeof(bytes));
+        if (sizeof(bytes) == I2C_dev_pread(&I2C0, 0x44, 1, 0XFD, &bytes, sizeof(bytes)))
+        {
+            int d1 = bytes[0] << 8 | bytes[1];
+            int tmpr = (d1 * 1750 / 65535 - 450);
+            printf("raw: %x, tmpr: %d\n", d1, tmpr);
 
-        int d1 = bytes[0] << 8 | bytes[1];
-        d1 = (d1 * 1750 / 65535 - 450);
-        printf("tmpr: %d\n", d1);
+        }
         */
 
         msleep(1000);
@@ -122,9 +133,6 @@ static void *blink_thread(void *arg)
     while (true)
     {
         mqueue_recv(mqd, &step, 0);
-
-        printf("mq recv: %d\n", step);
-        fflush(stdout);
 
         if (step & 0x1)
         {
