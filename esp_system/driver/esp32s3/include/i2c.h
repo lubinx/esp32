@@ -18,7 +18,7 @@ __BEGIN_DECLS
     };
 
 extern __attribute__((nothrow, nonnull))
-    int I2C_configure(i2c_dev_t *dev, enum I2C_mode_t mode, uint32_t kbps);
+    int I2C_configure(i2c_dev_t *dev, enum I2C_mode_t mode, uint16_t kbps);
 extern __attribute__((nothrow, nonnull))
     int I2C_deconfigure(i2c_dev_t *dev);
 

@@ -81,13 +81,13 @@ struct I2C_context
     mutex_t lock;
     sem_t evt;
 
-    uint32_t timeout;
+    // runtime properties
+    uint16_t kbps;              // multi-fd: current bps, reconfigure bps if not match I2C_fd_ext::kbps
     int err;
     bool read_op;
-
     uint8_t sa_bytes;
     uint32_t sa;
-
+    // runtime I/O buffer
     uint8_t *buf;
     size_t buf_io_bytes;
     size_t buf_size;
@@ -98,9 +98,11 @@ struct I2C_fd_ext
     struct I2C_context *context;
 
     uint16_t da;
-    uint8_t page_size;
-    uint8_t sa_bytes;
+    uint16_t kbps;
+
     uint32_t highest_addr;
+    uint8_t page_size;          // writting paging size, EPROM etc.
+    uint8_t sa_bytes;
 
     struct I2C_clk_config clk_conf;
 };
@@ -109,7 +111,7 @@ struct I2C_fd_ext
  *  @internal
  ***************************************************************************/
 static PERIPH_module_t I2C_periph_module(i2c_dev_t *dev, struct I2C_context **context);
-static void I2C_configure_bps(i2c_dev_t *dev, uint32_t kbps);
+static void I2C_configure_bps(i2c_dev_t *dev, uint16_t kbps, bool dev_sync);
 
 // command
 static void I2C_command_start(i2c_dev_t *dev, uint16_t da, bool read);
@@ -144,6 +146,7 @@ struct I2C_context i2c_context[SOC_I2C_NUM] = {0};
 __attribute__((constructor))
 void I2C_initialize()
 {
+    if (true)
     {
         struct I2C_context *context = &i2c_context[0];
         context->dev = &I2C0;
@@ -152,7 +155,7 @@ void I2C_initialize()
         sem_init_np(&context->evt, 0, 0, 1);
         esp_intr_alloc(ETS_I2C_EXT0_INTR_SOURCE, 0, I2C0_IntrHandler, context, &context->intr_hdl);
     }
-
+    if (true)
     {
         struct I2C_context *context = &i2c_context[1];
         context->dev = &I2C1;
@@ -161,7 +164,6 @@ void I2C_initialize()
         sem_init_np(&context->evt, 0, 0, 1);
         esp_intr_alloc(ETS_I2C_EXT1_INTR_SOURCE, 0, I2C1_IntrHandler, context, &context->intr_hdl);
     }
-
 }
 
 /****************************************************************************
@@ -169,26 +171,37 @@ void I2C_initialize()
  ****************************************************************************/
 int I2C_createfd(int nb, uint8_t da, uint16_t kbps, uint8_t page_size, uint32_t highest_addr)
 {
+    struct I2C_context *context;
+
     if (SOC_I2C_NUM <= nb)
         return __set_errno_neg(ENODEV);
     if (1000 < kbps || 0 == kbps)
         return __set_errno_neg(EINVAL);
+    else
+        context = &i2c_context[nb];
 
-    struct I2C_context *context = context = &i2c_context[nb];
+    int retval = I2C_configure(context->dev, I2C_MASTER_MODE, kbps);
+    if (0 != retval)
+        return __set_errno_neg(retval);
+
     struct I2C_fd_ext *ext = KERNEL_mallocz(sizeof(struct I2C_fd_ext));
     if (NULL == ext)
+    {
+        I2C_deconfigure(context->dev);
         return __set_errno_neg(ENOMEM);
+    }
 
     int fd = KERNEL_createfd(FD_TAG_CHAR, &implement, ext);
     if (-1 != fd)
     {
         context->fd_count ++;
-        AsFD(fd)->read_rdy = AsFD(fd)->write_rdy = &context->lock;
+        context->kbps = kbps;
 
-        I2C_configure(context->dev, I2C_MASTER_MODE, kbps);
+        AsFD(fd)->read_rdy = AsFD(fd)->write_rdy = &context->lock;
 
         ext->context = context;
         ext->da = da;
+        ext->kbps = kbps;
         ext->page_size = page_size;
         ext->highest_addr = highest_addr;
 
@@ -204,12 +217,14 @@ int I2C_createfd(int nb, uint8_t da, uint16_t kbps, uint8_t page_size, uint32_t 
             ext->sa_bytes = 4;
     }
     else
+    {
         KERNEL_mfree(ext);
-
+        I2C_deconfigure(context->dev);
+    }
     return fd;
 }
 
-int I2C_configure(i2c_dev_t *dev, enum I2C_mode_t mode, uint32_t kbps)
+int I2C_configure(i2c_dev_t *dev, enum I2C_mode_t mode, uint16_t kbps)
 {
     int retval;
 
@@ -254,7 +269,7 @@ int I2C_configure(i2c_dev_t *dev, enum I2C_mode_t mode, uint32_t kbps)
         // MSB
         dev->ctr.rx_lsb_first =  dev->ctr.tx_lsb_first = 0;
         // bps
-        I2C_configure_bps(dev, kbps);
+        I2C_configure_bps(dev, kbps, false);
         // update
         dev->ctr.conf_upgate = 1;
         dev->clk_conf.sclk_active = 1;
@@ -415,7 +430,7 @@ static PERIPH_module_t I2C_periph_module(i2c_dev_t *dev, struct I2C_context **co
     return module;
 }
 
-static void I2C_configure_bps(i2c_dev_t *dev, uint32_t kbps)
+static void I2C_configure_bps(i2c_dev_t *dev, uint16_t kbps, bool dev_sync)
 {
     uint32_t clk_freq = (uint32_t)CLK_i2c_sclk_freq(dev);
     uint32_t div = clk_freq / _MHZ / kbps;
@@ -450,6 +465,9 @@ static void I2C_configure_bps(i2c_dev_t *dev, uint32_t kbps)
     // timeout: 5 bits, max = 31;
     dev->to.time_out_value = 20;
     dev->to.time_out_en = 1;
+
+    if (dev_sync)
+        dev->ctr.conf_upgate = 1;
 }
 
 /***************************************************************************
@@ -457,6 +475,7 @@ static void I2C_configure_bps(i2c_dev_t *dev, uint32_t kbps)
  ***************************************************************************/
 static void I2C_command_next_sa(i2c_dev_t *dev, uint8_t idx, struct I2C_context *context)
 {
+    if (true)
     {
         uint8_t _sa[4] = {0};
         uint8_t *ptr = _sa;
@@ -490,14 +509,13 @@ static void I2C_command_next_sa(i2c_dev_t *dev, uint8_t idx, struct I2C_context 
         esp_rom_printf("sending sa: %x, bytes: %d\n", _sa[0], context->sa_bytes);
     }
 
-    // restart to continue read
-    if (context->read_op)
+    if (context->read_op)   // restart to continue read
     {
         i2c_cmd_reg_t reg = {.op_code = I2C_CMD_RESTART};
         I2C_command(dev, &idx, reg.val);
     }
 
-    // add pause
+    if (true)   // pause
     {
         i2c_cmd_reg_t reg = {.op_code = I2C_CMD_END};
         I2C_command(dev, &idx, reg.val);
@@ -544,11 +562,12 @@ static void I2C_command_next_rx(i2c_dev_t *dev, uint8_t idx, struct I2C_context 
     {
         if (SOC_I2C_FIFO_LEN < context->buf_size)
         {
+            if (true)
             {
                 i2c_cmd_reg_t reg = {.op_code = I2C_CMD_READ, .io_bytes = BIT_FIELD(8, context->buf_size)};
                 I2C_command(dev, &idx, reg.val);
             }
-            // END
+            if (true)   // END
             {
                 i2c_cmd_reg_t reg = {.op_code = I2C_CMD_END};
                 I2C_command(dev, &idx, reg.val);
@@ -556,31 +575,23 @@ static void I2C_command_next_rx(i2c_dev_t *dev, uint8_t idx, struct I2C_context 
         }
         else
         {
+            if (true)
             {
                 i2c_cmd_reg_t reg = {.op_code = I2C_CMD_READ, .io_bytes = BIT_FIELD(8, context->buf_size - 1)};
                 I2C_command(dev, &idx, reg.val);
             }
+            if (true)
             {
                 i2c_cmd_reg_t reg = {.op_code = I2C_CMD_READ, .io_bytes = 1, .ack_nack = 1};
                 I2C_command(dev, &idx, reg.val);
             }
-            // STOP
+            if (true)   // STOP
             {
                 i2c_cmd_reg_t reg = {.op_code = I2C_CMD_STOP};
                 I2C_command(dev, &idx, reg.val);
             }
         }
     }
-
-    /*
-    i2c_cmd_reg_t *cmd = (void *)&dev->comd0;
-    for (int i = 0; i < 8; i ++)
-    {
-        i2c_cmd_reg_t reg = {.val = cmd[i].val};
-        // if (! reg.done)
-            esp_rom_printf("idx: %d, cmd: %d, bytes:%d, ack_en: %d, done: %d\n", i, reg.op_code, reg.io_bytes, reg.ack_check_en, reg.done);
-    }
-    */
     dev->ctr.trans_start = 1;
 }
 
@@ -590,12 +601,12 @@ static void I2C_command_start(i2c_dev_t *dev, uint16_t da, bool read)
     dev->fifo_conf.tx_fifo_rst = dev->fifo_conf.rx_fifo_rst = 0;
 
     uint8_t idx = 0;
-    // start
+    if (true) // start
     {
         i2c_cmd_reg_t reg = {.op_code = I2C_CMD_RESTART};
         I2C_command(dev, &idx, reg.val);
     }
-    // da
+    if (true) // da
     {
         uint8_t da_bytes = (uint8_t)(da << 1) | (read ? 1 : 0);
         I2C_fifo_write(dev, &da_bytes, 1);
@@ -603,7 +614,7 @@ static void I2C_command_start(i2c_dev_t *dev, uint16_t da, bool read)
         i2c_cmd_reg_t reg = {.op_code = I2C_CMD_WRITE, .io_bytes = 1, .ack_check_en = 1};
         I2C_command(dev, &idx, reg.val);
     }
-    // pause
+    if (true) // pause
     {
         i2c_cmd_reg_t reg = {.op_code = I2C_CMD_END};
         I2C_command(dev, &idx, reg.val);
@@ -651,22 +662,58 @@ static unsigned I2C_fifo_read(i2c_dev_t *dev, void *buf, unsigned bufsize)
  ***************************************************************************/
 static ssize_t I2C_read(int fd, void *buf, size_t bufsize)
 {
-    uint32_t timeout = AsFD(fd)->read_timeo;
-    if (0 == timeout)
-        timeout = INFINITE;
+    struct I2C_fd_ext *ext = (struct I2C_fd_ext *)AsFD(fd)->ext;
+    struct I2C_context *context = ext->context;
 
-    ARG_UNUSED(buf, bufsize);
-    return 0;
+    uint32_t timeo;
+    if (! (FD_FLAG_NONBLOCK & AsFD(fd)->flags))
+    {
+        timeo = AsFD(fd)->write_timeo;
+        if (0 == timeo)
+            timeo = INFINITE;
+    }
+    else
+        timeo = 0;
+
+    if (0 != mutex_trylock(&context->lock, timeo))
+        return __set_errno_neg(EAGAIN);
+
+    if (ext->kbps != context->kbps)
+    {
+        I2C_configure_bps(context->dev, ext->kbps, true);
+        context->kbps = ext->kbps;
+    }
+
+    ssize_t retval = I2C_dev_pread(context->dev, ext->da, ext->sa_bytes, AsFD(fd)->position,
+        buf, bufsize);
+
+    mutex_unlock(&context->lock);
+    return retval;
 }
 
 static ssize_t I2C_write(int fd, void const *buf, size_t count)
 {
-    uint32_t timeout = AsFD(fd)->write_timeo;
-    if (0 == timeout)
-        timeout = INFINITE;
+    struct I2C_fd_ext *ext = (struct I2C_fd_ext *)AsFD(fd)->ext;
+    struct I2C_context *context = ext->context;
 
-    ARG_UNUSED(buf, count);
-    return 0;
+    uint32_t timeo;
+    if (! (FD_FLAG_NONBLOCK & AsFD(fd)->flags))
+    {
+        timeo = AsFD(fd)->write_timeo;
+        if (0 == timeo)
+            timeo = INFINITE;
+    }
+    else
+        timeo = 0;
+
+    if (0 != mutex_trylock(&context->lock, timeo))
+        return __set_errno_neg(EAGAIN);
+
+    ssize_t retval = I2C_dev_pwrite(context->dev, ext->da, ext->sa_bytes, AsFD(fd)->position,
+        buf, count);
+
+    mutex_unlock(&context->lock);
+    return retval;
 }
 
 static off_t I2C_seek(int fd, off_t offset, int mode)
