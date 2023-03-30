@@ -10,7 +10,7 @@
 #include "gpio.h"
 #include "uart.h"
 #include "i2c.h"
-#include "led.h"
+#include "panel.h"
 
 #include "esp_log.h"
 #include "esp_heap_caps.h"
@@ -66,12 +66,9 @@ int main(void)
         fflush(stdout);
     }
 
-
     //int i2c_fd = I2C_createfd(0, 0x44, 100, 0, 0);
-    LED_init_default();
+    PANEL_init_default();
     printf("i2c0: %lu bps sclk: %lu\n\n", I2C_get_bps(&I2C0), CLK_i2c_sclk_freq(&I2C0));
-    LED_test();
-
 
     struct mq_attr mq_attr = {0};
     mq_attr.mq_maxmsg = 16;
@@ -87,8 +84,6 @@ int main(void)
 
     while (1)
     {
-
-        printf("time: %llu\n", time(NULL));
         /*
         uint8_t cmd = 0xFD;
         if (sizeof(cmd) == write(i2c_fd, &cmd, sizeof(cmd)))
