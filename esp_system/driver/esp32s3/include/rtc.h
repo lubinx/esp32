@@ -2,12 +2,12 @@
 #define __ESP32S3_RTC_H                 1
 
 #include <features.h>
-#include <stdint.h>
-
-// #include "soc/rtc_cntl_struct.h"
+#include <sys/_timespec.h>
 
 __BEGIN_DECLS
 
+__attribute__((nothrow, pure))
+    uint64_t RTC_tick(void);
+
 __END_DECLS
 #endif
-

@@ -14,9 +14,9 @@ time_t time(time_t *timep)
     return tv.tv_sec;
 }
 
-int stime(time_t const *timeptr)
+int stime(time_t const ts)
 {
-    RTC_HAL_set_time(*timeptr);
+    RTC_HAL_set_time(ts);
     return 0;
 }
 
