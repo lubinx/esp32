@@ -165,30 +165,28 @@ void CLK_initialize(void)
 static void OSC_configure(void)
 {
     // TODO: use sdkconfig to enable/disable XTAL 32k, default powerup for dev board
+    // IO
+    RTCIO.xtal_32p_pad.x32p_mux_sel = 1;
+    RTCIO.xtal_32n_pad.x32n_mux_sel = 1;
+
+    // configure: this is default from esp-idf code
+    //  TODO: using sdkconfig to configure xtal 32k parameters
+    RTCCNTL.ext_xtl_conf.dac_xtal_32k = 3;
+    RTCCNTL.ext_xtl_conf.dres_xtal_32k = 3;
+    RTCCNTL.ext_xtl_conf.dgm_xtal_32k = 3;
+    RTCCNTL.ext_xtl_conf.dbuf_xtal_32k = 1;
+    // xpd status, meaning?
+    RTCCNTL.ext_xtl_conf.xpd_xtal_32k = RTC_CNTL_XPD_XTAL_32K_V;
+
+    // soo..XTAL mode selection not found in esp-idf code?
+    enum XTAL32K_mode_t
     {
-        // IO
-        RTCIO.xtal_32p_pad.x32p_mux_sel = 1;
-        RTCIO.xtal_32n_pad.x32n_mux_sel = 1;
+        XTAL32K_CRYSTAL_MODE        = 0,
+        XTAL32K_EXTERNAL_MODE,
+        XTAL32K_BOOTSTRAP_MODE
+    };
 
-        // configure: this is default from esp-idf code
-        //  TODO: using sdkconfig to configure xtal 32k parameters
-        RTCCNTL.ext_xtl_conf.dac_xtal_32k = 3;
-        RTCCNTL.ext_xtl_conf.dres_xtal_32k = 3;
-        RTCCNTL.ext_xtl_conf.dgm_xtal_32k = 3;
-        RTCCNTL.ext_xtl_conf.dbuf_xtal_32k = 1;
-        // xpd status, meaning?
-        RTCCNTL.ext_xtl_conf.xpd_xtal_32k = RTC_CNTL_XPD_XTAL_32K_V;
-
-        // soo..XTAL mode selection not found in esp-idf code?
-        enum XTAL32K_mode_t
-        {
-            XTAL32K_CRYSTAL_MODE        = 0,
-            XTAL32K_EXTERNAL_MODE,
-            XTAL32K_BOOTSTRAP_MODE
-        };
-
-        RTCCNTL.clk_conf.dig_xtal32k_en = 1;
-    }
+    RTCCNTL.clk_conf.dig_xtal32k_en = 1;
 }
 
 int CLK_pll_conf(enum PLL_freq_sel_t sel)
@@ -298,7 +296,7 @@ int CLK_pll_conf(enum PLL_freq_sel_t sel)
     return 0;
 }
 
-uint64_t CLK_pll_freq(void)
+uint32_t CLK_pll_freq(void)
 {
     switch (SYSTEM.cpu_per_conf.pll_freq_sel)
     {
@@ -397,7 +395,7 @@ int CLK_cpu_conf(enum CPU_sclk_sel_t sel, uint32_t div)
     return 0;
 }
 
-uint64_t CLK_cpu_freq(void)
+uint32_t CLK_cpu_freq(void)
 {
     /// @ref Table 7-2 / Table 7-3
     switch (SYSTEM.sysclk_conf.soc_clk_sel)
@@ -429,13 +427,13 @@ int CLK_systimer_conf(enum SYSTIMER_sclk_sel_t sel)
         return 0;
 }
 
-uint64_t CLK_systimer_freq(void)
+uint32_t CLK_systimer_freq(void)
 {
     //  somehow it fixed by XTAL_FREQ / 2.5 in esp32s3
     return 16000000;
 }
 
-uint64_t CLK_ahb_freq(void)
+uint32_t CLK_ahb_freq(void)
 {
     switch (SYSTEM.sysclk_conf.soc_clk_sel)     // ref table 7-5
     {
@@ -453,7 +451,7 @@ uint64_t CLK_ahb_freq(void)
 }
 
 // esp32s3 ahb = apb
-uint64_t CLK_apb_freq(void)
+uint32_t CLK_apb_freq(void)
     __attribute__((alias(("CLK_ahb_freq"))));
 
 int CLK_rtc_conf(enum RTC_sclk_sel_t sel)
@@ -488,7 +486,7 @@ int CLK_rtc_conf(enum RTC_sclk_sel_t sel)
     return 0;
 }
 
-uint64_t CLK_rtc_freq(void)
+uint32_t CLK_rtc_freq(void)
 {
     unsigned div;
 
@@ -556,7 +554,7 @@ int CLK_rtc_fast_sclk_sel(enum RTC_FAST_sclk_sel_t sel, uint32_t div)
     return 0;
 }
 
-uint64_t CLK_rtc_fast_sclk_freq(void)
+uint32_t CLK_rtc_fast_sclk_freq(void)
 {
     switch (RTCCNTL.clk_conf.fast_clk_rtc_sel)
     {
@@ -604,7 +602,7 @@ int CLK_uart_sclk_sel(uart_dev_t *dev, enum UART_sclk_sel_t sel)
     return 0;
 }
 
-uint64_t CLK_uart_sclk_freq(uart_dev_t *dev)
+uint32_t CLK_uart_sclk_freq(uart_dev_t *dev)
 {
     switch(dev->clk_conf.sclk_sel)
     {
@@ -635,7 +633,7 @@ int CLK_i2c_sclk_sel(i2c_dev_t *dev, enum I2C_sclk_sel_t sel)
     return 0;
 }
 
-uint64_t CLK_i2c_sclk_freq(i2c_dev_t *dev)
+uint32_t CLK_i2c_sclk_freq(i2c_dev_t *dev)
 {
     switch (dev->clk_conf.sclk_sel)
     {
