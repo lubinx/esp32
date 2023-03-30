@@ -771,28 +771,27 @@ static void I2C_IntrHandler(struct I2C_context *context)
 
     if (status.arbitration_lost_int_st)
     {
-        esp_rom_printf("\t--arbitration_lost_int_st\n");
+        // esp_rom_printf("\t--arbitration_lost_int_st\n");
         context->err = ENXIO;
         goto i2c_transfer_done;
     }
 
     if (status.nack_int_st)
     {
-        esp_rom_printf("\t--nack_int_st\n");
+        // esp_rom_printf("\t--nack_int_st\n");
         context->err = ENXIO;
     }
 
     if (status.time_out_int_st)
     {
-        esp_rom_printf("\t--time_out_int_st\n");
+        // esp_rom_printf("\t--time_out_int_st\n");
         context->err = ETIMEDOUT;
         goto i2c_transfer_done;
     }
 
     if (status.trans_complete_int_st)
     {
-        esp_rom_printf("\t--trans_complete_int_st\n");
-
+        // esp_rom_printf("\t--trans_complete_int_st\n");
         if (context->read_op && 0 != dev->sr.rxfifo_cnt)
             context->buf_io_bytes += I2C_fifo_read(dev, context->buf, context->buf_size);
 
@@ -801,8 +800,7 @@ static void I2C_IntrHandler(struct I2C_context *context)
 
     if (status.end_detect_int_st)
     {
-        esp_rom_printf("\t--end_detect_int_st\n");
-
+        // esp_rom_printf("\t--end_detect_int_st\n");
         if (0 == context->err)
         {
             if (context->sa_bytes)
