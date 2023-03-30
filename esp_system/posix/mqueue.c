@@ -93,7 +93,7 @@ int mqueue_create(char const *name, uint16_t msg_size, uint16_t msg_count)
     if (-1 != mqd)
     {
         spin_unlock(&MQ_atomic);
-        return -1;
+        return __set_errno_neg(EEXIST);
     }
 
     mqd = KERNEL_createfd(FD_TAG_MQD, &mqdio, ext);
@@ -266,7 +266,14 @@ mqd_t mq_open(char const *name, int flags, ...)
         return mqueue_create(name, (uint16_t)attr->mq_msgsize, (uint16_t)attr->mq_maxmsg);
     }
     else
-        return SVC_mq_find(name, false);
+    {
+        int mqd = SVC_mq_find(name, false);
+
+        if (-1 == mqd)
+            return __set_errno_neg(ENOENT);
+        else
+            return mqd;
+    }
 }
 
 int mq_close(mqd_t mqd)
@@ -392,12 +399,9 @@ static int SVC_mq_find(char const *name, bool extract)
             break;
         }
     }
-    spin_unlock(&MQ_atomic);
 
-    if (-1 == retval)
-        return __set_errno_neg(ENOENT);
-    else
-        return retval;
+    spin_unlock(&MQ_atomic);
+    return retval;
 }
 
 static struct MQ_msg *SVC_mqueue_get(struct MQ_list *queue, struct MQ_ext *ext)

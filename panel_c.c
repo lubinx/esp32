@@ -1,14 +1,23 @@
-#include <rtos/user.h>
-#include <i2c.h>
+#include <unistd.h>
+#include <pthread.h>
 
+#include <i2c.h>
 #include <stropts.h>
 #include <stdint.h>
 #include <string.h>
 
-#include "led.h"
+#include "panel.h"
 
 /****************************************************************************
- *  @consts
+ *  @internal
+ ****************************************************************************/
+static void *CLOCK_thread(pthread_mutex_t *update_lock) __attribute__((noreturn));
+// var
+static pthread_mutex_t CLOCK_update_lock = PTHREAD_RECURSIVE_MUTEX_INITIALIZER;
+static uint32_t CLOCK_thread_stack[1024 / sizeof(uint32_t)];
+
+/****************************************************************************
+ *  @def
  ****************************************************************************/
     #define SYSDIS                      (0x80)
     #define SYSEN                       (0x81)
@@ -114,7 +123,7 @@ static uint16_t const __xlat_wday[] =
     [6] = 1 << 14 | 1 << 15,
 };
 
-struct LED_context
+struct PANEL_context
 {
     int i2c_nb;
     int fd;
@@ -129,143 +138,165 @@ struct LED_context
 
     uint32_t flags;
 };
-static struct LED_context LED_context = {0};
+static struct PANEL_context PANEL_context = {0};
 
-static void LED_write(void const *buf, size_t count);
-static void LED_update_date(int year, int month, int mday);
-static void LED_update_time(int mtime);
+static void PANEL_write(void const *buf, size_t count);
+static void PANEL_update_date(int year, int month, int mday);
+static void PANEL_update_time(int mtime);
 
-static void LED_update_digit(uint8_t seg, int no, int count);
-static void LED_update_wday(int wday);
-static void LED_update_flags(void);
+static void PANEL_update_digit(uint8_t seg, int no, int count);
+static void PANEL_update_wday(int wday);
+static void PANEL_update_flags(void);
 
 /****************************************************************************
- *  @export
+ *  @implements
  ****************************************************************************/
-void LED_init(int i2c_nb, uint8_t da)
+void PANEL_init(int i2c_nb, uint8_t da)
 {
-    LED_context.fd = I2C_createfd(i2c_nb, da, 100, 0, 0);
-    // ioctl(LED_context.fd, OPT_WR_TIMEO, 500);
+    PANEL_context.fd = I2C_createfd(i2c_nb, da, 200, 0, 0);
+    // ioctl(PANEL_context.fd, OPT_WR_TIMEO, 500);
 
-    LED_context.mtime = (uint16_t)-1;
-    LED_context.pwm = 10;
+    PANEL_context.mtime = (uint16_t)-1;
+    PANEL_context.pwm = 10;
 
-    LED_context.flags = FLAG_IND_ALARM | FLAG_IND_ALARM_1 |
+    PANEL_context.flags = FLAG_IND_ALARM | FLAG_IND_ALARM_1 |
         FLAG_IND_HUMIDITY | FLAG_IND_PERCENT |
         FLAG_IND_TMPR | FLAG_IND_TMPR_C | FLAG_IND_TMPR_DOT;
 
-    if (-1 != LED_context.fd)
+    if (-1 != PANEL_context.fd)
     {
-        LED_context.i2c_nb = i2c_nb;
-        LED_context.da = da;
+        PANEL_context.i2c_nb = i2c_nb;
+        PANEL_context.da = da;
 
-        LED_write(__startup, sizeof(__startup));
-        LED_update_flags();
+        PANEL_write(__startup, sizeof(__startup));
+        PANEL_update_flags();
     }
+
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_attr_setstack(&attr, CLOCK_thread_stack, sizeof(CLOCK_thread_stack));
+
+    pthread_t id;
+    pthread_create(&id, &attr, (void *)CLOCK_thread, &CLOCK_update_lock);
 }
 
-void LED_test(void)
+void PANEL_test(void)
 {
-    LED_context.flags = 0xFFFFFFFF;
-    LED_update_flags();
+    PANEL_context.flags = 0xFFFFFFFF;
+    PANEL_update_flags();
 
     for (int i = 10000; i <= 19999; i += 1111)
     {
         // yyyy/mm/dd
-        LED_update_digit(SEG(0), i, 4);
-        LED_update_digit(SEG(5), i, 2);
-        LED_update_digit(SEG(7), i, 2);
-        LED_update_wday((uint8_t)(i % 10));
+        PANEL_update_digit(SEG(0), i, 4);
+        PANEL_update_digit(SEG(5), i, 2);
+        PANEL_update_digit(SEG(7), i, 2);
+        PANEL_update_wday((uint8_t)(i % 10));
         // hh:nn
-        LED_update_digit(SEG(10), i, 4);
+        PANEL_update_digit(SEG(10), i, 4);
         // humidity / tmpr
-        LED_update_digit(SEG(14), i, 2);
-        LED_update_digit(SEG(16), i, 3);
+        PANEL_update_digit(SEG(14), i, 2);
+        PANEL_update_digit(SEG(16), i, 3);
 
-        msleep(100);
+        msleep(300);
     }
 }
 
-void LED_update_clock(void)
+static void *CLOCK_thread(pthread_mutex_t *lock)
 {
-    struct tm tv;
+    struct tm tv = {0};
+
+    while (1)
     {
-        time_t ts = time(NULL);
-        localtime_r(&ts, &tv);
+        pthread_mutex_lock(lock);
+
+        {
+            time_t ts = time(NULL);
+            localtime_r(&ts, &tv);
+
+            printf("%04d/%02d/%02d %02d:%02d:%02d\n",
+                1900 + tv.tm_year, 1 + tv.tm_mon, tv.tm_mday,
+                tv.tm_hour, tv.tm_min, tv.tm_sec
+            );
+            printf("time: %llu\n", ts);
+            fflush(stdout);
+        }
+        msleep(1000);
+
+        PANEL_update_date(tv.tm_year + 1900, tv.tm_mon + 1, tv.tm_mday);
+        PANEL_update_wday((uint8_t)tv.tm_wday);
+        PANEL_update_time(tv.tm_hour * 100 + tv.tm_min);
+
+        if (tv.tm_hour >= 12)
+            PANEL_context.flags = (PANEL_context.flags & (uint32_t)~(FLAG_IND_AM)) | FLAG_IND_PM;
+        else
+            PANEL_context.flags = (PANEL_context.flags & (uint32_t)~(FLAG_IND_PM)) | FLAG_IND_AM;
+
+        PANEL_update_flags();
+        pthread_mutex_unlock(lock);
     }
-
-    LED_update_date(tv.tm_year + 1900, tv.tm_mon + 1, tv.tm_mday);
-    LED_update_wday((uint8_t)tv.tm_wday);
-    LED_update_time(tv.tm_hour * 100 + tv.tm_min);
-
-    if (tv.tm_hour >= 12)
-        LED_context.flags = (LED_context.flags & (uint32_t)~(FLAG_IND_AM)) | FLAG_IND_PM;
-    else
-        LED_context.flags = (LED_context.flags & (uint32_t)~(FLAG_IND_PM)) | FLAG_IND_AM;
-
-    LED_update_flags();
 }
 
-void LED_update_tmpr(int tmpr)
+void PANEL_update_tmpr(int tmpr)
 {
-    LED_update_digit(SEG(16), tmpr, 3);
+    PANEL_update_digit(SEG(16), tmpr, 3);
 }
 
-void LED_update_humidity(int humidity)
+void PANEL_update_humidity(int humidity)
 {
-    LED_update_digit(SEG(14), humidity, 2);
+    PANEL_update_digit(SEG(14), humidity, 2);
 }
 
 /****************************************************************************
  *  @internal
  ****************************************************************************/
-static void LED_write(void const *buf, size_t count)
+static void PANEL_write(void const *buf, size_t count)
 {
     while (true)
     {
-        if (-1 == write(LED_context.fd, buf, count))
+        if (-1 == write(PANEL_context.fd, buf, count))
             msleep(10);
         else
             break;
     }
 }
 
-static void LED_update_date(int year, int month, int mday)
+static void PANEL_update_date(int year, int month, int mday)
 {
-    LED_context.flags = LED_context.flags | FLAG_IND_YEAR | FLAG_IND_MONTH | FLAG_IND_MDAY;
+    PANEL_context.flags = PANEL_context.flags | FLAG_IND_YEAR | FLAG_IND_MONTH | FLAG_IND_MDAY;
 
-    if (LED_context.year != year)
+    if (PANEL_context.year != year)
     {
-        LED_context.year = (uint16_t)year;
-        LED_update_digit(SEG(0), LED_context.year, 4);
+        PANEL_context.year = (uint16_t)year;
+        PANEL_update_digit(SEG(0), PANEL_context.year, 4);
     }
-    if (LED_context.month != month)
+    if (PANEL_context.month != month)
     {
-        LED_context.month = (uint8_t)month;
-        LED_update_digit(SEG(5), LED_context.month, 2);
+        PANEL_context.month = (uint8_t)month;
+        PANEL_update_digit(SEG(5), PANEL_context.month, 2);
     }
-    if (LED_context.mday != mday)
+    if (PANEL_context.mday != mday)
     {
-        LED_context.mday = (uint8_t)mday;
-        LED_update_digit(SEG(7), LED_context.mday, 2);
+        PANEL_context.mday = (uint8_t)mday;
+        PANEL_update_digit(SEG(7), PANEL_context.mday, 2);
     }
 }
 
-static void LED_update_time(int mtime)
+static void PANEL_update_time(int mtime)
 {
-    if (LED_context.mtime != mtime)
+    if (PANEL_context.mtime != mtime)
     {
-        LED_context.mtime = (uint16_t)mtime;
-        LED_update_digit(SEG(10), LED_context.mtime, 4);
+        PANEL_context.mtime = (uint16_t)mtime;
+        PANEL_update_digit(SEG(10), PANEL_context.mtime, 4);
 
         if (1200 > mtime)
-            LED_context.flags = LED_context.flags | FLAG_IND_SEC | FLAG_IND_AM;
+            PANEL_context.flags = PANEL_context.flags | FLAG_IND_SEC | FLAG_IND_AM;
         else
-            LED_context.flags = LED_context.flags | FLAG_IND_SEC | FLAG_IND_PM;
+            PANEL_context.flags = PANEL_context.flags | FLAG_IND_SEC | FLAG_IND_PM;
     }
 }
 
-static void LED_update_wday(int wday)
+static void PANEL_update_wday(int wday)
 {
     uint8_t buf[1 + sizeof(uint16_t)] = {0};
     buf[0] = SEG(9);
@@ -275,26 +306,26 @@ static void LED_update_wday(int wday)
         uint16_t xlat = __xlat_wday[wday];
         memcpy(&buf[1], &xlat, sizeof(xlat));
     }
-    LED_write(&buf, sizeof(buf));
+    PANEL_write(&buf, sizeof(buf));
 }
 
-static void LED_update_flags(void)
+static void PANEL_update_flags(void)
 {
     static uint32_t flags;
 
-    if (flags != LED_context.flags)
+    if (flags != PANEL_context.flags)
     {
-        flags = LED_context.flags;
+        flags = PANEL_context.flags;
 
         uint8_t buf[1 + sizeof(uint32_t)] = {0};
         buf[0] = SEG(19);
         memcpy(&buf[1], &flags, sizeof(flags));
 
-        LED_write(&buf, sizeof(buf));
+        PANEL_write(&buf, sizeof(buf));
     }
 }
 
-static void LED_update_digit(uint8_t seg, int no, int count)
+static void PANEL_update_digit(uint8_t seg, int no, int count)
 {
     uint8_t buf[1 + 4 * sizeof(uint16_t)] = {0};
     buf[0] = seg;
@@ -327,5 +358,5 @@ static void LED_update_digit(uint8_t seg, int no, int count)
             }
         }
     }
-    LED_write(&buf, (unsigned)count + 1);
+    PANEL_write(&buf, (unsigned)count + 1);
 }
