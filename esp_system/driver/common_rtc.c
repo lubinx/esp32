@@ -3,6 +3,28 @@
 
 #include "hw/hal/rtc_hal.h"
 
+/***************************************************************************/
+/** @implements: posix
+****************************************************************************/
+int gettimeofday(struct timeval *tv, void *_tz)
+{
+    RTC_HAL_get_time(tv);
+
+    ARG_UNUSED(_tz);
+    return 0;
+}
+
+int _gettimeofday_r(struct _reent *r, struct timeval *tv, void *_tz)
+{
+    RTC_HAL_get_time(tv);
+
+    ARG_UNUSED(r, _tz);
+    return 0;
+}
+
+/***************************************************************************/
+/** @implements
+****************************************************************************/
 time_t time(time_t *timep)
 {
     struct timeval tv;
@@ -17,22 +39,6 @@ time_t time(time_t *timep)
 int stime(time_t const ts)
 {
     RTC_HAL_set_time(ts);
-    return 0;
-}
-
-int gettimeofday(struct timeval *tv, void *_tz)
-{
-    RTC_HAL_get_time(tv);
-
-    ARG_UNUSED(_tz);
-    return 0;
-}
-
-int _gettimeofday_r(struct _reent *r, struct timeval *tv, void *_tz)
-{
-    RTC_HAL_get_time(tv);
-
-    ARG_UNUSED(r, _tz);
     return 0;
 }
 
