@@ -9,11 +9,6 @@
 #include <rtos/kernel.h>
 #include <esp_attr.h>
 
-void __PTHREAD_introduce(void)
-{
-    // introduce unit, nothing to do
-}
-
 int pthread_create(pthread_t *thread, pthread_attr_t const *attr, pthread_routine_t routine, void *arg)
 {
     void *stack = attr ? attr->stack : NULL;
@@ -92,6 +87,16 @@ int pthread_attr_destroy(pthread_attr_t *attr)
 int pthread_attr_getstacksize(pthread_attr_t const *attr, size_t *stacksize)
 {
     *stacksize = attr->stack_size;
+    return 0;
+}
+
+int pthread_attr_setstack(pthread_attr_t *attr, void *stackaddr, size_t stacksize)
+{
+    if (stacksize < THREAD_MINIMAL_STACK_SIZE)
+        return EINVAL;
+
+    attr->stack = stackaddr;
+    attr->stack_size = stacksize;
     return 0;
 }
 

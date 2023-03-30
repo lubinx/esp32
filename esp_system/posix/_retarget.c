@@ -91,15 +91,6 @@ void __libc_retarget_init(void)
         mutex_init(&idf_common_mutex.mutex, MUTEX_FLAG_NORMAL);
     #endif
 
-    extern void __FILESYSTEM_introduce(void);
-    extern void __IO_introduce(void);
-    extern void __PTHREAD_introduce(void);
-    extern void __TIME_introduce(void);
-
-    __FILESYSTEM_introduce();
-    __IO_introduce();
-    __PTHREAD_introduce();
-
     _GLOBAL_REENT = &__reent;
     heap_caps_init();
 }
@@ -160,7 +151,7 @@ int atexit(void (*function)(void))
 #define __WEAK                          __attribute__((weak))
 
 __WEAK int _system_r(struct _reent *r, char const *str)                             __ENOSYS;
-// filesystem
+// implemented at filesystem.c
 __WEAK int _isatty_r(struct _reent *r, int fd)                                      __ENOSYS;
 __WEAK int _open_r(struct _reent *r, char const *path, int flags, int mode)         __ENOSYS;
 __WEAK int _close_r(struct _reent *r, int fd)                                       __ENOSYS;
@@ -170,11 +161,11 @@ __WEAK int _stat_r(struct _reent *r, char const *path, struct stat * st)        
 __WEAK int _link_r(struct _reent *r, const char *n1, const char *n2)                __ENOSYS;
 __WEAK int _unlink_r(struct _reent *r, char const *path)                            __ENOSYS;
 __WEAK int _rename_r(struct _reent *r, char const *src, char const *dst)            __ENOSYS;
-// io
+// implemented at io.c
 __WEAK off_t _lseek_r(struct _reent *r, int fd, off_t offset, int origin)           __ENOSYS;
 __WEAK ssize_t _read_r(struct _reent *r, int fd, void *buf, size_t bufsize)         __ENOSYS;
 __WEAK ssize_t _write_r(struct _reent *r, int fd, void const *buf, size_t count)    __ENOSYS;
-// time
+// time of day implemented at common_rtc.c
 __WEAK int _gettimeofday_r(struct _reent *r, struct timeval *tv, void *_tz)         __ENOSYS;
 
 /****************************************************************************
