@@ -51,15 +51,15 @@ extern  __attribute__((nothrow))
     int mq_notify(mqd_t mqd, struct sigevent const *notification);
 
 extern  __attribute__((nothrow, nonnull(2)))
-    ssize_t mq_receive(mqd_t mqd, char *ptr, size_t len, unsigned int *prio);
+    ssize_t mq_receive(mqd_t mqd, void *buf, size_t bufsize, unsigned int *prio);
 extern  __attribute__((nothrow, nonnull(2, 5)))
-    ssize_t mq_timedreceive(mqd_t mqd, char *restrict ptr, size_t len, unsigned int *restrict prio,
+    ssize_t mq_timedreceive(mqd_t mqd, void *restrict buf, size_t bufsize, unsigned int *restrict prio,
         struct timespec const *restrict abs_ts);
 
 extern  __attribute__((nothrow, nonnull(2)))
-    int mq_send(mqd_t mqd, char const *ptr, size_t len, unsigned int prio);
+    int mq_send(mqd_t mqd, void const *buf, size_t count, unsigned int prio);
 extern  __attribute__((nothrow, nonnull(2, 5)))
-    int mq_timedsend(mqd_t mqd, char const *ptr, size_t len, unsigned int prio,
+    int mq_timedsend(mqd_t mqd, void const *buf, size_t count, unsigned int prio,
         struct timespec const *abs_ts);
 
 __END_DECLS

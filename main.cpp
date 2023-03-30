@@ -1,12 +1,9 @@
 #include <unistd.h>
 #include <stdio.h>
-#include <inttypes.h>
 #include <string.h>
 #include <pthread.h>
 #include <semaphore.h>
 #include <mqueue.h>
-
-#include <rtos/user.h>
 
 #include "soc.h"
 #include "clk-tree.h"
@@ -38,13 +35,13 @@ int main(void)
 
     // I2C_configure(&I2C0, I2C_MASTER_MODE, 400);
 
-    printf("pll frequency: %llu MHz\n", CLK_pll_freq() / 1000000);
-    printf("cpu frequency: %llu MHz\n", CLK_cpu_freq() / 1000000);
-    printf("ahb frequency: %llu MHz\n", CLK_ahb_freq() / 1000000);
+    printf("pll frequency: %lu MHz\n", CLK_pll_freq() / 1000000);
+    printf("cpu frequency: %lu MHz\n", CLK_cpu_freq() / 1000000);
+    printf("ahb frequency: %lu MHz\n", CLK_ahb_freq() / 1000000);
 
-    printf("uart0: %lu bps sclk: %llu\n", UART_get_baudrate(&UART0), CLK_uart_sclk_freq(&UART0));
-    printf("uart1: %lu bps sclk: %llu\n", UART_get_baudrate(&UART1), CLK_uart_sclk_freq(&UART1));
-    printf("uart2: %lu bps sclk: %llu\n", UART_get_baudrate(&UART2), CLK_uart_sclk_freq(&UART2));
+    printf("uart0: %lu bps sclk: %lu\n", UART_get_baudrate(&UART0), CLK_uart_sclk_freq(&UART0));
+    printf("uart1: %lu bps sclk: %lu\n", UART_get_baudrate(&UART1), CLK_uart_sclk_freq(&UART1));
+    printf("uart2: %lu bps sclk: %lu\n", UART_get_baudrate(&UART2), CLK_uart_sclk_freq(&UART2));
 
     IOMUX_print();
 
@@ -72,10 +69,15 @@ int main(void)
 
     //int i2c_fd = I2C_createfd(0, 0x44, 100, 0, 0);
     LED_init_default();
-    printf("i2c0: %lu bps sclk: %llu\n\n", I2C_get_bps(&I2C0), CLK_i2c_sclk_freq(&I2C0));
+    printf("i2c0: %lu bps sclk: %lu\n\n", I2C_get_bps(&I2C0), CLK_i2c_sclk_freq(&I2C0));
     LED_test();
 
-    mqd = mqueue_create(NULL, 4, 16);
+
+    struct mq_attr mq_attr = {0};
+    mq_attr.mq_maxmsg = 16;
+    mq_attr.mq_msgsize = 4;
+
+    mqd = mq_open("mq", O_CREAT | O_RDWR, 0644, &mq_attr);
     printf("\ninfinite loop...mqd: %d\n", mqd);
     fflush(stdout);
 
@@ -85,6 +87,8 @@ int main(void)
 
     while (1)
     {
+
+        printf("time: %llu\n", time(NULL));
         /*
         uint8_t cmd = 0xFD;
         if (sizeof(cmd) == write(i2c_fd, &cmd, sizeof(cmd)))
@@ -112,7 +116,7 @@ static void *sema_thread(void *arg)
 
     while (true)
     {
-        mqueue_send(mqd, &step, 0);
+        mq_send(mqd, &step, sizeof(step), 0);
         step ++;
 
         msleep(500);
@@ -126,7 +130,7 @@ static void *blink_thread(void *arg)
 
     while (true)
     {
-        mqueue_recv(mqd, &step, 0);
+        mq_receive(mqd, &step, sizeof(step), 0);
 
         if (step & 0x1)
         {

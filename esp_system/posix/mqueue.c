@@ -316,53 +316,53 @@ int mq_notify(mqd_t mqd, struct sigevent const *notification)
     return __set_errno_neg(ENOSYS);
 }
 
-ssize_t mq_receive(mqd_t mqd, char *ptr, size_t len, unsigned int *prio)
+ssize_t mq_receive(mqd_t mqd, void *buf, size_t bufsize, unsigned int *prio)
 {
     struct MQ_ext *ext = AsMqd(mqd)->ext;
-    if (len < ext->msg_size)
+    if (bufsize < ext->msg_size)
         return __set_errno_neg(EMSGSIZE);
     else
-        return mqueue_recv(mqd, ptr, prio);
+        return mqueue_recv(mqd, buf, prio);
 }
 
-ssize_t mq_timedreceive(mqd_t mqd, char *restrict ptr, size_t len, unsigned int *restrict prio,
+ssize_t mq_timedreceive(mqd_t mqd, void *restrict buf, size_t bufsize, unsigned int *restrict prio,
     struct timespec const *restrict ts)
 {
     struct MQ_ext *ext = AsMqd(mqd)->ext;
-    if (len < ext->msg_size)
+    if (bufsize < ext->msg_size)
         return __set_errno_neg(EMSGSIZE);
 
     time_t t = time(NULL);
     if (ts->tv_sec < t)
         return __set_errno_neg(ETIMEDOUT);
 
-    return mqueue_timedrecv(mqd, ptr,
+    return mqueue_timedrecv(mqd, buf,
         (uint32_t)((ts->tv_sec - 1) * 1000 + (ts->tv_nsec / 1000)),
         prio
     );
 }
 
-int mq_send(mqd_t mqd, char const *ptr, size_t len, unsigned int prio)
+int mq_send(mqd_t mqd, void const *buf, size_t count, unsigned int prio)
 {
     struct MQ_ext *ext = AsMqd(mqd)->ext;
-    if (len < ext->msg_size)
+    if (count < ext->msg_size)
         return __set_errno_neg(EMSGSIZE);
     else
-        return mqueue_send(mqd, ptr, prio);
+        return mqueue_send(mqd, buf, prio);
 }
 
-int mq_timedsend(mqd_t mqd, char const *ptr, size_t len, unsigned int prio,
+int mq_timedsend(mqd_t mqd, void const *buf, size_t count, unsigned int prio,
     struct timespec const *ts)
 {
     struct MQ_ext *ext = AsMqd(mqd)->ext;
-    if (len < ext->msg_size)
+    if (count < ext->msg_size)
         return __set_errno_neg(EMSGSIZE);
 
     time_t t = time(NULL);
     if (ts->tv_sec < t)
         return __set_errno_neg(ETIMEDOUT);
 
-    return mqueue_timedsend(mqd, ptr,
+    return mqueue_timedsend(mqd, buf,
         (uint32_t)((ts->tv_sec - 1) * 1000 + (time_t)ts->tv_nsec / 1000),
         prio);
 }
