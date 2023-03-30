@@ -70,9 +70,9 @@
     #define LOG_COLOR_BLUE              "34"
     #define LOG_COLOR_PURPLE            "35"
     #define LOG_COLOR_CYAN              "36"
-    #define LOG_COLOR(COLOR)            "\033[0;" COLOR "m"
-    #define LOG_BOLD(COLOR)             "\033[1;" COLOR "m"
-    #define LOG_RESET_COLOR             "\033[0m"
+    #define LOG_COLOR(COLOR)            "\e[0;" COLOR "m"
+    #define LOG_BOLD(COLOR)             "\e[1;" COLOR "m"
+    #define LOG_RESET_COLOR             "\e[0m"
 
     #define LOG_END                     LOG_RESET_COLOR
     #define ESP_LOG_ERROR_COLOR         LOG_COLOR(LOG_COLOR_RED)
