@@ -4,8 +4,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "soc/soc.h"
-#include "soc/soc_caps.h"
+#include <soc/soc.h>
+#include <soc/soc_caps.h>
 
 __BEGIN_DECLS
 
