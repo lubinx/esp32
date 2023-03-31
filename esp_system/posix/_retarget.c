@@ -1,8 +1,5 @@
 #include <unistd.h>
-#include <stdio.h>
 #include <stdlib.h>
-#include <errno.h>
-#include <stdbool.h>
 #include <string.h>
 
 #include <sys/errno.h>
@@ -17,7 +14,6 @@
 #include "esp_rom_caps.h"
 #include "esp_heap_caps_init.h"
 
-#pragma GCC diagnostic ignored "-Wunused-parameter"
 /****************************************************************************
  * @imports
 *****************************************************************************/
@@ -26,7 +22,10 @@ struct _reent *_global_impure_ptr;
 /****************************************************************************
  *  @def
 *****************************************************************************/
-// locks
+#if ! defined(NDEBUG)
+    static char const *TAG = "syscall";
+#endif
+
 struct __lock
 {
     mutex_t mutex;
@@ -107,6 +106,12 @@ int _getpid_r(struct _reent *r)
     return 0;
 }
 
+int _kill_r(struct _reent *r, int pid, int sig)
+{
+    ARG_UNUSED(r, pid, sig);
+    return 0;
+}
+
 void __assert_func(char const *file, int line, char const *func, char const *failedexpr)
 {
     ESP_LOGE("assertion", "\"%s\" failed\n\tfile \"%s\", line %d%s%s\n",
@@ -118,25 +123,19 @@ void __assert_func(char const *file, int line, char const *func, char const *fai
 
 void _exit(int status)
 {
-    unsigned core_id = __get_CORE_ID();
-    for (unsigned i = 0; i < SOC_CPU_CORES_NUM; i ++)
-    {
-        if (i != core_id)
-            SOC_acquire_core(i);
-    }
-
+#ifdef NDEBUG
     SOC_reset();
+#else
+    ESP_LOGI(TAG, "exit code %ld", status);
+#endif
     while (1);
-}
-
-int _kill_r(struct _reent *r, int pid, int sig)
-{
-    exit(EFAULT);
 }
 
 void abort(void)
 {
-    ESP_LOGE("signal", "abort() was called at PC 0x%p on core %d", __builtin_return_address(0) - 3, __get_CORE_ID());
+#if ! defined(NDEBUG)
+    ESP_LOGE(TAG, "abort() was called at PC 0x%p on core %d", __builtin_return_address(0) - 3, __get_CORE_ID());
+#endif
 
     __BKPT(0);
     exit(EFAULT);
@@ -144,29 +143,16 @@ void abort(void)
 
 int atexit(void (*function)(void))
 {
+    ARG_UNUSED(function);
     return 0;
 }
 
-#define __ENOSYS                        { return __set_errno_r_neg(r, ENOSYS); }
-#define __WEAK                          __attribute__((weak))
-
-__WEAK int _system_r(struct _reent *r, char const *str)                             __ENOSYS;
-// implemented at filesystem.c
-__WEAK int _isatty_r(struct _reent *r, int fd)                                      __ENOSYS;
-__WEAK int _open_r(struct _reent *r, char const *path, int flags, int mode)         __ENOSYS;
-__WEAK int _close_r(struct _reent *r, int fd)                                       __ENOSYS;
-__WEAK int _fcntl_r(struct _reent *r, int fd, int cmd, int arg)                     __ENOSYS
-__WEAK int _fstat_r(struct _reent *r, int fd, struct stat *st)                      __ENOSYS;
-__WEAK int _stat_r(struct _reent *r, char const *path, struct stat * st)            __ENOSYS;
-__WEAK int _link_r(struct _reent *r, const char *n1, const char *n2)                __ENOSYS;
-__WEAK int _unlink_r(struct _reent *r, char const *path)                            __ENOSYS;
-__WEAK int _rename_r(struct _reent *r, char const *src, char const *dst)            __ENOSYS;
-// implemented at io.c
-__WEAK off_t _lseek_r(struct _reent *r, int fd, off_t offset, int origin)           __ENOSYS;
-__WEAK ssize_t _read_r(struct _reent *r, int fd, void *buf, size_t bufsize)         __ENOSYS;
-__WEAK ssize_t _write_r(struct _reent *r, int fd, void const *buf, size_t count)    __ENOSYS;
-// time of day implemented at common_rtc.c
-__WEAK int _gettimeofday_r(struct _reent *r, struct timeval *tv, void *_tz)         __ENOSYS;
+__attribute__((weak)) // implemented at filesystem.c
+int _fstat_r(struct _reent *r, int fd, struct stat *st)
+{
+    ARG_UNUSED(r, fd, st);
+    return __set_errno_r_neg(r, ENOSYS);
+}
 
 /****************************************************************************
  *  @implements: heap
@@ -175,8 +161,8 @@ __WEAK int _gettimeofday_r(struct _reent *r, struct timeval *tv, void *_tz)     
  These contain the business logic for the malloc() and realloc() implementation. Because of heap tracing
  wrapping reasons, we do not want these to be a public api, however, so they're not defined publicly.
 */
-extern void *heap_caps_malloc_default( size_t size );
-extern void *heap_caps_realloc_default( void *ptr, size_t size );
+extern void *heap_caps_malloc_default(size_t size);
+extern void *heap_caps_realloc_default(void *ptr, size_t size);
 
 void *malloc(size_t size)
 {
@@ -207,21 +193,25 @@ void free(void *ptr)
 
 void *_malloc_r(struct _reent *r, size_t size)
 {
+    ARG_UNUSED(r);
     return heap_caps_malloc_default(size);
 }
 
 void _free_r(struct _reent *r, void *ptr)
 {
+    ARG_UNUSED(r);
     heap_caps_free(ptr);
 }
 
 void *_realloc_r(struct _reent *r, void *ptr, size_t size)
 {
+    ARG_UNUSED(r);
     return heap_caps_realloc_default(ptr, size);
 }
 
 void *_calloc_r(struct _reent *r, size_t nmemb, size_t size)
 {
+    ARG_UNUSED(r);
     return calloc(nmemb, size);
 }
 
@@ -232,19 +222,20 @@ void *memalign(size_t alignment, size_t n)
 
 int posix_memalign(void **out_ptr, size_t alignment, size_t size)
 {
-    if (size == 0) {
+    if (size == 0)
+    {
         /* returning NULL for zero size is allowed, don't treat this as an error */
         *out_ptr = NULL;
         return 0;
     }
-    void *result = heap_caps_aligned_alloc(alignment, size, MALLOC_CAP_DEFAULT);
-    if (result != NULL) {
-        /* Modify output pointer only on success */
-        *out_ptr = result;
-        return 0;
+    else
+    {
+        *out_ptr = heap_caps_aligned_alloc(alignment, size, MALLOC_CAP_DEFAULT);
+        if (*out_ptr)
+            return 0;
+        else
+            return ENOMEM;
     }
-    /* Note: error returned, not set via errno! */
-    return ENOMEM;
 }
 
 /****************************************************************************
@@ -320,21 +311,6 @@ void __retarget_lock_release_recursive(_LOCK_T lock)
         lock = &idf_common_recursive_mutex;
 #endif
     mutex_unlock(&lock->mutex);
-}
-
-/****************************************************************************
- *  @implements: misc redirect esp-idf
-*****************************************************************************/
-__attribute__((weak))   // overrided in _rtos_freertos_impl.c
-clock_t clock(void)
-{
-    return 0;
-}
-
-__attribute__((weak))   // overrided in common_rtc.c
-time_t time(time_t *timep)
-{
-    return -1;
 }
 
 /****************************************************************************

@@ -94,10 +94,10 @@ extern
     struct FS_implement const *FS_root;
 
     /**
-     *  ROOT_initialize()
+     *  FILESYSTEM_init_root()
      */
 extern __attribute__((nothrow))
-    void ROOT_initialize(void);
+    void FILESYSTEM_init_root(void);
 
     /**
      *  ROOT_mount()
@@ -114,15 +114,6 @@ extern __attribute__((nonnull, nothrow))
      */
 extern __attribute__((nonnull, nothrow))
     void *ROOT_unmount(char const *name);
-
-    /**
-     *  ROOT_attach_dev() / ROOT_detach_dev()
-     *      attach / detach a dev fd into '/dev'
-     */
-extern __attribute__((nonnull, nothrow))
-    int ROOT_attach_dev(char const *name, int fd);
-extern __attribute__((nonnull, nothrow))
-    int ROOT_detach_dev(char const *name);
 
 __END_DECLS
 #endif

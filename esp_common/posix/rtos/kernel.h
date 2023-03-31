@@ -24,10 +24,12 @@
 #include <stdint.h>
 #include <stdarg.h>
 #include <sys/types.h>
+#include <sys/mutex.h>
 
 #include <rtos/glist.h>
 #include <rtos/types.h>
 #include <rtos/user.h>
+#include <rtos/filesystem.h>
 
 #include <xtensa/spinlock.h>
 
