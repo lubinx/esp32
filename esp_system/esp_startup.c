@@ -9,10 +9,6 @@
 extern uint32_t __zero_table_start__;
 extern uint32_t __zero_table_end__;
 
-// gcc ctors
-extern void (*__init_array_start)(void);
-extern void (*__init_array_end)(void);
-
 /****************************************************************************
  *  exports
 *****************************************************************************/
@@ -68,14 +64,6 @@ void Startup_Handler(void)
         static struct object ob;
         __register_frame_info(__eh_frame, &ob);
     // #endif
-
-    // gcc ctors
-    for (void (**p)(void) = &__init_array_start;
-        p < &__init_array_end;
-        p ++)
-    {
-        (*p)();
-    }
 
     esp_rtos_bootstrap();
 }

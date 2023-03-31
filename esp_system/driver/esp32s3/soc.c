@@ -16,6 +16,9 @@
  *  imports
 *****************************************************************************/
 extern void *_vector_table;
+// gcc ctors
+extern void (*__init_array_start)(void);
+extern void (*__init_array_end)(void);
 // esp system extends ctors
 extern struct __esp_init_fn _esp_system_init_fn_array_start;
 extern struct __esp_init_fn _esp_system_init_fn_array_end;
@@ -82,8 +85,16 @@ static void startup_other_cores(void)
     esp_rtos_bootstrap();
 }
 
-void __esp_rtos_initialize(void)
+void _esp_rtos_start(void)
 {
+    // gcc ctors
+    for (void (**p)(void) = &__init_array_start;
+        p < &__init_array_end;
+        p ++)
+    {
+        (*p)();
+    }
+
     do_system_init_fn();
 
     SOC_acquire_core(1);

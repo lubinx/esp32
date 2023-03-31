@@ -84,7 +84,7 @@ void IRAM_ATTR vApplicationIdleHook(void)
 static void __freertos_start(void *arg)
 {
     ARG_UNUSED(arg);
-    __esp_rtos_initialize();
+    _esp_rtos_start();
 
     extern __attribute__((noreturn)) int main(int argc, char **argv);
     // TODO: process main() exit code
@@ -127,7 +127,7 @@ void esp_rtos_bootstrap(void)
 }
 
 __attribute__((weak))
-void __esp_rtos_initialize(void)
+void _esp_rtos_start(void)
 {
 }
 
