@@ -8,16 +8,22 @@ static char const *TAG = "err";
 
 int __dbg_set_errno_r_neg(struct _reent *r, int err, char const *__function__)
 {
+#ifndef NDEBUG
     ESP_LOGW(TAG, "%d, %s(): %s", err, __function__, strerror(err));
-
+#else
+    ARG_UNUSED(__function__);
+#endif
     r->_errno = err;
     return -1;
 }
 
 void *__dbg_set_errno_r_nullptr(struct _reent *r, int err, char const *__function__)
 {
+#ifndef NDEBUG
     ESP_LOGW(TAG, "%d, %s(): %s", err, __function__, strerror(err));
-
+#else
+    ARG_UNUSED(__function__);
+#endif
     r->_errno = err;
     return NULL;
 }
@@ -37,8 +43,7 @@ char const *esp_err_to_name(esp_err_t code)
     if (code >= ESP_ERR_WIFI_BASE)
         return "esp wifi error";
 
-    // if (code >= ESP_ERR_BASE)
-        return "esp error";
+    return "esp error";
 }
 
 static inline char const *__strerror(int err)
