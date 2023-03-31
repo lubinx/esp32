@@ -9,16 +9,13 @@
 __BEGIN_DECLS
 
 extern __attribute__((nothrow))
-    void PANEL_init(int i2c_nb, uint8_t da);
-
-static inline
-    void PANEL_init_default(void) { PANEL_init(0, 0x73); }
+    void PANEL_init(void);
 
 extern __attribute__((nothrow))
     void PANEL_test(void);
 
 extern __attribute__((nothrow))
-    void PANEL_pwm(uint8_t val);
+    int PANEL_pwm(uint8_t val);
 
 extern __attribute__((nothrow))
     void PANEL_update_tmpr(int tmpr);

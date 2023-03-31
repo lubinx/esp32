@@ -1,5 +1,6 @@
 #include <unistd.h>
 #include <pthread.h>
+#include <sys/errno.h>
 
 #include <i2c.h>
 #include <stropts.h>
@@ -9,16 +10,11 @@
 #include "panel.h"
 
 /****************************************************************************
- *  @internal
- ****************************************************************************/
-static void *CLOCK_thread(pthread_mutex_t *update_lock) __attribute__((noreturn));
-// var
-static pthread_mutex_t CLOCK_update_lock = PTHREAD_RECURSIVE_MUTEX_INITIALIZER;
-static uint32_t CLOCK_thread_stack[1024 / sizeof(uint32_t)];
-
-/****************************************************************************
  *  @def
  ****************************************************************************/
+    #define I2C_NB                      (0)
+    #define DA                          (0x73)
+
     #define SYSDIS                      (0x80)
     #define SYSEN                       (0x81)
     #define LEDOFF                      (0x82)
@@ -80,65 +76,27 @@ static uint32_t CLOCK_thread_stack[1024 / sizeof(uint32_t)];
     #define FLAG_IND_TMPR_C             (1UL << 30)
     #define FLAG_IND_TMPR_F             (1UL << 31)
 
-// consts
-static uint8_t const __startup[] = {SYSDIS, COM16PMOS, RCMODE1, SYSEN, PWM(5), LEDON};
-// static uint8_t const __clear[49] = {0};
-
-static uint8_t const __xlat_digit[] =
-{
-    [0] = COM_A | COM_B | COM_C | COM_D | COM_E | COM_F,
-    [1] = COM_B | COM_C,
-    [2] = COM_A | COM_B | COM_G | COM_E | COM_D,
-    [3] = COM_A | COM_B | COM_C | COM_D | COM_G,
-    [4] = COM_F | COM_G | COM_B | COM_C,
-    [5] = COM_A | COM_F | COM_G | COM_C | COM_D,
-    [6] = COM_A | COM_F | COM_G | COM_E | COM_C | COM_D,
-    [7] = COM_A | COM_B | COM_C,
-    [8] = COM_A | COM_B | COM_C | COM_D | COM_E | COM_F | COM_G,
-    [9] = COM_A | COM_B | COM_C | COM_D | COM_F | COM_G,
-};
-
-static uint16_t const __xlat_digit_b[] =
-{
-    [0] = COM_AA | COM_BB | COM_CC | COM_DD | COM_EE | COM_FF,
-    [1] = COM_BB | COM_CC,
-    [2] = COM_AA | COM_BB | COM_GG | COM_EE | COM_DD,
-    [3] = COM_AA | COM_BB | COM_CC | COM_DD | COM_GG,
-    [4] = COM_FF | COM_GG | COM_BB | COM_CC,
-    [5] = COM_AA | COM_FF | COM_GG | COM_CC | COM_DD,
-    [6] = COM_AA | COM_FF | COM_GG | COM_EE | COM_CC | COM_DD,
-    [7] = COM_AA | COM_BB | COM_CC,
-    [8] = COM_AA | COM_BB | COM_CC | COM_DD | COM_EE | COM_FF | COM_GG,
-    [9] = COM_AA | COM_BB | COM_CC | COM_DD | COM_FF | COM_GG,
-};
-
-static uint16_t const __xlat_wday[] =
-{
-    [0] = 1 << 8 | 1 << 9,
-    [1] = 1 << 4 | 1 << 5,
-    [2] = 1 << 6 | 1 << 7,
-    [3] = 1 << 0 | 1 << 1,
-    [4] = 1 << 2 | 1 << 3,
-    [5] = 1 << 12 | 1 << 13,
-    [6] = 1 << 14 | 1 << 15,
-};
-
+/****************************************************************************
+ *  @def
+ ****************************************************************************/
 struct PANEL_context
 {
-    int i2c_nb;
-    int fd;
+    pthread_mutex_t lock;
 
-    uint8_t da;
-    uint8_t pwm;        // 0~15
+    int i2c_fd;
+    uint8_t pwm;            // 0~15
 
-    uint16_t year;
-    uint8_t month;
     uint8_t mday;
+    uint8_t month;
+    uint16_t year;
     uint16_t mtime;
-
     uint32_t flags;
 };
-static struct PANEL_context PANEL_context = {0};
+
+/****************************************************************************
+ *  @internal
+ ****************************************************************************/
+static void *PANEL_clock_thread(pthread_mutex_t *update_lock) __attribute__((noreturn));
 
 static void PANEL_write(void const *buf, size_t count);
 static void PANEL_update_date(int year, int month, int mday);
@@ -148,36 +106,61 @@ static void PANEL_update_digit(uint8_t seg, int no, int count);
 static void PANEL_update_wday(int wday);
 static void PANEL_update_flags(void);
 
+// var
+static struct PANEL_context PANEL_context = {0};
+static uint32_t PANEL_clock_thread_stack[2048 / sizeof(uint32_t)];
+
 /****************************************************************************
  *  @implements
  ****************************************************************************/
-void PANEL_init(int i2c_nb, uint8_t da)
+void PANEL_init()
 {
-    PANEL_context.fd = I2C_createfd(i2c_nb, da, 200, 0, 0);
-    // ioctl(PANEL_context.fd, OPT_WR_TIMEO, 500);
+    PANEL_context.i2c_fd = I2C_createfd(I2C_NB, DA, 200, 0, 0);
+    if (-1 == PANEL_context.i2c_fd)
+    {
+    }
+
+    // ioctl(PANEL_context.i2c_fd, OPT_WR_TIMEO, 500);
 
     PANEL_context.mtime = (uint16_t)-1;
-    PANEL_context.pwm = 10;
+    PANEL_context.pwm = 1;
 
     PANEL_context.flags = FLAG_IND_ALARM | FLAG_IND_ALARM_1 |
         FLAG_IND_HUMIDITY | FLAG_IND_PERCENT |
         FLAG_IND_TMPR | FLAG_IND_TMPR_C | FLAG_IND_TMPR_DOT;
 
-    if (-1 != PANEL_context.fd)
+    static uint8_t const __startup[] = {SYSDIS, COM16PMOS, RCMODE1, SYSEN, PWM(1), LEDON};
+    PANEL_write(__startup, sizeof(__startup));
+    PANEL_update_flags();
+
+    if (true)
     {
-        PANEL_context.i2c_nb = i2c_nb;
-        PANEL_context.da = da;
-
-        PANEL_write(__startup, sizeof(__startup));
-        PANEL_update_flags();
+        pthread_mutexattr_t attr;
+        pthread_mutexattr_init(&attr);
+        pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+        pthread_mutex_init(&PANEL_context.lock, &attr);
+        pthread_mutexattr_destroy(&attr);
     }
+    if (true)
+    {
+        pthread_t id;
+        pthread_attr_t attr;
 
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
-    pthread_attr_setstack(&attr, CLOCK_thread_stack, sizeof(CLOCK_thread_stack));
+        pthread_attr_init(&attr);
+        pthread_attr_setstack(&attr, PANEL_clock_thread_stack, sizeof(PANEL_clock_thread_stack));
+        pthread_create(&id, &attr, (void *)PANEL_clock_thread, &PANEL_context.lock);
+        pthread_attr_destroy(&attr);
+    }
+}
 
-    pthread_t id;
-    pthread_create(&id, &attr, (void *)CLOCK_thread, &CLOCK_update_lock);
+int PANEL_pwm(uint8_t val)
+{
+    if (15 < val)
+        return EINVAL;
+
+    uint8_t pwm =  PWM(1);
+    PANEL_write(&pwm, sizeof(pwm));
+    return 0;
 }
 
 void PANEL_test(void)
@@ -202,41 +185,6 @@ void PANEL_test(void)
     }
 }
 
-static void *CLOCK_thread(pthread_mutex_t *lock)
-{
-    struct tm tv = {0};
-
-    while (1)
-    {
-        pthread_mutex_lock(lock);
-
-        {
-            time_t ts = time(NULL);
-            localtime_r(&ts, &tv);
-
-            printf("%04d/%02d/%02d %02d:%02d:%02d\n",
-                1900 + tv.tm_year, 1 + tv.tm_mon, tv.tm_mday,
-                tv.tm_hour, tv.tm_min, tv.tm_sec
-            );
-            printf("time: %llu\n", ts);
-            fflush(stdout);
-        }
-        msleep(1000);
-
-        PANEL_update_date(tv.tm_year + 1900, tv.tm_mon + 1, tv.tm_mday);
-        PANEL_update_wday((uint8_t)tv.tm_wday);
-        PANEL_update_time(tv.tm_hour * 100 + tv.tm_min);
-
-        if (tv.tm_hour >= 12)
-            PANEL_context.flags = (PANEL_context.flags & (uint32_t)~(FLAG_IND_AM)) | FLAG_IND_PM;
-        else
-            PANEL_context.flags = (PANEL_context.flags & (uint32_t)~(FLAG_IND_PM)) | FLAG_IND_AM;
-
-        PANEL_update_flags();
-        pthread_mutex_unlock(lock);
-    }
-}
-
 void PANEL_update_tmpr(int tmpr)
 {
     PANEL_update_digit(SEG(16), tmpr, 3);
@@ -250,11 +198,45 @@ void PANEL_update_humidity(int humidity)
 /****************************************************************************
  *  @internal
  ****************************************************************************/
+static void *PANEL_clock_thread(pthread_mutex_t *lock)
+{
+    struct tm tv = {0};
+
+    while (1)
+    {
+        time_t ts = time(NULL);
+        localtime_r(&ts, &tv);
+
+        printf("%04d/%02d/%02d %02d:%02d:%02d\n",
+            1900 + tv.tm_year, 1 + tv.tm_mon, tv.tm_mday,
+            tv.tm_hour, tv.tm_min, tv.tm_sec
+        );
+        fflush(stdout);
+
+        pthread_mutex_lock(lock);
+        {
+            PANEL_update_date(tv.tm_year + 1900, tv.tm_mon + 1, tv.tm_mday);
+            PANEL_update_wday((uint8_t)tv.tm_wday);
+            PANEL_update_time(tv.tm_hour * 100 + tv.tm_min);
+
+            if (tv.tm_hour >= 12)
+                PANEL_context.flags = (PANEL_context.flags & (uint32_t)~(FLAG_IND_AM)) | FLAG_IND_PM;
+            else
+                PANEL_context.flags = (PANEL_context.flags & (uint32_t)~(FLAG_IND_PM)) | FLAG_IND_AM;
+
+            PANEL_update_flags();
+        }
+        pthread_mutex_unlock(lock);
+
+        msleep(1000);
+    }
+}
+
 static void PANEL_write(void const *buf, size_t count)
 {
     while (true)
     {
-        if (-1 == write(PANEL_context.fd, buf, count))
+        if (-1 == write(PANEL_context.i2c_fd, buf, count))
             msleep(10);
         else
             break;
@@ -298,6 +280,17 @@ static void PANEL_update_time(int mtime)
 
 static void PANEL_update_wday(int wday)
 {
+    static uint16_t const __xlat_wday[] =
+    {
+        [0] = 1 << 8 | 1 << 9,
+        [1] = 1 << 4 | 1 << 5,
+        [2] = 1 << 6 | 1 << 7,
+        [3] = 1 << 0 | 1 << 1,
+        [4] = 1 << 2 | 1 << 3,
+        [5] = 1 << 12 | 1 << 13,
+        [6] = 1 << 14 | 1 << 15,
+    };
+
     uint8_t buf[1 + sizeof(uint16_t)] = {0};
     buf[0] = SEG(9);
 
@@ -327,14 +320,40 @@ static void PANEL_update_flags(void)
 
 static void PANEL_update_digit(uint8_t seg, int no, int count)
 {
+    static uint8_t const __xlat_digit[] =
+    {
+        [0] = COM_A | COM_B | COM_C | COM_D | COM_E | COM_F,
+        [1] = COM_B | COM_C,
+        [2] = COM_A | COM_B | COM_G | COM_E | COM_D,
+        [3] = COM_A | COM_B | COM_C | COM_D | COM_G,
+        [4] = COM_F | COM_G | COM_B | COM_C,
+        [5] = COM_A | COM_F | COM_G | COM_C | COM_D,
+        [6] = COM_A | COM_F | COM_G | COM_E | COM_C | COM_D,
+        [7] = COM_A | COM_B | COM_C,
+        [8] = COM_A | COM_B | COM_C | COM_D | COM_E | COM_F | COM_G,
+        [9] = COM_A | COM_B | COM_C | COM_D | COM_F | COM_G,
+    };
+
+    static uint16_t const __xlat_digit_b[] =
+    {
+        [0] = COM_AA | COM_BB | COM_CC | COM_DD | COM_EE | COM_FF,
+        [1] = COM_BB | COM_CC,
+        [2] = COM_AA | COM_BB | COM_GG | COM_EE | COM_DD,
+        [3] = COM_AA | COM_BB | COM_CC | COM_DD | COM_GG,
+        [4] = COM_FF | COM_GG | COM_BB | COM_CC,
+        [5] = COM_AA | COM_FF | COM_GG | COM_CC | COM_DD,
+        [6] = COM_AA | COM_FF | COM_GG | COM_EE | COM_CC | COM_DD,
+        [7] = COM_AA | COM_BB | COM_CC,
+        [8] = COM_AA | COM_BB | COM_CC | COM_DD | COM_EE | COM_FF | COM_GG,
+        [9] = COM_AA | COM_BB | COM_CC | COM_DD | COM_FF | COM_GG,
+    };
+
     uint8_t buf[1 + 4 * sizeof(uint16_t)] = {0};
     buf[0] = seg;
     count *= 2;
 
     if (0 <= no)
     {
-        usleep(10);
-
         if (SEG(10) <= seg && SEG(13) >= seg)
         {
             int digit = 1;
@@ -358,5 +377,6 @@ static void PANEL_update_digit(uint8_t seg, int no, int count)
             }
         }
     }
+
     PANEL_write(&buf, (unsigned)count + 1);
 }
