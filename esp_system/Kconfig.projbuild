@@ -39,8 +39,8 @@ menu "ESP System Settings"
     rsource "driver/$IDF_TARGET/Kconfig.cache"
 
     choice ESP_SYSTEM_LOG_LEVEL
-        bool "Bootloader log verbosity"
-        default ESP_SYSTEM_LOG_LEVEL_DEBUG
+        bool "Log visibility"
+        default ESP_SYSTEM_LOG_LEVEL_WARN
 
         config ESP_SYSTEM_LOG_LEVEL_NONE
             bool "No output"
@@ -52,8 +52,8 @@ menu "ESP System Settings"
             bool "Info"
         config ESP_SYSTEM_LOG_LEVEL_DEBUG
             bool "Debug"
-        # config ESP_SYSTEM_LOG_LEVEL_VERBOSE   no verbose logs for bootloader
-        #     bool "Verbose"
+        config ESP_SYSTEM_LOG_LEVEL_VERBOSE
+            bool "Verbose"
     endchoice
 
     config ESP_SYSTEM_LOG_LEVEL
