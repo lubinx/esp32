@@ -127,7 +127,7 @@ void __attribute__((noreturn)) Reset_Handler(void)
     #endif
 
     kernel_entry_t entry = KERNEL_load(0x10000);
-    ESP_LOGD(TAG, "entry => %p\n", entry);
+    ESP_LOGD(TAG, "entry => %p\n", (void *)entry);
 
     // disable RWDT flashboot protection.
     RTCCNTL.wdt_wprotect = WDT_UNLOCK_VALUE;
@@ -197,7 +197,7 @@ static kernel_entry_t KERNEL_load(uintptr_t flash_location)
     struct flash_segment_t ro_seg = {0};
     struct flash_segment_t text_seg = {0};
 
-    ESP_LOGD(TAG, "reading image at %p", flash_location);
+    ESP_LOGD(TAG, "reading image at %p", (void *)flash_location);
     FLASH_read(flash_location, &hdr, sizeof(hdr));
     flash_location += sizeof(hdr);
 
@@ -207,7 +207,7 @@ static kernel_entry_t KERNEL_load(uintptr_t flash_location)
         goto kernel_load_error;
     }
 
-    for (int i = 0; i < hdr.segment_count; i ++)
+    for (unsigned i = 0; i < hdr.segment_count; i ++)
     {
         esp_segment_hdr_t seg;
 
@@ -216,14 +216,14 @@ static kernel_entry_t KERNEL_load(uintptr_t flash_location)
 
         if (SOC_DROM_HIGH >= seg.load_addr && SOC_DROM_LOW <= seg.load_addr)
         {
-            ESP_LOGD(TAG, "segment %d at %p map => %p DROM size=%d", i, flash_location, seg.load_addr, seg.data_len);
+            ESP_LOGD(TAG, "segment %u at %p map => %p DROM size=%ld", i, (void *)flash_location, (void *)seg.load_addr, seg.data_len);
 
             ro_seg.location = flash_location;
             ro_seg.hdr = seg;
         }
         else if (SOC_IROM_HIGH >= seg.load_addr && SOC_IROM_LOW <= seg.load_addr)
         {
-            ESP_LOGD(TAG, "segment %d at %p map => %p IROM size=%d", i, flash_location, seg.load_addr, seg.data_len);
+            ESP_LOGD(TAG, "segment %u at %p map => %p IROM size=%ld", i, (void *)flash_location, (void *)seg.load_addr, seg.data_len);
 
             text_seg.location = flash_location;
             text_seg.hdr = seg;
@@ -232,7 +232,10 @@ static kernel_entry_t KERNEL_load(uintptr_t flash_location)
         {
             if (seg.load_addr)
             {
-                ESP_LOGD(TAG, "segment %d at %p load=> %p %s size=%d", i, flash_location, seg.load_addr, MEMORY_REGION_TAG(seg.load_addr), seg.data_len);
+                ESP_LOGD(TAG, "segment %u at %p load=> %p %s size=%ld", i,
+                    (void *)flash_location, (void *)seg.load_addr,
+                    MEMORY_REGION_TAG(seg.load_addr), seg.data_len
+                );
 
                 uint8_t *dest = (uint8_t *)seg.load_addr;
                 size_t readed = 0;
@@ -241,7 +244,7 @@ static kernel_entry_t KERNEL_load(uintptr_t flash_location)
                     readed += (size_t)FLASH_read(flash_location + readed, dest + readed, seg.data_len - readed);
             }
             else
-                ESP_LOGD(TAG, "segment %d at %p pad size=%d", i, flash_location, seg.data_len);
+                ESP_LOGD(TAG, "segment %d at %p pad size=%ld", i, (void *)flash_location, seg.data_len);
         }
 
         flash_location += seg.data_len;
