@@ -14,8 +14,12 @@ static uint32_t RTCC_tick_freq = 0;
 __attribute__((constructor))
 void RTC_init()
 {
-    RTCC_tick_offset = (time_t)RTCCNTL.store6 << 32 | RTCCNTL.store7;
     RTCC_tick_freq = CLK_rtc_freq();
+    RTCC_tick_offset = (time_t)RTCCNTL.store6 << 32 | RTCCNTL.store7;
+
+    if (0 == RTCC_tick_offset)
+        RTCC_tick_offset = (0x64277400ULL + 86400 / 3) * RTCC_tick_freq;    // 2023/4/1
+    // RTCC_tick_offset = 0xFFFFFFFFULL * RTCC_tick_freq;
 }
 
 /***************************************************************************/

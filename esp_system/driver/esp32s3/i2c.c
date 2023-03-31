@@ -169,7 +169,7 @@ void I2C_initialize()
 /****************************************************************************
  *  @implements
  ****************************************************************************/
-int I2C_createfd(int nb, uint8_t da, uint16_t kbps, uint8_t page_size, uint32_t highest_addr)
+int I2C_createfd(int nb, uint16_t da, uint16_t kbps, uint8_t page_size, uint32_t highest_addr)
 {
     struct I2C_context *context;
 
@@ -227,13 +227,18 @@ int I2C_createfd(int nb, uint8_t da, uint16_t kbps, uint8_t page_size, uint32_t 
 int I2C_configure(i2c_dev_t *dev, enum I2C_mode_t mode, uint16_t kbps)
 {
     int retval;
+    struct I2C_context *context = NULL;
 
-    PERIPH_module_t i2c_module = I2C_periph_module(dev, NULL);
+    PERIPH_module_t i2c_module = I2C_periph_module(dev, &context);
     if (PERIPH_MODULE_MAX == i2c_module)
         return ENODEV;
 
     if (CLK_periph_is_enabled(i2c_module))
-        return EBUSY;
+    {
+        // i2c can only I2C_configure once, or shared by fd
+        if (0 == context->fd_count)
+            return EBUSY;
+    }
     else
         CLK_periph_enable(i2c_module);
 
@@ -780,6 +785,7 @@ static void I2C_IntrHandler(struct I2C_context *context)
     {
         // esp_rom_printf("\t--nack_int_st\n");
         context->err = ENXIO;
+        goto i2c_transfer_done;
     }
 
     if (status.time_out_int_st)

@@ -26,7 +26,7 @@ __BEGIN_DECLS
  *  create i2c-mst control fd
  ****************************************************************************/
 extern __attribute__((nothrow))
-    int I2C_createfd(int nb, uint8_t da, uint16_t kbps, uint8_t page_size, uint32_t highest_addr);
+    int I2C_createfd(int nb, uint16_t da, uint16_t kbps, uint8_t page_size, uint32_t highest_addr);
 
     #define __I2C_OPT                   ('I' << 8)
 /****************************************************************************
