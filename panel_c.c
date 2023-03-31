@@ -14,6 +14,7 @@
  ****************************************************************************/
     #define I2C_NB                      (0)
     #define DA                          (0x73)
+    #define DEF_PWM                     (10)
 
     #define SYSDIS                      (0x80)
     #define SYSEN                       (0x81)
@@ -123,13 +124,13 @@ void PANEL_init()
     // ioctl(PANEL_context.i2c_fd, OPT_WR_TIMEO, 500);
 
     PANEL_context.mtime = (uint16_t)-1;
-    PANEL_context.pwm = 1;
+    PANEL_context.pwm = DEF_PWM;
 
     PANEL_context.flags = FLAG_IND_ALARM | FLAG_IND_ALARM_1 |
         FLAG_IND_HUMIDITY | FLAG_IND_PERCENT |
         FLAG_IND_TMPR | FLAG_IND_TMPR_C | FLAG_IND_TMPR_DOT;
 
-    static uint8_t const __startup[] = {SYSDIS, COM16PMOS, RCMODE1, SYSEN, PWM(1), LEDON};
+    static uint8_t const __startup[] = {SYSDIS, COM16PMOS, RCMODE1, SYSEN, PWM(DEF_PWM), LEDON};
     PANEL_write(__startup, sizeof(__startup));
     PANEL_update_flags();
 
@@ -158,8 +159,11 @@ int PANEL_pwm(uint8_t val)
     if (15 < val)
         return EINVAL;
 
-    uint8_t pwm =  PWM(1);
-    PANEL_write(&pwm, sizeof(pwm));
+    if (val != PANEL_context.pwm)
+    {
+        uint8_t pwm =  PWM(val);
+        PANEL_write(&pwm, sizeof(pwm));
+    }
     return 0;
 }
 
