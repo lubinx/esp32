@@ -126,7 +126,7 @@ void _exit(int status)
 #ifdef NDEBUG
     SOC_reset();
 #else
-    ESP_LOGI(TAG, "exit code %ld", status);
+    ESP_LOGI(TAG, "exit code %d", status);
 #endif
     while (1);
 }
@@ -134,7 +134,7 @@ void _exit(int status)
 void abort(void)
 {
 #if ! defined(NDEBUG)
-    ESP_LOGE(TAG, "abort() was called at PC 0x%p on core %d", __builtin_return_address(0) - 3, __get_CORE_ID());
+    ESP_LOGE(TAG, "abort() was called at PC 0x%p on core %u", (void *)(__builtin_return_address(0) - 3), __get_CORE_ID());
 #endif
 
     __BKPT(0);
