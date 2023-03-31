@@ -88,7 +88,7 @@ void __attribute__((noreturn)) Reset_Handler(void)
     #endif
     */
 
-    #if CONFIG_BOOTLOADER_LOG_LEVEL
+    #if CONFIG_ESP_SYSTEM_LOG_LEVEL
         esp_rom_install_uart_printf();
         esp_rom_uart_set_as_console(0);
     #endif

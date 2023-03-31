@@ -12,27 +12,20 @@ add_executable(${PROJECT_NAME}
     "${IDF_TARGET}/startup.c"
     "log.c"
     "retarget.c"
+    "${IDF_PATH}/components/esp_rom/patches/esp_rom_sys.c"
 )
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${PROJECT_NAME}.elf")
+target_compile_options(${PROJECT_NAME} PRIVATE "-O2")   # bootloader project is always optmization for speed
+target_compile_options(${PROJECT_NAME} PRIVATE ${COMPILE_OPTIONS})
 
 idf_build_get_property(include_directories INCLUDE_DIRECTORIES GENERATOR_EXPRESSION)
 target_include_directories(${PROJECT_NAME} PRIVATE ${include_directories})
 
-get_optimization_level(optimize "_BOOTLOADER")
-target_compile_options(${PROJECT_NAME} PRIVATE ${optimize})
-idf_build_get_property(compile_options COMPILE_OPTIONS GENERATOR_EXPRESSION)
-target_compile_options(${PROJECT_NAME} PRIVATE ${compile_options})
-
-# NOTE: BOOTLOADER_BUILD
-idf_build_get_property(compile_definitions COMPILE_DEFINITIONS GENERATOR_EXPRESSION)
-target_compile_definitions(${PROJECT_NAME} PRIVATE "BOOTLOADER_BUILD=1" ${compile_definitions})
+# idf_build_get_property(compile_definitions COMPILE_DEFINITIONS GENERATOR_EXPRESSION)
+# target_compile_definitions(${PROJECT_NAME} PRIVATE "BOOTLOADER_BUILD=1" ${compile_definitions})
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     "include"
-)
-target_sources(${PROJECT_NAME} PRIVATE
-    "${IDF_PATH}/components/esp_rom/patches/esp_rom_sys.c"
-    "${IDF_PATH}/components/bootloader_support/src/${IDF_TARGET}/bootloader_soc.c"
 )
 target_link_options(${PROJECT_NAME} PRIVATE ${LINK_OPTIONS})
 
