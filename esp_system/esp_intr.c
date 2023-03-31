@@ -494,7 +494,7 @@ esp_err_t esp_intr_alloc_intrstatus(int source, int flags, uint32_t intrstatusre
             flags |= ESP_INTR_FLAG_LOWMED;
         }
     }
-    ESP_EARLY_LOGV(TAG, "esp_intr_alloc_intrstatus (cpu %u): Args okay. Resulting flags 0x%X", __get_CORE_ID(), flags);
+    ESP_EARLY_LOGV(TAG, "esp_intr_alloc_intrstatus (cpu %u): Args okay. Resulting flags 0x%x", __get_CORE_ID(), flags);
 
     //Check 'special' interrupt sources. These are tied to one specific interrupt, so we
     //have to force get_free_int to only look at that.
@@ -524,7 +524,7 @@ esp_err_t esp_intr_alloc_intrstatus(int source, int flags, uint32_t intrstatusre
     }
 
     portENTER_CRITICAL(&spinlock);
-    uint32_t cpu = __get_CORE_ID();
+    unsigned cpu = __get_CORE_ID();
     //See if we can find an interrupt that matches the flags.
     int intr = get_available_int(flags, cpu, force, source);
     if (intr == -1) {
