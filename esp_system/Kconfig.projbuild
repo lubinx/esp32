@@ -36,6 +36,34 @@ config VFS_SEMIHOSTFS_MAX_MOUNT_POINTS
 
 menu "ESP System Settings"
     rsource "driver/$IDF_TARGET/Kconfig.cpu"
+    rsource "driver/$IDF_TARGET/Kconfig.cache"
+
+    choice ESP_SYSTEM_LOG_LEVEL
+        bool "Bootloader log verbosity"
+        default ESP_SYSTEM_LOG_LEVEL_DEBUG
+
+        config ESP_SYSTEM_LOG_LEVEL_NONE
+            bool "No output"
+        config ESP_SYSTEM_LOG_LEVEL_ERROR
+            bool "Error"
+        config ESP_SYSTEM_LOG_LEVEL_WARN
+            bool "Warning"
+        config ESP_SYSTEM_LOG_LEVEL_INFO
+            bool "Info"
+        config ESP_SYSTEM_LOG_LEVEL_DEBUG
+            bool "Debug"
+        # config ESP_SYSTEM_LOG_LEVEL_VERBOSE   no verbose logs for bootloader
+        #     bool "Verbose"
+    endchoice
+
+    config ESP_SYSTEM_LOG_LEVEL
+        int
+        default 0 if ESP_SYSTEM_LOG_LEVEL_NONE
+        default 1 if ESP_SYSTEM_LOG_LEVEL_ERROR
+        default 2 if ESP_SYSTEM_LOG_LEVEL_WARN
+        default 3 if ESP_SYSTEM_LOG_LEVEL_INFO
+        default 4 if ESP_SYSTEM_LOG_LEVEL_DEBUG
+        default 5 if ESP_SYSTEM_LOG_LEVEL_VERBOSE
 
     config ESP_SYSTEM_RTC_FAST_MEM_AS_HEAP_DEPCHECK
         bool
