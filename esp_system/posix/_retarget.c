@@ -92,6 +92,9 @@ void __libc_retarget_init(void)
 
     _GLOBAL_REENT = &__reent;
     heap_caps_init();
+
+    extern void __FILESYSTEM_introduce(void);
+    __FILESYSTEM_introduce();
 }
 
 int setvbuf(FILE *fp, char *buffer, int mode, size_t size)
@@ -145,13 +148,6 @@ int atexit(void (*function)(void))
 {
     ARG_UNUSED(function);
     return 0;
-}
-
-__attribute__((weak)) // implemented at filesystem.c
-int _fstat_r(struct _reent *r, int fd, struct stat *st)
-{
-    ARG_UNUSED(r, fd, st);
-    return __set_errno_r_neg(r, ENOSYS);
 }
 
 /****************************************************************************

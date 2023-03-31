@@ -51,6 +51,10 @@ static void FS_dirfd_cleanup(int fd);
 /***************************************************************************/
 /** @constructor
 ****************************************************************************/
+void __FILESYSTEM_introduce(void)
+{
+}
+
 #ifdef __GNUC__
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wmissing-prototypes"
