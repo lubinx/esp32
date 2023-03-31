@@ -56,7 +56,6 @@ int _close_r(struct _reent *r, int fd)
         return __set_errno_r_neg(r, err);
 }
 
-/*
 int ioctl(int fd, unsigned long int request, ...)
 {
     if (0 >= fd || CID_FD != AsFD(fd)->cid)
@@ -87,7 +86,6 @@ int ioctl(int fd, unsigned long int request, ...)
     va_end(vl);
     return retval;
 }
-*/
 
 off_t tell(int fd)
 {

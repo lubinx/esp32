@@ -120,8 +120,7 @@ void PANEL_init()
     if (-1 == PANEL_context.i2c_fd)
     {
     }
-
-    // ioctl(PANEL_context.i2c_fd, OPT_WR_TIMEO, 500);
+    ioctl(PANEL_context.i2c_fd, OPT_WR_TIMEO, 500);
 
     PANEL_context.mtime = (uint16_t)-1;
     PANEL_context.pwm = DEF_PWM;
