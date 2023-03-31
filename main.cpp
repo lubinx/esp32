@@ -66,10 +66,6 @@ int main(void)
         fflush(stdout);
     }
 
-    //int i2c_fd = I2C_createfd(0, 0x44, 100, 0, 0);
-    PANEL_init_default();
-    printf("i2c0: %lu bps sclk: %lu\n\n", I2C_get_bps(&I2C0), CLK_i2c_sclk_freq(&I2C0));
-
     struct mq_attr mq_attr = {0};
     mq_attr.mq_maxmsg = 16;
     mq_attr.mq_msgsize = 4;
@@ -81,6 +77,8 @@ int main(void)
     pthread_t id;
     pthread_create(&id, NULL, blink_thread, NULL);
     pthread_create(&id, NULL, sema_thread, NULL);
+
+    PANEL_init();
 
     while (1)
     {
