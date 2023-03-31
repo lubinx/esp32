@@ -25,7 +25,7 @@ void RTC_init()
 /***************************************************************************/
 /** @implements
 ****************************************************************************/
-uint64_t RTC_tick(void)
+uint64_t RTCCNTL_get_tick(void)
 {
     RTCCNTL.time_update.update = 1;
     return (uint64_t)RTCCNTL.time_high0.rtc_timer_value0_high << 32 | RTCCNTL.time_low0;
@@ -33,7 +33,7 @@ uint64_t RTC_tick(void)
 
 void RTC_HAL_get_time(struct timeval *tv)
 {
-    uint64_t tick = RTC_tick() + RTCC_tick_offset;
+    uint64_t tick = RTCCNTL_get_tick() + RTCC_tick_offset;
 
     tv->tv_sec = (time_t)(tick / RTCC_tick_freq);
     tv->tv_usec = (suseconds_t)((tick % RTCC_tick_freq) * _MHZ / RTCC_tick_freq);
