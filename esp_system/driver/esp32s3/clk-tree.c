@@ -384,7 +384,7 @@ int CLK_cpu_conf(enum CPU_sclk_sel_t sel, uint32_t div)
     default:
     case CPU_SCLK_SEL_RC_FAST:
     case CPU_SCLK_SEL_XTAL:
-        SYSTEM.sysclk_conf.pre_div_cnt = BIT_FIELD(10, div - 1);
+        SYSTEM.sysclk_conf.pre_div_cnt = BIT_WIDTH_OF(10, div - 1);
         SYSTEM.sysclk_conf.soc_clk_sel = sel;
         break;
     }

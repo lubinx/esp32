@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __FEATURES_H
+#define __FEATURES_H                    1
 
 #include <sys/features.h>
 #include <sys/cdefs.h>
@@ -81,35 +82,35 @@
         #define __ARG_UNUSED_TEARDOWN(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, TEARDOWN, ...) TEARDOWN
         // ARG_UNUSED(1..9)
         #define __ARG_UNUSED_1(p1)      \
-            ((void)p1)
+            ((void)(p1))
         #define __ARG_UNUSED_2(p1, p2)  \
-            ((void)p1, (void)p2)
+            ((void)(p1), (void)(p2))
         #define __ARG_UNUSED_3(p1, p2, p3)  \
-            ((void)p1, (void)p2, (void)p3)
+            ((void)(p1), (void)(p2), (void)(p3))
         #define __ARG_UNUSED_4(p1, p2, p3, p4)  \
-            ((void)p1, (void)p2, (void)p3, (void)p4)
+            ((void)(p1), (void)(p2), (void)(p3), (void)(p4))
         #define __ARG_UNUSED_5(p1, p2, p3, p4, p5)  \
-            ((void)p1, (void)p2, (void)p3, (void)p4, (void)p5)
+            ((void)(p1), (void)(p2), (void)(p3), (void)(p4), (void)(p5))
         #define __ARG_UNUSED_6(p1, p2, p3, p4, p5, p6)  \
-            ((void)p1, (void)p2, (void)p3, (void)p4, (void)p5, (void)p6)
+            ((void)(p1), (void)(p2), (void)(p3), (void)(p4), (void)(p5), (void)(p6))
         #define __ARG_UNUSED_7(p1, p2, p3, p4, p5, p6, p7)  \
-            ((void)p1, (void)p2, (void)p3, (void)p4, (void)p5, (void)p6, (void)p7)
+            ((void)(p1), (void)(p2), (void)(p3), (void)(p4), (void)(p5), (void)(p6), (void)(p7))
         #define __ARG_UNUSED_8(p1, p2, p3, p4, p5, p6, p7, p8)  \
-            ((void)p1, (void)p2, (void)p3, (void)p4, (void)p5, (void)p6, (void)p7, (void)p8)
+            ((void)(p1), (void)(p2), (void)(p3), (void)(p4), (void)(p5), (void)(p6), (void)(p7), (void)(p8))
         #define __ARG_UNUSED_9(p1, p2, p3, p4, p5, p6, p7, p8, p9)  \
-            ((void)p1, (void)p2, (void)p3, (void)p4, (void)p5, (void)p6, (void)p7, (void)p8, (void)p9)
+            ((void)(p1), (void)(p2), (void)(p3), (void)(p4), (void)(p5), (void)(p6), (void)(p7), (void)(p8), (void)(p9))
         #define __ARG_UNUSED_10(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10) \
-            ((void)p1, (void)p2, (void)p3, (void)p4, (void)p5, (void)p6, (void)p7, (void)p8, (void)p9, (void)p10)
+            ((void)(p1), (void)(p2), (void)(p3), (void)(p4), (void)(p5), (void)(p6), (void)(p7), (void)(p8), (void)(p9), (void)(p10))
         #define __ARG_UNUSED_11(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11)    \
-            ((void)p1, (void)p2, (void)p3, (void)p4, (void)p5, (void)p6, (void)p7, (void)p8, (void)p9, (void)p10, (void)p11)
+            ((void)(p1), (void)(p2), (void)(p3), (void)(p4), (void)(p5), (void)(p6), (void)(p7), (void)(p8), (void)(p9), (void)(p10), (void)(p11))
         #define __ARG_UNUSED_12(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12)   \
-            ((void)p1, (void)p2, (void)p3, (void)p4, (void)p5, (void)p6, (void)p7, (void)p8, (void)p9, (void)p10, (void)p11, (void)p12)
+            ((void)(p1), (void)(p2), (void)(p3), (void)(p4), (void)(p5), (void)(p6), (void)(p7), (void)(p8), (void)(p9), (void)(p10), (void)(p11), (void)(p12))
         #define __ARG_UNUSED_13(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13)  \
-            ((void)p1, (void)p2, (void)p3, (void)p4, (void)p5, (void)p6, (void)p7, (void)p8, (void)p9, (void)p10, (void)p11, (void)p12, (void)p13)
+            ((void)(p1), (void)(p2), (void)(p3), (void)(p4), (void)(p5), (void)(p6), (void)(p7), (void)(p8), (void)(p9), (void)(p10), (void)(p11), (void)(p12), (void)p(13))
         #define __ARG_UNUSED_14(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14) \
-            ((void)p1, (void)p2, (void)p3, (void)p4, (void)p5, (void)p6, (void)p7, (void)p8, (void)p9, (void)p10, (void)p11, (void)p12, (void)p13, (void)p14)
+            ((void)(p1), (void)(p2), (void)(p3), (void)(p4), (void)(p5), (void)(p6), (void)(p7), (void)(p8), (void)(p9), (void)(p10), (void)(p11), (void)(p12), (void)p(13), (void)(p14))
         #define __ARG_UNUSED_15(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15)    \
-            ((void)p1, (void)p2, (void)p3, (void)p4, (void)p5, (void)p6, (void)p7, (void)p8, (void)p9, (void)p10, (void)p11, (void)p12, (void)p13, (void)p14, (void)p15)
+            ((void)(p1), (void)(p2), (void)(p3), (void)(p4), (void)(p5), (void)(p6), (void)(p7), (void)(p8), (void)(p9), (void)(p10), (void)(p11), (void)(p12), (void)p(13), (void)(p14), (void)(p15))
 
     #ifndef MAX
     #define MAX(...)                    __MAX_TEARDOWN(__VA_ARGS__, \
@@ -214,5 +215,5 @@
     #define sizeof_member(STRUCT_TYPE, MEMBER)  \
         sizeof(((STRUCT_TYPE *)0)->MEMBER)
 
-
-#define BIT_FIELD(WIDTH, VAL)           (((1ULL << (WIDTH)) - 1) & (VAL))
+    #define BIT_WIDTH_OF(WIDTH, VAL)           (((1ULL << (WIDTH)) - 1) & (VAL))
+#endif

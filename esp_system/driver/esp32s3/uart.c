@@ -429,9 +429,9 @@ static void UART_configure_context_bps(struct UART_context *context, uart_dev_t 
     uint32_t sclk_div = (uint32_t)((sclk_freq + UART_CLKDIV_V * context->bps - 1) / (UART_CLKDIV_V * context->bps));
     uint32_t clk_div = (uint32_t)(((sclk_freq) << 4) / (context->bps * sclk_div));
     // baud rate configuration register is divided into // an integer part and a fractional part.
-    dev->clkdiv.clkdiv = BIT_FIELD(12, clk_div >> 4);
+    dev->clkdiv.clkdiv = BIT_WIDTH_OF(12, clk_div >> 4);
     dev->clkdiv.clkdiv_frag = clk_div & 0xF;
-    dev->clk_conf.sclk_div_num = BIT_FIELD(8, sclk_div - 1);
+    dev->clk_conf.sclk_div_num = BIT_WIDTH_OF(8, sclk_div - 1);
 }
 
 static ssize_t UART_read(int fd, void *buf, size_t bufsize)

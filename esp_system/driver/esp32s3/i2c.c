@@ -443,7 +443,7 @@ static void I2C_configure_bps(i2c_dev_t *dev, uint16_t kbps, bool dev_sync)
     if (div > 0)
     {
         clk_freq = clk_freq / div;
-        dev->clk_conf.sclk_div_num = BIT_FIELD(8, div - 1);
+        dev->clk_conf.sclk_div_num = BIT_WIDTH_OF(8, div - 1);
     }
     else
         dev->clk_conf.sclk_div_num = 0;
@@ -453,19 +453,19 @@ static void I2C_configure_bps(i2c_dev_t *dev, uint16_t kbps, bool dev_sync)
     uint32_t half_cycle = clk_freq / 1000 == cycle * kbps ? cycle - low_cycle : cycle - low_cycle + 1;
 
     // scl
-    dev->scl_low_period.scl_low_period = BIT_FIELD(9, low_cycle);
-    dev->scl_high_period.scl_wait_high_period = BIT_FIELD(7, 80 < kbps ? half_cycle / 4 : half_cycle / 3);
-    dev->scl_high_period.scl_high_period = BIT_FIELD(9, half_cycle - dev->scl_high_period.scl_wait_high_period);
+    dev->scl_low_period.scl_low_period = BIT_WIDTH_OF(9, low_cycle);
+    dev->scl_high_period.scl_wait_high_period = BIT_WIDTH_OF(7, 80 < kbps ? half_cycle / 4 : half_cycle / 3);
+    dev->scl_high_period.scl_high_period = BIT_WIDTH_OF(9, half_cycle - dev->scl_high_period.scl_wait_high_period);
     // sda
-    dev->sda_hold.sda_hold_time = BIT_FIELD(9, half_cycle / 2);
-    dev->sda_sample.sda_sample_time = BIT_FIELD(9, half_cycle / 2 + dev->scl_high_period.scl_wait_high_period);
+    dev->sda_hold.sda_hold_time = BIT_WIDTH_OF(9, half_cycle / 2);
+    dev->sda_sample.sda_sample_time = BIT_WIDTH_OF(9, half_cycle / 2 + dev->scl_high_period.scl_wait_high_period);
 
     // start
-    dev->scl_start_hold.scl_start_hold_time = BIT_FIELD(9, half_cycle);
-    dev->scl_rstart_setup.scl_rstart_setup_time = BIT_FIELD(9, half_cycle);
+    dev->scl_start_hold.scl_start_hold_time = BIT_WIDTH_OF(9, half_cycle);
+    dev->scl_rstart_setup.scl_rstart_setup_time = BIT_WIDTH_OF(9, half_cycle);
     // stop
-    dev->scl_stop_setup.scl_stop_setup_time = BIT_FIELD(9, half_cycle);
-    dev->scl_stop_hold.scl_stop_hold_time = BIT_FIELD(9, half_cycle);
+    dev->scl_stop_setup.scl_stop_setup_time = BIT_WIDTH_OF(9, half_cycle);
+    dev->scl_stop_hold.scl_stop_hold_time = BIT_WIDTH_OF(9, half_cycle);
 
     // timeout: 5 bits, max = 31;
     dev->to.time_out_value = 20;
@@ -539,7 +539,7 @@ static void I2C_command_next_tx(i2c_dev_t *dev, uint8_t idx, struct I2C_context 
 
     if (count)
     {
-        i2c_cmd_reg_t reg = {.op_code = I2C_CMD_WRITE, .io_bytes = BIT_FIELD(8, count), .ack_check_en = 1};
+        i2c_cmd_reg_t reg = {.op_code = I2C_CMD_WRITE, .io_bytes = BIT_WIDTH_OF(8, count), .ack_check_en = 1};
         I2C_command(dev, &idx, reg.val);
     }
 
@@ -569,7 +569,7 @@ static void I2C_command_next_rx(i2c_dev_t *dev, uint8_t idx, struct I2C_context 
         {
             if (true)
             {
-                i2c_cmd_reg_t reg = {.op_code = I2C_CMD_READ, .io_bytes = BIT_FIELD(8, context->buf_size)};
+                i2c_cmd_reg_t reg = {.op_code = I2C_CMD_READ, .io_bytes = BIT_WIDTH_OF(8, context->buf_size)};
                 I2C_command(dev, &idx, reg.val);
             }
             if (true)   // END
@@ -582,7 +582,7 @@ static void I2C_command_next_rx(i2c_dev_t *dev, uint8_t idx, struct I2C_context 
         {
             if (true)
             {
-                i2c_cmd_reg_t reg = {.op_code = I2C_CMD_READ, .io_bytes = BIT_FIELD(8, context->buf_size - 1)};
+                i2c_cmd_reg_t reg = {.op_code = I2C_CMD_READ, .io_bytes = BIT_WIDTH_OF(8, context->buf_size - 1)};
                 I2C_command(dev, &idx, reg.val);
             }
             if (true)

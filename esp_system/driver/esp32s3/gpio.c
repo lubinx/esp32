@@ -231,7 +231,7 @@ int IOMUX_configure(enum iomux_def mux)
     IOMUX_route_disconnect(pin_nb);
 
     iomux_reg_t reg = {.val = mat->mux->val};
-    reg.mcu_sel = BIT_FIELD(3, mux);
+    reg.mcu_sel = BIT_WIDTH_OF(3, mux);
     // reg.func_ie = (0 != IOMUX_IS_INPUT & mux);
     mat->mux->val = reg.val;
 
@@ -269,7 +269,7 @@ int IOMUX_route_input(uint8_t pin_nb, uint16_t sig_idx, bool inv, enum GPIO_pad_
     IOMUX_route_disconnect(pin_nb);
 
     iomux_matrix_in_t mat_in = {0};
-    mat_in.func_sel = BIT_FIELD(6, pin_nb);
+    mat_in.func_sel = BIT_WIDTH_OF(6, pin_nb);
     mat_in.sig_in_inv = inv;
     mat_in.sig_in_sel = IOMUX_MATRIX_IN_EN;
 
@@ -294,7 +294,7 @@ int IOMUX_route_output(uint8_t pin_nb, uint16_t sig_idx, enum GPIO_output_mode_t
     GPIO_setdir_output_pin_nb(pin_nb, mode);
 
     iomux_matrix_out_t mat_out = {0};
-    mat_out.func_sel = BIT_FIELD(9, sig_idx);
+    mat_out.func_sel = BIT_WIDTH_OF(9, sig_idx);
     mat_out.inv_sel = inv;
     mat_out.oen_inv_sel = oen_inv;
     mat_out.oen_sel = IOMUX_MATRIX_OUT_EN;
@@ -304,7 +304,7 @@ int IOMUX_route_output(uint8_t pin_nb, uint16_t sig_idx, enum GPIO_output_mode_t
     if (mat->pin->pad_driver)
     {
         iomux_matrix_in_t mat_in = {0};
-        mat_in.func_sel = BIT_FIELD(6, pin_nb);
+        mat_in.func_sel = BIT_WIDTH_OF(6, pin_nb);
         mat_in.sig_in_inv = inv;
         mat_in.sig_in_sel = IOMUX_MATRIX_IN_EN;
 
@@ -677,12 +677,12 @@ static uint32_t iomux_reg_val(enum GPIO_pad_pull_t pp, uint8_t sel, uint8_t drv,
         .slp_ie = ie,
         .slp_pd = (pp == PULL_DOWN),
         .slp_pu = (PULL_UP == pp),
-        .slp_drv = BIT_FIELD(2, drv),
+        .slp_drv = BIT_WIDTH_OF(2, drv),
         .func_pd = (pp == PULL_DOWN),
         .func_pu = (PULL_UP == pp),
-        .func_drv = BIT_FIELD(2, drv),
+        .func_drv = BIT_WIDTH_OF(2, drv),
         .func_ie = ie,
-        .mcu_sel = BIT_FIELD(3, sel),
+        .mcu_sel = BIT_WIDTH_OF(3, sel),
         .filter_en = filter_en,
     };
     return reg.val;
