@@ -69,7 +69,7 @@ struct __lock    __lock___arc4random_mutex          = {0};
 /****************************************************************************
  *  @implements
 *****************************************************************************/
-void __libc_retarget_init(void)
+void __retarget_init(void)
 {
     extern void KERNEL_init(void);
     KERNEL_init();

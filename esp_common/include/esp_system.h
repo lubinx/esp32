@@ -11,15 +11,26 @@ typedef int esp_err_t;
 /****************************************************************************
  *  rtos
 *****************************************************************************/
+    /**
+     *  called by esp_startup.c(Startup_Handler())
+    */
 extern __attribute__((noreturn))
-    void esp_rtos_bootstrap(void);
+    void __rtos_bootstrap(void);
 
     /**
-     *  this function will called before enter main()
-     *      NOTE: rtos context here must be initialized
+     *  callback function: was called before enter main()
+     *      .it for replace gcc _start()
+     *
+     *  NOTE: rtos is initialized when callback to this function.
+     *      so the "constructor" functions was inside rtos "main" thread context
+     *
+     *  NOTE: freertos initialize chain:
+     *      1.Startup_Handler() => ZI => SOC_initialize() => __retarget_init() => __rtos_bootstrap()
+     *      2.__rtos_bootstrap() => create "main" thread (__freertos_start()) => startting task scheduler
+     *      3.__freertos_start() => calling __rtos_start() => calling main()
     */
 extern __attribute__((nothrow))
-    void _esp_rtos_start(void);
+    void __rtos_start(void);
 
 /****************************************************************************
  *  for esp-idf's freertos porting

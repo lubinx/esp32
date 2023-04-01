@@ -84,7 +84,7 @@ void IRAM_ATTR vApplicationIdleHook(void)
 static void __freertos_start(void *arg)
 {
     ARG_UNUSED(arg);
-    _esp_rtos_start();
+    __rtos_start();
 
     extern __attribute__((noreturn)) int main(int argc, char **argv);
     // TODO: process main() exit code
@@ -94,7 +94,7 @@ static void __freertos_start(void *arg)
     vTaskDelete(NULL);
 }
 
-void esp_rtos_bootstrap(void)
+void __rtos_bootstrap(void)
 {
     static uintptr_t __main_stack[CONFIG_ESP_MAIN_TASK_STACK_SIZE / sizeof(uintptr_t)];
     static StaticTask_t __main_task;
@@ -127,7 +127,7 @@ void esp_rtos_bootstrap(void)
 }
 
 __attribute__((weak))
-void _esp_rtos_start(void)
+void __rtos_start(void)
 {
 }
 

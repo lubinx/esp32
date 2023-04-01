@@ -77,15 +77,15 @@ static void do_system_init_fn(void)
     }
 }
 
-static void startup_other_cores(void)
+static void __startup_app_core(void)
 {
     SOC_initialize();
 
     do_system_init_fn();
-    esp_rtos_bootstrap();
+    __rtos_bootstrap();
 }
 
-void _esp_rtos_start(void)
+void __rtos_start(void)
 {
     // gcc ctors
     for (void (**p)(void) = &__init_array_start;
@@ -97,8 +97,8 @@ void _esp_rtos_start(void)
 
     do_system_init_fn();
 
+    ets_set_appcpu_boot_addr((uint32_t)__startup_app_core);
     SOC_acquire_core(1);
-    ets_set_appcpu_boot_addr((uint32_t)startup_other_cores);
 }
 
 unsigned SOC_cache_err_core_id(void)

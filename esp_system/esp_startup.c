@@ -53,8 +53,8 @@ void Startup_Handler(void)
 
     SOC_initialize();
 
-    extern void __libc_retarget_init(void); //  _retarget_init.c
-    __libc_retarget_init();
+    extern void __retarget_init(void); //  _retarget_init.c
+    __retarget_init();
 
     // REVIEW: soo..always attach this? #ifdef CONFIG_COMPILER_CXX_EXCEPTIONS
         struct object { long placeholder[10]; };
@@ -65,5 +65,5 @@ void Startup_Handler(void)
         __register_frame_info(__eh_frame, &ob);
     // #endif
 
-    esp_rtos_bootstrap();
+    __rtos_bootstrap();
 }

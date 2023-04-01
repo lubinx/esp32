@@ -141,12 +141,8 @@ PROVIDE(_flash_rodata_start = ABSOLUTE(.));
         /*constructor and destructor tables */
         /* Don't include anything from crtbegin.o or crtend.o, as IDF doesn't use toolchain crt */
         __init_array_start = ABSOLUTE(.);
-        KEEP (*(EXCLUDE_FILE (*crtend.* *crtbegin.*) .ctors SORT(.ctors.*)))
+        KEEP (*(EXCLUDE_FILE(*crtend.* *crtbegin.*) .ctors SORT(.ctors.*)))
         __init_array_end = ABSOLUTE(.);
-        KEEP (*crtbegin.*(.dtors))
-        KEEP (*(EXCLUDE_FILE (*crtend.*) .dtors))
-        KEEP (*(SORT(.dtors.*)))
-        KEEP (*(.dtors))
 
         /* C++ exception handlers table: */
         __XT_EXCEPTION_DESCS_ = ABSOLUTE(.);
