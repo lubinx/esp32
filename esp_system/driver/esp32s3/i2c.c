@@ -250,6 +250,8 @@ int I2C_configure(i2c_dev_t *dev, enum I2C_mode_t mode, uint16_t kbps)
         dev->int_clr.val= (uint32_t)~0;
         // fifo
         dev->fifo_conf.nonfifo_en = 0;
+        dev->fifo_conf.tx_fifo_rst = dev->fifo_conf.rx_fifo_rst = 1;
+        dev->fifo_conf.tx_fifo_rst = dev->fifo_conf.rx_fifo_rst = 0;
         // filter
         if (I2C_SCL_FILTER_CYCLE)
         {
@@ -572,7 +574,7 @@ static void I2C_command_next_rx(i2c_dev_t *dev, uint8_t idx, struct I2C_context 
                 i2c_cmd_reg_t reg = {.op_code = I2C_CMD_READ, .io_bytes = BIT_WIDTH_OF(8, context->buf_size)};
                 I2C_command(dev, &idx, reg.val);
             }
-            if (true)   // END
+            if (true)   // pause
             {
                 i2c_cmd_reg_t reg = {.op_code = I2C_CMD_END};
                 I2C_command(dev, &idx, reg.val);
@@ -602,9 +604,6 @@ static void I2C_command_next_rx(i2c_dev_t *dev, uint8_t idx, struct I2C_context 
 
 static void I2C_command_start(i2c_dev_t *dev, uint16_t da, bool read)
 {
-    dev->fifo_conf.tx_fifo_rst = dev->fifo_conf.rx_fifo_rst = 1;
-    dev->fifo_conf.tx_fifo_rst = dev->fifo_conf.rx_fifo_rst = 0;
-
     uint8_t idx = 0;
     if (true) // start
     {
@@ -619,7 +618,7 @@ static void I2C_command_start(i2c_dev_t *dev, uint16_t da, bool read)
         i2c_cmd_reg_t reg = {.op_code = I2C_CMD_WRITE, .io_bytes = 1, .ack_check_en = 1};
         I2C_command(dev, &idx, reg.val);
     }
-    if (true) // pause
+    if (true) // pause: it has to pause, otherwise NACK will release SCL (once NACK happens, it always NACK)
     {
         i2c_cmd_reg_t reg = {.op_code = I2C_CMD_END};
         I2C_command(dev, &idx, reg.val);
@@ -785,23 +784,14 @@ static void I2C_IntrHandler(struct I2C_context *context)
     {
         // esp_rom_printf("\t--nack_int_st\n");
         context->err = ENXIO;
-        goto i2c_transfer_done;
+        // goto i2c_transfer_done;
     }
 
     if (status.time_out_int_st)
     {
         // esp_rom_printf("\t--time_out_int_st\n");
         context->err = ETIMEDOUT;
-        goto i2c_transfer_done;
-    }
-
-    if (status.trans_complete_int_st)
-    {
-        // esp_rom_printf("\t--trans_complete_int_st\n");
-        if (context->read_op && 0 != dev->sr.rxfifo_cnt)
-            context->buf_io_bytes += I2C_fifo_read(dev, context->buf, context->buf_size);
-
-        goto i2c_transfer_done;
+        // goto i2c_transfer_done;
     }
 
     if (status.end_detect_int_st)
@@ -820,13 +810,19 @@ static void I2C_IntrHandler(struct I2C_context *context)
             goto i2c_transfer_done;
     }
 
-    if (false)
+    if (status.trans_complete_int_st)
     {
+        // esp_rom_printf("\t--trans_complete_int_st\n");
+        if (context->read_op && 0 != dev->sr.rxfifo_cnt)
+            context->buf_io_bytes += I2C_fifo_read(dev, context->buf, context->buf_size);
+
 i2c_transfer_done:
+        dev->fifo_conf.tx_fifo_rst = dev->fifo_conf.rx_fifo_rst = 1;
+        dev->fifo_conf.tx_fifo_rst = dev->fifo_conf.rx_fifo_rst = 0;
         dev->ctr.fsm_rst = 1;
+
         sem_post(&context->evt);
     }
-
     dev->int_clr.val = status.val;
 }
 
