@@ -1,11 +1,6 @@
-/*
- * SPDX-FileCopyrightText: 2022 Espressif Systems (Shanghai) CO LTD
- *
- * SPDX-License-Identifier: Apache-2.0
- */
 
-#include <stddef.h>
 #include <assert.h>
+#include <stddef.h>
 #include <semaphore.h>
 #include <sys/mutex.h>
 #include <sys/times.h>
@@ -16,7 +11,6 @@
 #include <esp_system.h>
 #include <esp_attr.h>
 #include <esp_log.h>
-#include <esp_heap_caps.h>
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -26,8 +20,6 @@
 #include "hal/systimer_hal.h"
 
 #include "sdkconfig.h"
-
-static char const *TAG = "freertos";
 static_assert(configSUPPORT_STATIC_ALLOCATION, "FreeRTOS should be configured with static allocation support");
 
 /****************************************************************************
@@ -102,8 +94,8 @@ void __rtos_bootstrap(void)
     // Initialize the cross-core interrupt on CPU0
     esp_crosscore_int_init();
 
-   if (0 == __get_CORE_ID())
-   {
+    if (0 == __get_CORE_ID())
+    {
         #if defined(CONFIG_ESP_MAIN_TASK_AFFINITY_NO_AFFINITY) && CONFIG_ESP_MAIN_TASK_AFFINITY_NO_AFFINITY
             xTaskCreateStatic(__freertos_start, __freertos_argv,
                 CONFIG_ESP_MAIN_TASK_STACK_SIZE, NULL, configMAX_PRIORITIES,
@@ -118,12 +110,12 @@ void __rtos_bootstrap(void)
 
         vTaskStartScheduler();
         abort();
-   }
-   else
-   {
+    }
+    else
+    {
         xPortStartScheduler();
         abort(); // Only get to here if FreeRTOS somehow very broken
-   }
+    }
 }
 
 __attribute__((weak))
@@ -237,12 +229,10 @@ thread_id_t thread_create_at_core(unsigned priority, void *(*start_rountine)(voi
             );
         }
 
-        // NOTE: freertos xTaskCreateStatic() task should equal to task itself, this is the feature *MUST*
-        if (hdl != (void *)task)
-        {
-            ESP_LOGE(TAG, "freertos xTaskCreateStatic() task *MUST* equal to task itself, this is the feature we *REQUIRED*");
-            while (1);
-        }
+        //  "freertos xTaskCreateStatic() task *MUST* equal to task itself, this is the feature we *REQUIRED*"
+        //      keep assertion here incase freertos changing its feature
+        assert(hdl == (void *)task);
+
         /// circle ref: tcb->task_ptr == task->tcb
         tcb->task_ptr = task;
         task->tcb = tcb;

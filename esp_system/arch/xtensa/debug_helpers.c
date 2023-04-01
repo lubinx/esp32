@@ -10,7 +10,8 @@
 #include "esp_attr.h"
 #include "esp_err.h"
 #include "esp_debug_helpers.h"
-#include "soc/soc_memory_layout.h"
+#include "esp_memory_utils.h"
+// #include "soc/soc_memory_layout.h"
 #include "esp_private/panic_internal.h"
 
 #include "xtensa/xtensa_context.h"

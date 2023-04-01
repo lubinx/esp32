@@ -8,8 +8,8 @@
 
 #include "soc.h"
 #include "esp_attr.h"
+#include "esp_memory_utils.h"
 
-#include "soc/soc_memory_layout.h"
 #include "soc/soc_caps.h"
 #include "soc/rtc.h"
 
