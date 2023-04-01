@@ -240,9 +240,10 @@ static void PANEL_write(void const *buf, size_t count)
     while (true)
     {
         if (-1 == write(PANEL_context.i2c_fd, buf, count))
-            msleep(10);
-        else
-            break;
+        {
+            // write error?
+        }
+        break;
     }
 }
 
