@@ -42,7 +42,7 @@ extern __attribute__((nothrow))
 static struct FS_context FS_context = {0};
 
 /// @function
-static int FS_openat(int dirfd, char const *pathname, int flags, mode_t mode);
+static int FS_openat(struct _reent *r, int dirfd, char const *pathname, int flags, mode_t mode);
 static void *FS_extbuf_alloc(void);
 static void FS_extbuf_release(void *ptr);
 static void FS_dirfd_link_cleanup(int base_dirfd, int fd);
@@ -115,7 +115,7 @@ void FILESYSTEM_fd_cleanup(int fd)
 ****************************************************************************/
 int FILESYSTEM_format(char const *pathmnt, char const *fstype)
 {
-    int fd = FS_openat(FS_context.working_dirfd, pathmnt, O_DIRECTORY, 0);
+    int fd = FS_openat(NULL, FS_context.working_dirfd, pathmnt, O_DIRECTORY, 0);
     if (-1 == fd)
         return fd;
 
@@ -127,7 +127,7 @@ int FILESYSTEM_format(char const *pathmnt, char const *fstype)
 
 int chdir(char const *pathname)
 {
-    int fd = FS_openat(FS_context.working_dirfd, pathname, O_DIRECTORY, 0);
+    int fd = FS_openat(NULL, FS_context.working_dirfd, pathname, O_DIRECTORY, 0);
     if (-1 == fd)
         return fd;
     else
@@ -245,7 +245,7 @@ char *get_current_dir_name(void)
 ****************************************************************************/
 int creat(char const *pathname, mode_t mode)
 {
-    return FS_openat(FS_context.working_dirfd, pathname,
+    return FS_openat(NULL, FS_context.working_dirfd, pathname,
         O_WRONLY | O_CREAT | O_TRUNC, mode);
 }
 
@@ -295,7 +295,7 @@ int _fcntl_r(struct _reent *r, int fd, int cmd, int value)
 int _open_r(struct _reent *r, char const *pathname, int flags, mode_t mode)
 {
     ARG_UNUSED(r);
-    return FS_openat(FS_context.working_dirfd, pathname, flags, mode);
+    return FS_openat(r, FS_context.working_dirfd, pathname, flags, mode);
 }
 
 int open(char const *pathname, int flags, ...)
@@ -313,7 +313,7 @@ int open(char const *pathname, int flags, ...)
     else
         mode = 0;
 
-    return FS_openat(FS_context.working_dirfd, pathname, flags, mode);
+    return FS_openat(NULL, FS_context.working_dirfd, pathname, flags, mode);
 }
 
 int openat(int dirfd, char const *pathname, int flags, ...)
@@ -330,7 +330,7 @@ int openat(int dirfd, char const *pathname, int flags, ...)
     else
         mode = 0;
 
-    return FS_openat(dirfd, pathname, flags, mode);
+    return FS_openat(NULL, dirfd, pathname, flags, mode);
 }
 
 int unlink(char const *pathname)
@@ -349,7 +349,7 @@ int unlinkat(int dirfd, char const *pathname, int flags)
     if (AT_FDCWD & flags)
         oflag |= AT_FDCWD;
 
-    int fd = FS_openat(dirfd, pathname, oflag, 0);
+    int fd = FS_openat(NULL, dirfd, pathname, oflag, 0);
     if (-1 == fd)
         return fd;
 
@@ -396,7 +396,7 @@ int ftruncate(int fd, off_t size)
 ****************************************************************************/
 DIR *opendir(char const *pathname)
 {
-    int fd = FS_openat(FS_context.working_dirfd, pathname, O_DIRECTORY, 0);
+    int fd = FS_openat(NULL, FS_context.working_dirfd, pathname, O_DIRECTORY, 0);
 
     if (fd < 0)
         return NULL;
@@ -564,7 +564,7 @@ int mkdir(char const *pathname, mode_t mode)
 
 int mkdirat(int dirfd, char const *pathname, mode_t mode)
 {
-    return FS_openat(dirfd, pathname, O_DIRECTORY | O_CREAT | O_EXCL, mode);
+    return FS_openat(NULL, dirfd, pathname, O_DIRECTORY | O_CREAT | O_EXCL, mode);
 }
 
 int rmdirat(int dirfd, char const *pathname)
@@ -580,10 +580,12 @@ int rmdir(char const *pathname)
 /***************************************************************************/
 /** @private
 ****************************************************************************/
-static int FS_openat(int dirfd, char const *pathname, int flags, mode_t mode)
+static int FS_openat(struct _reent *r, int dirfd, char const *pathname, int flags, mode_t mode)
 {
+    if (NULL == r)
+        r = __getreent();
     if (NULL == FS_root)
-        return __set_errno_neg(ENOSYS);
+        return __set_errno_r_neg(r, ENOSYS);
 
     char *name = KERNEL_malloc(NAME_MAX);
     char const *p = pathname;
@@ -603,7 +605,7 @@ static int FS_openat(int dirfd, char const *pathname, int flags, mode_t mode)
             struct FS_ext *ext = FS_extbuf_alloc();
             if (! ext)
             {
-                fd = __set_errno_neg(ENOMEM);
+                fd = __set_errno_r_neg(r, ENOMEM);
                 goto FS_openat_exit;
             }
             ext->ino_entry = ext->ino_working = (ino_t)-2;
@@ -617,7 +619,7 @@ static int FS_openat(int dirfd, char const *pathname, int flags, mode_t mode)
         }
         else
         {
-            fd = __set_errno_neg(ENOENT);
+            fd = __set_errno_r_neg(r, ENOENT);
             goto FS_openat_exit;
         }
     }
@@ -658,7 +660,7 @@ static int FS_openat(int dirfd, char const *pathname, int flags, mode_t mode)
         {
             close(fd);
 
-            fd = __set_errno_neg(ENOTDIR);
+            fd = __set_errno_r_neg(r, ENOTDIR);
             goto FS_openat_exit;
         }
         parent_fd = fd;
@@ -676,7 +678,7 @@ static int FS_openat(int dirfd, char const *pathname, int flags, mode_t mode)
             close(fd);
             KERNEL_mfree(dirp);
 
-            fd = __set_errno_neg(ENOMEM);
+            fd = __set_errno_r_neg(r, ENOMEM);
             goto FS_openat_exit;
         }
         ext->ino_entry = ext->ino_working = (ino_t)-2;
@@ -689,9 +691,9 @@ static int FS_openat(int dirfd, char const *pathname, int flags, mode_t mode)
 
             /// checking last of pathname and O_CREAT
             if (*p || ! (O_CREAT & flags))
-                fd = __set_errno_neg(ENOENT);
+                fd = __set_errno_r_neg(r, ENOENT);
             else if (NULL == fs->create)
-                fd = __set_errno_neg(EROFS);
+                fd = __set_errno_r_neg(r, EROFS);
             else
                 fd = fs->create(ext, name, mode);
         }
@@ -728,7 +730,7 @@ static int FS_openat(int dirfd, char const *pathname, int flags, mode_t mode)
         {
             if (fd != dirfd)
                 close(fd);
-            fd = __set_errno_neg(ENOTDIR);
+            fd = __set_errno_r_neg(r, ENOTDIR);
         }
         else
         {
