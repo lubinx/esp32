@@ -12,6 +12,7 @@
 #include "i2c.h"
 #include "panel.h"
 
+#include "esp_log.h"
 #include "esp_heap_caps.h"
 
 #define LED1_PIN_NUM                    (8)
@@ -31,6 +32,8 @@ int main(void)
 
     IOMUX_route_output(17, I2CEXT0_SDA_IN_IDX, OPEN_DRAIN_WITH_PULL_UP, false, false);
     IOMUX_route_output(18, I2CEXT0_SCL_IN_IDX, OPEN_DRAIN_WITH_PULL_UP, false, false);
+
+    // I2C_configure(&I2C0, I2C_MASTER_MODE, 400);
 
     printf("pll frequency: %lu MHz\n", CLK_pll_freq() / 1000000);
     printf("cpu frequency: %lu MHz\n", CLK_cpu_freq() / 1000000);
