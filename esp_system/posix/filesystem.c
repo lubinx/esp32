@@ -22,7 +22,7 @@ struct FS_context
     /// @collection of free ext blocks
     glist_t ext_buf_list;
     /// ext_buf_preallocated
-    struct FS_ext prealloc[16];
+    struct FS_ext prealloc[20];
 };
 
 /***************************************************************************/
@@ -42,7 +42,7 @@ extern __attribute__((nothrow))
 static struct FS_context FS_context = {0};
 
 /// @function
-static int FILESYSTEM_openat(int dirfd, char const *pathname, int flags, mode_t mode);
+static int FS_openat(int dirfd, char const *pathname, int flags, mode_t mode);
 static void *FS_extbuf_alloc(void);
 static void FS_extbuf_release(void *ptr);
 static void FS_dirfd_link_cleanup(int base_dirfd, int fd);
@@ -72,9 +72,6 @@ static void FILESYSTEM_initialize(void)
 
     FILESYSTEM_init_root();
     FILESYSTEM_startup();
-
-    if (-1 == FS_context.working_dirfd)
-        chdir("/");
 }
 
 #ifdef __GNUC__
@@ -118,7 +115,7 @@ void FILESYSTEM_fd_cleanup(int fd)
 ****************************************************************************/
 int FILESYSTEM_format(char const *pathmnt, char const *fstype)
 {
-    int fd = FILESYSTEM_openat(FS_context.working_dirfd, pathmnt, O_DIRECTORY, 0);
+    int fd = FS_openat(FS_context.working_dirfd, pathmnt, O_DIRECTORY, 0);
     if (-1 == fd)
         return fd;
 
@@ -130,7 +127,7 @@ int FILESYSTEM_format(char const *pathmnt, char const *fstype)
 
 int chdir(char const *pathname)
 {
-    int fd = FILESYSTEM_openat(FS_context.working_dirfd, pathname, O_DIRECTORY, 0);
+    int fd = FS_openat(FS_context.working_dirfd, pathname, O_DIRECTORY, 0);
     if (-1 == fd)
         return fd;
     else
@@ -248,7 +245,7 @@ char *get_current_dir_name(void)
 ****************************************************************************/
 int creat(char const *pathname, mode_t mode)
 {
-    return FILESYSTEM_openat(FS_context.working_dirfd, pathname,
+    return FS_openat(FS_context.working_dirfd, pathname,
         O_WRONLY | O_CREAT | O_TRUNC, mode);
 }
 
@@ -259,6 +256,7 @@ int fcntl(int fd, int cmd, ...)
 
     va_list vl;
     va_start(vl, cmd);
+
     int retval = 0;
     unsigned int value;
 
@@ -279,15 +277,25 @@ int fcntl(int fd, int cmd, ...)
         break;
 
     case F_GETFL:
-        value = AsFD(fd)->flags;
-
-        if (FD_FLAG_NONBLOCK & value)
+        if (FD_FLAG_NONBLOCK & AsFD(fd)->flags)
             retval |= O_NONBLOCK;
         break;
     }
 
     va_end(vl);
     return retval;
+}
+
+int _fcntl_r(struct _reent *r, int fd, int cmd, int value)
+{
+    ARG_UNUSED(r);
+    return fcntl(fd, cmd, value);
+}
+
+int _open_r(struct _reent *r, char const *pathname, int flags, mode_t mode)
+{
+    ARG_UNUSED(r);
+    return FS_openat(FS_context.working_dirfd, pathname, flags, mode);
 }
 
 int open(char const *pathname, int flags, ...)
@@ -305,7 +313,7 @@ int open(char const *pathname, int flags, ...)
     else
         mode = 0;
 
-    return FILESYSTEM_openat(FS_context.working_dirfd, pathname, flags, mode);
+    return FS_openat(FS_context.working_dirfd, pathname, flags, mode);
 }
 
 int openat(int dirfd, char const *pathname, int flags, ...)
@@ -322,7 +330,7 @@ int openat(int dirfd, char const *pathname, int flags, ...)
     else
         mode = 0;
 
-    return FILESYSTEM_openat(dirfd, pathname, flags, mode);
+    return FS_openat(dirfd, pathname, flags, mode);
 }
 
 int unlink(char const *pathname)
@@ -341,7 +349,7 @@ int unlinkat(int dirfd, char const *pathname, int flags)
     if (AT_FDCWD & flags)
         oflag |= AT_FDCWD;
 
-    int fd = FILESYSTEM_openat(dirfd, pathname, oflag, 0);
+    int fd = FS_openat(dirfd, pathname, oflag, 0);
     if (-1 == fd)
         return fd;
 
@@ -388,7 +396,7 @@ int ftruncate(int fd, off_t size)
 ****************************************************************************/
 DIR *opendir(char const *pathname)
 {
-    int fd = FILESYSTEM_openat(FS_context.working_dirfd, pathname, O_DIRECTORY, 0);
+    int fd = FS_openat(FS_context.working_dirfd, pathname, O_DIRECTORY, 0);
 
     if (fd < 0)
         return NULL;
@@ -556,7 +564,7 @@ int mkdir(char const *pathname, mode_t mode)
 
 int mkdirat(int dirfd, char const *pathname, mode_t mode)
 {
-    return FILESYSTEM_openat(dirfd, pathname, O_DIRECTORY | O_CREAT | O_EXCL, mode);
+    return FS_openat(dirfd, pathname, O_DIRECTORY | O_CREAT | O_EXCL, mode);
 }
 
 int rmdirat(int dirfd, char const *pathname)
@@ -572,7 +580,7 @@ int rmdir(char const *pathname)
 /***************************************************************************/
 /** @private
 ****************************************************************************/
-static int FILESYSTEM_openat(int dirfd, char const *pathname, int flags, mode_t mode)
+static int FS_openat(int dirfd, char const *pathname, int flags, mode_t mode)
 {
     if (NULL == FS_root)
         return __set_errno_neg(ENOSYS);
@@ -596,7 +604,7 @@ static int FILESYSTEM_openat(int dirfd, char const *pathname, int flags, mode_t 
             if (! ext)
             {
                 fd = __set_errno_neg(ENOMEM);
-                goto FILESYSTEM_openat_exit;
+                goto FS_openat_exit;
             }
             ext->ino_entry = ext->ino_working = (ino_t)-2;
             ext->flags = flags;
@@ -610,7 +618,7 @@ static int FILESYSTEM_openat(int dirfd, char const *pathname, int flags, mode_t 
         else
         {
             fd = __set_errno_neg(ENOENT);
-            goto FILESYSTEM_openat_exit;
+            goto FS_openat_exit;
         }
     }
     else
@@ -627,7 +635,7 @@ static int FILESYSTEM_openat(int dirfd, char const *pathname, int flags, mode_t 
         while (*p && *p != '/') p ++;
 
         size_t namelen = (size_t)(p - p1);
-        strncpy(name, p1, namelen);
+        strlcpy(name, p1, namelen);
         name[namelen] = '\0';
 
         if (*p == '/')
@@ -651,7 +659,7 @@ static int FILESYSTEM_openat(int dirfd, char const *pathname, int flags, mode_t 
             close(fd);
 
             fd = __set_errno_neg(ENOTDIR);
-            goto FILESYSTEM_openat_exit;
+            goto FS_openat_exit;
         }
         parent_fd = fd;
 
@@ -669,7 +677,7 @@ static int FILESYSTEM_openat(int dirfd, char const *pathname, int flags, mode_t 
             KERNEL_mfree(dirp);
 
             fd = __set_errno_neg(ENOMEM);
-            goto FILESYSTEM_openat_exit;
+            goto FS_openat_exit;
         }
         ext->ino_entry = ext->ino_working = (ino_t)-2;
         ext->data = ((struct FS_ext *)AsFD(fd)->ext)->data;
@@ -703,7 +711,7 @@ static int FILESYSTEM_openat(int dirfd, char const *pathname, int flags, mode_t 
         {
             if (parent_fd != dirfd)
                 close(parent_fd);
-            goto FILESYSTEM_openat_exit;
+            goto FS_openat_exit;
         }
         else
         {
@@ -731,7 +739,7 @@ static int FILESYSTEM_openat(int dirfd, char const *pathname, int flags, mode_t 
     else
         FS_dirfd_link_cleanup(dirfd, fd);
 
-FILESYSTEM_openat_exit:
+FS_openat_exit:
     free(name);
     return fd;
 }

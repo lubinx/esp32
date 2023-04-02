@@ -15,9 +15,10 @@
 #include "esp_heap_caps_init.h"
 
 /****************************************************************************
- * @imports
+ * @public
 *****************************************************************************/
 struct _reent *_global_impure_ptr;
+void *syscall_table_ptr;
 
 /****************************************************************************
  *  @def
@@ -90,7 +91,9 @@ void __retarget_init(void)
         mutex_init(&idf_common_mutex.mutex, MUTEX_FLAG_NORMAL);
     #endif
 
-    _GLOBAL_REENT = &__reent;
+    _global_impure_ptr = &__reent;
+    syscall_table_ptr= NULL;        // it has been deprecated and removed from our implement
+
     heap_caps_init();
 
     extern void __FILESYSTEM_introduce(void);
@@ -308,88 +311,3 @@ void __retarget_lock_release_recursive(_LOCK_T lock)
 #endif
     mutex_unlock(&lock->mutex);
 }
-
-/****************************************************************************
- *  @internal
-*****************************************************************************/
-/* REVIEW: it seems deprecated if we implements all libc retargets
-extern void _cleanup_r(struct _reent *r);
-
-extern int _printf_float(struct _reent *rptr, void *pdata,
-    FILE * fp, int (*pfunc) (struct _reent *, FILE *, char const *, size_t len), va_list * ap);
-extern int _scanf_float(struct _reent *rptr, void *pdata, FILE *fp, va_list *ap);
-
-static void raise_r_stub(struct _reent *rptr)
-{
-    _raise_r(rptr, 0);
-}
-
-static const struct syscall_stub_table __stub_table =
-{
-    .__getreent = &__getreent,
-    ._malloc_r = &_malloc_r,
-    ._free_r = &_free_r,
-    ._realloc_r = &_realloc_r,
-    ._calloc_r = &_calloc_r,
-    ._abort = &abort,
-    ._system_r = &_system_r,
-    ._rename_r = &_rename_r,
-    ._times_r = &_times_r,
-    ._gettimeofday_r = &_gettimeofday_r,
-    ._raise_r = &raise_r_stub,
-    ._unlink_r = &_unlink_r,
-    ._link_r = &_link_r,
-    ._stat_r = &_stat_r,
-    ._fstat_r = &_fstat_r,
-    ._sbrk_r = &_sbrk_r,
-    ._getpid_r = &_getpid_r,
-    ._kill_r = &_kill_r,
-    ._exit_r = NULL,    // never called in ROM
-    ._close_r = &_close_r,
-    ._open_r = &_open_r,
-    ._write_r = (int (*)(struct _reent *r, int, void const *, int)) &_write_r,
-    ._lseek_r = (int (*)(struct _reent *r, int, int, int)) &_lseek_r,
-    ._read_r = (int (*)(struct _reent *r, int, void *, int)) &_read_r,
-#if ESP_ROM_HAS_RETARGETABLE_LOCKING
-    ._retarget_lock_init = &__retarget_lock_init,
-    ._retarget_lock_init_recursive = &__retarget_lock_init_recursive,
-    ._retarget_lock_close = &__retarget_lock_close,
-    ._retarget_lock_close_recursive = &__retarget_lock_close_recursive,
-    ._retarget_lock_acquire = &__retarget_lock_acquire,
-    ._retarget_lock_acquire_recursive = &__retarget_lock_acquire_recursive,
-    ._retarget_lock_try_acquire = &__retarget_lock_try_acquire,
-    ._retarget_lock_try_acquire_recursive = &__retarget_lock_try_acquire_recursive,
-    ._retarget_lock_release = &__retarget_lock_release,
-    ._retarget_lock_release_recursive = &__retarget_lock_release_recursive,
-#else
-    ._lock_init = &_lock_init,
-    ._lock_init_recursive = &_lock_init_recursive,
-    ._lock_close = &_lock_close,
-    ._lock_close_recursive = &_lock_close_recursive,
-    ._lock_acquire = &_lock_acquire,
-    ._lock_acquire_recursive = &_lock_acquire_recursive,
-    ._lock_try_acquire = &_lock_try_acquire,
-    ._lock_try_acquire_recursive = &_lock_try_acquire_recursive,
-    ._lock_release = &_lock_release,
-    ._lock_release_recursive = &_lock_release_recursive,
-#endif
-// REVIEW: link with stdandard-newlib is hardcoded inside esp-idf
-//  SOO...wtf is nano printf format?
-#ifdef CONFIG_NEWLIB_NANO_FORMAT
-    ._printf_float = &_printf_float,
-    ._scanf_float = &_scanf_float,
-#else
-    ._printf_float = NULL,
-    ._scanf_float = NULL,
-#endif
-// REVIEW: why they make these simply things so confuse?
-#if CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32H4 \
-    || CONFIG_IDF_TARGET_ESP32C2 || CONFIG_IDF_TARGET_ESP32C6
-    // TODO IDF-2570 : mark that this assert failed in ROM, to avoid confusion between IDF & ROM
-        // assertion failures (as function names & source file names will be similar)
-    .__assert_func = __assert_func,
-    .__sinit = &__sinit,
-    ._cleanup_r = &_cleanup_r,
-#endif
-};
-*/

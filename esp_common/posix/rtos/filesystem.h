@@ -63,15 +63,11 @@ extern __attribute__((nothrow))
         uint16_t __pad;
         struct FD_implement const *fsio;
 
-        int (* format)  (struct FS_ext *ext, char const *fstype);
-        /// filesystem open file/directory
         int (* open)    (struct FS_ext *ext);
-        /// filesystem create file/directory
         int (* create)  (struct FS_ext *ext, char const *name, mode_t mode);
-        /// filesystem remove file/directory
         int (* truncate)(struct FS_ext *ext, off_t size);
-        /// filesystem remove file/directory
         int (* unlink)  (struct FS_ext *ext, ino_t ino);
+        int (* format)  (struct FS_ext *ext, char const *fstype);
     };
     struct FD_implement;
 
@@ -82,6 +78,9 @@ extern __attribute((nothrow))
     void FILESYSTEM_lock(void);
 extern __attribute((nothrow))
     void FILESYSTEM_unlock(void);
+
+extern __attribute__((nothrow))
+    int FILESYSTEM_format(char const *pathmnt, char const *fstype);
 
 /***************************************************************************/
 /** @ROOT implement
@@ -100,20 +99,20 @@ extern __attribute__((nothrow))
     void FILESYSTEM_init_root(void);
 
     /**
-     *  ROOT_mount()
+     *  FILESYSTEM_mount()
      *      mount filesystem into '/mnt'
      */
 extern __attribute__((nonnull, nothrow))
-    int ROOT_mount(char const *name, struct FS_implement const *fs, void *data);
+    int FILESYSTEM_mount(char const *name, struct FS_implement const *fs, void *data);
 
     /**
-     *  ROOT_unmount()
+     *  FILESYSTEM_unmount()
      *      unmount '/mnt/name'
      *  @returns
-     *      data ROOT_mount was provided
+     *      data FILESYSTEM_mount was provided
      */
 extern __attribute__((nonnull, nothrow))
-    void *ROOT_unmount(char const *name);
+    void *FILESYSTEM_unmount(char const *name);
 
 __END_DECLS
 #endif
