@@ -190,9 +190,10 @@ void GPIO_initialize(void)
         {
             GPIO_matrix[i].mat_out = (void *)&GPIO.func_out_sel_cfg[i];
             // bypass matrix
-            GPIO_matrix[i].mat_out->oen_sel = IOMUX_MATRIX_OUT_BYPASS;
+            if ((IOMUX_UART0_TXD >> 12) != i)   // default log
+                GPIO_matrix[i].mat_out->oen_sel = IOMUX_MATRIX_OUT_BYPASS;
 
-            // configure all PIN to GPIO, special configure for SPI
+            // configure all PIN to GPIO, special configure for SPI, UART0->TXD(default log)
             switch (i)
             {
             case 26:    // SPI CS1
@@ -208,6 +209,7 @@ void GPIO_initialize(void)
                 mux->func_pd = mux->func_pu = 0;    // HighZ
                 break;
 
+            case (IOMUX_UART0_TXD >> 12):
             case 31:    // SPI Q
             case 32:    // SPI D
                 break;

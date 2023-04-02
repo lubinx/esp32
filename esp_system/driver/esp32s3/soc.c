@@ -59,6 +59,8 @@ void SOC_initialize(void)
         REG_WRITE(ASSIST_DEBUG_CORE_1_RCD_RECORDING_REG, 1);
         */
     }
+
+    // esp_rom_printf("core: %u, stack: %p\n", core_id, __get_SP());
 }
 
 static void do_system_init_fn(void)
