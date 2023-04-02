@@ -247,26 +247,30 @@ PROVIDE(_flash_rodata_align = ALIGNOF(.data.ro));
 PROVIDE(_heap_start = ABSOLUTE(.));
 PROVIDE(end = ABSOLUTE(.));
 
-        . = ABSOLUTE(SRAM_ESP_SYSTEM_START);
+        . = ABSOLUTE(SRAM_ESP_RESERVED_START);
 
 PROVIDE(__heap_limit__ = ABSOLUTE(.));
     } > SRAM_data_seg
 
-    .__stacks_dummy(NOLOAD) :
+    /* really odd, we have no way do specify the startup stack */
+    .__stacks_core0_dummy(NOLOAD) :
     {
-        /* stacks should present here see memory.ld appendix */
-        . = ALIGN(8);
-        . += 16384;
+        . += 8192;
+    } > SRAM_data_seg
+
+    .__stacks_core1_dummy(NOLOAD) :
+    {
+        . += 8192;
     } > SRAM_data_seg
 
     .__esp_system_reserved (NOLOAD) :
     {
-        . = ORIGIN(SRAM_data_seg) + LENGTH(SRAM_data_seg) - DCACHE_SIZE;
+        . = ABSOLUTE(SRAM_ESP_RESERVED_END);
     } > SRAM_data_seg
 
     .__dcache_unused_dummy (NOLOAD) :
     {
-        . += DCACHE_SIZE;
+        . = ORIGIN(SRAM_data_seg) + LENGTH(SRAM_data_seg) - DCACHE_SIZE;
     } > SRAM_data_seg
 
     .rtc.text :
