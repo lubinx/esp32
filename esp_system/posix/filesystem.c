@@ -12,8 +12,11 @@
 #include <unistd.h>
 
 /***************************************************************************/
-/** @declaration
+/** @def
 ****************************************************************************/
+#define INO_PARENT_DIR                  ((ino_t)-1)
+#define INO_CURRENT_DIR                 ((ino_t)-2)
+
 struct FS_context
 {
     mutex_t lock;
@@ -416,7 +419,7 @@ DIR *fdopendir(int fd)
             dirp->fd = fd;
 
             AsFD(dirp->fd)->position = 0;
-            ((struct dirent *)(dirp + 1))->d_ino = (ino_t)-2;
+            ((struct dirent *)(dirp + 1))->d_ino = INO_CURRENT_DIR;
         }
 
         return dirp;
@@ -439,14 +442,14 @@ struct dirent *readdir(DIR *dirp)
     struct FS_implement const *fs = AsFD(dirp->fd)->fs;
     struct dirent *ent = (struct dirent *)(dirp + 1);
 
-    if ((ino_t)-2 == ent->d_ino)
+    if (INO_CURRENT_DIR == ent->d_ino)
     {
         ent->d_ino ++;
         ent->d_mode = S_IFDIR | S_IRUSR  | S_IRGRP | S_IROTH;
         ent->d_namelen = 1;
         strcpy(ent->d_name, ".");
     }
-    else if ((ino_t)-1 == ent->d_ino)
+    else if (INO_PARENT_DIR == ent->d_ino)
     {
         ent->d_ino ++;
         ent->d_mode = S_IFDIR | S_IRUSR  | S_IRGRP | S_IROTH;
@@ -483,10 +486,10 @@ void seekdir(DIR *dirp, off_t location)
 void rewinddir(DIR *dirp)
 {
     AsFD(dirp->fd)->position = 0;
-    ((struct dirent *)(dirp + 1))->d_ino = (ino_t)-2;
+    ((struct dirent *)(dirp + 1))->d_ino = INO_CURRENT_DIR;
 
     struct FS_ext *ext = (struct FS_ext *)AsFD(dirp->fd)->ext;
-    ext->ino_entry = ext->ino_working = (ino_t)-2;
+    ext->ino_entry = ext->ino_working = INO_CURRENT_DIR;
 }
 
 int dirfd(DIR *dir)
@@ -608,7 +611,7 @@ static int FS_openat(struct _reent *r, int dirfd, char const *pathname, int flag
                 fd = __set_errno_r_neg(r, ENOMEM);
                 goto FS_openat_exit;
             }
-            ext->ino_entry = ext->ino_working = (ino_t)-2;
+            ext->ino_entry = ext->ino_working = INO_CURRENT_DIR;
             ext->flags = flags;
 
             fd = FS_root->open(ext);
@@ -681,7 +684,7 @@ static int FS_openat(struct _reent *r, int dirfd, char const *pathname, int flag
             fd = __set_errno_r_neg(r, ENOMEM);
             goto FS_openat_exit;
         }
-        ext->ino_entry = ext->ino_working = (ino_t)-2;
+        ext->ino_entry = ext->ino_working = INO_CURRENT_DIR;
         ext->data = ((struct FS_ext *)AsFD(fd)->ext)->data;
 
         struct FS_implement const *fs = (struct FS_implement const *)AsFD(parent_fd)->fs;
