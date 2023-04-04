@@ -6,6 +6,7 @@
 
 #include <features.h>
 #include <sys/_timespec.h>
+#include <stdint.h>
 
 __BEGIN_DECLS
 

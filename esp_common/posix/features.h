@@ -125,31 +125,31 @@
         #define __MAX_2(p1, p2)         \
             ((p1) > (p2) ? (p1) : (p2))
         #define __MAX_3(p1, p2, p3)     \
-            __MAX_2(__MAX_2(p1, p2), p3)
+            __MAX_2(__MAX_2(p1, p2), (p3))
         #define __MAX_4(p1, p2, p3, p4) \
-            __MAX_2(__MAX_3(p1, p2, p3), p4)
+            __MAX_2(__MAX_3(p1, p2, p3), (p4))
         #define __MAX_5(p1, p2, p3, p4, p5) \
-            __MAX_2(__MAX_4(p1, p2, p3, p4), p5)
+            __MAX_2(__MAX_4(p1, p2, p3, p4), (p5))
         #define __MAX_6(p1, p2, p3, p4, p5, p6) \
-            __MAX_2(__MAX_5(p1, p2, p3, p4, p5), p6)
+            __MAX_2(__MAX_5(p1, p2, p3, p4, p5), (p6))
         #define __MAX_7(p1, p2, p3, p4, p5, p6, p7) \
-            __MAX_2(__MAX_6(p1, p2, p3, p4, p5, p6), p7)
+            __MAX_2(__MAX_6(p1, p2, p3, p4, p5, p6), (p7))
         #define __MAX_8(p1, p2, p3, p4, p5, p6, p7, p8) \
-            __MAX_2(__MAX_7(p1, p2, p3, p4, p5, p6, p7), p8)
+            __MAX_2(__MAX_7(p1, p2, p3, p4, p5, p6, p7), (p8))
         #define __MAX_9(p1, p2, p3, p4, p5, p6, p7, p8, p9) \
-            __MAX_2(__MAX_8(p1, p2, p3, p4, p5, p6, p7, p8), p9)
+            __MAX_2(__MAX_8(p1, p2, p3, p4, p5, p6, p7, p8), (p9))
         #define __MAX_10(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10)   \
-            __MAX_2(__MAX_9(p1, p2, p3, p4, p5, p6, p7, p8, p9), p10)
+            __MAX_2(__MAX_9(p1, p2, p3, p4, p5, p6, p7, p8, p9), (p10))
         #define __MAX_11(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11)  \
-            __MAX_2(__MAX_10(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10), p11)
+            __MAX_2(__MAX_10(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10), (p11))
         #define __MAX_12(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12) \
-            __MAX_2(__MAX_11(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11), p12)
+            __MAX_2(__MAX_11(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11), (p12))
         #define __MAX_13(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13)    \
-            __MAX_2(__MAX_12(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12), p13)
+            __MAX_2(__MAX_12(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12), (p13))
         #define __MAX_14(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14)   \
-            __MAX_2(__MAX_13(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13), p14)
+            __MAX_2(__MAX_13(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13), (p14))
         #define __MAX_15(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15)   \
-            __MAX_2(__MAX_14(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14), p15)
+            __MAX_2(__MAX_14(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14), (p15))
     #endif
 
     #ifndef MIN
@@ -165,31 +165,31 @@
         #define __MIN_2(p1, p2)         \
             ((p1) < (p2) ? (p1) : (p2))
         #define __MIN_3(p1, p2, p3)     \
-            __MIN_2(__MIN_2(p1, p2), p3)
+            __MIN_2(__MIN_2(p1, p2), (p3))
         #define __MIN_4(p1, p2, p3, p4) \
-            __MIN_2(__MIN_3(p1, p2, p3), p4)
+            __MIN_2(__MIN_3(p1, p2, p3), (p4))
         #define __MIN_5(p1, p2, p3, p4, p5) \
-            __MIN_2(__MIN_4(p1, p2, p3, p4), p5)
+            __MIN_2(__MIN_4(p1, p2, p3, p4), (p5))
         #define __MIN_6(p1, p2, p3, p4, p5, p6) \
-            __MIN_2(__MIN_5(p1, p2, p3, p4, p5), p6)
+            __MIN_2(__MIN_5(p1, p2, p3, p4, p5), (p6))
         #define __MIN_7(p1, p2, p3, p4, p5, p6, p7) \
-            __MIN_2(__MIN_6(p1, p2, p3, p4, p5, p6), p7)
+            __MIN_2(__MIN_6(p1, p2, p3, p4, p5, p6), (p7))
         #define __MIN_8(p1, p2, p3, p4, p5, p6, p7, p8) \
-            __MIN_2(__MIN_7(p1, p2, p3, p4, p5, p6, p7), p8)
+            __MIN_2(__MIN_7(p1, p2, p3, p4, p5, p6, p7), (p8))
         #define __MIN_9(p1, p2, p3, p4, p5, p6, p7, p8, p9) \
-            __MIN_2(__MIN_8(p1, p2, p3, p4, p5, p6, p7, p8), p9)
+            __MIN_2(__MIN_8(p1, p2, p3, p4, p5, p6, p7, p8), (p9))
         #define __MIN_10(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10)   \
-            __MIN_2(__MIN_9(p1, p2, p3, p4, p5, p6, p7, p8, p9), p10)
+            __MIN_2(__MIN_9(p1, p2, p3, p4, p5, p6, p7, p8, p9), (p10))
         #define __MIN_11(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11)  \
-            __MIN_2(__MIN_10(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10), p11)
+            __MIN_2(__MIN_10(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10), (p11))
         #define __MIN_12(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12) \
-            __MIN_2(__MIN_11(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11), p12)
+            __MIN_2(__MIN_11(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11), (p12))
         #define __MIN_13(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13)    \
-            __MIN_2(__MIN_12(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12), p13)
+            __MIN_2(__MIN_12(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12), (p13))
         #define __MIN_14(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14)   \
-            __MIN_2(__MIN_13(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13), p14)
+            __MIN_2(__MIN_13(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13), (p14))
         #define __MIN_15(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15)   \
-            __MIN_2(__MIN_14(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14), p15)
+            __MIN_2(__MIN_14(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14), (p15))
     #endif
 
     #ifndef STRINGIFY
