@@ -11,6 +11,8 @@
 #include <string.h>
 #include <assert.h>
 #include <limits.h>
+#include <xtensa/spinlock.h>
+#include <esp_memory_utils.h>
 
 #include "soc.h"
 #include "esp_err.h"
@@ -18,12 +20,6 @@
 #include "esp_heap_caps.h"
 #include "esp_intr_alloc.h"
 #include "esp_rom_sys.h"
-
-
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-
-// #include "esp_private/rtc_ctrl.h"
 
 #if !CONFIG_FREERTOS_UNICORE
     #include "esp_ipc.h"
@@ -105,7 +101,7 @@ static uint32_t non_iram_int_mask[SOC_CPU_CORES_NUM];
 static uint32_t non_iram_int_disabled[SOC_CPU_CORES_NUM];
 static bool non_iram_int_disabled_flag[SOC_CPU_CORES_NUM];
 
-static portMUX_TYPE spinlock = portMUX_INITIALIZER_UNLOCKED;
+static spinlock_t spinlock = SPINLOCK_INITIALIZER;
 
 //Inserts an item into vector_desc list so that the list is sorted
 //with an incrementing cpu.intno value.
@@ -202,17 +198,17 @@ esp_err_t esp_intr_mark_shared(int intno, int cpu, bool is_int_ram)
         return ESP_ERR_INVALID_ARG;
     }
 
-    portENTER_CRITICAL(&spinlock);
+    spin_lock(&spinlock);
     vector_desc_t *vd = get_desc_for_int(intno, cpu);
     if (vd == NULL) {
-        portEXIT_CRITICAL(&spinlock);
+        spin_unlock(&spinlock);
         return ESP_ERR_NO_MEM;
     }
     vd->flags = VECDESC_FL_SHARED;
     if (is_int_ram) {
         vd->flags |= VECDESC_FL_INIRAM;
     }
-    portEXIT_CRITICAL(&spinlock);
+    spin_unlock(&spinlock);
 
     return ESP_OK;
 }
@@ -226,14 +222,14 @@ esp_err_t esp_intr_reserve(int intno, int cpu)
         return ESP_ERR_INVALID_ARG;
     }
 
-    portENTER_CRITICAL(&spinlock);
+    spin_lock(&spinlock);
     vector_desc_t *vd = get_desc_for_int(intno, cpu);
     if (vd == NULL) {
-        portEXIT_CRITICAL(&spinlock);
+        spin_unlock(&spinlock);
         return ESP_ERR_NO_MEM;
     }
     vd->flags = VECDESC_FL_RESERVED;
-    portEXIT_CRITICAL(&spinlock);
+    spin_unlock(&spinlock);
 
     return ESP_OK;
 }
@@ -433,19 +429,18 @@ static void shared_intr_isr(void *arg)
 {
     vector_desc_t *vd = (vector_desc_t*)arg;
     shared_vector_desc_t *sh_vec = vd->shared_vec_info;
-    portENTER_CRITICAL_ISR(&spinlock);
+
+    spin_lock(&spinlock);
     while(sh_vec) {
         if (!sh_vec->disabled) {
             if ((sh_vec->statusreg == NULL) || (*sh_vec->statusreg & sh_vec->statusmask))
             {
-                traceISR_ENTER(sh_vec->source + ETS_INTERNAL_INTR_SOURCE_OFF);
                 sh_vec->isr(sh_vec->arg);
-                traceISR_EXIT();
             }
         }
         sh_vec = sh_vec->next;
     }
-    portEXIT_CRITICAL_ISR(&spinlock);
+    spin_unlock(&spinlock);
 }
 
 //We use ESP_EARLY_LOG* here because this can be called before the scheduler is running.
@@ -523,20 +518,20 @@ esp_err_t esp_intr_alloc_intrstatus(int source, int flags, uint32_t intrstatusre
         return ESP_ERR_NO_MEM;
     }
 
-    portENTER_CRITICAL(&spinlock);
+    spin_lock(&spinlock);
     unsigned cpu = __get_CORE_ID();
     //See if we can find an interrupt that matches the flags.
     int intr = get_available_int(flags, cpu, force, source);
     if (intr == -1) {
         //None found. Bail out.
-        portEXIT_CRITICAL(&spinlock);
+        spin_unlock(&spinlock);
         free(ret);
         return ESP_ERR_NOT_FOUND;
     }
     //Get an int vector desc for int.
     vector_desc_t *vd = get_desc_for_int(intr, cpu);
     if (vd == NULL) {
-        portEXIT_CRITICAL(&spinlock);
+        spin_unlock(&spinlock);
         free(ret);
         return ESP_ERR_NO_MEM;
     }
@@ -546,7 +541,7 @@ esp_err_t esp_intr_alloc_intrstatus(int source, int flags, uint32_t intrstatusre
         //Populate vector entry and add to linked list.
         shared_vector_desc_t *sh_vec=malloc(sizeof(shared_vector_desc_t));
         if (sh_vec == NULL) {
-            portEXIT_CRITICAL(&spinlock);
+            spin_unlock(&spinlock);
             free(ret);
             return ESP_ERR_NO_MEM;
         }
@@ -611,7 +606,7 @@ esp_err_t esp_intr_alloc_intrstatus(int source, int flags, uint32_t intrstatusre
     }
 #endif
 
-    portEXIT_CRITICAL(&spinlock);
+    spin_unlock(&spinlock);
 
     //Fill return handle if needed, otherwise free handle.
     if (ret_handle != NULL) {
@@ -656,7 +651,7 @@ esp_err_t esp_intr_free(intr_handle_t handle)
     }
 #endif /* !CONFIG_FREERTOS_UNICORE */
 
-    portENTER_CRITICAL(&spinlock);
+    spin_lock(&spinlock);
     esp_intr_disable(handle);
     if (handle->vector_desc->flags & VECDESC_FL_SHARED) {
         //Find and kill the shared int
@@ -701,7 +696,7 @@ esp_err_t esp_intr_free(intr_handle_t handle)
         //Also kill non_iram mask bit.
         non_iram_int_mask[handle->vector_desc->cpu] &= ~(1<<(handle->vector_desc->intno));
     }
-    portEXIT_CRITICAL(&spinlock);
+    spin_unlock(&spinlock);
     free(handle);
     return ESP_OK;
 }
@@ -722,7 +717,8 @@ esp_err_t esp_intr_enable(intr_handle_t handle)
     if (!handle) {
         return ESP_ERR_INVALID_ARG;
     }
-    portENTER_CRITICAL_SAFE(&spinlock);
+    spin_lock(&spinlock);
+
     int source;
     if (handle->shared_vector_desc) {
         handle->shared_vector_desc->disabled = 0;
@@ -736,12 +732,12 @@ esp_err_t esp_intr_enable(intr_handle_t handle)
     } else {
         //Re-enable using cpu int ena reg
         if (handle->vector_desc->cpu != __get_CORE_ID()) {
-            portEXIT_CRITICAL_SAFE(&spinlock);
+            spin_unlock(&spinlock);
             return ESP_ERR_INVALID_ARG; //Can only enable these ints on this cpu
         }
         SOC_enable_intr_nb(handle->vector_desc->intno);
     }
-    portEXIT_CRITICAL_SAFE(&spinlock);
+    spin_unlock(&spinlock);
     return ESP_OK;
 }
 
@@ -750,7 +746,7 @@ esp_err_t esp_intr_disable(intr_handle_t handle)
     if (!handle) {
         return ESP_ERR_INVALID_ARG;
     }
-    portENTER_CRITICAL_SAFE(&spinlock);
+    spin_lock(&spinlock);
     int source;
     bool disabled = 1;
     if (handle->shared_vector_desc) {
@@ -778,11 +774,11 @@ esp_err_t esp_intr_disable(intr_handle_t handle)
     } else {
         //Disable using per-cpu regs
         if (handle->vector_desc->cpu != __get_CORE_ID()) {
-            portEXIT_CRITICAL_SAFE(&spinlock);
+            spin_unlock(&spinlock);
             return ESP_ERR_INVALID_ARG; //Can only enable these ints on this cpu
         }
         SOC_disable_intr_nb(handle->vector_desc->intno);
     }
-    portEXIT_CRITICAL_SAFE(&spinlock);
+    spin_unlock(&spinlock);
     return ESP_OK;
 }
