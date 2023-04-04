@@ -61,7 +61,13 @@
     #define __ESP_EARLY_LOG             __ESP_LOG // for now
 
     #define LOG_FORMAT(level, format)   \
-        level##_COLOR "%-6" PRIu32 level##_LETTER" %s: " format LOG_END "\n"
+        level##_COLOR level##_LETTER " %-8" PRIu32 " %s: " format LOG_END "\n"
+
+    #define ESP_LOG_ERROR_LETTER        "E"
+    #define ESP_LOG_WARN_LETTER         "W"
+    #define ESP_LOG_INFO_LETTER         "I"
+    #define ESP_LOG_DEBUG_LETTER        "D"
+    #define ESP_LOG_VERBOSE_LETTER      "V"
 
     #define LOG_COLOR_BLACK             "30"
     #define LOG_COLOR_RED               "31"
@@ -80,12 +86,6 @@
     #define ESP_LOG_INFO_COLOR          LOG_COLOR(LOG_COLOR_GREEN)
     #define ESP_LOG_DEBUG_COLOR         LOG_COLOR(LOG_COLOR_CYAN)
     #define ESP_LOG_VERBOSE_COLOR
-
-    #define ESP_LOG_ERROR_LETTER        "E"
-    #define ESP_LOG_WARN_LETTER         "W"
-    #define ESP_LOG_INFO_LETTER         "I"
-    #define ESP_LOG_DEBUG_LETTER        "D"
-    #define ESP_LOG_VERBOSE_LETTER      "V"
 
 // esp_hw_support
     #define ESP_HW_LOGE(tag, fmt, ...)  ESP_EARLY_LOGE(tag, fmt, ##__VA_ARGS__)
