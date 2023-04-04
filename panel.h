@@ -17,8 +17,14 @@ extern __attribute__((nothrow))
 extern __attribute__((nothrow))
     int PANEL_pwm(uint8_t val);
 
+    enum tmpr_degree_t
+    {
+        CELSIUS,
+        FAHRENHEIT
+    };
+
 extern __attribute__((nothrow))
-    void PANEL_update_tmpr(int tmpr);
+    void PANEL_update_tmpr(int tmpr, enum tmpr_degree_t deg);
 
 extern __attribute__((nothrow))
     void PANEL_update_humidity(int humidity);

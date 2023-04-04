@@ -87,10 +87,12 @@ struct PANEL_context
     int i2c_fd;
     uint8_t pwm;            // 0~15
 
+    uint8_t weekday;
     uint8_t mday;
     uint8_t month;
     uint16_t year;
     uint16_t mtime;
+
     uint32_t flags;
 };
 
@@ -99,13 +101,13 @@ struct PANEL_context
  ****************************************************************************/
 static void *PANEL_clock_thread(pthread_mutex_t *update_lock) __attribute__((noreturn));
 
-static void PANEL_write(void const *buf, size_t count);
-static void PANEL_update_date(int year, int month, int mday);
+static void PANEL_update_date(uint16_t year, uint8_t month, uint8_t mday);
 static void PANEL_update_time(int mtime);
-
-static void PANEL_update_digit(uint8_t seg, int no, int count);
-static void PANEL_update_wday(int wday);
+static void PANEL_update_wday(uint8_t wday);
 static void PANEL_update_flags(void);
+
+static int PANEL_update_digit(uint8_t seg, int no, int count);
+static int PANEL_write(void const *buf, size_t count);
 
 // var
 static struct PANEL_context PANEL_context = {0};
@@ -188,9 +190,15 @@ void PANEL_test(void)
     }
 }
 
-void PANEL_update_tmpr(int tmpr)
+void PANEL_update_tmpr(int tmpr, enum tmpr_degree_t deg)
 {
+    if (CELSIUS == deg)
+        PANEL_context.flags = (PANEL_context.flags & ~FLAG_IND_TMPR_F) | FLAG_IND_TMPR_C;
+    else
+        PANEL_context.flags = (PANEL_context.flags & ~FLAG_IND_TMPR_C) | FLAG_IND_TMPR_F;
+
     PANEL_update_digit(SEG(16), tmpr, 3);
+    PANEL_update_flags();
 }
 
 void PANEL_update_humidity(int humidity)
@@ -218,7 +226,7 @@ static void *PANEL_clock_thread(pthread_mutex_t *lock)
 
         pthread_mutex_lock(lock);
         {
-            PANEL_update_date(tv.tm_year + 1900, tv.tm_mon + 1, tv.tm_mday);
+            PANEL_update_date((uint16_t)tv.tm_year + 1900, (uint8_t)tv.tm_mon + 1, (uint8_t)tv.tm_mday);
             PANEL_update_wday((uint8_t)tv.tm_wday);
             PANEL_update_time(tv.tm_hour * 100 + tv.tm_min);
 
@@ -235,36 +243,25 @@ static void *PANEL_clock_thread(pthread_mutex_t *lock)
     }
 }
 
-static void PANEL_write(void const *buf, size_t count)
+static void PANEL_update_date(uint16_t year, uint8_t month, uint8_t mday)
 {
-    while (true)
-    {
-        if (-1 == write(PANEL_context.i2c_fd, buf, count))
-        {
-            // write error?
-        }
-        break;
-    }
-}
-
-static void PANEL_update_date(int year, int month, int mday)
-{
+    int retval = 0;
     PANEL_context.flags = PANEL_context.flags | FLAG_IND_YEAR | FLAG_IND_MONTH | FLAG_IND_MDAY;
 
-    if (PANEL_context.year != year)
+    if (0 == retval && PANEL_context.year != year)
     {
-        PANEL_context.year = (uint16_t)year;
-        PANEL_update_digit(SEG(0), PANEL_context.year, 4);
+        if (0 == (retval = PANEL_update_digit(SEG(0), year, 4)))
+            PANEL_context.year = (uint16_t)year;
     }
-    if (PANEL_context.month != month)
+    if (0 == retval && PANEL_context.month != month)
     {
-        PANEL_context.month = (uint8_t)month;
-        PANEL_update_digit(SEG(5), PANEL_context.month, 2);
+        if (0 == (retval = PANEL_update_digit(SEG(5), month, 2)))
+            PANEL_context.month = (uint8_t)month;
     }
-    if (PANEL_context.mday != mday)
+    if (0 == retval && PANEL_context.mday != mday)
     {
-        PANEL_context.mday = (uint8_t)mday;
-        PANEL_update_digit(SEG(7), PANEL_context.mday, 2);
+        if (0 == (retval = PANEL_update_digit(SEG(7), mday, 2)))
+            PANEL_context.mday = (uint8_t)mday;
     }
 }
 
@@ -272,8 +269,8 @@ static void PANEL_update_time(int mtime)
 {
     if (PANEL_context.mtime != mtime)
     {
-        PANEL_context.mtime = (uint16_t)mtime;
-        PANEL_update_digit(SEG(10), PANEL_context.mtime, 4);
+        if (0 == PANEL_update_digit(SEG(10), mtime, 4))
+            PANEL_context.mtime = (uint16_t)mtime;
 
         if (1200 > mtime)
             PANEL_context.flags = PANEL_context.flags | FLAG_IND_SEC | FLAG_IND_AM;
@@ -282,7 +279,7 @@ static void PANEL_update_time(int mtime)
     }
 }
 
-static void PANEL_update_wday(int wday)
+static void PANEL_update_wday(uint8_t wday)
 {
     static uint16_t const __xlat_wday[] =
     {
@@ -295,20 +292,25 @@ static void PANEL_update_wday(int wday)
         [6] = 1 << 14 | 1 << 15,
     };
 
-    uint8_t buf[1 + sizeof(uint16_t)] = {0};
-    buf[0] = SEG(9);
-
-    if (7 > (uint32_t)wday)
+    if (PANEL_context.weekday != wday)
     {
-        uint16_t xlat = __xlat_wday[wday];
-        memcpy(&buf[1], &xlat, sizeof(xlat));
+        uint8_t buf[1 + sizeof(uint16_t)] = {0};
+        buf[0] = SEG(9);
+
+        if (7 > wday)
+        {
+            uint16_t xlat = __xlat_wday[wday];
+            memcpy(&buf[1], &xlat, sizeof(xlat));
+
+            if (0 == PANEL_write(&buf, sizeof(buf)))
+                PANEL_context.weekday = wday;
+        }
     }
-    PANEL_write(&buf, sizeof(buf));
 }
 
 static void PANEL_update_flags(void)
 {
-    static uint32_t flags;
+    static uint32_t flags = 0;
 
     if (flags != PANEL_context.flags)
     {
@@ -322,7 +324,7 @@ static void PANEL_update_flags(void)
     }
 }
 
-static void PANEL_update_digit(uint8_t seg, int no, int count)
+static int PANEL_update_digit(uint8_t seg, int no, int count)
 {
     static uint8_t const __xlat_digit[] =
     {
@@ -382,5 +384,15 @@ static void PANEL_update_digit(uint8_t seg, int no, int count)
         }
     }
 
-    PANEL_write(&buf, (unsigned)count + 1);
+    return PANEL_write(&buf, (unsigned)count + 1);
+}
+
+static int PANEL_write(void const *buf, size_t count)
+{
+    int retval = (count ==  write(PANEL_context.i2c_fd, buf, count));
+
+    if (retval)
+        return 0;
+    else
+        return errno;
 }
