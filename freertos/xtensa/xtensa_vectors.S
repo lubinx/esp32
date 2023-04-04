@@ -141,19 +141,19 @@
 
 /*
   Macro get_percpu_entry_for - convert a per-core ID into a multicore entry.
-  Basically does reg=reg*portNUM_PROCESSORS+current_core_id
-  Multiple versions here to optimize for specific portNUM_PROCESSORS values.
+  Basically does reg=reg*configNUM_CORES+current_core_id
+  Multiple versions here to optimize for specific configNUM_CORES values.
 */
     .macro get_percpu_entry_for reg scratch
-#if (portNUM_PROCESSORS == 1)
+#if (configNUM_CORES == 1)
     /* No need to do anything */
-#elif  (portNUM_PROCESSORS == 2)
+#elif  (configNUM_CORES == 2)
     /* Optimized 2-core code. */
     getcoreid \scratch
     addx2 \reg,\reg,\scratch
 #else
     /* Generalized n-core code. Untested! */
-    movi \scratch,portNUM_PROCESSORS
+    movi \scratch,configNUM_CORES
     mull \scratch,\reg,\scratch
     getcoreid \reg
     add \reg,\scratch,\reg
@@ -841,7 +841,7 @@ _xt_coproc_mask:
     .type   _xt_coproc_owner_sa,@object
     .align  16,,XCHAL_CP_MAX<<2     /* minimize crossing cache boundaries */
 _xt_coproc_owner_sa:
-    .space  (XCHAL_CP_MAX * portNUM_PROCESSORS) << 2
+    .space  (XCHAL_CP_MAX * configNUM_CORES) << 2
 
 /* Spinlock per core for accessing _xt_coproc_owner_sa array
  *
@@ -853,13 +853,13 @@ _xt_coproc_owner_sa:
  * and _xt_coproc_release). Therefore, this spinlock is defined to ensure thread
  * safe access of the _xt_coproc_owner_sa array.
  */
-#if portNUM_PROCESSORS > 1
+#if configNUM_CORES > 1
     .global _xt_coproc_owner_sa_lock
     .type   _xt_coproc_owner_sa_lock,@object
     .align  16                      /* minimize crossing cache boundaries */
 _xt_coproc_owner_sa_lock:
     .space  4
-#endif /* portNUM_PROCESSORS > 1 */
+#endif /* configNUM_CORES > 1 */
 
     .section .iram1,"ax"
     .align  4
@@ -936,11 +936,11 @@ _xt_coproc_exc:
     movi    a3, _xt_coproc_owner_sa         /* a3 = base of all owner arrays */
     add     a3, a3, a2                      /* a3 = base of owner array of the current core */
 
-#if portNUM_PROCESSORS > 1
+#if configNUM_CORES > 1
     /* If multicore, we must also acquire the _xt_coproc_owner_sa_lock spinlock
      * to ensure thread safe access of _xt_coproc_owner_sa between cores. */
     spinlock_take a0 a2 _xt_coproc_owner_sa_lock
-#endif /* portNUM_PROCESSORS > 1 */
+#endif /* configNUM_CORES > 1 */
 
     /* Get old coprocessor owner thread (save area ptr) and assign new one.  */
     addx4   a3,  a5, a3                      /* a3 = &_xt_coproc_owner_sa[n] */
@@ -948,10 +948,10 @@ _xt_coproc_exc:
     s32i    a15, a3, 0                       /* _xt_coproc_owner_sa[n] = new */
     rsync                                    /* ensure wsr.CPENABLE is complete */
 
-#if portNUM_PROCESSORS > 1
+#if configNUM_CORES > 1
     /* Release previously taken spinlock */
     spinlock_release a0 a2 _xt_coproc_owner_sa_lock
-#endif /* portNUM_PROCESSORS > 1 */
+#endif /* configNUM_CORES > 1 */
 
     /* Only need to context switch if new owner != old owner. */
     /* If float is necessary on ISR, we need to remove this check */

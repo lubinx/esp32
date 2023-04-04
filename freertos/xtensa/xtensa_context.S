@@ -372,7 +372,7 @@ _xt_coproc_init:
 
     /* Initialize thread co-processor ownerships to 0 (unowned). */
     movi    a2, _xt_coproc_owner_sa         /* a2 = base of owner array */
-    addi    a3, a2, (XCHAL_CP_MAX*portNUM_PROCESSORS) << 2       /* a3 = top+1 of owner array */
+    addi    a3, a2, (XCHAL_CP_MAX*configNUM_CORES) << 2       /* a3 = top+1 of owner array */
     movi    a4, 0                           /* a4 = 0 (unowned) */
 1:  s32i    a4, a2, 0
     addi    a2, a2, 4
@@ -428,11 +428,11 @@ _xt_coproc_release:
     movi    a5, 0                           /* a5 = 0 (unowned) */
 
     rsil    a6, XCHAL_EXCM_LEVEL            /* lock interrupts */
-#if portNUM_PROCESSORS > 1
+#if configNUM_CORES > 1
     /* If multicore, we must also acquire the _xt_coproc_owner_sa_lock spinlock
      * to ensure thread safe access of _xt_coproc_owner_sa between cores. */
     spinlock_take a7 a8 _xt_coproc_owner_sa_lock
-#endif /* portNUM_PROCESSORS > 1 */
+#endif /* configNUM_CORES > 1 */
 
 1:  l32i    a7, a3, 0                       /* a7 = owner at a3 */
     bne     a2, a7, 2f                      /* if (coproc_sa_base == owner) */
@@ -440,10 +440,10 @@ _xt_coproc_release:
 2:  addi    a3, a3, 1<<2                    /* a3 = next entry in owner array */
     bltu    a3, a4, 1b                      /* repeat until end of array */
 
-#if portNUM_PROCESSORS > 1
+#if configNUM_CORES > 1
     /* Release previously taken spinlock */
     spinlock_release a7 a8 _xt_coproc_owner_sa_lock
-#endif /* portNUM_PROCESSORS > 1 */
+#endif /* configNUM_CORES > 1 */
     wsr     a6, PS                          /* restore interrupts */
 
     RET0

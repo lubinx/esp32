@@ -31,7 +31,7 @@
 #endif
 
 static portMUX_TYPE reason_spinlock = portMUX_INITIALIZER_UNLOCKED;
-static volatile uint32_t reason[portNUM_PROCESSORS];
+static volatile uint32_t reason[configNUM_CORES];
 
 /*
 ToDo: There is a small chance the CPU already has yielded when this ISR is serviced. In that case, it's running the intended task but
@@ -93,7 +93,7 @@ void esp_crosscore_int_init(void) {
     reason[__get_CORE_ID()] = 0;
     portEXIT_CRITICAL(&reason_spinlock);
     esp_err_t err __attribute__((unused)) = ESP_OK;
-#if portNUM_PROCESSORS > 1
+#if configNUM_CORES > 1
     if (0 == __get_CORE_ID()) {
         err = esp_intr_alloc(ETS_FROM_CPU_INTR0_SOURCE, ESP_INTR_FLAG_IRAM, esp_crosscore_isr, (void *)&reason[0], NULL);
     }
@@ -107,7 +107,7 @@ void esp_crosscore_int_init(void) {
 }
 
 static void IRAM_ATTR esp_crosscore_int_send(unsigned core_id, uint32_t reason_mask) {
-    assert(core_id < portNUM_PROCESSORS);
+    assert(core_id < configNUM_CORES);
     //Mark the reason we interrupt the other CPU
     portENTER_CRITICAL_ISR(&reason_spinlock);
     reason[core_id] |= reason_mask;

@@ -11,29 +11,6 @@
 #include "esp_memory_utils.h"
 #include "sdkconfig.h"
 
-/* ----------------------------------------- Port Implementations (Common)  --------------------------------------------
- * - Common FreeRTOS port function implementations
- * - These functions are common to all FreeRTOS ports (i.e., on all architectures and all FreeRTOS implementations).
- * ------------------------------------------------------------------------------------------------------------------ */
-
-// -------------------- Heap Related -----------------------
-
-#if !CONFIG_FREERTOS_SMP    // IDF-3997
-bool xPortCheckValidTCBMem(void const *ptr)
-{
-    return esp_ptr_internal(ptr) && esp_ptr_byte_accessible(ptr);
-}
-
-bool xPortcheckValidStackMem(void const *ptr)
-{
-#ifdef CONFIG_SPIRAM_ALLOW_STACK_EXTERNAL_MEMORY
-    return esp_ptr_byte_accessible(ptr);
-#else
-    return esp_ptr_internal(ptr) && esp_ptr_byte_accessible(ptr);
-#endif
-}
-#endif
-
 // ------------- FreeRTOS Static Allocation ----------------
 
 /*

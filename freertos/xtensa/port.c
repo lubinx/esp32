@@ -58,8 +58,8 @@ _Static_assert(portBYTE_ALIGNMENT == 16, "portBYTE_ALIGNMENT must be set to 16")
     #endif /* configNUM_CORES > 1 */
 #endif /* XCHAL_CP_NUM > 0 */
 
-volatile unsigned port_xSchedulerRunning[portNUM_PROCESSORS] = {0}; // Indicates whether scheduler is running on a per-core basis
-unsigned int port_interruptNesting[portNUM_PROCESSORS] = {0};  // Interrupt nesting level. Increased/decreased in portasm.c, _frxt_int_enter/_frxt_int_exit
+volatile unsigned port_xSchedulerRunning[configNUM_CORES] = {0}; // Indicates whether scheduler is running on a per-core basis
+unsigned int port_interruptNesting[configNUM_CORES] = {0};  // Interrupt nesting level. Increased/decreased in portasm.c, _frxt_int_enter/_frxt_int_exit
 
 //FreeRTOS SMP Locks
 portMUX_TYPE port_xTaskLock = portMUX_INITIALIZER_UNLOCKED;
@@ -82,8 +82,8 @@ BaseType_t IRAM_ATTR xPortInterruptedFromISRContext(void)
 Variables used by IDF critical sections only (SMP tracks critical nesting inside TCB now)
 [refactor-todo] Figure out how IDF critical sections will be merged with SMP FreeRTOS critical sections
 */
-BaseType_t port_uxCriticalNestingIDF[portNUM_PROCESSORS] = {0};
-BaseType_t port_uxCriticalOldInterruptStateIDF[portNUM_PROCESSORS] = {0};
+BaseType_t port_uxCriticalNestingIDF[configNUM_CORES] = {0};
+BaseType_t port_uxCriticalOldInterruptStateIDF[configNUM_CORES] = {0};
 
 /*
 *******************************************************************************
@@ -91,9 +91,9 @@ BaseType_t port_uxCriticalOldInterruptStateIDF[portNUM_PROCESSORS] = {0};
 * parameter "configISR_STACK_SIZE" in FreeRTOSConfig.h
 *******************************************************************************
 */
-volatile StackType_t DRAM_ATTR __attribute__((aligned(16))) port_IntStack[portNUM_PROCESSORS][configISR_STACK_SIZE];
+volatile StackType_t DRAM_ATTR __attribute__((aligned(16))) port_IntStack[configNUM_CORES][configISR_STACK_SIZE];
 /* One flag for each individual CPU. */
-volatile uint32_t port_switch_flag[portNUM_PROCESSORS];
+volatile uint32_t port_switch_flag[configNUM_CORES];
 
 BaseType_t xPortEnterCriticalTimeout(portMUX_TYPE *lock, BaseType_t timeout)
 {
@@ -165,7 +165,7 @@ _Static_assert(SOC_CPU_CORES_NUM <= SOC_SYSTIMER_ALARM_NUM - 1, "the number of c
 
 void SysTickIsrHandler(void *arg);
 
-static uint32_t s_handled_systicks[portNUM_PROCESSORS] = { 0 };
+static uint32_t s_handled_systicks[configNUM_CORES] = { 0 };
 
 #define SYSTICK_INTR_ID (ETS_SYSTIMER_TARGET0_EDGE_INTR_SOURCE)
 
@@ -201,7 +201,7 @@ void vPortSetupTimer(void)
             systimer_hal_counter_can_stall_by_cpu(&systimer_hal, SYSTIMER_COUNTER_OS_TICK, cpuid, false);
         }
 
-        for (cpuid = 0; cpuid < portNUM_PROCESSORS; ++cpuid) {
+        for (cpuid = 0; cpuid < configNUM_CORES; ++cpuid) {
             uint32_t alarm_id = SYSTIMER_ALARM_OS_TICK_CORE0 + cpuid;
 
             /* configure the timer */

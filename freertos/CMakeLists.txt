@@ -25,12 +25,12 @@ if(CONFIG_IDF_TARGET_ARCH_XTENSA)
         "xtensa/port.c"
         "xtensa/portasm.S"
         "xtensa/xtensa_context.S"
-        "xtensa/xtensa_overlay_os_hook.c"
         "xtensa/xtensa_vector_defaults.S"
         "xtensa/xtensa_vectors.S"
         # CONFIG_ESP32_IRAM_AS_8BIT_ACCESSIBLE_MEMORY
         "xtensa/xtensa_loadstore_handler.S"
         # esp-idf
+        # "xtensa/xtensa_overlay_os_hook.c"
         "esp_ringbuf.c"     # TODO: CMAKE: esp_ringbuf remove later
     )
 endif()
