@@ -124,22 +124,16 @@ void PANEL_init()
     }
     ioctl(PANEL_context.i2c_fd, OPT_WR_TIMEO, 500);
 
-    PANEL_context.mtime = (uint16_t)-1;
     PANEL_context.pwm = DEF_PWM;
-
-    PANEL_context.flags = FLAG_IND_ALARM | FLAG_IND_ALARM_1 |
-        FLAG_IND_HUMIDITY | FLAG_IND_PERCENT |
-        FLAG_IND_TMPR | FLAG_IND_TMPR_C | FLAG_IND_TMPR_DOT;
-
-    static uint8_t const __startup[] = {SYSDIS, COM16PMOS, RCMODE1, SYSEN, PWM(DEF_PWM), LEDON};
-    PANEL_write(__startup, sizeof(__startup));
-    PANEL_update_flags();
+    PANEL_context.mtime = (uint16_t)~0;
+    PANEL_context.flags = 0;
 
     if (true)
     {
         pthread_mutexattr_t attr;
         pthread_mutexattr_init(&attr);
         pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+
         pthread_mutex_init(&PANEL_context.lock, &attr);
         pthread_mutexattr_destroy(&attr);
     }
@@ -150,6 +144,7 @@ void PANEL_init()
 
         pthread_attr_init(&attr);
         pthread_attr_setstack(&attr, PANEL_clock_thread_stack, sizeof(PANEL_clock_thread_stack));
+
         pthread_create(&id, &attr, (void *)PANEL_clock_thread, &PANEL_context.lock);
         pthread_attr_destroy(&attr);
     }
@@ -211,11 +206,16 @@ void PANEL_update_humidity(int humidity)
  ****************************************************************************/
 static void *PANEL_clock_thread(pthread_mutex_t *lock)
 {
-    struct tm tv = {0};
+    static uint8_t const __startup[] = {SYSDIS, COM16PMOS, RCMODE1, SYSEN, PWM(DEF_PWM), LEDON};
+    while (0 != PANEL_write(__startup, sizeof(__startup)))
+        msleep(1000);
+    PANEL_update_flags();
 
     while (1)
     {
+        struct tm tv = {0};
         time_t ts = time(NULL);
+
         localtime_r(&ts, &tv);
 
         printf("%04d/%02d/%02d %02d:%02d:%02d\n",
@@ -310,7 +310,7 @@ static void PANEL_update_wday(uint8_t wday)
 
 static void PANEL_update_flags(void)
 {
-    static uint32_t flags = 0;
+    static uint32_t flags = (uint32_t)~0;
 
     if (flags != PANEL_context.flags)
     {
