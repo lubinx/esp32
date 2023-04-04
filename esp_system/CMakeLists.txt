@@ -7,7 +7,6 @@ else()
 endif()
 
 list(APPEND srcs
-    "esp_crosscore_int.c"
     "esp_dbg_ubsan.c"                   # debug for undefined behavior, but not sure if its works
     "esp_startup.c"
     "panic.c"
@@ -17,8 +16,6 @@ list(APPEND srcs
 
 list(APPEND includes
     "include"
-    #  NOTE fix: soc => ${IDF_TARGET} subdir using relative paths
-    "${IDF_PATH}/components/soc/${IDF_TARGET}/include"
 )
 list(APPEND priv_includes
 )
@@ -39,7 +36,6 @@ idf_component_register(
     PRIV_REQUIRES
         "esp_common"
         "soc"
-        # "esp_hw_support"                                # remove later: should merge into driver
     LDFRAGMENTS
         "memap.lf"
 )
