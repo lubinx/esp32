@@ -12,7 +12,6 @@ add_executable(${PROJECT_NAME}
     "${IDF_TARGET}/startup.c"
     "log.c"
     "retarget.c"
-    "${IDF_PATH}/components/esp_rom/patches/esp_rom_sys.c"
 )
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${PROJECT_NAME}.elf")
 target_compile_options(${PROJECT_NAME} PRIVATE "-O2")   # bootloader project is always optmization for speed
