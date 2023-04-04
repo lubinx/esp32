@@ -1,3 +1,6 @@
 [submodule "spiffs/spiffs"]
 	path = spiffs/spiffs
 	url = https://github.com/pellepl/spiffs.git
+[submodule "lwip/lwip"]
+	path = lwip/lwip
+	url = https://git.savannah.gnu.org/git/lwip.git
