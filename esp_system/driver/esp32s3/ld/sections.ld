@@ -52,8 +52,7 @@ PROVIDE(_iram_text_start = ABSOLUTE(.));
         /* *(.iram_end_test) */
 
         /* ESP32-S3 memprot requires 16B padding for possible CPU prefetch  & alignment for PMS*/
-        . += 16;
-        . = ALIGN(256);
+        . = ALIGN(16);
 PROVIDE(_iram_text_end = ABSOLUTE(.));
 PROVIDE(_iram_end = ABSOLUTE(.));
     } > SRAM_text_seg
@@ -78,12 +77,6 @@ PROVIDE(_data_start = ABSOLUTE(.));
         . = ALIGN(4);
 PROVIDE(_data_end = ABSOLUTE(.));
     } > SRAM_data_seg
-
-    .data.noinit (NOLOAD) :
-    {
-        *(.noinit .noinit.*)
-        . = ALIGN(4);
-    }
 
     .data.zi (NOLOAD) :
     {
@@ -127,7 +120,7 @@ PROVIDE(_flash_rodata_start = ABSOLUTE(.));
         *(.gnu.linkonce.r.*)
         *(.rodata1)
 
-        . = ALIGN(4);   /* WTF? . = (. + 3) & ~ 3; */
+        . = ALIGN(4);
         __eh_frame = ABSOLUTE(.);
         KEEP(*(.eh_frame))
 
@@ -172,56 +165,19 @@ PROVIDE(_flash_rodata_start = ABSOLUTE(.));
 
         . = ALIGN(4);
 PROVIDE(_thread_local_start = ABSOLUTE(.));
-        *(.tdata)
-        *(.tdata.*)
-        *(.tbss)
-        *(.tbss.*)
-
+        *(.tdata*)
+        *(.tbss*)
         . = ALIGN(4);
 PROVIDE(_thread_local_end = ABSOLUTE(.));
-
-        /* REVIEW: This section holds .ext_ram.bss data, and will be put in PSRAM */
-        /*
-        _ext_ram_bss_start = ABSOLUTE(.);
-        mapping[extern_ram]
-
-        . = ALIGN(4);
-        _ext_ram_bss_end = ABSOLUTE(.);
-        */
 PROVIDE(_flash_rodata_end = ABSOLUTE(.));
     } > FLASH_data_seg
 PROVIDE(_flash_rodata_align = ALIGNOF(.data.ro));
 
-    .data.ro_noload (NOLOAD) :
+    .__flash_rodata_alignment (NOLOAD):
     {
-        /* REVIEW: what is this? */
-        mapping[rodata_noload]
-        . = ALIGN (4);
-    } > FLASH_data_seg
-
-    .__flash_overlapped_dummy (NOLOAD):
-    {
-        . = . + SIZEOF(.data.ro) + SIZEOF(.data.ro_noload);
+        . = . + SIZEOF(.data.ro);
         . = ALIGN(MMU_PAGE_SIZE);
     } > FLASH_text_seg
-
-    /* REVIEW: these section is impossiable to exists?
-    .data.iram0 :
-    {
-        _iram_data_start = ABSOLUTE(.);
-        mapping[iram0_data]
-        . = ALIGN(4);
-        _iram_data_end = ABSOLUTE(.);
-    } > SRAM_text_seg
-
-    .bss.iram (NOLOAD) :
-    {
-        _iram_bss_start = ABSOLUTE(.);
-        mapping[iram0_bss]
-        _iram_bss_end = ABSOLUTE(.);
-        . = ALIGN(4);
-    } > SRAM_text_seg
-    */
 
     .flash.text :
     {
@@ -237,11 +193,11 @@ PROVIDE(_flash_rodata_align = ALIGNOF(.data.ro));
         *(.irom0.text)
 
         /* ESP32-S3 memprot requires 16B padding for possible CPU prefetch  & alignment for PMS*/
-        . += 16;
+        . = ALIGN(16);
     } > FLASH_text_seg
 
     /* heap should present here see memory.ld appendix */
-    .__heap_dummy(NOLOAD) :
+    .__heap_avail(NOLOAD) :
     {
         . = ALIGN(8);
 PROVIDE(_heap_start = ABSOLUTE(.));
@@ -263,7 +219,7 @@ PROVIDE(__heap_limit__ = ABSOLUTE(.));
         . += 8192;
     } > SRAM_data_seg
 
-    .__esp_system_reserved (NOLOAD) :
+    .__esp_idf_reserved (NOLOAD) :
     {
         . = ABSOLUTE(SRAM_ESP_RESERVED_END);
     } > SRAM_data_seg
@@ -283,8 +239,7 @@ PROVIDE(__heap_limit__ = ABSOLUTE(.));
         *(.rtc_text_end_test)
 
         /* 16B padding for possible CPU prefetch and 4B alignment for PMS split lines */
-        . += 16;
-        . = ALIGN(4);
+        . = ALIGN(16);
 PROVIDE(_rtc_text_end = ABSOLUTE(.));
 
         mapping[rtc_force_fast]
@@ -316,12 +271,6 @@ PROVIDE(__rtc_bss_start__ = ABSOLUTE(.));
 
         . = ALIGN(4) ;
 PROVIDE(__rtc_bss_end__ = ABSOLUTE(.));
-    } > RTC_slow_seg
-
-    .rtc_noinit (NOLOAD):
-    {
-        *(.rtc_noinit*)
-        . = ALIGN(4) ;
     } > RTC_slow_seg
 
     .xt.prop 0 :

@@ -71,8 +71,8 @@ MEMORY
         external FLASH
             // REVIEW: esptool_py hide something in the first 0x20(32 bytes)
     */
-    FLASH_data_seg (R) :            org = 0x3C000000 + 0x20,   len = 16M - 0x20
-    FLASH_text_seg (X) :            org = 0x42000000 + 0x20,   len = 16M - 0x20
+    FLASH_data_seg (R) :            org = 0x3C000000,   len = 16M
+    FLASH_text_seg (X) :            org = 0x42000000,   len = 16M
 
     /*
         PSRAM
