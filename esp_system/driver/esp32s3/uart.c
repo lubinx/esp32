@@ -7,9 +7,11 @@
 #include <soc/soc_caps.h>
 #include <soc/uart_reg.h>
 
-#include "clk-tree.h"
-#include "esp_log.h"
+#include <esp_attr.h>
+#include <esp_log.h>
 #include "esp_intr_alloc.h"
+
+#include "clk-tree.h"
 
 #include "uart.h"
 #include "sdkconfig.h"
@@ -535,7 +537,7 @@ static int UART_close(int fd)
 /****************************************************************************
  *  intr
  ****************************************************************************/
-static void UART_IntrHandler(struct UART_context *context)
+static IRAM_ATTR void UART_IntrHandler(struct UART_context *context)
 {
     uart_dev_t *dev = context->dev;
     uint32_t flags = dev->int_st.val;
