@@ -91,9 +91,6 @@ void __rtos_bootstrap(void)
     static uintptr_t __main_stack[CONFIG_ESP_MAIN_TASK_STACK_SIZE / sizeof(uintptr_t)];
     static StaticTask_t __main_task;
 
-    // Initialize the cross-core interrupt on CPU0
-    esp_crosscore_int_init();
-
     if (0 == __get_CORE_ID())
     {
         #if defined(CONFIG_ESP_MAIN_TASK_AFFINITY_NO_AFFINITY) && CONFIG_ESP_MAIN_TASK_AFFINITY_NO_AFFINITY
