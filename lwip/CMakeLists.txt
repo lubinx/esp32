@@ -1,22 +1,14 @@
-idf_build_get_property(target IDF_TARGET)
-if(NOT ${target} STREQUAL "linux")
-    # ESP platform targets share the same port folder
-    set(target esp32xx)
-endif()
-
 set(include_dirs
-    include
-    include/apps
-    include/apps/sntp
-    lwip/src/include
-    port/include
-    port/freertos/include/
-    port/${target}/include
-    port/${target}/include/arch
-    )
+    "include"
+    "lwip/src/include"
+    "port/include"
+    "port/freertos/include/"
+    "port/${IDF_TARGET}/include"
+    "port/${IDF_TARGET}/include/arch"
+)
 
 set(srcs
-    "apps/sntp/sntp.c"
+    # "apps/sntp/sntp.c"
     "lwip/src/api/api_lib.c"
     "lwip/src/api/api_msg.c"
     "lwip/src/api/err.c"
@@ -133,14 +125,14 @@ if(CONFIG_LWIP_PPP_SUPPORT)
         "lwip/src/netif/ppp/polarssl/sha1.c")
 endif()
 
-if(NOT ${target} STREQUAL "linux")
-    # Support for vfs and linker fragments only for target builds
+if(NOT ${IDF_TARGET} STREQUAL "linux")
+    # Support for vfs and linker fragments only for IDF_TARGET builds
     set(priv_requires vfs)
     set(linker_fragments linker.lf)
     if(CONFIG_VFS_SUPPORT_IO)
-        list(APPEND srcs "port/${target}/vfs_lwip.c")
+        list(APPEND srcs "port/${IDF_TARGET}/vfs_lwip.c")
     else()
-        list(APPEND srcs "port/${target}/no_vfs_syscalls.c")
+        list(APPEND srcs "port/${IDF_TARGET}/no_vfs_syscalls.c")
     endif()
 endif()
 
@@ -200,10 +192,4 @@ if(CONFIG_LWIP_DHCP_RESTORE_LAST_IP)
     idf_component_optional_requires(PRIVATE nvs_flash)
 endif()
 
-target_compile_options(${COMPONENT_LIB} PRIVATE "-Wno-format")
-
-if(${target} STREQUAL "linux")
-    set(THREADS_PREFER_PTHREAD_FLAG ON)
-    find_package(Threads REQUIRED)
-    target_link_libraries(${COMPONENT_LIB} PRIVATE Threads::Threads)
-endif()
+# target_compile_options(${COMPONENT_LIB} PRIVATE "-Wno-format")
