@@ -23,9 +23,7 @@ void *syscall_table_ptr;
 /****************************************************************************
  *  @def
 *****************************************************************************/
-#if ! defined(NDEBUG)
-    static char const *TAG = "syscall";
-#endif
+static __attribute__((used)) char const *TAG = "syscall";
 
 struct __lock
 {

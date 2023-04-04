@@ -4,7 +4,7 @@
 #include "esp_err.h"
 #include "esp_log.h"
 
-static char const *TAG = "err";
+static __attribute__((used))  char const *TAG = "err";
 
 int __dbg_set_errno_r_neg(struct _reent *r, int err, char const *__function__)
 {

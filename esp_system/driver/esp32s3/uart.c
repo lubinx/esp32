@@ -14,11 +14,9 @@
 #include "uart.h"
 #include "sdkconfig.h"
 
-/*
-static char const *UART_TAG = "uart";
-static char const *RS485_TAG = "rs485";
-static char const *IRDA_TAG = "irda";
-*/
+static __attribute__((used)) char const *UART_TAG = "uart";
+static __attribute__((used)) char const *IRDA_TAG = "irda";
+static __attribute__((used)) char const *RS485_TAG = "rs485";
 
 /****************************************************************************
  *  @def

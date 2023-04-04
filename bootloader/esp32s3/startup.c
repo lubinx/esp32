@@ -15,7 +15,7 @@
 
 #include "sdkconfig.h"
 
-static char const *TAG = "bootloader";
+static __attribute__((used)) char const *TAG = "bootloader";
 
 // FLASH_read() => memcpy() overread
 #pragma GCC diagnostic ignored "-Wstringop-overread"

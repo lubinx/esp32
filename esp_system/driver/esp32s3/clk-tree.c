@@ -8,7 +8,7 @@
 #include "soc/dport_access.h"
 #include "sdkconfig.h"
 
-static char const *TAG = "clktree";
+static __attribute__((used)) char const *TAG = "clktree";
 
 /****************************************************************************
  * @def
