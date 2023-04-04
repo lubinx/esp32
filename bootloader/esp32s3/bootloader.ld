@@ -2,7 +2,6 @@ ENTRY(Reset_Handler);
 
 /* alias */
 PROVIDE(esp_log_printf = ets_printf);
-PROVIDE (esp_rom_uart_set_as_console = uart_tx_switch);
 /**
  *  Appendix: Memory Usage of ROM bootloader
  *

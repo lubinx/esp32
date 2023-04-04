@@ -5,8 +5,6 @@
 #include "soc.h"
 
 #include "esp_image.h"
-#include "esp_rom_sys.h"
-#include "esp_rom_uart.h"
 #include "esp_log.h"
 
 #include "cache_ll.h"
@@ -89,8 +87,18 @@ void __attribute__((noreturn)) Reset_Handler(void)
     */
 
     #if CONFIG_ESP_SYSTEM_LOG_LEVEL
-        esp_rom_install_uart_printf();
-        esp_rom_uart_set_as_console(0);
+        extern void uart_tx_switch(uint8_t uart_nb);
+        extern void ets_install_uart_printf(void);
+        extern bool g_uart_print;
+        extern bool g_usb_print;
+
+        // If ROM log is disabled permanently via eFuse or temporarily via RTC storage register,
+        // this ROM symbol will be set to false, and cause ``esp_rom_printf`` can't work on esp-idf side.
+        g_uart_print = true;
+        g_usb_print = true;
+
+        ets_install_uart_printf();
+        uart_tx_switch(0);
     #endif
 
     #if XCHAL_ERRATUM_572
