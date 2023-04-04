@@ -719,11 +719,16 @@ function(idf_build)
     target_link_options(${PROJECT_NAME} PRIVATE ${LINK_OPTIONS})
 
     # show size after build
-    # add_custom_command(
-    #     TARGET ${CMAKE_PROJECT_NAME}
-    #     COMMAND "${_CMAKE_TOOLCHAIN_PREFIX}size ${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}.elf -A"
-    #     VERBATIM
-    # )
+    add_custom_command(
+        OUTPUT "size"
+        COMMAND "${_CMAKE_TOOLCHAIN_PREFIX}size" -A "${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}.elf"
+        DEPENDS
+        VERBATIM
+    )
+    add_custom_target("elf_size" ALL
+        DEPENDS "${CMAKE_PROJECT_NAME}" "size"
+    )
+
     # Propagate link dependencies from component library targets to the executable
     idf_build_get_property(link_depends __LINK_DEPENDS)
     set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES LINK_DEPENDS "${link_depends}")
