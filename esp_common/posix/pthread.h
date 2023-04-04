@@ -90,6 +90,19 @@
     };
     #define PTHREAD_CANCELED            ((void *) -1)
 
+    enum
+    {
+        PTHREAD_AFFINITY_NO_AFFINITY    = 0,
+        PTHREAD_AFFINITY_CORE0          = (1 << 0),
+        PTHREAD_AFFINITY_CORE1          = (1 << 1),
+        PTHREAD_AFFINITY_CORE2          = (1 << 2),
+        PTHREAD_AFFINITY_CORE3          = (1 << 3),
+        PTHREAD_AFFINITY_CORE4          = (1 << 4),
+        PTHREAD_AFFINITY_CORE5          = (1 << 5),
+        PTHREAD_AFFINITY_CORE6          = (1 << 6),
+        PTHREAD_AFFINITY_CORE7          = (1 << 7),
+    };
+
 // Single execution handling.
     #define PTHREAD_ONCE_INIT           0
 
@@ -117,15 +130,20 @@ extern __attribute__((nonnull, nothrow))
 extern __attribute__((nonnull, nothrow))
     int pthread_attr_destroy(pthread_attr_t *attr);
 
+extern __attribute__((nonnull, nothrow))
+    int pthread_attr_getaffinity(pthread_attr_t const *restrict attr, unsigned *restrict affinity);
+extern __attribute__((nonnull, nothrow))
+    int pthread_attr_setaffinity(pthread_attr_t *attr, unsigned affinity);
+
     /**
      *  pthread_attr_getdetachstate() & pthread_attr_setdetachstate()
      *      get and set the detachstate attribute
      *  **ALWAYS** PTHREAD_CREATE_JOINABLE
      */
 extern __attribute__((nonnull, nothrow))
-    int pthread_attr_getdetachstate(pthread_attr_t const *restrict attr, int *detachstate);
+    int pthread_attr_getdetachstate(pthread_attr_t const *restrict attr, int *restrict detachstate);
 extern __attribute__((nonnull, nothrow))
-    int pthread_attr_setdetachstate(pthread_attr_t *restrict attr, int detachstate);
+    int pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate);
 
     /**
      *  pthread_attr_getguardsize() or pthread_attr_setguardsize()
@@ -155,7 +173,7 @@ extern __attribute__((nonnull, nothrow))
 extern __attribute__((nonnull, nothrow))
     int pthread_attr_getschedparam(pthread_attr_t const *restrict attr, struct sched_param *restrict param);
 extern __attribute__((nonnull, nothrow))
-    int pthread_attr_setschedparam(pthread_attr_t *restrict attr, struct sched_param const *restrict param);
+    int pthread_attr_setschedparam(pthread_attr_t *attr, struct sched_param const *restrict param);
 
     /**
      *  pthread_attr_getschedpolicy(), pthread_attr_setschedpolicy()
@@ -203,10 +221,6 @@ extern __attribute__((nonnull, nothrow))
      */
 extern __attribute__((nonnull(1, 3), nothrow))
     int pthread_create(pthread_t *restrict thread, pthread_attr_t const *restrict attr,
-        pthread_routine_t routine, void *restrict arg);
-
-extern __attribute__((nonnull(1, 3), nothrow))
-    int pthread_create2(pthread_t *restrict thread, pthread_attr_t const *restrict attr,
         pthread_routine_t routine, void *restrict arg);
 
     /**
@@ -456,7 +470,7 @@ extern __attribute__((nonnull, nothrow))
      *      initialize destroy and condition variables
      */
 extern __attribute__((nonnull, nothrow))
-    int pthread_cond_init(pthread_cond_t *restrict cond, const pthread_condattr_t *restrict attr);
+    int pthread_cond_init(pthread_cond_t *restrict cond, pthread_condattr_t *restrict attr);
 extern __attribute__((nonnull, nothrow))
     int pthread_cond_destroy(pthread_cond_t *cond);
 

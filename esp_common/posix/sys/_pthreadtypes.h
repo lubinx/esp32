@@ -12,6 +12,7 @@
 
     struct pthread_attr_t
     {
+        unsigned affinity;
         unsigned priority;
         int  detachstate;
 

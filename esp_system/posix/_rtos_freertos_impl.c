@@ -30,9 +30,9 @@ struct __freertos_tcb
     struct KERNEL_tcb kernel;
 
 //--- thread freertos parameters
-    unsigned priority;
-    bool task_is_dynamic_alloc;
-    bool stack_is_dynamic_alloc;
+    uint8_t priority;
+    uint8_t task_is_dynamic_alloc;
+    uint8_t stack_is_dynamic_alloc;
     // __freertos_tcb <==> __freertos_task
     struct __freertos_task *task_ptr;
 };
@@ -101,7 +101,7 @@ void __rtos_bootstrap(void)
         #else
             xTaskCreateStaticAffinitySet(__freertos_start, __freertos_argv,
                 CONFIG_ESP_MAIN_TASK_STACK_SIZE, NULL, configMAX_PRIORITIES,
-                (void *)__main_stack, &__main_task, CONFIG_ESP_MAIN_TASK_AFFINITY
+                (void *)__main_stack, &__main_task, 1 << CONFIG_ESP_MAIN_TASK_AFFINITY
             );
         #endif
 
@@ -126,7 +126,9 @@ void __rtos_start(void)
 static void __freertos_thread_entry(struct __freertos_tcb *tcb)
 {
     tcb->kernel.exit_code = tcb->kernel.start_routine(tcb->kernel.arg);
+
     struct __freertos_task *task = tcb->task_ptr;
+    vTaskDelete((void *)&task->_sinit);
 
     if (! tcb->task_is_dynamic_alloc)
     {
@@ -140,33 +142,23 @@ static void __freertos_thread_entry(struct __freertos_tcb *tcb)
     if (tcb->stack_is_dynamic_alloc)
         KERNEL_mfree(tcb->kernel.stack_base);
 
-    vTaskDelete((void *)&task->_sinit);
     KERNEL_handle_release(tcb);
 }
 
-thread_id_t thread_create(unsigned priority, void *(*start_rountine)(void *arg), void *arg,
+thread_id_t thread_create(void *(*start_rountine)(void *arg), void *arg, uint8_t priority,
     uint32_t *stack, size_t stack_size)
 {
-    return thread_create_at_core(priority, start_rountine, arg,
-        stack, stack_size, THREAD_BIND_ALL_CORE);
+    return thread_create_at_core(start_rountine, arg, priority,
+        stack, stack_size, THREAD_CORE_NO_AFFINITY);
 }
 
-thread_id_t thread_create_at_core(unsigned priority, void *(*start_rountine)(void *arg), void *arg,
-    uint32_t *stack, size_t stack_size, unsigned core_id)
+thread_id_t thread_create_at_core(void *(*start_rountine)(void *arg), void *arg, uint8_t priority,
+    uint32_t *stack, size_t stack_size, unsigned affinity)
 {
     if (stack_size < THREAD_MINIMAL_STACK_SIZE)
         return __set_errno_nullptr(EINVAL);
-    if (THREAD_BIND_ALL_CORE != core_id && SOC_CPU_CORES_NUM - 1 < core_id)
+    if (THREAD_CORE_NO_AFFINITY != affinity && (1 << SOC_CPU_CORES_NUM) <= affinity)
         return __set_errno_nullptr(EINVAL);
-
-    void *dynamic_stack = NULL;
-    if (! stack)
-    {
-        dynamic_stack = KERNEL_malloc(stack_size);
-
-        if (! dynamic_stack)
-            return __set_errno_nullptr(ENOMEM);
-    }
 
     spin_lock(&task_pool.atomic);
     if (! glist_is_initialized(&task_pool.freed))
@@ -188,18 +180,32 @@ thread_id_t thread_create_at_core(unsigned priority, void *(*start_rountine)(voi
             return __set_errno_nullptr(ENOMEM);
     }
 
+    void *dynamic_stack = NULL;
+    if (! stack)
+    {
+        dynamic_stack = KERNEL_malloc(stack_size);
+
+        if (! dynamic_stack)
+        {
+            if (dynamic_task)
+                KERNEL_mfree(dynamic_task);
+
+            return __set_errno_nullptr(ENOMEM);
+        }
+    }
+
     struct __freertos_tcb *tcb = KERNEL_handle_get(CID_TCB);
     if (tcb)
     {
         tcb->kernel.start_routine = start_rountine;
         tcb->kernel.arg = arg;
         tcb->kernel.stack_size = stack_size;
-        tcb->priority = priority;
+        tcb->priority = (uint8_t)priority;
 
         if (dynamic_stack)
         {
             tcb->kernel.stack_base = dynamic_stack;
-            tcb->stack_is_dynamic_alloc |= HDL_FLAG_SYSMEM_MANAGED;
+            tcb->stack_is_dynamic_alloc = true;
         }
         else
             tcb->kernel.stack_base = stack;
@@ -211,7 +217,7 @@ thread_id_t thread_create_at_core(unsigned priority, void *(*start_rountine)(voi
         }
 
         TaskHandle_t hdl;
-        if (THREAD_BIND_ALL_CORE == core_id)
+        if (THREAD_CORE_NO_AFFINITY == affinity)
         {
             hdl = xTaskCreateStatic((void *)__freertos_thread_entry, NULL,
                 stack_size, tcb, priority,
@@ -222,7 +228,7 @@ thread_id_t thread_create_at_core(unsigned priority, void *(*start_rountine)(voi
         {
             hdl = xTaskCreateStaticAffinitySet((void *)__freertos_thread_entry, NULL,
                 stack_size, tcb, priority,
-                tcb->kernel.stack_base, &task->_sinit, 1 << core_id
+                tcb->kernel.stack_base, &task->_sinit, affinity
             );
         }
 
