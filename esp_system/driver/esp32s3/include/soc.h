@@ -99,7 +99,7 @@
 
 #include "soc/ext_mem_defs.h"
     // mmu page size is fixed 64k, not depends sdkconfig.h
-    #define MMU_PAGE_SIZE               (0x10000)
+    #define SOC_MMU_PAGE_SIZE           (0x10000)
 
 
 __BEGIN_DECLS

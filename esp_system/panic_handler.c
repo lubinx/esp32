@@ -111,7 +111,7 @@ static void panic_handler(void *frame, bool pseudo_excause)
         );
 
         // For cache error, pause the non-offending core - offending core handles panic
-        if (panic_get_cause(frame) == PANIC_RSN_CACHEERR && core_id != SOC_cache_err_core_id())
+        if (panic_get_cause(frame) == PANIC_RSN_CACHEERR && core_id != __cache_err_core_id())
         {
             // Only print the backtrace for the offending core in case of the cache error
             g_exc_frames[core_id] = NULL;

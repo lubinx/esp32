@@ -103,7 +103,7 @@ void __rtos_start(void)
     SOC_acquire_core(1);
 }
 
-unsigned SOC_cache_err_core_id(void)
+unsigned __cache_err_core_id(void)
 {
     /*
     if (cache_ll_l1_get_access_error_intr_status(0, CACHE_LL_L1_ACCESS_EVENT_MASK))
@@ -206,6 +206,11 @@ void SOC_release_core(unsigned core_id)
 }
 
 /****************************************************************************
+ *  @implements:
+ ****************************************************************************/
+
+
+/****************************************************************************
  * TODO: implements  esp_intr_alloc
  ****************************************************************************/
 #include "esp_intr_alloc.h"
@@ -268,7 +273,7 @@ void esp_cpu_intr_get_desc(unsigned core_id, int intr_nb, esp_cpu_intr_desc_t *i
  ****************************************************************************/
 static void SOC_cache_err_init(unsigned core_id)
 {
-    SOC_disable_intr_nb(ETS_CACHEERR_INUM);
+    __intr_nb_disable(ETS_CACHEERR_INUM);
 
     // We do not register a handler for the interrupt because it is interrupt
     // level 4 which is not serviceable from C. Instead, xtensa_vectors.S has
@@ -341,5 +346,5 @@ static void SOC_cache_err_init(unsigned core_id)
             0;
     }
 
-    SOC_enable_intr_nb(ETS_CACHEERR_INUM);
+    __intr_nb_enable(ETS_CACHEERR_INUM);
 }

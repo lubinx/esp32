@@ -5,27 +5,15 @@
     #include "xt_utils.h"
     #include "xtensa/xtensa_api.h"
 
-    typedef xt_handler esp_intr_handler_t;
+    typedef xt_handler intr_handler_t;
 #elif __riscv
     #include "riscv/rv_utils.h"
 
-    typedef intr_handler_t esp_intr_handler_t;
-
-    #if SOC_CPU_HAS_FLEXIBLE_INTC
-        #define esp_cpu_intr_get_type(intr_nb)  \
-            (INTR_TYPE_LEVEL == esprv_intc_int_get_type(intr_nb) ? ESP_CPU_INTR_TYPE_LEVEL : ESP_CPU_INTR_TYPE_EDGE)
-        #define esp_cpu_intr_set_type(intr_nb, intr_type)   \
-            esprv_intc_int_set_type(intr_nb, ESP_CPU_INTR_TYPE_LEVEL == intr_type ? INTR_TYPE_LEVEL : INTR_TYPE_EDGE)
-
-        #define esp_cpu_intr_get_priority(intr_nb)  \
-            esprv_intc_int_get_priority(intr_nb)
-        #define esp_cpu_intr_set_priority(intr_nb, intr_prio)   \
-            esprv_intc_int_set_priority(intr_nb, intr_prio)
-    #endif
+    typedef intr_handler_t intr_handler_t;
 #endif
 
 static inline
-    bool SOC_is_intr_handled(unsigned intr_nb)
+    bool __intr_nb_is_handled(unsigned intr_nb)
     {
     #ifdef __XTENSA__
         return xt_int_has_handler(intr_nb, __get_CORE_ID());
@@ -35,7 +23,7 @@ static inline
     }
 
 static inline
-    esp_intr_handler_t SOC_set_intr_handler(unsigned intr_nb, esp_intr_handler_t handler, void* arg)
+    intr_handler_t __intr_nb_set_handler(unsigned intr_nb, intr_handler_t handler, void* arg)
     {
     #ifdef __XTENSA__
         return xt_set_interrupt_handler(intr_nb, handler, arg);
@@ -46,23 +34,21 @@ static inline
     #endif
     }
 
-    /* its pointless to get this
 static inline
-    void *SOC_intr_handler_arg(unsigned intr_nb)
+    void *__intr_nb_get_arg(unsigned intr_nb)
     {
     #ifdef __XTENSA__
-        return xt_get_interrupt_handler_arg(intr_nb);
+        return xt_get_interrupt_handler_arg((int)intr_nb);
     #else
         return intr_handler_get_arg(intr_nb);
     #endif
     }
-    */
 
     /**
      *  entable interrupt
     */
 static inline
-    void SOC_enable_intr_nb(unsigned intr_nb)
+    void __intr_nb_enable(unsigned intr_nb)
     {
     #ifdef __XTENSA__
         xt_ints_on(1 << intr_nb);
@@ -71,22 +57,11 @@ static inline
     #endif
     }
 
-    // NOTE: esp-idf perfer to enable/disable interrupts by mask, this consider is dangers~!
-static inline __attribute__((deprecated("using SOC_enable_intr_nb() instead")))
-    void SOC_enable_intr_mask(unsigned intr_mask)
-    {
-    #ifdef __XTENSA__
-        xt_ints_on(intr_mask);
-    #else
-        rv_utils_intr_enable(intr_mask);
-    #endif
-    }
-
     /**
      *  disable interrrupt
     */
 static inline
-    void SOC_disable_intr_nb(unsigned intr_nb)
+    void __intr_nb_disable(unsigned intr_nb)
     {
     #ifdef __XTENSA__
         xt_ints_off(1 << intr_nb);
@@ -95,35 +70,8 @@ static inline
     #endif
     }
 
-    // NOTE: esp-idf perfer to enable/disable interrupts by mask, this consider is dangers~!
-static inline __attribute__((deprecated("using SOC_disable_intr_nb() instead")))
-    void SOC_disable_intr_mask(unsigned intr_mask)
-    {
-    #ifdef __XTENSA__
-        xt_ints_off(intr_mask);
-    #else
-        rv_utils_intr_disable(intr_mask);
-    #endif
-    }
-
-    /**
-     *  REVIEW: get interrupt mask, this should be __get_IPSR()?
-    */
 static inline
-    unsigned SOC_get_intr_mask(void)
-    {
-    #ifdef __XTENSA__
-        return xt_utils_intr_get_enabled_mask();
-    #else
-        return rv_utils_intr_get_enabled_mask();
-    #endif
-    }
-
-    /**
-     *  REVIEW: clear interrupt pending?
-    */
-static inline
-    void SOC_clear_intr_pending(unsigned intr_nb)
+    void __intr_nb_clear_pending(unsigned intr_nb)
     {
     #ifdef __XTENSA__
         xthal_set_intclear(1 << intr_nb);
@@ -137,7 +85,7 @@ static inline
      *      implement at driver/${target}/soc.c
     */
 extern __attribute__((nothrow, const))
-    unsigned SOC_cache_err_core_id(void);
+    unsigned __cache_err_core_id(void);
 
 /****************************************************************************
  *  debugger
@@ -164,13 +112,44 @@ static inline
 
 #define __BKPT(value)                   (__dbgr_is_attached() ? __dbgr_break(): (void)value)
 
-// esp-idf
+/****************************************************************************
+ *  esp-idf
+*****************************************************************************/
     #define esp_cpu_get_core_id()       \
         __get_CORE_ID()
-    #define esp_cpu_intr_enable(mask)   \
-        SOC_enable_intr_mask(mask)
-    #define esp_cpu_intr_disable(mask)  \
-        SOC_disable_intr_mask(mask)
     #define esp_cpu_intr_edge_ack(intr_nb)  \
-        SOC_clear_intr_pending(intr_nb)
+        __intr_nb_clear_pending(intr_nb)
+
+static inline
+    unsigned esp_cpu_intr_get_enabled_mask(void)
+    {
+    #ifdef __XTENSA__
+        return xt_utils_intr_get_enabled_mask();
+    #else
+        return rv_utils_intr_get_enabled_mask();
+    #endif
+    }
+
+    // NOTE: esp-idf perfer to enable/disable interrupts by mask, this consider is dangers~!
+static inline __attribute__((deprecated("using __intr_nb_enable() instead")))
+    void esp_cpu_intr_enable(unsigned intr_mask)
+    {
+    #ifdef __XTENSA__
+        xt_ints_on(intr_mask);
+    #else
+        rv_utils_intr_enable(intr_mask);
+    #endif
+    }
+
+    // NOTE: esp-idf perfer to enable/disable interrupts by mask, this consider is dangers~!
+static inline __attribute__((deprecated("using __intr_nb_disable() instead")))
+    void esp_cpu_intr_disable(unsigned intr_mask)
+    {
+    #ifdef __XTENSA__
+        xt_ints_off(intr_mask);
+    #else
+        rv_utils_intr_disable(intr_mask);
+    #endif
+    }
+
 #endif

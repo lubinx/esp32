@@ -59,7 +59,7 @@
     {
         xt_exc_handler old;
 
-        if (intr >= XCHAL_EXCCAUSE_NUM )
+        if (intr >= XCHAL_EXCCAUSE_NUM)
             return 0;
 
         /* Convert exception number to _xt_exception_table name */
@@ -77,12 +77,12 @@
 
 #if XCHAL_HAVE_INTERRUPTS
     /* Handler table is in xtensa_intr_asm.S */
-
-    typedef struct xt_handler_table_entry
+    struct xt_handler_table_entry
     {
         void *handler;
         void *arg;
-    } xt_handler_table_entry;
+    };
+    typedef struct xt_handler_table_entry   xt_handler_table_entry;
 
     extern xt_handler_table_entry _xt_interrupt_table[XCHAL_NUM_INTERRUPTS * SOC_CPU_CORES_NUM];
 
@@ -113,9 +113,9 @@
         xt_handler_table_entry * entry;
         xt_handler               old;
 
-        if( n < 0 || n >= XCHAL_NUM_INTERRUPTS )
+        if (n >= XCHAL_NUM_INTERRUPTS)
             return 0;       /* invalid interrupt number */
-        if( Xthal_intlevel[n] > XCHAL_EXCM_LEVEL )
+        if (Xthal_intlevel[n] > XCHAL_EXCM_LEVEL)
             return 0;       /* priority level too high to safely handle in C */
 
         /* Convert exception number to _xt_exception_table name */
@@ -124,11 +124,13 @@
         entry = _xt_interrupt_table + n;
         old   = entry->handler;
 
-        if (f) {
+        if (f)
+        {
             entry->handler = f;
             entry->arg     = arg;
         }
-        else {
+        else
+        {
             entry->handler = &xt_unhandled_interrupt;
             entry->arg     = (void*)n;
         }

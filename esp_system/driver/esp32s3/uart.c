@@ -12,7 +12,6 @@
 #include "esp_intr_alloc.h"
 
 #include "clk-tree.h"
-
 #include "uart.h"
 #include "sdkconfig.h"
 
@@ -149,9 +148,12 @@ ssize_t console_write(void const *buf, size_t count)
 /****************************************************************************
  *  @implements
  ****************************************************************************/
+#include <esp_arch.h>
+
 __attribute__((constructor))
 void UART_initialize(void)
 {
+    // __intr_nb_set_handler(ETS_UART0_INTR_SOURCE, UART0_IntrHandler, &uart_context[0]);
     esp_intr_alloc(ETS_UART0_INTR_SOURCE, 0, UART0_IntrHandler, &uart_context[0], &uart_context[0].intr_hdl);
     esp_intr_alloc(ETS_UART1_INTR_SOURCE, 0, UART1_IntrHandler, &uart_context[1], &uart_context[1].intr_hdl);
     esp_intr_alloc(ETS_UART2_INTR_SOURCE, 0, UART2_IntrHandler, &uart_context[2], &uart_context[2].intr_hdl);

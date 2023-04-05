@@ -21,10 +21,6 @@
 #include "esp_intr_alloc.h"
 #include "esp_rom_sys.h"
 
-#if !CONFIG_FREERTOS_UNICORE
-    #include "esp_ipc.h"
-#endif
-
 #pragma GCC diagnostic ignored "-Wunused-variable"
 #pragma GCC diagnostic ignored "-Wconversion"
 #pragma GCC diagnostic ignored "-Wsign-conversion"
@@ -292,8 +288,8 @@ static bool is_vect_desc_usable(vector_desc_t *vd, int flags, int cpu, int force
             ALCHLOG("...Unusable: int is shared, we need non-shared.");
             return false;
         }
-    } else if (SOC_is_intr_handled(x)) {
-        //Check if interrupt already is allocated by SOC_set_intr_handler
+    } else if (__intr_nb_is_handled(x)) {
+        //Check if interrupt already is allocated by __intr_nb_set_handler
         ALCHLOG("....Unusable: already allocated");
         return false;
     }
@@ -366,7 +362,7 @@ static int get_available_int(int flags, int cpu, int force, int source)
 
         ALCHLOG("Int %d reserved %d priority %d %s hasIsr %d",
             x, intr_desc.flags & ESP_CPU_INTR_DESC_FLAG_RESVD, intr_desc.priority,
-            intr_desc.type == ESP_CPU_INTR_TYPE_LEVEL? "LEVEL" : "EDGE", SOC_is_intr_handled(x));
+            intr_desc.type == ESP_CPU_INTR_TYPE_LEVEL? "LEVEL" : "EDGE", _intr_nb_has_handle(x));
 
         if (!is_vect_desc_usable(vd, flags, cpu, force)) {
             continue;
@@ -556,12 +552,12 @@ esp_err_t esp_intr_alloc_intrstatus(int source, int flags, uint32_t intrstatusre
         vd->shared_vec_info = sh_vec;
         vd->flags |= VECDESC_FL_SHARED;
         //(Re-)set shared isr handler to new value.
-        SOC_set_intr_handler(intr, (esp_cpu_intr_handler_t)shared_intr_isr, vd);
+        __intr_nb_set_handler(intr, (esp_cpu_intr_handler_t)shared_intr_isr, vd);
     } else {
         //Mark as unusable for other interrupt sources. This is ours now!
         vd->flags = VECDESC_FL_NONSHARED;
         if (handler) {
-            SOC_set_intr_handler(intr, (esp_cpu_intr_handler_t)handler, arg);
+            __intr_nb_set_handler(intr, (esp_cpu_intr_handler_t)handler, arg);
         }
 
         if (flags & ESP_INTR_FLAG_EDGE) {
@@ -586,7 +582,7 @@ esp_err_t esp_intr_alloc_intrstatus(int source, int flags, uint32_t intrstatusre
     ret->shared_vector_desc = vd->shared_vec_info;
 
     //Enable int at CPU-level;
-    SOC_enable_intr_nb(intr);
+    __intr_nb_enable(intr);
 
     //If interrupt has to be started disabled, do that now; ints won't be enabled for real until the end
     //of the critical section.
@@ -629,27 +625,12 @@ esp_err_t esp_intr_alloc(int source, int flags, intr_handler_t handler, void *ar
     return esp_intr_alloc_intrstatus(source, flags, 0, 0, handler, arg, ret_handle);
 }
 
-#if !CONFIG_FREERTOS_UNICORE
-static void esp_intr_free_cb(void *arg)
-{
-    (void)esp_intr_free((intr_handle_t)arg);
-}
-#endif /* !CONFIG_FREERTOS_UNICORE */
-
 esp_err_t esp_intr_free(intr_handle_t handle)
 {
     bool free_shared_vector=false;
     if (!handle) {
         return ESP_ERR_INVALID_ARG;
     }
-
-#if !CONFIG_FREERTOS_UNICORE
-    //Assign this routine to the core where this interrupt is allocated on.
-    if (handle->vector_desc->cpu != __get_CORE_ID()) {
-        esp_err_t ret = esp_ipc_call_blocking(handle->vector_desc->cpu, &esp_intr_free_cb, (void *)handle);
-        return ret == ESP_OK ? ESP_OK : ESP_FAIL;
-    }
-#endif /* !CONFIG_FREERTOS_UNICORE */
 
     spin_lock(&spinlock);
     esp_intr_disable(handle);
@@ -686,7 +667,7 @@ esp_err_t esp_intr_free(intr_handle_t handle)
         ESP_EARLY_LOGV(TAG, "esp_intr_free: Disabling int, killing handler");
 
         //Reset to normal handler:
-        SOC_set_intr_handler(handle->vector_desc->intno, NULL, (void*)((int)handle->vector_desc->intno));
+        __intr_nb_set_handler(handle->vector_desc->intno, NULL, (void*)((int)handle->vector_desc->intno));
         //Theoretically, we could free the vector_desc... not sure if that's worth the few bytes of memory
         //we save.(We can also not use the same exit path for empty shared ints anymore if we delete
         //the desc.) For now, just mark it as free.
@@ -735,7 +716,7 @@ esp_err_t esp_intr_enable(intr_handle_t handle)
             spin_unlock(&spinlock);
             return ESP_ERR_INVALID_ARG; //Can only enable these ints on this cpu
         }
-        SOC_enable_intr_nb(handle->vector_desc->intno);
+        __intr_nb_enable(handle->vector_desc->intno);
     }
     spin_unlock(&spinlock);
     return ESP_OK;
@@ -777,7 +758,7 @@ esp_err_t esp_intr_disable(intr_handle_t handle)
             spin_unlock(&spinlock);
             return ESP_ERR_INVALID_ARG; //Can only enable these ints on this cpu
         }
-        SOC_disable_intr_nb(handle->vector_desc->intno);
+        __intr_nb_disable(handle->vector_desc->intno);
     }
     spin_unlock(&spinlock);
     return ESP_OK;

@@ -87,13 +87,13 @@ However these can still be overridden from the command line.
 #endif
 
 #ifndef XT_INTEXC_HOOKS
-  #if configXT_INTEXC_HOOKS
-    #define XT_INTEXC_HOOKS             1  /* Enables exception hooks */
-  #endif
+    #if configXT_INTEXC_HOOKS
+        #define XT_INTEXC_HOOKS         1  /* Enables exception hooks */
+    #endif
 #endif
 
 #if (!XT_SIMULATOR) && (!XT_BOARD)
-  #error Either XT_SIMULATOR or XT_BOARD must be defined.
+    #error Either XT_SIMULATOR or XT_BOARD must be defined.
 #endif
 
 
@@ -108,7 +108,7 @@ Error messages can be customize to the RTOS port.
 */
 
 #if !XCHAL_HAVE_XEA2
-#error "FreeRTOS/Xtensa requires XEA2 (exception architecture 2)."
+    #error "FreeRTOS/Xtensa requires XEA2 (exception architecture 2)."
 #endif
 
 
