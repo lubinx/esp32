@@ -163,23 +163,3 @@ void IRAM_ATTR xt_unhandled_exception(void *frame)
 {
     panic_handler(frame, false);
 }
-
-void __attribute__((noreturn)) panic_restart(void)
-{
-    /*
-    bool digital_reset_needed = false;
-
-#ifdef CONFIG_IDF_TARGET_ESP32
-    // On the ESP32, cache error status can only be cleared by system reset
-    if (SOC_cache_err_core_id() != -1) {
-        digital_reset_needed = true;
-    }
-#endif
-
-    if (digital_reset_needed)
-        esp_restart_noos_dig();
-    else
-        esp_restart_noos();
-    */
-    SOC_reset();
-}
