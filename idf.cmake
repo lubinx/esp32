@@ -44,6 +44,17 @@ endif()
 set(IDF_CMAKE_PATH ${IDF_PATH}/tools/cmake)
 
 #############################################################################
+# 💡 message colours
+#############################################################################
+string(ASCII 27 ESC)
+set(RED     "${ESC}[31m")
+set(GREEN   "${ESC}[32m")
+set(YELLOW  "${ESC}[33m")
+set(BLUE    "${ESC}[34m")
+set(MAGENTA "${ESC}[35m")
+set(CYAN    "${ESC}[36m")
+
+#############################################################################
 # 💡 compiler toolchain variables
 #############################################################################
 set(CMAKE_TOOLCHAIN_FILE ${IDF_CMAKE_PATH}/toolchain-${IDF_TARGET}.cmake)
@@ -112,7 +123,7 @@ list(APPEND IDF_COMPILE_OPTIONS
 # idf kernel components that
 list(APPEND IDF_KERNEL_COMPONENTS
     "esp_system"
-    "esp_common" "soc" "heap"
+    "esp_common" "soc"
     "freertos"
     "esptool_py"
 )
@@ -358,7 +369,7 @@ function(idf_component_add name_or_dir) # optional: prefix
         endif()
     else()
         if (NOT prefix)
-            set(prefix ${PROJECT_NAME})
+            set(prefix "esp32")
         endif()
     endif()
 
@@ -446,17 +457,23 @@ macro(idf_component_register)
         __component_set_property(${component_target} KCONFIG_PROJBUILD "${__KCONFIG_PROJBUILD}" APPEND)
         __component_set_property(${component_target} WHOLE_ARCHIVE ${__WHOLE_ARCHIVE})
 
-        message(STATUS "Add Component: ${prefix}::${component_name}")
+        __component_get_property(idf_managed_component ${component_target} IDF_MANAGED_COMPONENT)
+        if (idf_managed_component)
+            message(STATUS "Add Component: ${MAGENTA}${prefix}::${component_name}")
+        else()
+            message(STATUS "Add Component: ${prefix}::${component_name}")
+        endif()
+
         message("\tcomponent dir: ${component_dir}")
         if (__REQUIRES OR __PRIV_REQUIRES)
             if (__REQUIRES)
-                message("\tdepends: ${__REQUIRES}")
+                message("\tdepends: ${CYAN}${__REQUIRES}")
             endif()
             if (__PRIV_REQUIRES)
-                message("\tprivate depends: ${__PRIV_REQUIRES}")
+                message("\tprivate depends: ${CYAN}${__PRIV_REQUIRES}")
             endif()
             if (obsoleted_components)
-                message("\t❌ obsoleted depends: ${obsoleted_components}")
+                message("\t❌ obsoleted depends: ${RED}${obsoleted_components}")
             endif()
         else()
             message("\tno dependencies")
@@ -707,16 +724,6 @@ function(idf_build)
             __component_get_property(COMPONENT_DIR ${component_target} COMPONENT_DIR)
 
             add_subdirectory(${COMPONENT_DIR} ${build_dir}/${prefix}/${component_name})
-
-            # fix: mbedtls private targets not append compile options
-            # if (component_name STREQUAL "mbedtls")
-            #     list(APPEND mbedtls_targets "mbedtls" "mbedcrypto" "mbedx509")
-            #     foreach(mbedtls_target ${mbedtls_targets})
-            #         foreach(option ${IDF_COMPILE_OPTIONS})
-            #             target_compile_options(${mbedtls_target} PRIVATE ${option})
-            #         endforeach()
-            #     endforeach()
-            # endif()
         endforeach()
     endmacro()
     __import_components()
@@ -771,7 +778,6 @@ function(idf_build)
 
     message("\n💡 Add sub-project: bootloader")
     add_subdirectory("${ESP32_PATH}/bootloader" bootloader)
-
 
     message("\n💡 global includes")
     idf_build_get_property(include_directories INCLUDE_DIRECTORIES)
