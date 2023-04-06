@@ -29,6 +29,10 @@ elseif (DEFINED ENV{IDF_PATH} AND NOT ($ENV{IDF_PATH} STREQUAL ${IDF_PATH}))
     message(FATAL_ERROR)
 endif()
 
+if (NOT ESP32_PATH)
+    set(ESP32_PATH ${CMAKE_CURRENT_LIST_DIR} CACHE STRING "esp32 source path")
+endif()
+
 if (NOT IDF_ENV_PATH)
     set(IDF_ENV_PATH $ENV{IDF_ENV_PATH})
 endif()
@@ -332,6 +336,12 @@ function(idf_component_add name_or_dir) # optional: prefix
         get_filename_component(component_dir ${name_or_dir} ABSOLUTE BASE_DIR ${CMAKE_CURRENT_LIST_DIR})
         get_filename_component(__parent_dir ${component_dir} DIRECTORY)
         get_filename_component(component_name ${component_dir} NAME)
+
+        set(idf_managed_component 0)
+    elseif (IS_DIRECTORY "${ESP32_PATH}/${name_or_dir}")
+        set(component_dir "${ESP32_PATH}/${name_or_dir}")
+        set(__parent_dir "${ESP32_PATH}")
+        set(component_name ${name_or_dir})
 
         set(idf_managed_component 0)
     else()
@@ -760,7 +770,7 @@ function(idf_build)
     endforeach()
 
     message("\n💡 Add sub-project: bootloader")
-    add_subdirectory("bootloader")
+    add_subdirectory("${ESP32_PATH}/bootloader" bootloader)
 
 
     message("\n💡 global includes")
