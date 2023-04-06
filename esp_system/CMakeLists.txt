@@ -33,9 +33,10 @@ idf_component_register(
         ${priv_includes}
     SRCS
         ${srcs}
-    PRIV_REQUIRES
+    REQUIRES
         "esp_common"
         "soc"
+        "heap"
     LDFRAGMENTS
         "memap.lf"
 )

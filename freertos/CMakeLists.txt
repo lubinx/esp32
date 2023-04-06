@@ -42,9 +42,10 @@ idf_component_register(
         ${private_include_dirs}
     SRCS
         ${srcs}
-    PRIV_REQUIRES
+    REQUIRES
         "esp_common"
         "soc"
+        "heap"
 )
 
 if(CONFIG_FREERTOS_ENABLE_STATIC_TASK_CLEAN_UP AND CONFIG_FREERTOS_SMP)

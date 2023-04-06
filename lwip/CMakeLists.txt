@@ -154,7 +154,7 @@ endif()
 idf_component_register(SRCS "${srcs}"
                     INCLUDE_DIRS  ${include_dirs}
                     LDFRAGMENTS   ${linker_fragments}
-                    PRIV_REQUIRES ${priv_requires})
+                    REQUIRES ${priv_requires})
 
 # lots of LWIP source files evaluate macros that check address of stack variables
 target_compile_options(${COMPONENT_LIB} PRIVATE -Wno-address)
