@@ -1,7 +1,7 @@
 #############################################################################
 # 💡 environment variables
 #############################################################################
-if (NOT IDF_TARGET)
+if(NOT IDF_TARGET)
     set(IDF_TARGET "esp32s3" CACHE STRING "esp-idf build target")
     message("❓ variable IDF_TARGET is not set, default set to esp32s3")
 endif()
@@ -9,34 +9,34 @@ set_property(CACHE IDF_TARGET PROPERTY STRINGS esp32 esp32s2 esp32s3 esp32c3 esp
 
 if("${IDF_TARGET}" STREQUAL "linux")
     set(IDF_TARGET_ARCH "")
-elseif(("${IDF_TARGET}" STREQUAL "esp32") OR ("${IDF_TARGET}" STREQUAL "esp32s2") OR ("${IDF_TARGET}" STREQUAL "esp32s3"))
+elseif(("${IDF_TARGET}" STREQUAL "esp32") OR("${IDF_TARGET}" STREQUAL "esp32s2") OR("${IDF_TARGET}" STREQUAL "esp32s3"))
     set(IDF_TARGET_ARCH "xtensa")
 else()
     set(IDF_TARGET_ARCH "riscv")
 endif()
 
-if (NOT IDF_PATH)
-    if (DEFINED ENV{IDF_PATH})
+if(NOT IDF_PATH)
+    if(DEFINED ENV{IDF_PATH})
         set(IDF_PATH $ENV{IDF_PATH})
     else()
         set(IDF_PATH "$ENV{HOME}/esp-idf")
         message("❓ variable IDF_PATH is not set, default set to $ENV{HOME}/esp-idf")
     endif()
     set(IDF_PATH ${IDF_PATH} CACHE STRING "esp-idf source path")
-elseif (DEFINED ENV{IDF_PATH} AND NOT ($ENV{IDF_PATH} STREQUAL ${IDF_PATH}))
+elseif(DEFINED ENV{IDF_PATH} AND NOT($ENV{IDF_PATH} STREQUAL ${IDF_PATH}))
     message("❌ IDF_PATH was changed since last build")
     message("✔️ clear cmake cache to fix\n\n")
     message(FATAL_ERROR)
 endif()
 
-if (NOT ESP32_PATH)
+if(NOT ESP32_PATH)
     set(ESP32_PATH ${CMAKE_CURRENT_LIST_DIR} CACHE STRING "esp32 source path")
 endif()
 
-if (NOT IDF_ENV_PATH)
+if(NOT IDF_ENV_PATH)
     set(IDF_ENV_PATH $ENV{IDF_ENV_PATH})
 endif()
-if (NOT IDF_ENV_PATH)
+if(NOT IDF_ENV_PATH)
     set(IDF_ENV_PATH "$ENV{HOME}/.espressif")
     message("❓ variable IDF_ENV_PATH is not set, default set to ${IDF_ENV_PATH}")
 endif()
@@ -84,18 +84,18 @@ list(APPEND LINK_OPTIONS
 )
 
 # compile optimization level
-function (get_optimization_level level)     # optional __name
+function(get_optimization_level level)     # optional __name
     list(POP_FRONT ARGN __name)
 
-    if (${CONFIG${__name}_COMPILER_OPTIMIZATION_SIZE})
+    if(${CONFIG${__name}_COMPILER_OPTIMIZATION_SIZE})
         set(${level} "-Os" PARENT_SCOPE)
-    elseif (${CONFIG${__name}_COMPILER_OPTIMIZATION_FULL})
+    elseif(${CONFIG${__name}_COMPILER_OPTIMIZATION_FULL})
         set(${level} "-O3" PARENT_SCOPE)
-    elseif (${CONFIG${__name}_COMPILER_OPTIMIZATION_PERF})
+    elseif(${CONFIG${__name}_COMPILER_OPTIMIZATION_PERF})
         set(${level} "-O2" PARENT_SCOPE)
-    elseif (${CONFIG${__name}_COMPILER_OPTIMIZATION_BASIC})
+    elseif(${CONFIG${__name}_COMPILER_OPTIMIZATION_BASIC})
         set(${level} "-O1" PARENT_SCOPE)
-    elseif (${CONFIG${__name}_COMPILER_OPTIMIZATION_DEBUG})
+    elseif(${CONFIG${__name}_COMPILER_OPTIMIZATION_DEBUG})
         set(${level} "-Og" PARENT_SCOPE)
     else()
         set(${level} "-O0" PARENT_SCOPE)
@@ -123,8 +123,7 @@ list(APPEND IDF_COMPILE_OPTIONS
 # idf kernel components that
 list(APPEND IDF_KERNEL_COMPONENTS
     "esp_system"
-    "esp_common" "soc"
-    "freertos"
+    "esp_common" "soc" "freertos"
     "esptool_py"
 )
 
@@ -148,7 +147,7 @@ include(${IDF_CMAKE_PATH}/kconfig.cmake)
 include(${IDF_CMAKE_PATH}/ldgen.cmake)
 
 # cmake last build idf version
-if (IDF_BUILD_VERSION AND NOT ($ENV{IDF_VERSION} STREQUAL "${IDF_BUILD_VERSION}"))
+if(IDF_BUILD_VERSION AND NOT($ENV{IDF_VERSION} STREQUAL "${IDF_BUILD_VERSION}"))
     message("❌ IDF_VERSION was changed since last build")
     message("✔️ this is not a fatal, but recommended clear cmake cache\n\n")
 else()
@@ -157,7 +156,7 @@ endif()
 list(APPEND IDF_COMPILE_DEFINITIONS "IDF_VER=\"$ENV{IDF_VERSION}\"")
 
 # cmake caching python fullpath
-if (NOT PYTHON_ENV)
+if(NOT PYTHON_ENV)
     # search python: narrow to idfx.x_* should be only 1 result
     file(GLOB PYTHON_ENV "${IDF_ENV_PATH}/python_env/idf${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}_*")
     set(PYTHON_ENV "${PYTHON_ENV}/bin/python" CACHE STRING "esp-idf python path")
@@ -170,9 +169,9 @@ endfunction()
 #############################################################################
 # esp-idf git submodules
 #############################################################################
-function (__idf_git_submodule_check_once)
+function(__idf_git_submodule_check_once)
     # get git submodules from ${IDF_PATH} if submodules was not initialized
-    if (NOT GIT_SUBMODULES_CHECKED)
+    if(NOT GIT_SUBMODULES_CHECKED)
     set(GIT_SUBMODULES_CHECKED true CACHE BOOL "esp-idf git submodule checked")
         message("💡 Checking ESP-IDF components submodules")
         include(${IDF_CMAKE_PATH}/git_submodules.cmake)
@@ -303,7 +302,7 @@ function(__build_init)
     idf_build_set_property(__PREFIX esp-idf)
 
     # cmake cache all directory of ${IDF_PATH}/components
-    if (NOT IDF_COMPONENTS_CACHE)
+    if(NOT IDF_COMPONENTS_CACHE)
         set(IDF_COMPONENTS_CACHE "${IDF_PATH}/components" CACHE STRING "")
         file(GLOB dirs "${IDF_PATH}/components/*")
 
@@ -329,7 +328,7 @@ function(idf_target_include_directories component_target type dirs)
             message(FATAL_ERROR "Include directory '${dir}' is not a directory.")
         endif()
 
-        if (${type} STREQUAL "PUBLIC" AND component_name IN_LIST IDF_KERNEL_COMPONENTS)
+        if(${type} STREQUAL "PUBLIC" AND component_name IN_LIST IDF_KERNEL_COMPONENTS)
             idf_build_set_property(INCLUDE_DIRECTORIES ${dir} APPEND)
         else()
             target_include_directories(${component_target} ${type} ${dir})
@@ -343,13 +342,13 @@ endfunction()
 function(idf_component_add name_or_dir) # optional: prefix
     list(POP_FRONT ARGN prefix)
 
-    if (IS_DIRECTORY ${name_or_dir} OR IS_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/${name_or_dir}")
+    if(IS_DIRECTORY ${name_or_dir} OR IS_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/${name_or_dir}")
         get_filename_component(component_dir ${name_or_dir} ABSOLUTE BASE_DIR ${CMAKE_CURRENT_LIST_DIR})
         get_filename_component(__parent_dir ${component_dir} DIRECTORY)
         get_filename_component(component_name ${component_dir} NAME)
 
         set(idf_managed_component 0)
-    elseif (IS_DIRECTORY "${ESP32_PATH}/${name_or_dir}")
+    elseif(IS_DIRECTORY "${ESP32_PATH}/${name_or_dir}")
         set(component_dir "${ESP32_PATH}/${name_or_dir}")
         set(__parent_dir "${ESP32_PATH}")
         set(component_name ${name_or_dir})
@@ -363,12 +362,12 @@ function(idf_component_add name_or_dir) # optional: prefix
         set(idf_managed_component 1)
     endif()
 
-    if (${__parent_dir} STREQUAL "${IDF_PATH}/components")
-        if (NOT prefix)
+    if(${__parent_dir} STREQUAL "${IDF_PATH}/components")
+        if(NOT prefix)
             idf_build_get_property(prefix __PREFIX)
         endif()
     else()
-        if (NOT prefix)
+        if(NOT prefix)
             set(prefix "esp32")
         endif()
     endif()
@@ -404,11 +403,11 @@ function(idf_component_add name_or_dir) # optional: prefix
     __component_set_property(${component_target} IDF_MANAGED_COMPONENT ${idf_managed_component})
 
     # Set Kconfig related properties on the component
-    function (__kconfig_add_component component_dir)
+    function(__kconfig_add_component component_dir)
         file(GLOB kconfig "${component_dir}/Kconfig")
         file(GLOB kconfig_projbuild "${component_dir}/Kconfig.projbuild")
         list(APPEND kconfig ${kconfig_projbuild})
-        if (${component_name} IN_LIST IDF_KERNEL_COMPONENTS)
+        if(${component_name} IN_LIST IDF_KERNEL_COMPONENTS)
             __component_set_property(${component_target} KCONFIG_PROJBUILD "${kconfig}")
         else()
             __component_set_property(${component_target} KCONFIG "${kconfig}")
@@ -437,42 +436,41 @@ macro(idf_component_register)
     )
     cmake_parse_arguments(_ "WHOLE_ARCHIVE" "${single_value}" "${multi_value}" ${ARGN})
 
+    if(__PRIV_REQUIRES)
+        list(APPEND __REQUIRES "${__PRIV_REQUIRES}")
+        unset(__PRIV_REQUIRES)
+        # message("${YELLOW}DEPRECATED PRIV_REQUIRES, to remove cross-chaos we add all dependendcy PRIVATEly")
+    endif()
+
     if(NOT __idf_component_context)
         get_property(depends GLOBAL PROPERTY DEPENDED_COMPONENTS)
-        foreach(iter ${__REQUIRES} ${__PRIV_REQUIRES})
-            if (NOT iter IN_LIST OBSOLETED_COMPONENTS)
-                if (NOT iter IN_LIST depends)
+        foreach(iter ${__REQUIRES})
+            if(NOT iter IN_LIST OBSOLETED_COMPONENTS)
+                if(NOT iter IN_LIST depends)
                     set_property(GLOBAL PROPERTY DEPENDED_COMPONENTS ${iter} APPEND)
                 endif()
             else()
                 list(APPEND obsoleted_components ${iter})
                 list(REMOVE_ITEM __REQUIRES ${iter})
-                list(REMOVE_ITEM __PRIV_REQUIRES ${iter})
             endif()
         endforeach()
 
         __component_set_property(${component_target} REQUIRES "${__REQUIRES}")
-        __component_set_property(${component_target} PRIV_REQUIRES "${__PRIV_REQUIRES}")
         __component_set_property(${component_target} KCONFIG "${__KCONFIG}" APPEND)
         __component_set_property(${component_target} KCONFIG_PROJBUILD "${__KCONFIG_PROJBUILD}" APPEND)
         __component_set_property(${component_target} WHOLE_ARCHIVE ${__WHOLE_ARCHIVE})
 
         __component_get_property(idf_managed_component ${component_target} IDF_MANAGED_COMPONENT)
-        if (idf_managed_component)
+        if(idf_managed_component)
             message(STATUS "Add Component: ${MAGENTA}${prefix}::${component_name}")
         else()
             message(STATUS "Add Component: ${prefix}::${component_name}")
         endif()
 
         message("\tcomponent dir: ${component_dir}")
-        if (__REQUIRES OR __PRIV_REQUIRES)
-            if (__REQUIRES)
-                message("\tdepends: ${CYAN}${__REQUIRES}")
-            endif()
-            if (__PRIV_REQUIRES)
-                message("\tprivate depends: ${CYAN}${__PRIV_REQUIRES}")
-            endif()
-            if (obsoleted_components)
+        if(__REQUIRES)
+            message("\tdepends: ${CYAN}${__REQUIRES}")
+            if(obsoleted_components)
                 message("\t❌ obsoleted depends: ${RED}${obsoleted_components}")
             endif()
         else()
@@ -488,9 +486,6 @@ endmacro()
 
 function(__inherited_component_register component_target)
     __component_get_property(component_lib ${component_target} COMPONENT_LIB)
-
-    # Add component manifest to the list of dependencies
-    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${component_dir}/idf_component.yml")
 
     if(__SRC_DIRS)
         foreach(dir ${__SRC_DIRS})
@@ -521,15 +516,6 @@ function(__inherited_component_register component_target)
     endif()
     list(REMOVE_DUPLICATES sources)
 
-    idf_build_get_property(component_targets __COMPONENT_TARGETS)
-
-    macro(__component_set_dependencies reqs type)
-        foreach(req ${reqs})
-            idf_component_get_property(req_lib ${req} COMPONENT_LIB)
-            target_link_libraries(${component_lib} ${type} ${req_lib})
-        endforeach()
-    endmacro()
-
     if(sources OR __EMBED_FILES OR __EMBED_TXTFILES)
         add_library(${component_lib} STATIC ${sources})
         set_target_properties(${component_lib} PROPERTIES OUTPUT_NAME ${component_name} LINKER_LANGUAGE C)
@@ -538,7 +524,7 @@ function(__inherited_component_register component_target)
         target_compile_options(${component_lib} PRIVATE ${optimize})
 
         __component_get_property(idf_managed_component ${component_target} IDF_MANAGED_COMPONENT)
-        if (idf_managed_component)
+        if(idf_managed_component)
             target_compile_options(${component_lib} PRIVATE ${IDF_COMPILE_OPTIONS})
         endif()
 
@@ -558,34 +544,29 @@ function(__inherited_component_register component_target)
         list(APPEND reqs ${IDF_KERNEL_COMPONENTS})
             list(REMOVE_ITEM reqs ${component_name})
             list(REMOVE_DUPLICATES reqs)
-        __component_set_dependencies("${reqs}" PUBLIC)
 
-        __component_get_property(priv_reqs ${component_target} PRIV_REQUIRES)
-        __component_set_dependencies("${priv_reqs}" PRIVATE)
+        foreach(req ${reqs})
+            idf_component_get_property(req_lib ${req} COMPONENT_LIB)
+            target_link_libraries(${component_lib} PRIVATE ${req_lib})
+        endforeach()
 
         __ldgen_add_component(${component_lib})
+
+        # Perform other component processing, such as embedding binaries and processing linker
+        # script fragments
+        foreach(file ${__EMBED_FILES})
+            target_add_binary_data(${component_lib} "${file}" "BINARY")
+        endforeach()
+
+        foreach(file ${__EMBED_TXTFILES})
+            target_add_binary_data(${component_lib} "${file}" "TEXT")
+        endforeach()
+
+        if(__LDFRAGMENTS)
+            __ldgen_add_fragment_files("${__LDFRAGMENTS}")
+        endif()
     else()
         add_library(${component_lib} INTERFACE)
-
-        idf_target_include_directories(${component_lib} INTERFACE "${__INCLUDE_DIRS}")
-
-        __component_get_property(reqs ${component_target} REQUIRES)
-        __component_set_dependencies("${reqs}" INTERFACE)
-    endif()
-
-
-    # Perform other component processing, such as embedding binaries and processing linker
-    # script fragments
-    foreach(file ${__EMBED_FILES})
-        target_add_binary_data(${component_lib} "${file}" "BINARY")
-    endforeach()
-
-    foreach(file ${__EMBED_TXTFILES})
-        target_add_binary_data(${component_lib} "${file}" "TEXT")
-    endforeach()
-
-    if(__LDFRAGMENTS)
-        __ldgen_add_fragment_files("${__LDFRAGMENTS}")
     endif()
 
     # as COMPONENT_LIB for compatibility.
@@ -603,7 +584,7 @@ function(idf_build)
     )
     cmake_parse_arguments(_ "" "" "${multi_value}" ${ARGN})
 
-    if (NOT TIME_T_SIZE)
+    if(NOT TIME_T_SIZE)
         include(CheckTypeSize)
         check_type_size("time_t" TIME_T_SIZE)
         if(NOT TIME_T_SIZE)
@@ -628,7 +609,7 @@ function(idf_build)
             idf_build_get_property(component_targets __COMPONENT_TARGETS)
             idf_get_component_target(req_target ${iter})
 
-            if (NOT req_target IN_LIST component_targets)
+            if(NOT req_target IN_LIST component_targets)
                 idf_component_add(${iter})
             endif()
         endforeach()
@@ -638,10 +619,10 @@ function(idf_build)
             list(POP_FRONT deps iter)
             set_property(GLOBAL PROPERTY DEPENDED_COMPONENTS ${deps})
 
-            if (iter)
+            if(iter)
                 idf_build_get_property(component_targets __COMPONENT_TARGETS)
                 idf_get_component_target(req_target ${iter})
-                if (NOT req_target IN_LIST component_targets)
+                if(NOT req_target IN_LIST component_targets)
                     idf_component_add(${iter})
                 endif()
             else()
@@ -723,7 +704,7 @@ function(idf_build)
             __component_get_property(component_name ${component_target} COMPONENT_NAME)
             __component_get_property(COMPONENT_DIR ${component_target} COMPONENT_DIR)
 
-            add_subdirectory(${COMPONENT_DIR} ${build_dir}/${prefix}/${component_name})
+            add_subdirectory(${COMPONENT_DIR} ${build_dir}/${component_name})
         endforeach()
     endmacro()
     __import_components()
