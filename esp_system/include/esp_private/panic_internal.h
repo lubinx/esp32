@@ -19,9 +19,6 @@
 
 #include "soc/soc_caps.h"
 
-#include "sdkconfig.h"
-
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -40,7 +37,8 @@ extern "C" {
     // Can be used to convey to the main logic what exception is being
     // dealt with to perform some actions, without knowing the underlying
     // architecture/chip-specific exception.
-    typedef enum {
+    typedef enum
+    {
         PANIC_EXCEPTION_DEBUG,
         PANIC_EXCEPTION_IWDT,
         PANIC_EXCEPTION_TWDT,
@@ -64,17 +62,11 @@ extern "C" {
 
     // Create own print functions, since printf might be broken, and can be silenced
     // when CONFIG_ESP_SYSTEM_PANIC_SILENT_REBOOT
-#if !CONFIG_ESP_SYSTEM_PANIC_SILENT_REBOOT
+
     void panic_print_char(char c);
     void panic_print_str(char const *str);
     void panic_print_dec(int d);
     void panic_print_hex(int h);
-#else
-#define panic_print_char(c)
-#define panic_print_str(str)
-#define panic_print_dec(d)
-#define panic_print_hex(h)
-#endif
 
     void __attribute__((noreturn)) panic_abort(char const *details);
 

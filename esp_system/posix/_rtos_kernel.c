@@ -16,7 +16,7 @@ struct KERNEL_context_t
     glist_t hdl_destroying_list;
 };
 static struct KERNEL_context_t KERNEL_context = {0};
-static struct KERNEL_hdl statical_hdl[(4096 - sizeof(struct KERNEL_context_t))  / sizeof(struct KERNEL_hdl)];
+static struct KERNEL_hdl statical_hdl[(4096 - sizeof(struct KERNEL_context_t))  / sizeof(struct KERNEL_hdl)] = {0};
 
 /***************************************************************************/
 /** constructor

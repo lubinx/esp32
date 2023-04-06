@@ -338,7 +338,7 @@ void panic_soc_fill_info(void *f, panic_info_t *info)
     }
     else if (frame->exccause == PANIC_RSN_CACHEERR)
     {
-        info->core = SOC_cache_err_core_id();
+        info->core = __cache_err_core_id();
     }
     else {}
 

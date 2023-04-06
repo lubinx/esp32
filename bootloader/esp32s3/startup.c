@@ -34,7 +34,7 @@ extern void rom_config_data_cache_mode(uint32_t cfg_cache_size, uint8_t cfg_cach
 /****************************************************************************
  *  @def
 *****************************************************************************/
-#define FLASH_READ_MMU_VADDR            (SOC_DROM_HIGH - MMU_PAGE_SIZE)
+#define FLASH_READ_MMU_VADDR            (SOC_DROM_HIGH - SOC_MMU_PAGE_SIZE)
 
 #define MEMORY_REGION_TAG(ADDR)         (\
     (SOC_IRAM_HIGH >= ADDR && SOC_IRAM_LOW <= ADDR) ? "IRAM" :  \
@@ -307,10 +307,10 @@ static ssize_t FLASH_read(uintptr_t flash_location, void *buf, size_t bufsize)
         cache_hal_enable(CACHE_TYPE_DATA);
     }
 
-    off_t offset = flash_location & (MMU_PAGE_SIZE - 1);
+    off_t offset = flash_location & (SOC_MMU_PAGE_SIZE - 1);
     void *src = (void *)(FLASH_READ_MMU_VADDR + offset);
 
-    int bytes_remain = MMU_PAGE_SIZE - offset;
+    int bytes_remain = SOC_MMU_PAGE_SIZE - offset;
     bufsize = bufsize < (size_t)bytes_remain ? bufsize : (size_t)bytes_remain;
 
     memcpy(buf, src, bufsize);
@@ -319,12 +319,12 @@ static ssize_t FLASH_read(uintptr_t flash_location, void *buf, size_t bufsize)
 
 static void MAP_flash_segment(struct flash_segment_t *seg)
 {
-    unsigned offset = seg->location & (MMU_PAGE_SIZE - 1);
+    unsigned offset = seg->location & (SOC_MMU_PAGE_SIZE - 1);
 
-    seg->aligned_vaddr = seg->hdr.load_addr & ~((uintptr_t)MMU_PAGE_SIZE - 1);
-    seg->aligned_size = (seg->hdr.data_len + offset + MMU_PAGE_SIZE - 1) & ~((uintptr_t)MMU_PAGE_SIZE - 1);
+    seg->aligned_vaddr = seg->hdr.load_addr & ~((uintptr_t)SOC_MMU_PAGE_SIZE - 1);
+    seg->aligned_size = (seg->hdr.data_len + offset + SOC_MMU_PAGE_SIZE - 1) & ~((uintptr_t)SOC_MMU_PAGE_SIZE - 1);
 
-    int pages = (int)seg->aligned_size / MMU_PAGE_SIZE;
+    int pages = (int)seg->aligned_size / SOC_MMU_PAGE_SIZE;
 
     uint32_t entry_id = mmu_ll_get_entry_id(seg->aligned_vaddr);
     uint32_t paddr = mmu_ll_format_paddr(seg->location, 0);
