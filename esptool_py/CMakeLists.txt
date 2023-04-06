@@ -24,7 +24,7 @@ set(esptool_elf2image_args
 
 add_custom_command(OUTPUT "project_elf2bin"
     COMMAND ${ESPTOOLPY} elf2image ${esptool_elf2image_args}
-        -o "${CMAKE_BINARY_DIR}/${PROJECT_NAME}.bin" "${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}.elf"
+        -o "${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}.bin" "${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}.elf"
     DEPENDS
         "${CMAKE_PROJECT_NAME}"
     VERBATIM

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 include(./idf.cmake)
 
-project(smartcuckoo)
+project(kernel)
 
 idf_build(
     COMPONENTS
