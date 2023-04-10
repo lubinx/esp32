@@ -9,8 +9,6 @@
 #include "clk-tree.h"
 #include "gpio.h"
 #include "uart.h"
-#include "i2c.h"
-#include "panel.h"
 
 #include "esp_log.h"
 #include "esp_heap_caps.h"
@@ -78,25 +76,8 @@ int main(void)
     pthread_create(&id, NULL, blink_thread, NULL);
     pthread_create(&id, NULL, sema_thread, NULL);
 
-    PANEL_init();
-
     while (1)
     {
-        /*
-        uint8_t cmd = 0xFD;
-        if (sizeof(cmd) == write(i2c_fd, &cmd, sizeof(cmd)))
-        {
-            msleep(1000);
-
-            uint8_t bytes[2];
-            if (sizeof(bytes) == read(i2c_fd, &bytes, sizeof(bytes)))
-            {
-                int d1 = bytes[0] << 8 | bytes[1];
-                int tmpr = (d1 * 1750 / 65535 - 450);
-                printf("raw: %x, tmpr: %d\n", d1, tmpr);
-            }
-        }
-        */
 
         msleep(1000);
     }

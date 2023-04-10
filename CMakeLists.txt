@@ -10,5 +10,4 @@ idf_build(
         # "lwip"
     SRCS
         "main.cpp"
-        "panel_c.c"
 )
