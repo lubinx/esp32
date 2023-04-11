@@ -69,7 +69,7 @@ list(APPEND COMPILE_OPTIONS
     "-Wshadow"
     "-Wwrite-strings"
     "-Wall"
-    # "-Wextra"
+    "-Wextra"
     "-Wconversion"
     "-Wformat"
     "-Wunused"
@@ -117,7 +117,7 @@ list(APPEND IDF_COMPILE_OPTIONS
     "-Wno-sign-conversion"
     # "-fno-jump-tables"
     # "-fno-tree-switch-conversion"
-    "$<$<COMPILE_LANGUAGE:C>:-Wno-old-style-declaration>"
+    # "$<$<COMPILE_LANGUAGE:C>:-Wno-old-style-declaration>"
 )
 
 # idf kernel components that

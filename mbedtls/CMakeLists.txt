@@ -1,26 +1,24 @@
-idf_build_get_property(idf_target IDF_TARGET)
 idf_build_get_property(python PYTHON)
 
-if(NOT ${IDF_TARGET} STREQUAL "linux")
-set(priv_requires soc esp_hw_support)
-
-if(NOT BOOTLOADER_BUILD)
-    list(APPEND priv_requires esp_pm)
-endif()
-endif()
-
 set(mbedtls_srcs "")
-set(mbedtls_include_dirs "port/include" "mbedtls/include" "mbedtls/library")
 
-if(CONFIG_MBEDTLS_CERTIFICATE_BUNDLE)
-    list(APPEND mbedtls_srcs "esp_crt_bundle/esp_crt_bundle.c")
-    list(APPEND mbedtls_include_dirs "esp_crt_bundle/include")
-endif()
+# if(CONFIG_MBEDTLS_CERTIFICATE_BUNDLE)
+#     list(APPEND mbedtls_srcs "esp_crt_bundle/esp_crt_bundle.c")
+#     list(APPEND mbedtls_include_dirs )
+# endif()
 
-idf_component_register(SRCS "${mbedtls_srcs}"
-    INCLUDE_DIRS "${mbedtls_include_dirs}"
-    PRIV_REQUIRES "${priv_requires}"
-    )
+idf_component_register(
+    SRCS 
+        "${mbedtls_srcs}"
+    INCLUDE_DIRS 
+        "port/include" 
+        "mbedtls/include" 
+        "mbedtls/library"
+        # "esp_crt_bundle/include"
+    PRIV_REQUIRES 
+        "soc"
+        # "esp_hw_support"
+)
 
 # Determine the type of mbedtls component library
 if(mbedtls_srcs STREQUAL "")
@@ -31,62 +29,66 @@ else()
 endif()
 
 
-if(CONFIG_MBEDTLS_CERTIFICATE_BUNDLE)
-    set(bundle_name "x509_crt_bundle")
-    set(DEFAULT_CRT_DIR ${COMPONENT_DIR}/esp_crt_bundle)
+# if(CONFIG_MBEDTLS_CERTIFICATE_BUNDLE)
+#     set(bundle_name "x509_crt_bundle")
+#     set(DEFAULT_CRT_DIR ${COMPONENT_DIR}/esp_crt_bundle)
 
-    # Generate custom certificate bundle using the generate_cert_bundle utility
-    set(GENERATE_CERT_BUNDLEPY ${python} ${COMPONENT_DIR}/esp_crt_bundle/gen_crt_bundle.py)
+#     # Generate custom certificate bundle using the generate_cert_bundle utility
+#     set(GENERATE_CERT_BUNDLEPY ${python} ${COMPONENT_DIR}/esp_crt_bundle/gen_crt_bundle.py)
 
-    if(CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_DEFAULT_FULL)
-        list(APPEND crt_paths ${DEFAULT_CRT_DIR}/cacrt_all.pem ${DEFAULT_CRT_DIR}/cacrt_local.pem)
-    elseif(CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_DEFAULT_CMN)
-        list(APPEND crt_paths ${DEFAULT_CRT_DIR}/cacrt_all.pem ${DEFAULT_CRT_DIR}/cacrt_local.pem)
-        list(APPEND args --filter ${DEFAULT_CRT_DIR}/cmn_crt_authorities.csv)
-    endif()
+#     if(CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_DEFAULT_FULL)
+#         list(APPEND crt_paths ${DEFAULT_CRT_DIR}/cacrt_all.pem ${DEFAULT_CRT_DIR}/cacrt_local.pem)
+#     elseif(CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_DEFAULT_CMN)
+#         list(APPEND crt_paths ${DEFAULT_CRT_DIR}/cacrt_all.pem ${DEFAULT_CRT_DIR}/cacrt_local.pem)
+#         list(APPEND args --filter ${DEFAULT_CRT_DIR}/cmn_crt_authorities.csv)
+#     endif()
 
-    if(CONFIG_MBEDTLS_CUSTOM_CERTIFICATE_BUNDLE)
-        get_filename_component(custom_bundle_path
-        ${CONFIG_MBEDTLS_CUSTOM_CERTIFICATE_BUNDLE_PATH} ABSOLUTE BASE_DIR "${project_dir}")
-        list(APPEND crt_paths ${custom_bundle_path})
+#     if(CONFIG_MBEDTLS_CUSTOM_CERTIFICATE_BUNDLE)
+#         get_filename_component(custom_bundle_path
+#         ${CONFIG_MBEDTLS_CUSTOM_CERTIFICATE_BUNDLE_PATH} ABSOLUTE BASE_DIR "${project_dir}")
+#         list(APPEND crt_paths ${custom_bundle_path})
 
-    endif()
-    list(APPEND args --input ${crt_paths} -q)
+#     endif()
+#     list(APPEND args --input ${crt_paths} -q)
 
-    get_filename_component(crt_bundle
-        ${bundle_name}
-        ABSOLUTE BASE_DIR "${CMAKE_CURRENT_BINARY_DIR}")
+#     get_filename_component(crt_bundle
+#         ${bundle_name}
+#         ABSOLUTE BASE_DIR "${CMAKE_CURRENT_BINARY_DIR}")
 
-    # Generate bundle according to config
-    add_custom_command(OUTPUT ${crt_bundle}
-        COMMAND ${GENERATE_CERT_BUNDLEPY} ${args}
-        DEPENDS ${custom_bundle_path}
-        VERBATIM)
+#     # Generate bundle according to config
+#     add_custom_command(OUTPUT ${crt_bundle}
+#         COMMAND ${GENERATE_CERT_BUNDLEPY} ${args}
+#         DEPENDS ${custom_bundle_path}
+#         VERBATIM)
 
-    add_custom_target(custom_bundle DEPENDS ${cert_bundle})
-    add_dependencies(${COMPONENT_LIB} custom_bundle)
+#     add_custom_target(custom_bundle DEPENDS ${cert_bundle})
+#     add_dependencies(${COMPONENT_LIB} custom_bundle)
 
 
-    target_add_binary_data(${COMPONENT_LIB} ${crt_bundle} BINARY)
-    set_property(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-        APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES
-        "${crt_bundle}")
-endif()
+#     target_add_binary_data(${COMPONENT_LIB} ${crt_bundle} BINARY)
+#     set_property(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+#         APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES
+#         "${crt_bundle}")
+# endif()
 
 
 # Only build mbedtls libraries
 set(ENABLE_TESTING CACHE BOOL OFF)
 set(ENABLE_PROGRAMS CACHE BOOL OFF)
-
 # Use pre-generated source files in mbedtls repository
 set(GEN_FILES CACHE BOOL OFF)
-
 # Make sure mbedtls finds the same Python interpreter as IDF uses
 idf_build_get_property(python PYTHON)
 set(Python3_EXECUTABLE ${python})
 
+# mbedtls has lots of conversion error
+add_compile_options("-Wno-conversion")
+# mbedtls introduce global includes
+idf_build_get_property(include_directories INCLUDE_DIRECTORIES GENERATOR_EXPRESSION)
+include_directories("${include_directories}")
 # Needed to for include_next includes to work from within mbedtls
 include_directories("${COMPONENT_DIR}/port/include")
+
 
 # Import mbedtls library targets
 add_subdirectory(mbedtls)
@@ -97,43 +99,39 @@ list(REMOVE_ITEM src_tls net_sockets.c)
 set_property(TARGET mbedtls PROPERTY SOURCES ${src_tls})
 
 if(CONFIG_MBEDTLS_SSL_PROTO_GMTSSL1_1)
-get_target_property(src_tls mbedtls SOURCES)
-list(REMOVE_ITEM src_tls ssl_ciphersuites.c ssl_cli.c ssl_tls.c)
-set_property(TARGET mbedtls PROPERTY SOURCES ${src_tls})
+    get_target_property(src_tls mbedtls SOURCES)
+    list(REMOVE_ITEM src_tls ssl_ciphersuites.c ssl_cli.c ssl_tls.c)
+    set_property(TARGET mbedtls PROPERTY SOURCES ${src_tls})
 
-get_target_property(src_crypto mbedcrypto SOURCES)
-list(REMOVE_ITEM src_crypto cipher_wrap.c ecdsa.c ecp.c ecp_curves.c oid.c pk_wrap.c)
-set_property(TARGET mbedcrypto PROPERTY SOURCES ${src_crypto})
+    get_target_property(src_crypto mbedcrypto SOURCES)
+    list(REMOVE_ITEM src_crypto cipher_wrap.c ecdsa.c ecp.c ecp_curves.c oid.c pk_wrap.c)
+    set_property(TARGET mbedcrypto PROPERTY SOURCES ${src_crypto})
 
-get_target_property(src_x509 mbedx509 SOURCES)
-list(REMOVE_ITEM src_x509 x509_crt.c)
-set_property(TARGET mbedx509 PROPERTY SOURCES ${src_x509})
+    get_target_property(src_x509 mbedx509 SOURCES)
+    list(REMOVE_ITEM src_x509 x509_crt.c)
+    set_property(TARGET mbedx509 PROPERTY SOURCES ${src_x509})
 endif()
 
 set(mbedtls_targets mbedtls mbedcrypto mbedx509)
-
 set(mbedtls_target_sources "${COMPONENT_DIR}/port/mbedtls_debug.c")
 
-if(CONFIG_MBEDTLS_DYNAMIC_BUFFER)
-set(mbedtls_target_sources ${mbedtls_target_sources}
-                           "${COMPONENT_DIR}/port/dynamic/esp_mbedtls_dynamic_impl.c"
-                           "${COMPONENT_DIR}/port/dynamic/esp_ssl_cli.c"
-                           "${COMPONENT_DIR}/port/dynamic/esp_ssl_srv.c"
-                           "${COMPONENT_DIR}/port/dynamic/esp_ssl_tls.c")
-endif()
-
-if(${IDF_TARGET} STREQUAL "linux")
-set(mbedtls_target_sources ${mbedtls_target_sources} "${COMPONENT_DIR}/port/net_sockets.c")
-endif()
+# if(CONFIG_MBEDTLS_DYNAMIC_BUFFER)
+#     set(mbedtls_target_sources 
+#         ${mbedtls_target_sources}
+#         "${COMPONENT_DIR}/port/dynamic/esp_mbedtls_dynamic_impl.c"
+#         "${COMPONENT_DIR}/port/dynamic/esp_ssl_cli.c"
+#         "${COMPONENT_DIR}/port/dynamic/esp_ssl_srv.c"
+#         "${COMPONENT_DIR}/port/dynamic/esp_ssl_tls.c")
+# endif()
 
 # net_sockets.c should only be compiled if BSD socket functions are available.
 # Do this by checking if lwip component is included into the build.
-idf_build_get_property(build_components BUILD_COMPONENTS)
-if(lwip IN_LIST build_components)
-    list(APPEND mbedtls_target_sources "${COMPONENT_DIR}/port/net_sockets.c")
-    idf_component_get_property(lwip_lib lwip COMPONENT_LIB)
-    target_link_libraries(${COMPONENT_LIB} ${linkage_type} ${lwip_lib})
-endif()
+# idf_build_get_property(build_components BUILD_COMPONENTS)
+# if(lwip IN_LIST build_components)
+#     list(APPEND mbedtls_target_sources "${COMPONENT_DIR}/port/net_sockets.c")
+#     idf_component_get_property(lwip_lib lwip COMPONENT_LIB)
+#     target_link_libraries(${COMPONENT_LIB} ${linkage_type} ${lwip_lib})
+# endif()
 
 # Add port files to mbedtls targets
 target_sources(mbedtls PRIVATE ${mbedtls_target_sources})
@@ -183,9 +181,10 @@ if(AES_PERIPHERAL_TYPE STREQUAL "dma")
 endif()
 
 
-target_sources(mbedcrypto PRIVATE "${COMPONENT_DIR}/port/esp_hardware.c"
-                                  "${COMPONENT_DIR}/port/esp_mem.c"
-                                  "${COMPONENT_DIR}/port/esp_timing.c"
+target_sources(mbedcrypto PRIVATE 
+    "${COMPONENT_DIR}/port/esp_hardware.c"
+    "${COMPONENT_DIR}/port/esp_mem.c"
+    "${COMPONENT_DIR}/port/esp_timing.c"
 )
 
 if(CONFIG_SOC_AES_SUPPORTED)
@@ -213,43 +212,43 @@ endif()
 #
 # The other port-specific files don't override internal mbedTLS functions, they just add new functions.
 
-if(CONFIG_MBEDTLS_HARDWARE_MPI)
-    target_sources(mbedcrypto PRIVATE  "${COMPONENT_DIR}/port/esp_bignum.c"
-                                       "${COMPONENT_DIR}/port/${idf_target}/bignum.c"
-    )
-endif()
+# if(CONFIG_MBEDTLS_HARDWARE_MPI)
+#     target_sources(mbedcrypto PRIVATE  "${COMPONENT_DIR}/port/esp_bignum.c"
+#                                        "${COMPONENT_DIR}/port/${IDF_TARGET}/bignum.c"
+#     )
+# endif()
 
-if(CONFIG_MBEDTLS_HARDWARE_SHA)
-    target_sources(mbedcrypto PRIVATE  "${COMPONENT_DIR}/port/sha/${SHA_PERIPHERAL_TYPE}/esp_sha1.c"
-                                       "${COMPONENT_DIR}/port/sha/${SHA_PERIPHERAL_TYPE}/esp_sha256.c"
-                                       "${COMPONENT_DIR}/port/sha/${SHA_PERIPHERAL_TYPE}/esp_sha512.c"
-    )
-endif()
+# if(CONFIG_MBEDTLS_HARDWARE_SHA)
+#     target_sources(mbedcrypto PRIVATE  "${COMPONENT_DIR}/port/sha/${SHA_PERIPHERAL_TYPE}/esp_sha1.c"
+#                                        "${COMPONENT_DIR}/port/sha/${SHA_PERIPHERAL_TYPE}/esp_sha256.c"
+#                                        "${COMPONENT_DIR}/port/sha/${SHA_PERIPHERAL_TYPE}/esp_sha512.c"
+#     )
+# endif()
 
-if(CONFIG_MBEDTLS_HARDWARE_GCM OR (NOT CONFIG_SOC_AES_SUPPORT_GCM AND CONFIG_MBEDTLS_HARDWARE_AES))
-    target_sources(mbedcrypto PRIVATE  "${COMPONENT_DIR}/port/aes/esp_aes_gcm.c")
-endif()
+# if(CONFIG_MBEDTLS_HARDWARE_GCM OR (NOT CONFIG_SOC_AES_SUPPORT_GCM AND CONFIG_MBEDTLS_HARDWARE_AES))
+#     target_sources(mbedcrypto PRIVATE  "${COMPONENT_DIR}/port/aes/esp_aes_gcm.c")
+# endif()
 
-if(CONFIG_MBEDTLS_HARDWARE_ECC)
-    target_sources(mbedcrypto PRIVATE  "${COMPONENT_DIR}/port/ecc/esp_ecc.c"
-                                       "${COMPONENT_DIR}/port/ecc/ecc_alt.c")
-endif()
+# if(CONFIG_MBEDTLS_HARDWARE_ECC)
+#     target_sources(mbedcrypto PRIVATE  "${COMPONENT_DIR}/port/ecc/esp_ecc.c"
+#                                        "${COMPONENT_DIR}/port/ecc/ecc_alt.c")
+# endif()
 
-if(CONFIG_MBEDTLS_HARDWARE_ECDSA_SIGN OR CONFIG_MBEDTLS_HARDWARE_ECDSA_VERIFY)
-    target_sources(mbedcrypto PRIVATE  "${COMPONENT_DIR}/port/ecdsa/ecdsa_alt.c")
+# if(CONFIG_MBEDTLS_HARDWARE_ECDSA_SIGN OR CONFIG_MBEDTLS_HARDWARE_ECDSA_VERIFY)
+#     target_sources(mbedcrypto PRIVATE  "${COMPONENT_DIR}/port/ecdsa/ecdsa_alt.c")
 
-    if(CONFIG_MBEDTLS_HARDWARE_ECDSA_SIGN)
-        target_link_libraries(${COMPONENT_LIB} INTERFACE "-Wl,--wrap=mbedtls_ecdsa_sign")
-    endif()
+#     if(CONFIG_MBEDTLS_HARDWARE_ECDSA_SIGN)
+#         target_link_libraries(${COMPONENT_LIB} INTERFACE "-Wl,--wrap=mbedtls_ecdsa_sign")
+#     endif()
 
-    if(CONFIG_MBEDTLS_HARDWARE_ECDSA_VERIFY)
-        target_link_libraries(${COMPONENT_LIB} INTERFACE "-Wl,--wrap=mbedtls_ecdsa_verify")
-    endif()
-endif()
+#     if(CONFIG_MBEDTLS_HARDWARE_ECDSA_VERIFY)
+#         target_link_libraries(${COMPONENT_LIB} INTERFACE "-Wl,--wrap=mbedtls_ecdsa_verify")
+#     endif()
+# endif()
 
-if(CONFIG_MBEDTLS_ROM_MD5)
-    target_sources(mbedcrypto PRIVATE  "${COMPONENT_DIR}/port/md/esp_md.c")
-endif()
+# if(CONFIG_MBEDTLS_ROM_MD5)
+#     target_sources(mbedcrypto PRIVATE  "${COMPONENT_DIR}/port/md/esp_md.c")
+# endif()
 
 foreach(target ${mbedtls_targets})
     target_compile_definitions(${target} PUBLIC -DMBEDTLS_CONFIG_FILE="mbedtls/esp_config.h")
@@ -275,13 +274,13 @@ endif()
 
 set_property(TARGET mbedcrypto APPEND PROPERTY LINK_INTERFACE_LIBRARIES mbedtls)
 
-if(CONFIG_PM_ENABLE)
-    target_link_libraries(mbedcrypto PRIVATE idf::esp_pm)
-endif()
+# if(CONFIG_PM_ENABLE)
+#     target_link_libraries(mbedcrypto PRIVATE idf::esp_pm)
+# endif()
 
-if(CONFIG_MBEDTLS_HARDWARE_ECDSA_SIGN OR CONFIG_MBEDTLS_HARDWARE_ECDSA_VERIFY)
-    target_link_libraries(mbedcrypto PRIVATE idf::efuse)
-endif()
+# if(CONFIG_MBEDTLS_HARDWARE_ECDSA_SIGN OR CONFIG_MBEDTLS_HARDWARE_ECDSA_VERIFY)
+#     target_link_libraries(mbedcrypto PRIVATE idf::efuse)
+# endif()
 
 target_link_libraries(${COMPONENT_LIB} ${linkage_type} ${mbedtls_targets})
 
@@ -291,6 +290,6 @@ if(CONFIG_ESP_TLS_USE_DS_PERIPHERAL)
 endif()
 
 # Link esp-cryptoauthlib to mbedtls
-if(CONFIG_ATCA_MBEDTLS_ECDSA)
-    idf_component_optional_requires(PRIVATE espressif__esp-cryptoauthlib esp-cryptoauthlib)
-endif()
+# if(CONFIG_ATCA_MBEDTLS_ECDSA)
+#     idf_component_optional_requires(PRIVATE espressif__esp-cryptoauthlib esp-cryptoauthlib)
+# endif()
