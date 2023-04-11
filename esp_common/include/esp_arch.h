@@ -13,7 +13,7 @@
 #endif
 
 static inline
-    bool __intr_nb_is_handled(unsigned intr_nb)
+    bool __intr_nb_has_handler(unsigned intr_nb)
     {
     #ifdef __XTENSA__
         return xt_int_has_handler(intr_nb, __get_CORE_ID());

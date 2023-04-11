@@ -20,7 +20,6 @@
 #define __PTHREAD_H                     1
 
 #include <features.h>
-
 #include <sys/types.h>
 
 #ifndef __GCC__

@@ -13,12 +13,11 @@ int pthread_create(pthread_t *thread, pthread_attr_t const *attr, pthread_routin
 {
     void *stack = attr ? attr->stack : NULL;
     size_t stack_size = attr ? attr->stack_size : THREAD_DEFAULT_STACK_SIZE;
-    uint8_t priority = attr ? (uint8_t)attr->priority : THREAD_DEF_PRIORITY;
-    unsigned affinity = attr ? attr->affinity : THREAD_CORE_NO_AFFINITY;
+    uint8_t priority = attr ? attr->priority : THREAD_DEFAULT_PRIORITY;
+    unsigned affinity = attr ? attr->affinity : THREAD_NO_CORE_AFFINITY;
 
     *thread = (void *)thread_create_at_core(routine, arg, priority,
-        stack, stack_size,
-        PTHREAD_AFFINITY_NO_AFFINITY == affinity ? THREAD_CORE_NO_AFFINITY : affinity
+        stack, stack_size, affinity
     );
 
     if (*thread)
@@ -73,9 +72,10 @@ int pthread_setcanceltype(int type, int *old_type)
 int pthread_attr_init(pthread_attr_t *attr)
 {
     memset(attr, 0, sizeof(*attr));
-
     attr->detachstate = PTHREAD_CREATE_JOINABLE;
-    attr->priority = THREAD_DEF_PRIORITY;
+
+    attr->affinity = THREAD_NO_CORE_AFFINITY;
+    attr->priority = THREAD_DEFAULT_PRIORITY;
     attr->stack_size = THREAD_DEFAULT_STACK_SIZE;
     return 0;
 }
@@ -111,6 +111,19 @@ int pthread_attr_setstacksize(pthread_attr_t *attr, size_t stacksize)
     return 0;
 }
 
+int pthread_attr_getaffinity(pthread_attr_t const *restrict attr, unsigned *restrict affinity)
+{
+    *affinity = (THREAD_NO_CORE_AFFINITY == attr->affinity ? PTHREAD_AFFINITY_NO_AFFINITY : attr->affinity);
+    return 0;
+}
+
+int pthread_attr_setaffinity(pthread_attr_t *attr, unsigned affinity)
+{
+    attr->affinity = (PTHREAD_AFFINITY_NO_AFFINITY == affinity ? THREAD_NO_CORE_AFFINITY : affinity);
+    return 0;
+}
+
+
 int pthread_attr_getdetachstate(pthread_attr_t const *attr, int *detachstate)
 {
     *detachstate = attr->detachstate;
@@ -119,7 +132,7 @@ int pthread_attr_getdetachstate(pthread_attr_t const *attr, int *detachstate)
 
 int pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate)
 {
-    attr->detachstate = detachstate;
+    attr->detachstate = (uint8_t)detachstate;
     return 0;
 }
 
@@ -345,20 +358,5 @@ int pthread_mutexattr_gettype(pthread_mutexattr_t const *restrict attr, int *res
 int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int type)
 {
     attr->type = type;
-    return 0;
-}
-
-/***************************************************************************
- *  @implements: pthread affinity, freertos
- ***************************************************************************/
-int pthread_attr_getaffinity(pthread_attr_t const *restrict attr, unsigned *restrict affinity)
-{
-    *affinity = attr->affinity;
-    return 0;
-}
-
-int pthread_attr_setaffinity(pthread_attr_t *attr, unsigned affinity)
-{
-    attr->affinity = affinity;
     return 0;
 }

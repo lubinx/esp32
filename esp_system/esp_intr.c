@@ -288,7 +288,7 @@ static bool is_vect_desc_usable(vector_desc_t *vd, int flags, int cpu, int force
             ALCHLOG("...Unusable: int is shared, we need non-shared.");
             return false;
         }
-    } else if (__intr_nb_is_handled(x)) {
+    } else if (__intr_nb_has_handler(x)) {
         //Check if interrupt already is allocated by __intr_nb_set_handler
         ALCHLOG("....Unusable: already allocated");
         return false;

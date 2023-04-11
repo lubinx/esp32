@@ -91,19 +91,15 @@ void __rtos_bootstrap(void)
     static uintptr_t __main_stack[CONFIG_ESP_MAIN_TASK_STACK_SIZE / sizeof(uintptr_t)];
     static StaticTask_t __main_task;
 
+    // Initialize the cross-core interrupt on CPU0
+    esp_crosscore_int_init();
+
     if (0 == __get_CORE_ID())
     {
-        #if defined(CONFIG_ESP_MAIN_TASK_AFFINITY_NO_AFFINITY) && CONFIG_ESP_MAIN_TASK_AFFINITY_NO_AFFINITY
-            xTaskCreateStatic(__freertos_start, __freertos_argv,
-                CONFIG_ESP_MAIN_TASK_STACK_SIZE, NULL, configMAX_PRIORITIES,
-                (void *)__main_stack, &__main_task
-            );
-        #else
-            xTaskCreateStaticAffinitySet(__freertos_start, __freertos_argv,
-                CONFIG_ESP_MAIN_TASK_STACK_SIZE, NULL, configMAX_PRIORITIES,
-                (void *)__main_stack, &__main_task, 1 << CONFIG_ESP_MAIN_TASK_AFFINITY
-            );
-        #endif
+        xTaskCreateStaticAffinitySet(__freertos_start, __freertos_argv,
+            CONFIG_ESP_MAIN_TASK_STACK_SIZE, NULL, configMAX_PRIORITIES,
+            (void *)__main_stack, &__main_task, CONFIG_ESP_MAIN_TASK_AFFINITY
+        );
 
         vTaskStartScheduler();
         abort();
@@ -149,7 +145,7 @@ thread_id_t thread_create(void *(*start_rountine)(void *arg), void *arg, uint8_t
     uint32_t *stack, size_t stack_size)
 {
     return thread_create_at_core(start_rountine, arg, priority,
-        stack, stack_size, THREAD_CORE_NO_AFFINITY);
+        stack, stack_size, THREAD_NO_CORE_AFFINITY);
 }
 
 thread_id_t thread_create_at_core(void *(*start_rountine)(void *arg), void *arg, uint8_t priority,
@@ -157,7 +153,7 @@ thread_id_t thread_create_at_core(void *(*start_rountine)(void *arg), void *arg,
 {
     if (stack_size < THREAD_MINIMAL_STACK_SIZE)
         return __set_errno_nullptr(EINVAL);
-    if (THREAD_CORE_NO_AFFINITY != affinity && (1 << SOC_CPU_CORES_NUM) <= affinity)
+    if (THREAD_NO_CORE_AFFINITY != affinity && (1 << SOC_CPU_CORES_NUM) <= affinity)
         return __set_errno_nullptr(EINVAL);
 
     spin_lock(&task_pool.atomic);
@@ -200,7 +196,7 @@ thread_id_t thread_create_at_core(void *(*start_rountine)(void *arg), void *arg,
         tcb->kernel.start_routine = start_rountine;
         tcb->kernel.arg = arg;
         tcb->kernel.stack_size = stack_size;
-        tcb->priority = (uint8_t)priority;
+        tcb->priority = priority;
 
         if (dynamic_stack)
         {
@@ -217,7 +213,7 @@ thread_id_t thread_create_at_core(void *(*start_rountine)(void *arg), void *arg,
         }
 
         TaskHandle_t hdl;
-        if (THREAD_CORE_NO_AFFINITY == affinity)
+        if (THREAD_NO_CORE_AFFINITY == affinity)
         {
             hdl = xTaskCreateStatic((void *)__freertos_thread_entry, NULL,
                 stack_size, tcb, priority,

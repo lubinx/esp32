@@ -12,9 +12,9 @@
 
     struct pthread_attr_t
     {
+        uint8_t priority;
+        uint8_t detachstate;
         unsigned affinity;
-        unsigned priority;
-        int  detachstate;
 
         void *stack;
         size_t stack_size;

@@ -17,6 +17,8 @@
 #include "xt_instr_macros.h"
 
 #include "esp_macros.h"
+
+#include "esp_private/crosscore_int.h"
 #include "esp_memory_utils.h"
 
 #include "sdkconfig.h"
@@ -53,17 +55,17 @@ typedef portSTACK_TYPE              StackType_t;
 typedef portBASE_TYPE               BaseType_t;
 typedef unsigned portBASE_TYPE      UBaseType_t;
 
-#if(configUSE_16_BIT_TICKS == 1)
+#if (configUSE_16_BIT_TICKS == 1)
 typedef uint16_t TickType_t;
-#define portMAX_DELAY (TickType_t) 0xffff
+#define portMAX_DELAY (TickType_t)0xffff
 #else
 typedef uint32_t TickType_t;
-#define portMAX_DELAY (TickType_t) 0xffffffffUL
+#define portMAX_DELAY (TickType_t)0xffffffffUL
 #endif
 
 /* Task function macros as described on the FreeRTOS.org WEB site. */
-#define portTASK_FUNCTION_PROTO(vFunction, pvParameters)  void vFunction(void *pvParameters)
-#define portTASK_FUNCTION(vFunction, pvParameters)        void vFunction(void *pvParameters)
+#define portTASK_FUNCTION_PROTO(vFunction, pvParameters) void vFunction(void *pvParameters)
+#define portTASK_FUNCTION(vFunction, pvParameters)       void vFunction(void *pvParameters)
 
 /* ----------------------------------------------- Port Configurations -------------------------------------------------
  * - Configurations values supplied by each port
@@ -72,7 +74,7 @@ typedef uint32_t TickType_t;
 
 #define portCRITICAL_NESTING_IN_TCB     1
 #define portSTACK_GROWTH                (-1)
-#define portTICK_PERIOD_MS              ((TickType_t) 1000 / configTICK_RATE_HZ)
+#define portTICK_PERIOD_MS              ((TickType_t)1000 / configTICK_RATE_HZ)
 #define portBYTE_ALIGNMENT              16    // Xtensa Windowed ABI requires the stack pointer to always be 16-byte aligned. See "isa_rm.pdf 8.1.1 Windowed Register Usage and Stack Layout"
 #define portNOP()                       XT_NOP()    //Todo: Check if XT_NOP exists
 
@@ -83,12 +85,12 @@ typedef uint32_t TickType_t;
 
 // ---------------------- Spinlocks ------------------------
 
-typedef spinlock_t                      portMUX_TYPE;               /**< Spinlock type used by FreeRTOS critical sections */
-#define portMUX_INITIALIZER_UNLOCKED    SPINLOCK_INITIALIZER        /**< Spinlock initializer */
-#define portMUX_FREE_VAL                SPINLOCK_FREE               /**< Spinlock is free. [refactor-todo] check if this is still required */
-#define portMUX_NO_TIMEOUT              SPINLOCK_WAIT_FOREVER       /**< When passed for 'timeout_cycles', spin forever if necessary. [refactor-todo] check if this is still required */
-#define portMUX_TRY_LOCK                SPINLOCK_NO_WAIT            /**< Try to acquire the spinlock a single time only. [refactor-todo] check if this is still required */
-#define portMUX_INITIALIZE(mux)         spinlock_init(mux)    /*< Initialize a spinlock to its unlocked state */
+typedef spinlock_t                          portMUX_TYPE;               /**< Spinlock type used by FreeRTOS critical sections */
+#define portMUX_INITIALIZER_UNLOCKED        SPINLOCK_INITIALIZER        /**< Spinlock initializer */
+#define portMUX_FREE_VAL                    SPINLOCK_FREE               /**< Spinlock is free. [refactor-todo] check if this is still required */
+#define portMUX_NO_TIMEOUT                  SPINLOCK_WAIT_FOREVER       /**< When passed for 'timeout_cycles', spin forever if necessary. [refactor-todo] check if this is still required */
+#define portMUX_TRY_LOCK                    SPINLOCK_NO_WAIT            /**< Try to acquire the spinlock a single time only. [refactor-todo] check if this is still required */
+#define portMUX_INITIALIZE(mux)             spinlock_init(mux)    /*< Initialize a spinlock to its unlocked state */
 
 // ----------------------- Memory --------------------------
 
@@ -114,10 +116,11 @@ void vPortReleaseLock(portMUX_TYPE *lock);
 // ---------------------- Yielding -------------------------
 
 void vPortYield(void);
+static inline void __attribute__((always_inline)) vPortYieldCore(BaseType_t xCoreID);
 static inline void __attribute__((always_inline)) vPortYieldFromISR(void);
 
 #define portYIELD_FROM_ISR_CHECK(x)     ({ \
-    if ((x) == pdTRUE) { \
+    if ((x) == pdTRUE){ \
         vPortYieldFromISR(); \
     } \
 })
@@ -217,7 +220,7 @@ extern void vTaskExitCritical(void);
 
 // ------------------- TCB Cleanup ----------------------
 
-#define portCLEAN_UP_TCB(pxTCB)                     vPortCleanUpTCB(pxTCB)
+#define portCLEAN_UP_TCB(pxTCB)                  vPortCleanUpTCB(pxTCB)
 
 /* --------------------------------------------- Inline Implementations ------------------------------------------------
  * - Implementation of inline functions of the forward declares
@@ -235,8 +238,7 @@ extern void _frxt_setup_switch(void);     //Defined in portasm.S
 
 static inline void __attribute__((always_inline)) vPortYieldCore(BaseType_t xCoreID)
 {
-    (void)xCoreID;
-    // esp_crosscore_int_send_yield((unsigned)xCoreID);
+    esp_crosscore_int_send_yield((unsigned)xCoreID);
 }
 
 static inline void __attribute__((always_inline)) vPortYieldFromISR(void)

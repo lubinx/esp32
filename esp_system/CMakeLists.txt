@@ -7,6 +7,7 @@ else()
 endif()
 
 list(APPEND srcs
+    "esp_crosscore_int.c"
     "esp_dbg_ubsan.c"                   # debug for undefined behavior, but not sure if its works
     "esp_startup.c"
     "panic.c"
