@@ -5,7 +5,7 @@ list(APPEND includes
     "${CMAKE_CURRENT_LIST_DIR}/${IDF_TARGET}/include"
     # esp_rom
     "${esp_rom_path}/include"
-    "${esp_rom_path}/${IDF_TARGET}"
+    "${esp_rom_path}/${IDF_TARGET}"         # for esp_rom_caps.h
 )
 
 list(APPEND srcs

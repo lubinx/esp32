@@ -129,7 +129,7 @@ list(APPEND IDF_KERNEL_COMPONENTS
 
 # OBSOLETED_COMPONENTS: force remove REQUIRES & PRIV_REQUIRES
 list(APPEND OBSOLETED_COMPONENTS
-    "esp_rom"       # merged into esp_system
+    "esp_rom"       # merged into driver
     "esp_ringbuf"   # merged into freertos
     "vfs"           # merged into posix
     # "hal"
@@ -317,24 +317,6 @@ endfunction()
 
 # 💡 build initialization
 __build_init()
-
-#############################################################################
-# idf_target_include_directories(): fix relative path
-#############################################################################
-function(idf_target_include_directories component_target type dirs)
-    foreach(dir ${dirs})
-        get_filename_component(dir ${dir} ABSOLUTE BASE_DIR ${CMAKE_CURRENT_LIST_DIR})
-        if(NOT IS_DIRECTORY ${dir})
-            message(FATAL_ERROR "Include directory '${dir}' is not a directory.")
-        endif()
-
-        if(${type} STREQUAL "PUBLIC" AND component_name IN_LIST IDF_KERNEL_COMPONENTS)
-            idf_build_set_property(INCLUDE_DIRECTORIES ${dir} APPEND)
-        else()
-            target_include_directories(${component_target} ${type} ${dir})
-        endif()
-    endforeach()
-endfunction()
 
 #############################################################################
 # idf_component_add() / idf_component_register()
@@ -537,8 +519,17 @@ function(__inherited_component_register component_target)
         idf_build_get_property(include_directories INCLUDE_DIRECTORIES GENERATOR_EXPRESSION)
         target_include_directories(${component_lib} INTERFACE "${include_directories}")
 
-        idf_target_include_directories(${component_lib} PUBLIC "${__INCLUDE_DIRS}")
-        idf_target_include_directories(${component_lib} PRIVATE "${__PRIV_INCLUDE_DIRS}")
+        foreach(dir ${__INCLUDE_DIRS} ${__PRIV_INCLUDE_DIRS})
+            get_filename_component(dir ${dir} ABSOLUTE BASE_DIR ${CMAKE_CURRENT_LIST_DIR})
+            if(NOT IS_DIRECTORY ${dir})
+                message(FATAL_ERROR "Include directory '${dir}' is not a directory.")
+            endif()
+            target_include_directories(${component_lib} PRIVATE ${dir})
+        endforeach()
+        foreach(dir ${__INCLUDE_DIRS})
+            get_filename_component(dir ${dir} ABSOLUTE BASE_DIR ${CMAKE_CURRENT_LIST_DIR})
+            idf_build_set_property(INCLUDE_DIRECTORIES ${dir} APPEND)
+        endforeach()
 
         __component_get_property(reqs ${component_target} REQUIRES)
         list(APPEND reqs ${IDF_KERNEL_COMPONENTS})
@@ -547,7 +538,12 @@ function(__inherited_component_register component_target)
 
         foreach(req ${reqs})
             idf_component_get_property(req_lib ${req} COMPONENT_LIB)
-            target_link_libraries(${component_lib} PRIVATE ${req_lib})
+
+            if(${req} IN_LIST IDF_KERNEL_COMPONENTS)
+                target_link_libraries(${component_lib} PUBLIC ${req_lib})
+            else()
+                target_link_libraries(${component_lib} PRIVATE ${req_lib})
+            endif()
         endforeach()
 
         __ldgen_add_component(${component_lib})
