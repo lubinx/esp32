@@ -50,7 +50,7 @@ handle_t KERNEL_handle_get(uint8_t cid)
 
         if (blocks)
         {
-            for (int I = 1; I < DYNAMIC_INC_DESCRIPTORS; I++)
+            for (unsigned I = 1; I < DYNAMIC_INC_DESCRIPTORS; I++)
                 glist_push_back(&KERNEL_context.hdl_freed_list, &blocks[I]);
 
             ptr = &blocks[0];

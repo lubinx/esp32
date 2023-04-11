@@ -305,7 +305,7 @@ void panic_arch_fill_info(void *f, panic_info_t *info)
         "Cp4Dis", "Cp5Dis", "Cp6Dis", "Cp7Dis"
     };
 
-    if (frame->exccause < (sizeof(reason) / sizeof(char *))) {
+    if (frame->exccause < (long)(sizeof(reason) / sizeof(char *))) {
         info->reason = (reason[frame->exccause]);
     }
     else {
