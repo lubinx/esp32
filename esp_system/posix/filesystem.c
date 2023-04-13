@@ -588,7 +588,7 @@ static int FS_openat(struct _reent *r, int dirfd, char const *pathname, int flag
     if (NULL == r)
         r = __getreent();
     if (NULL == FS_root)
-        return __set_errno_r_neg(r, ENOSYS);
+        return __set_errno_r_neg(r, ENOENT);
 
     char *name = KERNEL_malloc(NAME_MAX);
     char const *p = pathname;
