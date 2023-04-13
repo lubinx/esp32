@@ -116,7 +116,7 @@ BaseType_t xPortEnterCriticalTimeout(portMUX_TYPE *lock, BaseType_t timeout)
     BaseType_t newNesting = port_uxCriticalNestingIDF[coreID] + 1;
     port_uxCriticalNestingIDF[coreID] = newNesting;
     //If this is the first entry to a critical section. Save the old interrupt level.
-    if ( newNesting == 1 ) {
+    if (newNesting == 1) {
         port_uxCriticalOldInterruptStateIDF[coreID] = xOldInterruptLevel;
     }
     return pdPASS;
@@ -136,7 +136,7 @@ void vPortExitCriticalIDF(portMUX_TYPE *lock)
         nesting--;
         port_uxCriticalNestingIDF[coreID] = nesting;
         //This is the last exit call, restore the saved interrupt level
-        if ( nesting == 0 ) {
+        if (nesting == 0) {
             XTOS_RESTORE_JUST_INTLEVEL((int) port_uxCriticalOldInterruptStateIDF[coreID]);
         }
     }
@@ -273,14 +273,14 @@ BaseType_t xPortCheckIfInISR(void)
 
 // ------------------ Critical Sections --------------------
 
-void vPortTakeLock( portMUX_TYPE *lock )
+void vPortTakeLock(portMUX_TYPE *lock)
 {
-    spinlock_acquire( lock, portMUX_NO_TIMEOUT);
+    spinlock_acquire(lock, portMUX_NO_TIMEOUT);
 }
 
-void vPortReleaseLock( portMUX_TYPE *lock )
+void vPortReleaseLock(portMUX_TYPE *lock)
 {
-    spinlock_release( lock );
+    spinlock_release(lock);
 }
 
 // ---------------------- Yielding -------------------------
@@ -296,7 +296,7 @@ void vPortReleaseLock( portMUX_TYPE *lock )
 
 extern void _xt_coproc_init(void);
 
-BaseType_t xPortStartScheduler( void )
+BaseType_t xPortStartScheduler(void)
 {
     portDISABLE_INTERRUPTS();
     // Interrupts are disabled at this point and stack contains PS with enabled interrupts when task context is restored
@@ -311,12 +311,14 @@ BaseType_t xPortStartScheduler( void )
 
     port_xSchedulerRunning[__get_CORE_ID()] = 1;
 
+    /*
 #if configNUM_CORES > 1
     // Workaround for non-thread safe multi-core OS startup (see IDF-4524)
     if (__get_CORE_ID() != 0) {
         vTaskStartSchedulerOtherCores();
     }
 #endif // configNUM_CORES > 1
+    */
 
     // Cannot be directly called from C; never returns
     __asm__ volatile ("call0    _frxt_dispatch\n");
@@ -325,7 +327,7 @@ BaseType_t xPortStartScheduler( void )
     return pdTRUE;
 }
 
-void vPortEndScheduler( void )
+void vPortEndScheduler(void)
 {
     ;
 }
@@ -334,28 +336,28 @@ void vPortEndScheduler( void )
 
 #define FREERTOS_SMP_MALLOC_CAPS    (MALLOC_CAP_INTERNAL|MALLOC_CAP_8BIT)
 
-void *pvPortMalloc( size_t xSize )
+void *pvPortMalloc(size_t xSize)
 {
     return heap_caps_malloc(xSize, FREERTOS_SMP_MALLOC_CAPS);
 }
 
-void vPortFree( void *pv )
+void vPortFree(void *pv)
 {
     heap_caps_free(pv);
 }
 
-void vPortInitialiseBlocks( void )
+void vPortInitialiseBlocks(void)
 {
     ;   //Does nothing, heap is initialized separately in ESP-IDF
 }
 
-#if( configSTACK_ALLOCATION_FROM_SEPARATE_HEAP == 1 )
-void *pvPortMallocStack( size_t xSize )
+#if(configSTACK_ALLOCATION_FROM_SEPARATE_HEAP == 1)
+void *pvPortMallocStack(size_t xSize)
 {
     return NULL;
 }
 
-void vPortFreeStack( void *pv )
+void vPortFreeStack(void *pv)
 {
 
 }
@@ -569,7 +571,7 @@ FORCE_INLINE_ATTR UBaseType_t uxInitialiseStackFrame(UBaseType_t uxStackPointer,
     /*
     Initialize the task's entry point. This will differ depending on
     - Whether the task's entry point is the wrapper function or pxCode
-    - Whether Windowed ABI is used (for windowed, we mimic the task entry point being call4'd )
+    - Whether Windowed ABI is used (for windowed, we mimic the task entry point being call4'd)
     */
     #if CONFIG_FREERTOS_TASK_FUNCTION_WRAPPER
         frame->pc = (UBaseType_t) vPortTaskWrapper;         // Task entry point is the wrapper function
@@ -611,15 +613,15 @@ FORCE_INLINE_ATTR UBaseType_t uxInitialiseStackFrame(UBaseType_t uxStackPointer,
     return uxStackPointer;
 }
 
-#if ( portHAS_STACK_OVERFLOW_CHECKING == 1 )
-StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
+#if (portHAS_STACK_OVERFLOW_CHECKING == 1)
+StackType_t * pxPortInitialiseStack(StackType_t * pxTopOfStack,
                                      StackType_t * pxEndOfStack,
                                      TaskFunction_t pxCode,
-                                     void * pvParameters )
+                                     void * pvParameters)
 #else
-StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
+StackType_t * pxPortInitialiseStack(StackType_t * pxTopOfStack,
                                      TaskFunction_t pxCode,
-                                     void * pvParameters )
+                                     void * pvParameters)
 #endif
 {
 #ifdef __clang_analyzer__
@@ -668,29 +670,29 @@ StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
     return (StackType_t *)uxStackPointer;
 }
 // -------------------- Co-Processor -----------------------
-#if ( XCHAL_CP_NUM > 0 && configUSE_CORE_AFFINITY == 1 && configNUM_CORES > 1 )
+#if (XCHAL_CP_NUM > 0 && configUSE_CORE_AFFINITY == 1 && configNUM_CORES > 1)
 
 void _xt_coproc_release(volatile void *coproc_sa_base, BaseType_t xTargetCoreID);
 
-void vPortCleanUpCoprocArea( void *pxTCB )
+void vPortCleanUpCoprocArea(void *pxTCB)
 {
     UBaseType_t uxCoprocArea;
     BaseType_t xTargetCoreID;
 
     /* Get pointer to the task's coprocessor save area from TCB->pxEndOfStack. See uxInitialiseStackCPSA() */
-    uxCoprocArea = ( UBaseType_t ) ( ( ( StaticTask_t * ) pxTCB )->pxDummy8 );  /* Get TCB_t.pxEndOfStack */
+    uxCoprocArea = (UBaseType_t) (((StaticTask_t *) pxTCB)->pxDummy8);  /* Get TCB_t.pxEndOfStack */
     uxCoprocArea = STACKPTR_ALIGN_DOWN(16, uxCoprocArea - XT_CP_SIZE);
 
     /* Extract core ID from the affinity mask */
-    xTargetCoreID = ( ( StaticTask_t * ) pxTCB )->uxDummy25 ;
-    xTargetCoreID = ( BaseType_t ) __builtin_ffs( ( int ) xTargetCoreID );
-    assert( xTargetCoreID >= 1 ); // __builtin_ffs always returns first set index + 1
+    xTargetCoreID = ((StaticTask_t *) pxTCB)->uxDummy25 ;
+    xTargetCoreID = (BaseType_t) __builtin_ffs((int) xTargetCoreID);
+    assert(xTargetCoreID >= 1); // __builtin_ffs always returns first set index + 1
     xTargetCoreID -= 1;
 
     /* If task has live floating point registers somewhere, release them */
-    _xt_coproc_release( (void *)uxCoprocArea, xTargetCoreID );
+    _xt_coproc_release((void *)uxCoprocArea, xTargetCoreID);
 }
-#endif // ( XCHAL_CP_NUM > 0 && configUSE_CORE_AFFINITY == 1 && configNUM_CORES > 1 )
+#endif // (XCHAL_CP_NUM > 0 && configUSE_CORE_AFFINITY == 1 && configNUM_CORES > 1)
 
 // -------------------- Tick Handler -----------------------
 BaseType_t xPortSysTickHandler(void)
@@ -716,8 +718,8 @@ BaseType_t xPortSysTickHandler(void)
 
 #include <stdlib.h>
 
-#if ( configCHECK_FOR_STACK_OVERFLOW > 0 )
-void  __attribute__((weak)) vApplicationStackOverflowHook( TaskHandle_t xTask, char *pcTaskName )
+#if (configCHECK_FOR_STACK_OVERFLOW > 0)
+void  __attribute__((weak)) vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
 {
 #define ERR_STR1 "***ERROR*** A stack overflow in task "
 #define ERR_STR2 " has been detected."
@@ -738,20 +740,39 @@ void  __attribute__((weak)) vApplicationStackOverflowHook( TaskHandle_t xTask, c
  * user defined static memory areas in the TCB.
  */
 #if CONFIG_FREERTOS_ENABLE_STATIC_TASK_CLEAN_UP
-void __real_vPortCleanUpTCB( void *pxTCB );
-
-void __wrap_vPortCleanUpTCB( void *pxTCB )
+    void __real_vPortCleanUpTCB(void *pxTCB);
+    void __wrap_vPortCleanUpTCB(void *pxTCB)
 #else
-void vPortCleanUpTCB ( void *pxTCB )
+    void vPortCleanUpTCB (void *pxTCB)
 #endif /* CONFIG_FREERTOS_ENABLE_STATIC_TASK_CLEAN_UP */
 {
-#if ( CONFIG_FREERTOS_ENABLE_STATIC_TASK_CLEAN_UP )
+#if (CONFIG_FREERTOS_ENABLE_STATIC_TASK_CLEAN_UP)
     /* Call user defined vPortCleanUpTCB */
-    __real_vPortCleanUpTCB( pxTCB );
+    __real_vPortCleanUpTCB(pxTCB);
 #endif /* CONFIG_FREERTOS_ENABLE_STATIC_TASK_CLEAN_UP */
 
-#if ( XCHAL_CP_NUM > 0 && configUSE_CORE_AFFINITY == 1 && configNUM_CORES > 1 )
+#if (XCHAL_CP_NUM > 0 && configUSE_CORE_AFFINITY == 1 && configNUM_CORES > 1)
     /* Cleanup coproc save area */
-    vPortCleanUpCoprocArea( pxTCB );
-#endif // ( XCHAL_CP_NUM > 0 && configUSE_CORE_AFFINITY == 1 && configNUM_CORES > 1 )
+    vPortCleanUpCoprocArea(pxTCB);
+#endif // (XCHAL_CP_NUM > 0 && configUSE_CORE_AFFINITY == 1 && configNUM_CORES > 1)
+}
+
+void vApplicationGetIdleTaskMemory(StaticTask_t **tcb, StackType_t **stack, uint32_t *stacksize)
+{
+    static StaticTask_t idle_task;
+    static StackType_t idle_task_stack[configMINIMAL_STACK_SIZE / sizeof(StackType_t)];
+
+    *tcb = &idle_task;
+    *stack = (void *)&idle_task_stack;
+    *stacksize = configMINIMAL_STACK_SIZE;
+}
+
+void vApplicationGetTimerTaskMemory(StaticTask_t **tcb, StackType_t **stack, uint32_t *stacksize)
+{
+    static StaticTask_t timer_task;
+    static StackType_t timer_task_stack[configTIMER_TASK_STACK_DEPTH / sizeof(StackType_t)];
+
+    *tcb = &timer_task;
+    *stack = (void *)&timer_task_stack;
+    *stacksize = configMINIMAL_STACK_SIZE;
 }

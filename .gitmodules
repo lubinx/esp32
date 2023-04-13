@@ -7,3 +7,7 @@
 [submodule "mbedtls/mbedtls"]
 	path = mbedtls/mbedtls
 	url = https://github.com/Mbed-TLS/mbedtls.git
+[submodule "freertos/freertos-smp"]
+	path = freertos/freertos-smp
+	url = https://github.com/FreeRTOS/FreeRTOS-Kernel.git
+	branch = smp

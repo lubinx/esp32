@@ -206,6 +206,7 @@ extern void vTaskExitCritical(void);
 #define portYIELD_CORE(x)                           vPortYieldCore(x)
 
 // ----------------------- System --------------------------
+#define portGET_CORE_ID()                           (BaseType_t)__get_CORE_ID()
 #define portCHECK_IF_IN_ISR()                       xPortCheckIfInISR()
 
 // ------------------- Run Time Stats ----------------------
