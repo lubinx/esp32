@@ -34,6 +34,8 @@ struct mq_attr
     // Number of messages currently queued.
     uint32_t mq_curmsgs;
 };
+#define MQATTR_INITIALIZER(maxmsg, msgsize) \
+    {.mq_flags = 0, .mq_maxmsg = maxmsg, .mq_msgsize = msgsize, .mq_curmsgs = 0}
 
 extern  __attribute__((nothrow, nonnull(1)))
     mqd_t mq_open(char const *name, int flags, /* optional mode_t, struct mq_attr * */...);

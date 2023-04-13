@@ -64,9 +64,7 @@ int main(void)
         fflush(stdout);
     }
 
-    struct mq_attr mq_attr = {0};
-    mq_attr.mq_maxmsg = 16;
-    mq_attr.mq_msgsize = 4;
+    struct mq_attr mq_attr = MQATTR_INITIALIZER(16, 4);
 
     mqd = mq_open("mq", O_CREAT | O_RDWR, 0644, &mq_attr);
     printf("\ninfinite loop...mqd: %d\n", mqd);
