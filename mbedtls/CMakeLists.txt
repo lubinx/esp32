@@ -8,17 +8,24 @@ set(mbedtls_srcs "")
 # endif()
 
 idf_component_register(
-    SRCS 
+    SRCS
         "${mbedtls_srcs}"
-    INCLUDE_DIRS 
-        "port/include" 
-        "mbedtls/include" 
+    INCLUDE_DIRS
+        "port/include"
+        "mbedtls/include"
         "mbedtls/library"
         # "esp_crt_bundle/include"
-    PRIV_REQUIRES 
+    PRIV_REQUIRES
         "soc"
         # "esp_hw_support"
 )
+add_compile_options("-Wno-conversion")
+
+# mbedtls introduce global includes
+idf_build_get_property(include_directories INCLUDE_DIRECTORIES GENERATOR_EXPRESSION)
+include_directories("${include_directories}")
+# Needed to for include_next includes to work from within mbedtls
+include_directories("${COMPONENT_DIR}/port/include")
 
 # Determine the type of mbedtls component library
 if(mbedtls_srcs STREQUAL "")
@@ -81,15 +88,6 @@ set(GEN_FILES CACHE BOOL OFF)
 idf_build_get_property(python PYTHON)
 set(Python3_EXECUTABLE ${python})
 
-# mbedtls has lots of conversion error
-add_compile_options("-Wno-conversion")
-# mbedtls introduce global includes
-idf_build_get_property(include_directories INCLUDE_DIRECTORIES GENERATOR_EXPRESSION)
-include_directories("${include_directories}")
-# Needed to for include_next includes to work from within mbedtls
-include_directories("${COMPONENT_DIR}/port/include")
-
-
 # Import mbedtls library targets
 add_subdirectory(mbedtls)
 
@@ -116,7 +114,7 @@ set(mbedtls_targets mbedtls mbedcrypto mbedx509)
 set(mbedtls_target_sources "${COMPONENT_DIR}/port/mbedtls_debug.c")
 
 # if(CONFIG_MBEDTLS_DYNAMIC_BUFFER)
-#     set(mbedtls_target_sources 
+#     set(mbedtls_target_sources
 #         ${mbedtls_target_sources}
 #         "${COMPONENT_DIR}/port/dynamic/esp_mbedtls_dynamic_impl.c"
 #         "${COMPONENT_DIR}/port/dynamic/esp_ssl_cli.c"
@@ -181,7 +179,7 @@ if(AES_PERIPHERAL_TYPE STREQUAL "dma")
 endif()
 
 
-target_sources(mbedcrypto PRIVATE 
+target_sources(mbedcrypto PRIVATE
     "${COMPONENT_DIR}/port/esp_hardware.c"
     "${COMPONENT_DIR}/port/esp_mem.c"
     "${COMPONENT_DIR}/port/esp_timing.c"
