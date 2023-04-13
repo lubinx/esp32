@@ -51,6 +51,7 @@ target_compile_options(${COMPONENT_LIB} PRIVATE
     "-Wno-conversion"
     "-Wno-unused-parameter"
     "-Wno-sign-compare"
+    "-Wno-type-limits"
 )
 
 if(CONFIG_FREERTOS_ENABLE_STATIC_TASK_CLEAN_UP AND CONFIG_FREERTOS_SMP)
