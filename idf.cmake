@@ -122,8 +122,8 @@ list(APPEND IDF_COMPILE_OPTIONS
 
 # idf kernel components that
 list(APPEND IDF_KERNEL_COMPONENTS
+    "esp_common" "soc" "freertos" "driver"
     "esp_system"
-    "esp_common" "soc" "freertos"
     "esptool_py"
 )
 

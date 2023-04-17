@@ -1,5 +1,6 @@
 #include <soc/rtc_cntl_struct.h>
 #include <clk-tree.h>
+
 #include "hw/hal/rtc_hal.h"
 
 /***************************************************************************/
@@ -31,6 +32,7 @@ uint64_t RTCCNTL_get_tick(void)
     return (uint64_t)RTCCNTL.time_high0.rtc_timer_value0_high << 32 | RTCCNTL.time_low0;
 }
 
+__attribute__((weak))
 void RTC_HAL_get_time(struct timeval *tv)
 {
     uint64_t tick = RTCCNTL_get_tick() + RTCC_tick_offset;
@@ -39,6 +41,7 @@ void RTC_HAL_get_time(struct timeval *tv)
     tv->tv_usec = (suseconds_t)((tick % RTCC_tick_freq) * _MHZ / RTCC_tick_freq);
 }
 
+__attribute__((weak))
 void RTC_HAL_set_time(time_t ts)
 {
     ARG_UNUSED(ts);

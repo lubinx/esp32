@@ -35,9 +35,6 @@ config VFS_SEMIHOSTFS_MAX_MOUNT_POINTS
     default 1
 
 menu "ESP System Settings"
-    rsource "driver/$IDF_TARGET/Kconfig.cpu"
-    rsource "driver/$IDF_TARGET/Kconfig.cache"
-
     choice ESP_SYSTEM_LOG_LEVEL
         bool "Log visibility"
         default ESP_SYSTEM_LOG_LEVEL_WARN

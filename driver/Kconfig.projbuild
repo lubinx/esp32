@@ -1,0 +1,4 @@
+menu "Driver Configure"
+    rsource "$IDF_TARGET/Kconfig.cpu"
+    rsource "$IDF_TARGET/Kconfig.cache"
+endmenu
