@@ -192,6 +192,6 @@ endmenu
 
 source "$COMPONENT_KCONFIGS_PROJBUILD_SOURCE_FILE"
 
-menu "Component config"
+menu "Components"
     source "$COMPONENT_KCONFIGS_SOURCE_FILE"
 endmenu
