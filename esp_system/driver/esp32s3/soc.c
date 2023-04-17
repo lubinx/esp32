@@ -44,7 +44,7 @@ void SOC_initialize(void)
 
     if (0 == core_id)
     {
-        GPIO_initialize();
+        IOMUX_initialize();
         CLK_initialize();
 
         /*

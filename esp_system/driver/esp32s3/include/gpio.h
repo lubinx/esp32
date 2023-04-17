@@ -162,7 +162,7 @@ __BEGIN_DECLS
  *  initialization: called by SOC_initialize()
  ****************************************************************************/
 extern __attribute__((nothrow, nonnull))
-    void GPIO_initialize(void);
+    void IOMUX_initialize(void);
 
 /***************************************************************************/
 /**  IO mux & matrix

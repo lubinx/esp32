@@ -166,7 +166,7 @@ static struct GPIO_matrix GPIO_matrix[SOC_GPIO_PIN_COUNT] = {0};
 /****************************************************************************
  *  initialization: called by SOC_initialize()
  ****************************************************************************/
-void GPIO_initialize(void)
+void IOMUX_initialize(void)
 {
     // GPIO initial direct-INPUT is on
     for (unsigned i = 0; i < lengthof(GPIO.func_in_sel_cfg); i ++)
