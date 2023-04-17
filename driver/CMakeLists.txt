@@ -13,7 +13,6 @@ list(APPEND srcs
     "${IDF_TARGET}/gpio.c"
     "${IDF_TARGET}/i2c.c"
     "${IDF_TARGET}/rtc.c"
-    "${IDF_TARGET}/soc.c"
     "${IDF_TARGET}/true-rng.c"
     "${IDF_TARGET}/uart.c"
 )
