@@ -273,18 +273,18 @@ int thread_detach(thread_id_t thread)
 /****************************************************************************
  *  @implements: clock & sleep
 *****************************************************************************/
-clock_t clock(void)
+clock_t IRAM_ATTR clock(void)
 {
     return xTaskGetTickCount() * portTICK_PERIOD_MS;
 }
 
-int sched_yield(void)
+int IRAM_ATTR sched_yield(void)
 {
     taskYIELD();
     return 0;
 }
 
-int usleep(useconds_t us)
+int IRAM_ATTR usleep(useconds_t us)
 {
     unsigned tick_start = __get_CCOUNT();
 
@@ -308,13 +308,13 @@ int usleep(useconds_t us)
     }
 }
 
-unsigned int sleep(unsigned int seconds)
+unsigned int IRAM_ATTR sleep(unsigned int seconds)
 {
     vTaskDelay(seconds * 1000 / portTICK_PERIOD_MS);
     return 0;
 }
 
-int msleep(uint32_t msec)
+int IRAM_ATTR msleep(uint32_t msec)
 {
     if (msec)
         vTaskDelay(msec / portTICK_PERIOD_MS);
@@ -327,7 +327,7 @@ int msleep(uint32_t msec)
 /****************************************************************************
  * @implements: generic waitfor
 *****************************************************************************/
-int waitfor(handle_t hdl, uint32_t timeout)
+int IRAM_ATTR waitfor(handle_t hdl, uint32_t timeout)
 {
     int retval;
     if (HDL_FLAG_RECURSIVE_MUTEX & AsKernelHdl(hdl)->flags)
@@ -349,7 +349,10 @@ static int __freertos_hdl_init(struct KERNEL_hdl *hdl, uint8_t cid, uint8_t flag
     switch (cid)
     {
     case CID_SEMAPHORE:
-        xSemaphoreCreateCountingStatic(hdl->init_sem.max_count, hdl->init_sem.initial_count, (void *)hdl->padding);
+        if (1 == hdl->init_sem.max_count)
+            xSemaphoreCreateBinaryStatic((void *)hdl->padding);
+        else
+            xSemaphoreCreateCountingStatic(hdl->init_sem.max_count, hdl->init_sem.initial_count, (void *)hdl->padding);
         break;
 
     case CID_MUTEX:
