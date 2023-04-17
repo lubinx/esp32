@@ -681,7 +681,7 @@ function(idf_build)
 
     macro(__import_components)
         # do not remove: some esp-idf'component direct using this value
-        set(target ${IDF_TARGET})
+        # set(target ${IDF_TARGET})
         # project_include.cmake
         foreach(component_target ${component_targets})
             __component_get_property(COMPONENT_DIR ${component_target} COMPONENT_DIR)

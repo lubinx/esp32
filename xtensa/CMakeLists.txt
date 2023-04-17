@@ -8,4 +8,4 @@ idf_component_register(
         "${IDF_TARGET}/include"
 )
 
-target_link_libraries(${COMPONENT_LIB} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/${target}/libxt_hal.a")
+target_link_libraries(${COMPONENT_LIB} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/${IDF_TARGET}/libxt_hal.a")

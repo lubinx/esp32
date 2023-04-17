@@ -76,6 +76,8 @@ int main(void)
 
     while (1)
     {
+        printf("main thread: %u\n", __get_CORE_ID());
+        fflush(stdout);
 
         msleep(1000);
     }
@@ -91,6 +93,9 @@ static void *sema_thread(void *arg)
         mq_send(mqd, &step, sizeof(step), 0);
         step ++;
 
+        printf("sema thread: %u\n", __get_CORE_ID());
+        fflush(stdout);
+
         msleep(500);
     }
 }
@@ -103,6 +108,9 @@ static void *blink_thread(void *arg)
     while (true)
     {
         mq_receive(mqd, &step, sizeof(step), 0);
+
+        printf("blink thread: %u\n", __get_CORE_ID());
+        fflush(stdout);
 
         if (step & 0x1)
         {
