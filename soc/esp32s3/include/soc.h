@@ -84,12 +84,6 @@
 #include "soc/usb_wrap_reg.h"
 #include "soc/world_controller_reg.h"
 
-// pins
-#include "soc/spi_pins.h"
-#include "soc/touch_sensor_pins.h"
-#include "soc/uart_pins.h"
-#include "soc/usb_pins.h"
-
 // wdt
     // wdt lock/unlock values
     #define WDT_LOCK_VALUE              (0)
