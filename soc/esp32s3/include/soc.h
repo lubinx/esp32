@@ -85,8 +85,6 @@
 #include "soc/world_controller_reg.h"
 
 // pins
-#include "soc/gpio_pins.h"
-#include "soc/sdmmc_pins.h"
 #include "soc/spi_pins.h"
 #include "soc/touch_sensor_pins.h"
 #include "soc/uart_pins.h"
