@@ -42,9 +42,11 @@ int stime(time_t const ts)
     return 0;
 }
 
+/*
 __attribute__((weak))
 void RTC_HAL_get_time(struct timeval *tv)
 {
     tv->tv_sec = 0;
     tv->tv_usec = 0;
 }
+*/
