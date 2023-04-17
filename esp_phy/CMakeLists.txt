@@ -4,14 +4,6 @@ set(srcs
     # "src/lib_printf.c"
 )
 
-if(CONFIG_APP_NO_BLOBS)
-    set(link_binary_libs 0)
-    set(ldfragments)
-else()
-    set(link_binary_libs 1)
-    set(ldfragments "linker.lf")
-endif()
-
 if(CONFIG_SOC_BT_SUPPORTED OR CONFIG_SOC_IEEE802154_SUPPORTED OR CONFIG_SOC_IEEE802154_BLE_ONLY)
     list(APPEND srcs "src/btbb_init.c")
 endif()
@@ -42,7 +34,7 @@ idf_component_register(
         "${IDF_TARGET}/include"
     # PRIV_REQUIRES nvs_flash driver efuse esp_timer esp_wifi
     LDFRAGMENTS
-        "${ldfragments}"
+        "linker.lf"
     EMBED_FILES
         ${embed_files}
 )
@@ -50,34 +42,13 @@ target_link_directories(${COMPONENT_LIB} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/lib
 
 # Override functions in PHY lib with the functions in 'phy_override.c'
 target_link_libraries(${COMPONENT_LIB} INTERFACE "-u include_esp_phy_override")
+target_link_libraries(${COMPONENT_LIB} PUBLIC phy)
 
-if(link_binary_libs)
-    target_link_libraries(${COMPONENT_LIB} PUBLIC phy)
-
-    idf_component_get_property(esp_phy_lib esp_phy COMPONENT_LIB)
-
-    if(CONFIG_IDF_TARGET_ESP32)
-        target_link_libraries(${COMPONENT_LIB} PUBLIC rtc)
-        target_link_libraries(${COMPONENT_LIB} INTERFACE $<TARGET_FILE:${esp_phy_lib}> libphy.a librtc.a
-        $<TARGET_FILE:${esp_phy_lib}>)
-    elseif(CONFIG_IDF_TARGET_ESP32S2)
-        target_link_libraries(${COMPONENT_LIB} INTERFACE $<TARGET_FILE:${esp_phy_lib}> libphy.a
-        $<TARGET_FILE:${esp_phy_lib}>)
-    elseif(CONFIG_SOC_BT_SUPPORTED OR CONFIG_SOC_IEEE802154_SUPPORTED)
-        target_link_libraries(${COMPONENT_LIB} PUBLIC
-            "btbb"      # libbtbb.a
-        )
-
-        target_link_libraries(${COMPONENT_LIB} INTERFACE
-            $<TARGET_FILE:${esp_phy_lib}> libphy.a libbtbb.a
-            $<TARGET_FILE:${esp_phy_lib}>
-        )
-    endif()
-
-    if(CONFIG_ESP_PHY_ENABLE_CERT_TEST)
-        target_link_libraries(${COMPONENT_LIB} INTERFACE $<TARGET_FILE:${esp_phy_lib}> libbttestmode.a
-        librfate.a librftest.a $<TARGET_FILE:${esp_phy_lib}>)
-    endif()
+if(CONFIG_SOC_BT_SUPPORTED OR CONFIG_SOC_IEEE802154_SUPPORTED)
+    target_link_libraries(${COMPONENT_LIB} PUBLIC
+        "btbb"      # libbtbb.a
+    )
+    target_link_libraries(${COMPONENT_LIB} INTERFACE libphy.a libbtbb.a)
 endif()
 
 # if(CONFIG_ESP_PHY_INIT_DATA_IN_PARTITION)

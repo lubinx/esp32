@@ -114,13 +114,6 @@ menu "PHY"
             When using USB Serial/JTAG/OTG/CDC, PHY should enable USB, otherwise USB module
             can not work properly. Notice: Enabling this configuration option will slightly impact wifi performance.
 
-    config ESP_PHY_ENABLE_CERT_TEST
-        bool "Enable RF certification test functions"
-        default n
-        depends on IDF_TARGET_ESP32C3 || IDF_TARGET_ESP32S3
-        help
-            If enabled, you can use RF certification test APIs.
-
     choice ESP_PHY_CALIBRATION_MODE
         prompt "Calibration mode"
         default ESP_PHY_RF_CAL_PARTIAL
