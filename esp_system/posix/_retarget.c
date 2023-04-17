@@ -21,13 +21,13 @@ struct _reent *_global_impure_ptr;
 void *syscall_table_ptr;
 
 /****************************************************************************
- *  @def
-*****************************************************************************/
-static __attribute__((used)) char const *TAG = "syscall";
-
-/****************************************************************************
  *  @internal
 *****************************************************************************/
+struct __lock
+{
+    mutex_t mutex;
+};
+
 // static const struct syscall_stub_table __stub_table;
 static struct _reent __reent = {0};
 // locks
@@ -125,7 +125,7 @@ void _exit(int status)
 #ifdef NDEBUG
     SOC_reset();
 #else
-    ESP_LOGI(TAG, "exit code %d", status);
+    ESP_LOGI("exit", "code %d", status);
 #endif
     while (1);
 }
@@ -133,9 +133,8 @@ void _exit(int status)
 void abort(void)
 {
 #if ! defined(NDEBUG)
-    ESP_LOGE(TAG, "abort() was called at PC 0x%p on core %u", (void *)(__builtin_return_address(0) - 3), __get_CORE_ID());
+    ESP_LOGE("abort", "PC 0x%p on core %u", (void *)(__builtin_return_address(0) - 3), __get_CORE_ID());
 #endif
-
     __BKPT(0);
     exit(EFAULT);
 }
