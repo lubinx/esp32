@@ -33,6 +33,8 @@ idf_component_register(
         "include"
         "${IDF_TARGET}/include"
     # PRIV_REQUIRES nvs_flash driver efuse esp_timer esp_wifi
+    REQUIRES
+        "driver"
     LDFRAGMENTS
         "linker.lf"
     EMBED_FILES

@@ -6,6 +6,7 @@ project(kernel)
 idf_build(
     COMPONENTS
         # "mbedtls"
+        "esp_phy"
         # "esp_event"
         # "lwip"
     SRCS

@@ -1,14 +1,6 @@
-/*
- * SPDX-FileCopyrightText: 2015-2022 Espressif Systems (Shanghai) CO LTD
- *
- * SPDX-License-Identifier: Apache-2.0
- */
-
-#include <stddef.h>
-#include <stdlib.h>
 #include <string.h>
-#include <inttypes.h>
 #include <stdbool.h>
+#include <endian.h>
 #include <sys/mutex.h>
 
 #include "clk-tree.h"
@@ -18,21 +10,14 @@
 
 #include "esp_heap_caps.h"
 #include "esp_phy_init.h"
-#include "esp_mac.h"
+#include "phy.h"
 
 #include "esp_attr.h"
 #include "esp_log.h"
 #include "esp_err.h"
 
-// #include "nvs.h"
-// #include "nvs_flash.h"
-// #include "esp_efuse.h"
-// #include "esp_timer.h"
-// #include "esp_sleep.h"
-
 #include "sdkconfig.h"
 
-#include "endian.h"
 #include "esp_private/phy.h"
 #include "phy_init_data.h"
 // #include "esp_private/wifi.h"
@@ -41,23 +26,13 @@
 #include "esp_rom_crc.h"
 #include "esp_rom_sys.h"
 
-#include "FreeRTOS.h"
-
-
 // #include "soc/rtc_periph.h"
 
 #if __has_include("soc/syscon_reg.h")
     #include "soc/syscon_reg.h"
 #endif
 
-// #include "hal/efuse_hal.h"
-
-#if SOC_PM_MODEM_RETENTION_BY_REGDMA
-#include "esp_private/sleep_retention.h"
-#endif
-
 static const char* TAG = "phy_init";
-
 static mutex_t s_phy_access_lock = MUTEX_INITIALIZER;
 
 /*
@@ -74,15 +49,10 @@ static mutex_t s_phy_access_lock = MUTEX_INITIALIZER;
 /* Reference count of enabling PHY */
 static uint8_t s_phy_access_ref = 0;
 
-/* PHY spinlock for libphy.a */
-static DRAM_ATTR portMUX_TYPE s_phy_int_mux = portMUX_INITIALIZER_UNLOCKED;
-
 /* Indicate PHY is calibrated or not */
 static bool s_is_phy_calibrated = false;
 
 #if SOC_PM_MODEM_RETENTION_BY_BACKUPDMA
-/* Indicate PHY regs is stored or not */
-static bool s_is_phy_reg_stored = false;
 /* Memory to store PHY digital registers */
 static uint32_t* s_phy_digital_regs_mem = NULL;
 static uint8_t s_phy_modem_init_ref = 0;
@@ -161,12 +131,8 @@ static uint8_t s_phy_modem_init_ref = 0;
 
 uint32_t IRAM_ATTR phy_enter_critical(void)
 {
-    if (xPortInIsrContext()) {
-        portENTER_CRITICAL_ISR(&s_phy_int_mux);
-
-    } else {
-        portENTER_CRITICAL(&s_phy_int_mux);
-    }
+    // TODO: trace phy_enter_critical() / phy_exit_critical()
+    //  it seem never called
     // Interrupt level will be stored in current tcb, so always return zero.
     return 0;
 }
@@ -174,13 +140,6 @@ uint32_t IRAM_ATTR phy_enter_critical(void)
 void IRAM_ATTR phy_exit_critical(uint32_t level)
 {
     ARG_UNUSED(level);
-
-    // Param level don't need any more, ignore it.
-    if (xPortInIsrContext()) {
-        portEXIT_CRITICAL_ISR(&s_phy_int_mux);
-    } else {
-        portEXIT_CRITICAL(&s_phy_int_mux);
-    }
 }
 
 IRAM_ATTR void esp_phy_common_clock_enable(void)
@@ -192,24 +151,6 @@ IRAM_ATTR void esp_phy_common_clock_disable(void)
 {
     wifi_bt_common_module_disable();
 }
-
-#if SOC_PM_MODEM_RETENTION_BY_BACKUPDMA
-static inline void phy_digital_regs_store(void)
-{
-    if (s_phy_digital_regs_mem != NULL) {
-        phy_dig_reg_backup(true, s_phy_digital_regs_mem);
-        s_is_phy_reg_stored = true;
-    }
-}
-
-static inline void phy_digital_regs_load(void)
-{
-    if (s_is_phy_reg_stored && s_phy_digital_regs_mem != NULL) {
-        phy_dig_reg_backup(false, s_phy_digital_regs_mem);
-    }
-}
-#endif // SOC_PM_MODEM_RETENTION_BY_BACKUPDMA
-
 void esp_phy_enable(void)
 {
     mutex_lock(&s_phy_access_lock);
@@ -329,7 +270,6 @@ void esp_phy_modem_deinit(void)
 
     s_phy_modem_init_ref--;
     if (s_phy_modem_init_ref == 0) {
-        s_is_phy_reg_stored = false;
         free(s_phy_digital_regs_mem);
         s_phy_digital_regs_mem = NULL;
         /* Fix the issue caused by the power domain off.

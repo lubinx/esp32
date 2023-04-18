@@ -9,6 +9,7 @@ list(APPEND includes
 
 list(APPEND srcs
     "${CMAKE_CURRENT_LIST_DIR}/clk-tree.c"
+    "${CMAKE_CURRENT_LIST_DIR}/efuse.c"
     "${CMAKE_CURRENT_LIST_DIR}/gpio.c"
     "${CMAKE_CURRENT_LIST_DIR}/i2c.c"
     "${CMAKE_CURRENT_LIST_DIR}/rtc.c"
