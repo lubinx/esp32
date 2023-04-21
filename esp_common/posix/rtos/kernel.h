@@ -177,7 +177,7 @@ extern __attribute__((nothrow))
      *  KERNEL_handle_release(): destroy a handle
      *      @returns
      *          On Success 0 is returned
-     *          On Error an error number shall be returned to indicate the error
+     *          On Error an errno shall be returned to indicate the error
      *      @errors
      *          EBADF
      *          EFAULT: when handle is static initialized

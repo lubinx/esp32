@@ -42,7 +42,7 @@ __BEGIN_DECLS
      *          wait timeout in milliseconds
      *      @returns
      *          On Success 0 is returned
-     *          On Error an error number shall be returned to indicate the error
+     *          On Error an errno shall be returned to indicate the error
      *      @errors
      *          EINVAL: indicate hdr is not valid syncobj
      *          ETIMEDOUT: syncobj can not acquire by timeout
@@ -113,7 +113,7 @@ extern __attribute__((nothrow))
      *  mqueue_destroy()
      *      @returns
      *          On Success 0 is returned
-     *          On Error an error number shall be returned to indicate the error
+     *          On Error an errno shall be returned to indicate the error
      *      @errors
      *          EBADF
      */
@@ -130,7 +130,7 @@ extern __attribute__((nothrow))
      *  mqueue_flush(): flush all messages from mqueue
      *      @returns
      *          On Success 0 is returned
-     *          On Error an error number shall be returned to indicate the error
+     *          On Error an errno shall be returned to indicate the error
      *      @errors
      *          EBADF
      */
