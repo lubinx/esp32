@@ -75,18 +75,10 @@
     };
 
 __BEGIN_DECLS
+
 /***************************************************************************/
-/**  GPIO @configure
+/**  GPIO common
 ****************************************************************************/
-extern __attribute__((nothrow, nonnull))
-    int GPIO_disable(void *const gpio, uint32_t pins, bool pull_up);
-
-extern __attribute__((nothrow, nonnull))
-    int GPIO_setdir_input(void *const gpio, uint32_t pins, enum GPIO_pad_pull_t pp, bool filter_en);
-
-extern __attribute__((nothrow, nonnull))
-    int GPIO_setdir_output(enum GPIO_output_mode_t mode, void *const gpio, uint32_t pins);
-
     /**
      *  GPIO debounce for INPUT mode only
      */
@@ -100,7 +92,28 @@ extern __attribute__((nothrow))
     int GPIO_hold_repeating(void *const gpio, uint32_t pins, uint32_t millisecond);
 
 /***************************************************************************/
-/** GPIO @IO
+/**  GPIO direction configure
+****************************************************************************/
+    /**
+     *  GPIO_disable()
+     *      disable GPIO, if chip supported it
+     *      otherwise should set direction as input with HIGH-Z / GPIO_disable_with_pullup(): PULL-UP
+    */
+extern __attribute__((nothrow, nonnull))
+    int GPIO_disable(void *const gpio, uint32_t pins);
+extern __attribute__((nothrow, nonnull))
+    int GPIO_disable_with_pullup(void *const gpio, uint32_t pins);
+
+extern __attribute__((nothrow, nonnull))
+    int GPIO_setdir_input(void *const gpio, uint32_t pins);
+extern __attribute__((nothrow, nonnull))
+    int GPIO_setdir_input_pp(void *const gpio, uint32_t pins, enum GPIO_pad_pull_t pp, bool filter_en);
+
+extern __attribute__((nothrow, nonnull))
+    int GPIO_setdir_output(enum GPIO_output_mode_t mode, void *const gpio, uint32_t pins);
+
+/***************************************************************************/
+/** GPIO IO
 ****************************************************************************/
     /**
      *  GPIO_peek(): peek Input LEVEL
@@ -133,7 +146,7 @@ extern __attribute__((nothrow, nonnull))
     void GPIO_clear(void *const gpio, uint32_t pins);
 
 /***************************************************************************/
-/**  GPIO @Input Interrupt Control
+/**  GPIO Interrupt Control
 ****************************************************************************/
     /**
      *  GPIO interrupt's @callback

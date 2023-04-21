@@ -434,13 +434,25 @@ void IOMUX_print(void)
 /***************************************************************************/
 /** @implements
 ****************************************************************************/
-int GPIO_disable(void *const gpio, uint32_t pins, bool pull_up)
+int GPIO_disable(void *const gpio, uint32_t pins)
 {
-    ARG_UNUSED(gpio, pins, pull_up);
+    ARG_UNUSED(gpio, pins);
     return ENOSYS;
 }
 
-int GPIO_setdir_input(void *const gpio, uint32_t pins, enum GPIO_pad_pull_t pp, bool filter_en)
+int GPIO_disable_with_pullup(void *const gpio, uint32_t pins)
+{
+    ARG_UNUSED(gpio, pins);
+    return ENOSYS;
+}
+
+int GPIO_setdir_input(void *const gpio, uint32_t pins)
+{
+    ARG_UNUSED(gpio, pins);
+    return ENOSYS;
+}
+
+int GPIO_setdir_input_pp(void *const gpio, uint32_t pins, enum GPIO_pad_pull_t pp, bool filter_en)
 {
     ARG_UNUSED(gpio, pins, pp, filter_en);
     return ENOSYS;
@@ -453,18 +465,6 @@ int GPIO_setdir_output(enum GPIO_output_mode_t mode, void *const gpio, uint32_t 
     if (OPEN_SOURCE == mode)
         return ENOTSUP;
 
-    return ENOSYS;
-}
-
-int GPIO_debounce(void *const gpio, uint32_t pins, uint32_t millisecond)
-{
-    ARG_UNUSED(gpio, pins, millisecond);
-    return ENOSYS;
-}
-
-int GPIO_hold_repeating(void *const gpio, uint32_t pins, uint32_t millisecond)
-{
-    ARG_UNUSED(gpio, pins, millisecond);
     return ENOSYS;
 }
 
