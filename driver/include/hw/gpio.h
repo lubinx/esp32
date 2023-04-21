@@ -17,6 +17,7 @@
 
 #include <features.h>
 #include <stdint.h>
+#include <stdbool.h>
 
     #define GPIO_ALL_PORT               ((void *)0xFFFFFFFFUL)
     #define GPIO_ALL_PIN                (0xFFFFFFFFUL)
