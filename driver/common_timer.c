@@ -404,7 +404,7 @@ uint32_t TIMER_match_cached_sections(int nb)
 /***************************************************************************
  *  TIMER @PWM
  ***************************************************************************/
-int TIMER_PWM_get(uint32_t const freq, void *const gpio, uint32_t pin, TIMER_callback_t callback)
+int TIMER_PWM_get(uint32_t const freq, void *gpio, uint32_t pin, TIMER_callback_t callback)
 {
     spin_lock(&TIMER_atomic);
     int retval = TIMER_PWM_HAL_get_channel(gpio, pin);

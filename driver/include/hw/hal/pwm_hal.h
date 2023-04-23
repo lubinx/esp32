@@ -54,10 +54,10 @@ extern __attribute__((nothrow))
      *      get PWM device no associate with PORT.PIN
      */
 extern __attribute__((nothrow, nonnull))
-    int PWM_HAL_get_channel(uint32_t const freq, void *const gpio, uint32_t pin);
+    int PWM_HAL_get_channel(uint32_t const freq, void *gpio, uint32_t pin);
 
 extern __attribute__((nothrow, nonnull))
-    void PWM_HAL_release(void *const gpio, uint32_t pin);
+    void PWM_HAL_release(void *gpio, uint32_t pin);
 
 extern __attribute__((nothrow))
     void PWM_HAL_intr_enable(int nb);

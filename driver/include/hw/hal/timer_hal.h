@@ -132,17 +132,17 @@ void TIMER_HAL_setmatch(void *const dev, uint8_t ch, uint32_t val);
 /** TIMER @PWM
 ****************************************************************************/
 extern __attribute__((nothrow, nonnull(1)))
-    int TIMER_PWM_HAL_get_channel(void *const gpio, uint32_t pin);
+    int TIMER_PWM_HAL_get_channel(void *gpio, uint32_t pin);
 
 extern __attribute__((nothrow, nonnull(2)))
-    void TIMER_PWM_HAL_release(int nb, void *const gpio, uint32_t pin);
+    void TIMER_PWM_HAL_release(int nb, void *gpio, uint32_t pin);
 
     /**
      * TIMER_PWM_HAL_polarity()
      *  set PWM default polarity, depend by PORT'PIN default LEVEL (invert)
      */
 extern __attribute__((nothrow, nonnull(2)))
-    void TIMER_PWM_HAL_polarity(void *const dev, void *const gpio, uint32_t pin);
+    void TIMER_PWM_HAL_polarity(void *const dev, void *gpio, uint32_t pin);
 
     /**
      *  TIMER_PWM_HAL_update() should start TIMER'PWM immdiately

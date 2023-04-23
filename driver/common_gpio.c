@@ -77,7 +77,7 @@ static glist_t callback_list = GLIST_INITIALIZER(callback_list);
 /**  GPIO @configure
 ****************************************************************************/
 /*
-int GPIO_debounce(void *const gpio, uint32_t pins, uint32_t millisecond)
+int GPIO_debounce(void *gpio, uint32_t pins, uint32_t millisecond)
 {
     if (0 != GPIO_context.debounce_timeout_id)
     {
@@ -94,7 +94,7 @@ int GPIO_debounce(void *const gpio, uint32_t pins, uint32_t millisecond)
 */
 
 /*
-int GPIO_hold_repeating(void *const gpio, uint32_t pins, uint32_t millisecond)
+int GPIO_hold_repeating(void *gpio, uint32_t pins, uint32_t millisecond)
 {
     if (0 != GPIO_context.hold_timeout_id)
     {
@@ -114,7 +114,7 @@ int GPIO_hold_repeating(void *const gpio, uint32_t pins, uint32_t millisecond)
 /**  GPIO @Input Interrupt Control
 ****************************************************************************/
 __attribute__((weak))
-int GPIO_intr_enable(void *const gpio, uint32_t pins, enum GPIO_trig_t trig, GPIO_callback_t callback, void *arg)
+int GPIO_intr_enable(void *gpio, uint32_t pins, enum GPIO_trig_t trig, GPIO_callback_t callback, void *arg)
 {
     int retval = 0;
     struct GPIO_callback_context *ctx = NULL;
@@ -175,7 +175,7 @@ int GPIO_intr_enable(void *const gpio, uint32_t pins, enum GPIO_trig_t trig, GPI
 }
 
 __attribute__((weak))
-void GPIO_intr_disable(void *const gpio, uint32_t pins)
+void GPIO_intr_disable(void *gpio, uint32_t pins)
 {
     spin_lock(&GPIO_atomic);
 
@@ -235,7 +235,7 @@ void GPIO_intr_disable_cb(GPIO_callback_t callback)
 /***************************************************************************/
 /** @INT callback
 ****************************************************************************/
-void GPIO_HAL_intr_callback(void *const gpio, uint32_t pins, void *arg)
+void GPIO_HAL_intr_callback(void *gpio, uint32_t pins, void *arg)
 {
     /*
     if (0 != GPIO_context.debounce_timeout_id)
@@ -259,7 +259,7 @@ void GPIO_HAL_intr_callback(void *const gpio, uint32_t pins, void *arg)
         GPIO_HAL_execute_callback(gpio, pins, arg);
 }
 
-void GPIO_HAL_execute_callback(void *const gpio, uint32_t pins, void *arg)
+void GPIO_HAL_execute_callback(void *gpio, uint32_t pins, void *arg)
 {
     for (struct GPIO_callback_context **iter = glist_iter_begin(&callback_list);
         iter != glist_iter_end(&callback_list);

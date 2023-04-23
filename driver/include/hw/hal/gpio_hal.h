@@ -23,10 +23,10 @@ __BEGIN_DECLS
 /**  GPIO @Input Interrupt Control
 ****************************************************************************/
 extern __attribute__((nothrow))
-    void GPIO_HAL_intr_enable(void *const gpio, uint32_t pins, enum GPIO_trig_t trig);
+    void GPIO_HAL_intr_enable(void *gpio, uint32_t pins, enum GPIO_trig_t trig);
 
 extern __attribute__((nothrow))
-    void GPIO_HAL_intr_disable(void *const gpio, uint32_t pins);
+    void GPIO_HAL_intr_disable(void *gpio, uint32_t pins);
 
 /***************************************************************************/
 /**  GPIO INT callback
@@ -36,13 +36,13 @@ extern __attribute__((nothrow))
      *      this function is staticly provide by common_gpio.c
      */
 extern __attribute__((nothrow))
-    void GPIO_HAL_intr_callback(void *const gpio, uint32_t pins, void *arg);
+    void GPIO_HAL_intr_callback(void *gpio, uint32_t pins, void *arg);
 
     /**
      *  GPIO HW actually execute user provide's callback function
      */
 extern __attribute__((nothrow))
-    void GPIO_HAL_execute_callback(void *const gpio, uint32_t pins, void *arg);
+    void GPIO_HAL_execute_callback(void *gpio, uint32_t pins, void *arg);
 
 __END_DECLS
 #endif

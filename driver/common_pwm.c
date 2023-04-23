@@ -44,7 +44,7 @@ static void PWM_initialize(void)
 /***************************************************************************/
 /** @PWM configure
 ****************************************************************************/
-int PWM_get(uint32_t const freq, void *const gpio, uint32_t pin, PWM_callback_t callback)
+int PWM_get(uint32_t const freq, void *gpio, uint32_t pin, PWM_callback_t callback)
 {
     int retval = PWM_HAL_get_channel(freq, gpio, pin);
 

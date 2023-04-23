@@ -13,6 +13,9 @@
 #include "esp_log.h"
 #include "esp_heap_caps.h"
 
+#include "efuse.h"
+#include <soc/efuse_struct.h>
+
 #define LED1_PIN_NUM                    (8)
 #define LED2_PIN_NUM                    (9)
 
@@ -31,7 +34,9 @@ int main(void)
     IOMUX_route_output(17, I2CEXT0_SDA_IN_IDX, OPEN_DRAIN_WITH_PULL_UP, false, false);
     IOMUX_route_output(18, I2CEXT0_SCL_IN_IDX, OPEN_DRAIN_WITH_PULL_UP, false, false);
 
-    // I2C_configure(&I2C0, I2C_MASTER_MODE, 400);
+    uint8_t MAC[6];
+    EFUSE_read_blob(EFUSE_FIELD_MAC, &MAC, 48);
+    printf("MAC: %02X:%02X:%02X:%02X:%02X:%02X\n", MAC[0], MAC[1], MAC[2], MAC[3], MAC[4], MAC[5]);
 
     printf("pll frequency: %lu MHz\n", CLK_pll_freq() / 1000000);
     printf("cpu frequency: %lu MHz\n", CLK_cpu_freq() / 1000000);
