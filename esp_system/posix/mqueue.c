@@ -33,6 +33,7 @@ struct MQ_msg
 struct MQ_list
 {
     sem_t sema;
+    spinlock_t lock;
     glist_t list;
 };
 
@@ -70,8 +71,8 @@ static struct FD_implement const mqdio =
 };
 
 /// @var
-static spinlock_t MQ_atomic;
-static glist_t mq_named_list = GLIST_INITIALIZER(mq_named_list);
+static glist_t mq_list = GLIST_INITIALIZER(mq_list);
+static spinlock_t mq_list_lock = SPINLOCK_INITIALIZER;
 
 /***************************************************************************/
 /** @implements ultracore.h
@@ -87,12 +88,12 @@ int mqueue_create(char const *name, uint16_t msg_size, uint16_t msg_count)
     if (NULL == ext)
         return __set_errno_neg(ENOMEM);
 
-    spin_lock(&MQ_atomic);
+    spin_lock(&mq_list_lock);
 
     int mqd = SVC_mq_find(name, false);
     if (-1 != mqd)
     {
-        spin_unlock(&MQ_atomic);
+        spin_unlock(&mq_list_lock);
         return __set_errno_neg(EEXIST);
     }
 
@@ -108,10 +109,12 @@ int mqueue_create(char const *name, uint16_t msg_size, uint16_t msg_count)
 
         // none queued at beginning
         sem_init(&ext->queued.sema, 0, 0);
+        spinlock_init(&ext->queued.lock);
         glist_initialize(&ext->queued.list);
 
         // all freed at beginning
         sem_init(&ext->freed.sema, 0, msg_count);
+        spinlock_init(&ext->freed.lock);
         glist_initialize(&ext->freed.list);
 
         AsMqd(mqd)->read_rdy = &ext->queued.sema;
@@ -121,12 +124,12 @@ int mqueue_create(char const *name, uint16_t msg_size, uint16_t msg_count)
         for (size_t i = 0 ; i < msg_count; i ++)
             glist_push_front(&ext->freed.list, ext->__msg_start + i * __msg_size);
 
-        glist_push_back(&mq_named_list, AsMqd(mqd));
+        glist_push_back(&mq_list, AsMqd(mqd));
     }
     else
         KERNEL_mfree(ext);
 
-    spin_unlock(&MQ_atomic);
+    spin_unlock(&mq_list_lock);
     return mqd;
 }
 
@@ -143,15 +146,15 @@ int mqueue_flush(int mqd)
     if (CID_FD == AsMqd(mqd)->cid && FD_TAG_MQD == (FD_TAG_MQD & AsMqd(mqd)->tag))
     {
         struct MQ_ext *ext = AsMqd(mqd)->ext;
-        spin_lock(&MQ_atomic);
+        spin_lock(&ext->queued.lock);
 
-        if (0 == sem_timedwait_ms(&ext->queued.sema, 0))
+        while (0 == sem_timedwait_ms(&ext->queued.sema, 0))
         {
             void *msg = glist_pop(&ext->queued.list);
             glist_push_back(&ext->freed.list, msg);
         }
 
-        spin_unlock(&MQ_atomic);
+        spin_unlock(&ext->queued.lock);
         return 0;
     }
     else
@@ -383,47 +386,46 @@ static int SVC_mq_find(char const *name, bool extract)
         return -1;
 
     int retval = -1;
-    spin_lock(&MQ_atomic);
+    spin_lock(&mq_list_lock);
 
-    for (struct KERNEL_mqd **iter = glist_iter_begin(&mq_named_list);
-        iter != glist_iter_end(&mq_named_list);
-        iter = glist_iter_next(&mq_named_list, iter))
+    for (struct KERNEL_mqd **iter = glist_iter_begin(&mq_list);
+        iter != glist_iter_end(&mq_list);
+        iter = glist_iter_next(&mq_list, iter))
     {
         if (0 == strcmp((*iter)->name, name))
         {
             retval = (int)(*iter);
 
             if (0 != extract)
-                glist_iter_extract(&mq_named_list, iter);
+                glist_iter_extract(&mq_list, iter);
 
             break;
         }
     }
 
-    spin_unlock(&MQ_atomic);
+    spin_unlock(&mq_list_lock);
     return retval;
 }
 
 static struct MQ_msg *SVC_mqueue_get(struct MQ_list *queue, struct MQ_ext *ext)
 {
-    spin_lock(&MQ_atomic);
-
+    spin_lock(&queue->lock);
     struct MQ_msg *retval = glist_pop(&queue->list);
+    spin_unlock(&queue->lock);;
 
-    int queued_count;
-    sem_getvalue(&queue->sema, &queued_count);
-
-    if (&ext->queued == queue && 0 == queued_count)
-        ext->lowest_prio_queued = 0;
-
-    spin_unlock(&MQ_atomic);
+    if (&ext->queued == queue)
+    {
+        int queued_count;
+        if (sem_getvalue(&queue->sema, &queued_count) && 0 == queued_count)
+            ext->lowest_prio_queued = 0;
+    }
     return retval;
 }
 
 static void SVC_mqueue_post(struct MQ_list *queue, struct MQ_msg *msg, struct MQ_ext *ext)
 {
     struct MQ_msg **iter;
-    spin_lock(&MQ_atomic);
+    spin_lock(&queue->lock);
 
     if (ext->lowest_prio_queued <= msg->prio)
     {
@@ -445,28 +447,24 @@ static void SVC_mqueue_post(struct MQ_list *queue, struct MQ_msg *msg, struct MQ
         if ((*iter)->prio > msg->prio)
         {
             glist_iter_insert(&queue->list, iter, msg);
-            goto mqueue_sem_post;
+            break;
         }
         else
             iter = glist_iter_next(&queue->list, iter);
     }
 
-    if (false)
-    {
 mqueue_sem_post:
-        sem_post(&queue->sema);
-    }
-    spin_unlock(&MQ_atomic);
+    spin_unlock(&queue->lock);
+    sem_post(&queue->sema);
 }
 
 static void SVC_mqueue_release(struct MQ_list *queue, struct MQ_msg *msg)
 {
-    spin_lock(&MQ_atomic);
-
+    spin_lock(&queue->lock);
     glist_push_front(&queue->list, msg);
-    sem_post(&queue->sema);
+    spin_unlock(&queue->lock);
 
-    spin_unlock(&MQ_atomic);
+    sem_post(&queue->sema);
 }
 
 /***************************************************************************/
