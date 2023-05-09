@@ -16,6 +16,7 @@
 #define __SEMAPHORE_H                   1
 
 #include <features.h>
+#include <rtos/types.h>
 #include <sys/_timespec.h>
 
     typedef struct KERNEL_hdl      sem_t;
