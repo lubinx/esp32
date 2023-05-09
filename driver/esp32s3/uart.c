@@ -64,26 +64,26 @@ enum
 };
 enum
 {
-    UART_INTR_RXFIFO_FULL = (1 << 0),
-    UART_INTR_TXFIFO_EMPTY = (1 << 1),
-    UART_INTR_PARITY_ERR = (1 << 2),
-    UART_INTR_FRAME_ERR = (1 << 3),
-    UART_INTR_RXFIFO_OVF = (1 << 4),
-    UART_INTR_DSR_CHG = (1 << 5),
-    UART_INTR_CTS_CHG = (1 << 6),
-    UART_INTR_BRK_DET = (1 << 7),
-    UART_INTR_RXFIFO_TOUT = (1 << 8),
-    UART_INTR_SW_XON = (1 << 9),
-    UART_INTR_SW_XOFF = (1 << 10),
-    UART_INTR_GLITCH_DET = (1 << 11),
-    UART_INTR_TX_BRK_DONE = (1 << 12),
-    UART_INTR_TX_BRK_IDLE = (1 << 13),
-    UART_INTR_TX_DONE = (1 << 14),
-    UART_INTR_RS485_PARITY_ERR = (1 << 15),
-    UART_INTR_RS485_FRAME_ERR = (1 << 16),
-    UART_INTR_RS485_CLASH = (1 << 17),
-    UART_INTR_CMD_CHAR_DET = (1 << 18),
-    UART_INTR_WAKEUP = (1 << 19),
+    UART_INTR_RXFIFO_FULL               = (1 << 0),
+    UART_INTR_TXFIFO_EMPTY              = (1 << 1),
+    UART_INTR_PARITY_ERR                = (1 << 2),
+    UART_INTR_FRAME_ERR                 = (1 << 3),
+    UART_INTR_RXFIFO_OVF                = (1 << 4),
+    UART_INTR_DSR_CHG                   = (1 << 5),
+    UART_INTR_CTS_CHG                   = (1 << 6),
+    UART_INTR_BRK_DET                   = (1 << 7),
+    UART_INTR_RXFIFO_TOUT               = (1 << 8),
+    UART_INTR_SW_XON                    = (1 << 9),
+    UART_INTR_SW_XOFF                   = (1 << 10),
+    UART_INTR_GLITCH_DET                = (1 << 11),
+    UART_INTR_TX_BRK_DONE               = (1 << 12),
+    UART_INTR_TX_BRK_IDLE               = (1 << 13),
+    UART_INTR_TX_DONE                   = (1 << 14),
+    UART_INTR_RS485_PARITY_ERR          = (1 << 15),
+    UART_INTR_RS485_FRAME_ERR           = (1 << 16),
+    UART_INTR_RS485_CLASH               = (1 << 17),
+    UART_INTR_CMD_CHAR_DET              = (1 << 18),
+    UART_INTR_WAKEUP                    = (1 << 19),
 };
 
 struct UART_gpio_cfg
@@ -440,44 +440,37 @@ static ssize_t UART_read(int fd, void *buf, size_t bufsize)
 {
     struct UART_context *context = AsFD(fd)->ext;
     uart_dev_t *dev = context->dev;
-    int retval;
 
-    if (0 == dev->status.rxfifo_cnt)
+    if (0 != dev->status.rxfifo_cnt)
+        return (int)UART_fifo_read(dev, buf, bufsize);
+
+    // rxfifo intr status is not auto cleared
+    /*
+    dev->int_clr.rxfifo_full_int_clr = 1;
+    dev->int_ena.rxfifo_full_int_ena = 1;
+    */
+
+    uint32_t timeo;
+    if (! (FD_FLAG_NONBLOCK & AsFD(fd)->flags))
     {
-        // rxfifo intr status is not auto cleared
-        dev->int_clr.rxfifo_full_int_clr = 1;
-        dev->int_ena.rxfifo_full_int_ena = 1;
-
-        uint32_t timeo;
-        if (! (FD_FLAG_NONBLOCK & AsFD(fd)->flags))
-        {
-            timeo = AsFD(fd)->read_timeo;
-            if (0 == timeo)
-                timeo = INFINITE;
-        }
-        else
-            timeo = 0;
-
-        retval = sem_timedwait_ms(&context->read_rdy, timeo);
+        timeo = AsFD(fd)->read_timeo;
+        if (0 == timeo)
+            timeo = INFINITE;
     }
     else
-        retval = 0;
+        timeo = 0;
 
-    if (0 == retval)
-    {
-        retval = (int)UART_fifo_read(dev, buf, bufsize);
-
-        if (0 == retval)
-            retval = __set_errno_neg(EAGAIN);
-    }
-    return retval;
+    int retval = sem_timedwait_ms(&context->read_rdy, timeo);
+    if (0 != retval)
+        return __set_errno_neg(EAGAIN);
+    else
+        return (int)UART_fifo_read(dev, buf, bufsize);
 }
 
 static ssize_t UART_write(int fd, void const *buf, size_t count)
 {
     struct UART_context *context = AsFD(fd)->ext;
     uart_dev_t *dev = context->dev;
-    int retval;
 
     uint32_t timeo;
     if (! (FD_FLAG_NONBLOCK & AsFD(fd)->flags))
@@ -489,36 +482,26 @@ static ssize_t UART_write(int fd, void const *buf, size_t count)
     else
         timeo = 0;
 
-    retval = sem_timedwait_ms(&context->write_rdy, timeo);
-    if (0 == retval)
+    int retval = sem_timedwait_ms(&context->write_rdy, timeo);
+    if (0 != retval)
+        return __set_errno_neg(EAGAIN);
+
+    retval = (int)UART_fifo_write(dev, buf, count);
+    if ((size_t)retval < count)
     {
-        size_t written = UART_fifo_write(dev, buf, count);
-
-        if (written < count)
+        if (! (FD_FLAG_NONBLOCK & AsFD(fd)->flags))
         {
-            if (FD_FLAG_NONBLOCK & AsFD(fd)->flags)
-            {
-                if (written)
-                    retval = (int)written;
-                else
-                    retval = __set_errno_neg(EAGAIN);
-            }
-            else
-            {
-                context->tx_ptr = (uint8_t *)buf + written;
-                context->tx_end = (uint8_t *)buf + count;
+            context->tx_ptr = (uint8_t *)buf + retval;
+            context->tx_end = (uint8_t *)buf + count;
 
-                dev->int_ena.tx_done_int_ena = 1;
-                sem_wait(&context->write_rdy);
+            dev->int_ena.tx_done_int_ena = 1;
+            sem_wait(&context->write_rdy);
 
-                retval = (ssize_t)count;
-            }
+            retval = (ssize_t)count;
         }
-        else
-            retval = (int)written;
-
-        sem_post(&context->write_rdy);
     }
+
+    sem_post(&context->write_rdy);
     return retval;
 }
 
