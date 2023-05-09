@@ -293,24 +293,28 @@ int IRAM_ATTR usleep(useconds_t us)
     if (1000000 < (unsigned)us)
         return EINVAL;
 
-    uint32_t us_per_tick = portTICK_PERIOD_MS * 1000;
-    if (us > us_per_tick)
+    if (100 < us)
     {
-        vTaskDelay((us + us_per_tick - 1) / us_per_tick);
-        return 0;
+        uint32_t us_per_tick = 1000 * portTICK_PERIOD_MS;
+        if (us - 100 >= us_per_tick)
+            vTaskDelay((us - 100) / us_per_tick);
     }
-    else
-    {
-        unsigned ticks = us * (unsigned)(CLK_cpu_freq() / _MHZ);
 
-        while ((unsigned)(__get_CCOUNT() - tick_start) < ticks) {}
-        return 0;
-    }
+    unsigned ticks = us * (unsigned)(CLK_cpu_freq() / _MHZ);
+    while ((unsigned)(__get_CCOUNT() - tick_start) < ticks) {}
+    return 0;
 }
 
 unsigned int IRAM_ATTR sleep(unsigned int seconds)
 {
     vTaskDelay(seconds * 1000 / portTICK_PERIOD_MS);
+
+/**
+ *  TODO: usleep(20) after VTaskDelay(): vTaskDelay() halted
+ *      do know if this is freertos bug
+ *      or esp32 cache problem
+*/
+    usleep(20);
     return 0;
 }
 
@@ -321,6 +325,12 @@ int IRAM_ATTR msleep(uint32_t msec)
     else
         taskYIELD();
 
+/**
+ *  TODO: usleep(20) after VTaskDelay(): vTaskDelay() halted
+ *      do know if this is freertos bug
+ *      or esp32 cache problem
+*/
+    usleep(20);
     return 0;
 }
 
