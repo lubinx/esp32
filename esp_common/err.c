@@ -56,6 +56,12 @@ static inline char const *__strerror(int err)
     default:
         return "unkonwn error";
 
+/* rtos error base */
+    case ECMD:
+        return "Command not understood";
+    case EARBLOST:
+        return "Arbitration lost";
+
 /* esp error base */
     case ESP_ERR_INVALID_STATE:
         return "esp error invalid state";

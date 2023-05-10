@@ -11,7 +11,6 @@
 // #include_next <sys/errno.h>
 
 #define errno                           __getreent()->_errno
-// #define error_r(reent)                   reent->_errno
 
 #define __set_errno_neg(err)            __set_errno_r_neg(__getreent(), err)
 #define __set_errno_nullptr(err)        __set_errno_r_nullptr(__getreent(), err)
@@ -24,10 +23,17 @@
     #define __set_errno_r_nullptr(r, err)   __dbg_set_errno_r_nullptr(r, err, __func__)
 #endif
 
+#define RTOS_ERR_BASE                   0x1000
+    #define ECMD                        (1 + RTOS_ERR_BASE)     // shell: command not understood
+
+    // hardware error 0x1800..
+    #define EPARITY                     (2048 + RTOS_ERR_BASE)   // parity error
+    #define EARBLOST                    (2049 + RTOS_ERR_BASE)   // arbitration lost
+
 typedef int esp_err_t;
 
 #define ESP_OK                          0
-#define ESP_ERR_BASE                    0x1000
+#define ESP_ERR_BASE                    0x2000
     /* esp_err_t remap to std error */
     #define ESP_FAIL                    EFAULT
     #define ESP_ERR_NO_MEM              ENOMEM
@@ -35,14 +41,14 @@ typedef int esp_err_t;
     #define ESP_ERR_NOT_SUPPORTED       EOPNOTSUPP
     #define ESP_ERR_TIMEOUT             ETIMEDOUT
     /* esp errors */
-    #define ESP_ERR_INVALID_STATE       0x1003      /*!< Invalid state */
-    #define ESP_ERR_INVALID_SIZE        0x1004      /*!< Invalid size */
-    #define ESP_ERR_NOT_FOUND           0x1005      /*!< Requested resource not found */
-    #define ESP_ERR_INVALID_RESPONSE    0x1008      /*!< Received response was invalid */
-    #define ESP_ERR_INVALID_CRC         0x1009      /*!< CRC or checksum was invalid */
-    #define ESP_ERR_INVALID_VERSION     0x100A      /*!< Version was invalid */
-    #define ESP_ERR_INVALID_MAC         0x100B      /*!< MAC address was invalid */
-    #define ESP_ERR_NOT_FINISHED        0x100C      /*!< There are items remained to retrieve */
+    #define ESP_ERR_INVALID_STATE       0x2003      /*!< Invalid state */
+    #define ESP_ERR_INVALID_SIZE        0x2004      /*!< Invalid size */
+    #define ESP_ERR_NOT_FOUND           0x2005      /*!< Requested resource not found */
+    #define ESP_ERR_INVALID_RESPONSE    0x2008      /*!< Received response was invalid */
+    #define ESP_ERR_INVALID_CRC         0x2009      /*!< CRC or checksum was invalid */
+    #define ESP_ERR_INVALID_VERSION     0x200A      /*!< Version was invalid */
+    #define ESP_ERR_INVALID_MAC         0x200B      /*!< MAC address was invalid */
+    #define ESP_ERR_NOT_FINISHED        0x200C      /*!< There are items remained to retrieve */
 
 #define ESP_ERR_WIFI_BASE               0x3000      /*!< Starting number of WiFi error codes */
 #define ESP_ERR_MESH_BASE               0x4000      /*!< Starting number of MESH error codes */

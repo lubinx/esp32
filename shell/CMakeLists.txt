@@ -6,6 +6,17 @@ list(APPEND priv_includes
 )
 
 list(APPEND srcs
+    "cmdline.c"
+    "ucsh.c"
+    "impl/cat.c"
+    "impl/chdir.c"
+    "impl/dt.c"
+    "impl/format.c"
+    "impl/ls.c"
+    "impl/mkdir.c"
+    # "impl/nvm.c"
+    "impl/pwd.c"
+    "impl/rmdir.c"
 )
 
 idf_component_register(
