@@ -295,9 +295,9 @@ int IRAM_ATTR usleep(useconds_t us)
 
     if (100 < us)
     {
-        uint32_t us_per_tick = 1000 * portTICK_PERIOD_MS;
-        if (us - 100 >= us_per_tick)
-            vTaskDelay((us - 100) / us_per_tick);
+        uint32_t us_per_rtos_tick = 1000 * portTICK_PERIOD_MS;
+        if (us - 100 >= us_per_rtos_tick)
+            vTaskDelay((us - 100) / us_per_rtos_tick);
     }
 
     unsigned ticks = us * (unsigned)(CLK_cpu_freq() / _MHZ);
