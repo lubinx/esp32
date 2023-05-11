@@ -360,7 +360,13 @@ static int __freertos_sema_init(struct KERNEL_hdl *hdl, uint8_t cid, uint8_t fla
     {
     case CID_SEMAPHORE:
         if (1 == hdl->init_sem.max_count)
+        {
+            bool init_signaled = 0 != hdl->init_sem.initial_count;
+
             xSemaphoreCreateBinaryStatic((void *)hdl->padding);
+            if (init_signaled)
+                xSemaphoreGive((void *)hdl->padding);
+        }
         else
             xSemaphoreCreateCountingStatic(hdl->init_sem.max_count, hdl->init_sem.initial_count, (void *)hdl->padding);
         break;
