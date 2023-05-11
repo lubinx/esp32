@@ -25,13 +25,15 @@ __BEGIN_DECLS
     struct UCSH_env
     {
         int fd;             // shell input/output fd
+        char cmdline[1024];
 
-        char *argv[12];
-        void *arg;          // fill any value by user
+        char *argv[16];
 
         int16_t argc;
         uint16_t bufsize;
+
         char *buf;
+        void *arg;          // fill any value by user
     };
 
     /**
@@ -124,17 +126,20 @@ extern __attribute__((nonnull, nothrow))
  *  preset @commands
  ***************************************************************************/
 extern __attribute__((nonnull, nothrow))
+    int UCSH_version(struct UCSH_env *env);
+extern __attribute__((nonnull, nothrow))
+    int UCSH_help(struct UCSH_env *env);
+extern __attribute__((nonnull, nothrow))
     int UCSH_reset(struct UCSH_env *env);
 
-
 extern __attribute__((nonnull, nothrow))
-    int UCSH_version(struct UCSH_env *env);
+    int UCSH_nvm(struct UCSH_env *env);
+extern __attribute__((nonnull, nothrow))
+    int UCSH_format(struct UCSH_env *env);
 
 extern __attribute__((nonnull, nothrow))
     int UCSH_datetime(struct UCSH_env *env);
 
-extern __attribute__((nonnull, nothrow))
-    int UCSH_nvm(struct UCSH_env *env);
 extern __attribute__((nonnull, nothrow))
     int UCSH_ls(struct UCSH_env *env);
 extern __attribute__((nonnull, nothrow))
@@ -149,9 +154,6 @@ extern __attribute__((nonnull, nothrow))
     int UCSH_chdir(struct UCSH_env *env);
 extern __attribute__((nonnull, nothrow))
     int UCSH_rmdir(struct UCSH_env *env);
-extern __attribute__((nonnull, nothrow))
-    int UCSH_format(struct UCSH_env *env);
-
 
 __END_DECLS
 #endif

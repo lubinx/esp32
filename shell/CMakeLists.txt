@@ -14,9 +14,11 @@ list(APPEND srcs
     "impl/format.c"
     "impl/ls.c"
     "impl/mkdir.c"
-    # "impl/nvm.c"
+    "impl/nvm.c"
     "impl/pwd.c"
     "impl/rmdir.c"
+    "impl/rst.c"
+    "impl/unlink.c"
 )
 
 idf_component_register(

@@ -625,6 +625,7 @@ esp_err_t esp_intr_alloc(int source, int flags, intr_handler_t handler, void *ar
     return esp_intr_alloc_intrstatus(source, flags, 0, 0, handler, arg, ret_handle);
 }
 
+/*
 esp_err_t esp_intr_free(intr_handle_t handle)
 {
     bool free_shared_vector=false;
@@ -681,6 +682,7 @@ esp_err_t esp_intr_free(intr_handle_t handle)
     free(handle);
     return ESP_OK;
 }
+*/
 
 /*
  Interrupt disabling strategy:

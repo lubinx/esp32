@@ -185,7 +185,7 @@ int UART_createfd(int nb, uint32_t bps, enum UART_parity_t parity, enum UART_sto
     }
 
     sem_init_np(&context->read_rdy, 0, 0, 1);
-    sem_init_np(&context->write_rdy, 0, 0, 1);
+    sem_init_np(&context->write_rdy, 0, 1, 1);
 
     int retval = UART_configure(dev, bps, parity, stopbits);
 
@@ -195,8 +195,6 @@ int UART_createfd(int nb, uint32_t bps, enum UART_parity_t parity, enum UART_sto
         // use first uart as stdout when no stdout fd is assigned
         if (-1 == __stdout_fd)
             __stdout_fd = retval;
-
-        sem_post(&context->write_rdy);
     }
     else
         retval = __set_errno_neg(retval);
@@ -280,8 +278,10 @@ int UART_configure(uart_dev_t *dev, uint32_t bps, enum UART_parity_t parity, enu
 
     UART_configure_bps(dev, bps);
 
-    // set read_rdy when any character in the queue
     dev->conf1.rxfifo_full_thrhd = 1;
+    // clear rx fifo
+    while (0 != dev->status.rxfifo_cnt)
+        UART_fifo_rx(dev);
 
     dev->int_ena.val = UART_INTR_PARITY_ERR | UART_INTR_FRAME_ERR |
         UART_INTR_RS485_PARITY_ERR | UART_INTR_RS485_FRAME_ERR |
@@ -350,7 +350,14 @@ void UART_fifo_tx(uart_dev_t *dev, uint8_t ch)
 uint8_t UART_fifo_rx(uart_dev_t *dev)
 {
     while (0 == dev->status.rxfifo_cnt);
-    return (uint8_t)dev->fifo.rxfifo_rd_byte;
+
+    uint8_t ch = (uint8_t)dev->fifo.rxfifo_rd_byte;
+
+    // BUG: fifo flags is not auto cleared
+    if (0 == dev->status.rxfifo_cnt)
+        dev->int_clr.rxfifo_full_int_clr = 1;
+
+    return ch;
 }
 
 unsigned UART_fifo_write(uart_dev_t *dev, void const *buf, unsigned count)
@@ -378,6 +385,11 @@ unsigned UART_fifo_read(uart_dev_t *dev, void *buf, unsigned bufsize)
         (uint8_t *)buf ++;
         readed ++;
     }
+
+    // BUG: fifo flags is not auto cleared
+    if (0 == dev->status.rxfifo_cnt)
+        dev->int_clr.rxfifo_full_int_clr = 1;
+
     return readed;
 }
 
@@ -430,6 +442,7 @@ static void UART_configure_context_bps(struct UART_context *context, uart_dev_t 
     // calucate baudrate: UART_CLKDIV_V = 12bits int = 0xFFF = 4095
     uint32_t sclk_div = (uint32_t)((sclk_freq + UART_CLKDIV_V * context->bps - 1) / (UART_CLKDIV_V * context->bps));
     uint32_t clk_div = (uint32_t)(((sclk_freq) << 4) / (context->bps * sclk_div));
+
     // baud rate configuration register is divided into // an integer part and a fractional part.
     dev->clkdiv.clkdiv = BIT_WIDTH_OF(12, clk_div >> 4);
     dev->clkdiv.clkdiv_frag = clk_div & 0xF;
@@ -441,14 +454,12 @@ static ssize_t UART_read(int fd, void *buf, size_t bufsize)
     struct UART_context *context = AsFD(fd)->ext;
     uart_dev_t *dev = context->dev;
 
-    if (0 != dev->status.rxfifo_cnt)
-        return (int)UART_fifo_read(dev, buf, bufsize);
+    int retval = (int)UART_fifo_read(dev, buf, bufsize);
+    if (0 < retval)
+        return retval;
 
-    // rxfifo intr status is not auto cleared
-    /*
-    dev->int_clr.rxfifo_full_int_clr = 1;
+    // enable rxfifo intr
     dev->int_ena.rxfifo_full_int_ena = 1;
-    */
 
     uint32_t timeo;
     if (! (FD_FLAG_NONBLOCK & AsFD(fd)->flags))
@@ -460,7 +471,7 @@ static ssize_t UART_read(int fd, void *buf, size_t bufsize)
     else
         timeo = 0;
 
-    int retval = sem_timedwait_ms(&context->read_rdy, timeo);
+    retval = sem_timedwait_ms(&context->read_rdy, timeo);
     if (0 != retval)
         return __set_errno_neg(EAGAIN);
     else
