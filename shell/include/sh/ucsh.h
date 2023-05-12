@@ -25,15 +25,12 @@ __BEGIN_DECLS
     struct UCSH_env
     {
         int fd;             // shell input/output fd
-        char cmdline[1024];
-
+        char *buf;
+        void *arg;          // fill any value by user
         char *argv[16];
 
         int16_t argc;
         uint16_t bufsize;
-
-        char *buf;
-        void *arg;          // fill any value by user
     };
 
     /**
@@ -70,21 +67,20 @@ extern __attribute__((nothrow))
      *  UCSH_register(): register a command callback
      *  @RETURN see SHELL_REPO_register();
      */
-extern __attribute__((nonnull, nothrow))
+extern __attribute__((nothrow, nonnull))
     int UCSH_register(char const *cmd, const UCSH_callback_t callback);
 
     /**
-     *  UCSH_init_instance(): initialize a UCSH thread
-     *      buffer sharing with stack from top->bottom
+     *  UCSH_loop()
      */
-extern __attribute__((nothrow))
-    void UCSH_init_instance(struct UCSH_env *env, int fd, uint32_t *stack, size_t stack_size);
+extern __attribute__((nothrow, noreturn))
+    void UCSH_loop(struct UCSH_env *env, int fd, uint16_t line_bufsize);
 
     /**
-     *  UCSH_alloc_instance(): initialize a UCSH thread with allocated stack
+     *  UCSH_init_instance(): initialize a UCSH thread
      */
-extern __attribute__((nothrow))
-    struct UCSH_env *UCSH_alloc_instance(int fd, size_t stack_size);
+extern __attribute__((nothrow, nonnull(1)))
+    int UCSH_init_instance(struct UCSH_env *env, int fd, size_t stack_size, uint32_t *stack);
 
     /**
      *  UCSH_leading_count() / UCSH_leading_filter()
@@ -100,14 +96,14 @@ extern __attribute__((nothrow))
      *  UCSH_startup_handle()
      *      **weak** linked when UCSH startup
      */
-extern __attribute__((nonnull, nothrow))
+extern __attribute__((nothrow, nonnull))
     void UCSH_startup_handle(struct UCSH_env *env);
 
     /**
      *  UCSH_startup_handle()
      *      **weak** linked when UCSH print prompt
      */
-extern __attribute__((nonnull, nothrow))
+extern __attribute__((nothrow, nonnull))
     void UCSH_prompt_handle(struct UCSH_env *env);
 
     /**
@@ -119,40 +115,40 @@ extern __attribute__((nonnull, nothrow))
      *      [E2BIG] indicated the parameter is too long to handle
      *      @other call to POSIX functions
      */
-extern __attribute__((nonnull, nothrow))
+extern __attribute__((nothrow, nonnull))
     void UCSH_error_handle(struct UCSH_env *env, int err);
 
 /****************************************************************************
  *  preset @commands
  ***************************************************************************/
-extern __attribute__((nonnull, nothrow))
+extern __attribute__((nothrow, nonnull))
     int UCSH_version(struct UCSH_env *env);
-extern __attribute__((nonnull, nothrow))
+extern __attribute__((nothrow, nonnull))
     int UCSH_help(struct UCSH_env *env);
-extern __attribute__((nonnull, nothrow))
+extern __attribute__((nothrow, nonnull))
     int UCSH_reset(struct UCSH_env *env);
 
-extern __attribute__((nonnull, nothrow))
+extern __attribute__((nothrow, nonnull))
     int UCSH_nvm(struct UCSH_env *env);
-extern __attribute__((nonnull, nothrow))
+extern __attribute__((nothrow, nonnull))
     int UCSH_format(struct UCSH_env *env);
 
-extern __attribute__((nonnull, nothrow))
+extern __attribute__((nothrow, nonnull))
     int UCSH_datetime(struct UCSH_env *env);
 
-extern __attribute__((nonnull, nothrow))
+extern __attribute__((nothrow, nonnull))
     int UCSH_ls(struct UCSH_env *env);
-extern __attribute__((nonnull, nothrow))
+extern __attribute__((nothrow, nonnull))
     int UCSH_cat(struct UCSH_env *env);
-extern __attribute__((nonnull, nothrow))
+extern __attribute__((nothrow, nonnull))
     int UCSH_pwd(struct UCSH_env *env);
-extern __attribute__((nonnull, nothrow))
+extern __attribute__((nothrow, nonnull))
     int UCSH_unlink(struct UCSH_env *env);
-extern __attribute__((nonnull, nothrow))
+extern __attribute__((nothrow, nonnull))
     int UCSH_mkdir(struct UCSH_env *env);
-extern __attribute__((nonnull, nothrow))
+extern __attribute__((nothrow, nonnull))
     int UCSH_chdir(struct UCSH_env *env);
-extern __attribute__((nonnull, nothrow))
+extern __attribute__((nothrow, nonnull))
     int UCSH_rmdir(struct UCSH_env *env);
 
 __END_DECLS

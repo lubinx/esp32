@@ -22,6 +22,10 @@
 #include "sh/cmdline.h"
 #include "sh/ucsh.h"
 
+#ifndef UCSH_LINE_BUFFER
+    #define UCSH_LINE_BUFFER            (512U * sizeof(char))
+#endif
+
 /***************************************************************************/
 /** @def
 ****************************************************************************/
@@ -102,9 +106,33 @@ int UCSH_register(char const *cmd, UCSH_callback_t func)
     return retval;
 }
 
-void UCSH_init_instance(struct UCSH_env *env, int fd, uint32_t *stack, size_t stack_size)
+void UCSH_loop(struct UCSH_env *env, int fd, uint16_t const line_bufsize)
 {
+    char buffer[line_bufsize / sizeof(char)];
+
     env->fd = fd;
+    env->buf = buffer;
+    env->bufsize = line_bufsize;
+
+    UCSH_thread(env);
+}
+
+int UCSH_init_instance(struct UCSH_env *env, int fd, size_t stack_size, uint32_t *stack)
+{
+    if (! stack)
+        stack = malloc(stack_size);
+    if (! stack)
+        return ENOMEM;
+
+    env->fd = fd;
+    env->buf = (char *)stack;
+    {
+        uint16_t half_stacksize = (uint16_t)((stack_size >> 1) & ~0x7U);
+        env->bufsize = UCSH_LINE_BUFFER < half_stacksize ? UCSH_LINE_BUFFER : (uint16_t)half_stacksize;
+    }
+
+    stack = (uint32_t *)((uint8_t *)stack + env->bufsize);
+    stack_size -= env->bufsize;
 
     pthread_attr_t attr;
     pthread_t id;
@@ -113,20 +141,7 @@ void UCSH_init_instance(struct UCSH_env *env, int fd, uint32_t *stack, size_t st
     pthread_attr_setstack(&attr, stack, stack_size);
 
     pthread_create(&id, &attr, (pthread_routine_t)UCSH_thread, env);
-    pthread_attr_destroy(&attr);
-}
-
-struct UCSH_env *UCSH_alloc_instance(int fd, size_t stack_size)
-{
-    struct UCSH_env *env =
-        malloc(sizeof(struct UCSH_env) + stack_size);
-
-    if (env)
-        UCSH_init_instance(env, fd, (uint32_t *)(env + 1), stack_size);
-    else
-        (void)__set_errno_nullptr(ENOMEM);
-
-    return env;
+    return pthread_attr_destroy(&attr);
 }
 
 /***************************************************************************/
@@ -148,7 +163,7 @@ bool UCSH_leading_filter(char *leading, size_t count)
 __attribute__((weak))
 void UCSH_startup_handle(struct UCSH_env *env)
 {
-    UCSH_puts(env, "UltraCore shell...\r\n");
+    UCSH_puts(env, "\r\nUltraCore shell...\r\n");
 }
 
 __attribute__((weak))
@@ -161,22 +176,7 @@ __attribute__((weak))
 void UCSH_error_handle(struct UCSH_env *env, int err)
 {
     if (0 != err)
-    {
-        char const *msg;
-
-        switch (err)
-        {
-        case ECMD:
-            msg = "Command not understood";
-            break;
-
-        default:
-            msg = strerror(err);
-            break;
-        }
-
-        UCSH_printf(env, "%d: %s\r\n", err, msg);
-    }
+        UCSH_printf(env, "%d: %s\r\n", err, strerror(err));
 }
 
 __attribute__((weak))
@@ -219,80 +219,77 @@ int UCSH_help(struct UCSH_env *env)
 ****************************************************************************/
 static __attribute__((noreturn)) void *UCSH_thread(struct UCSH_env *env)
 {
-    env->buf = env->cmdline;
-    env->bufsize = sizeof(env->bufsize);
-    uint16_t cmdline_wpos;
-
     UCSH_startup_handle(env);
+
+    uint16_t const bufsize = env->bufsize;
+    char *cmdline = env->buf;
+    uint16_t comdline_wpos;
 
     while (true)
     {
 UCSH_infinite_loop:
-        cmdline_wpos = 0;
-
-        env->argv[0] = NULL;
+        comdline_wpos = 0;
+        env->bufsize = bufsize;
         env->argc = 0;
 
-        // msleep(10);
         UCSH_prompt_handle(env);
 
 UCSH_continue_read:
-        if (-1 == read(env->fd, &env->cmdline[cmdline_wpos], 1))
-        {
-            // msleep(10);
+        if (sizeof(char) != read(env->fd, &cmdline[comdline_wpos], 1))
             goto UCSH_continue_read;
-        }
 
-        cmdline_wpos ++;
-        env->cmdline[cmdline_wpos] = '\0';
+        comdline_wpos ++;
+        cmdline[comdline_wpos] = '\0';
 
-        if (! UCSH_leading_filter(env->cmdline, cmdline_wpos))
+        if (! UCSH_leading_filter(cmdline, comdline_wpos))
             continue;
-        if (cmdline_wpos < UCSH_leading_count())
+        if (comdline_wpos < UCSH_leading_count())
             goto UCSH_continue_read;
         else
-            cmdline_wpos -= UCSH_leading_count();
+            comdline_wpos -= UCSH_leading_count();
 
         while (true)
         {
-            char CH;
-            if (-1 == read(env->fd, &CH, sizeof(CH)))
+            char ch;
+            if (sizeof(ch) != read(env->fd, &ch, sizeof(ch)))
                 goto UCSH_infinite_loop;
 
-            if (cmdline_wpos > 0)
+            if (comdline_wpos > 0)
             {
-                if (CH == 0x08)     // backspace
+                if (ch == 0x08)     // backspace
                 {
-                    cmdline_wpos --;
+                    comdline_wpos -= (uint16_t)sizeof(char);
                     continue;
                 }
-                else if (' ' == CH && ' ' == env->cmdline[cmdline_wpos - 1])
+                else if (' ' == ch && ' ' == cmdline[comdline_wpos - 1])
                     continue;
             }
-            if (CH == '\n')
+            if (ch == '\n')
             {
-                if (cmdline_wpos > 0 && env->cmdline[cmdline_wpos -1] == '\r')
-                    cmdline_wpos --;
+                if (comdline_wpos > 0 && cmdline[comdline_wpos -1] == '\r')
+                    comdline_wpos -= (uint16_t)sizeof(char);
 
-                env->cmdline[cmdline_wpos] = '\0';
+                cmdline[comdline_wpos] = '\0';
                 break;
             }
-            env->cmdline[cmdline_wpos ++] = CH;
 
-            if (sizeof(env->cmdline) < cmdline_wpos)
+            cmdline[comdline_wpos] = ch;
+            comdline_wpos += (uint16_t)sizeof(char);;
+
+            if (comdline_wpos > bufsize)
             {
                 UCSH_error_handle(env, E2BIG);
                 goto UCSH_infinite_loop;
             }
         }
 
-        env->cmdline[cmdline_wpos ++] = '\0';
-        env->argc = (int16_t)CMD_parse(env->cmdline, lengthof(env->argv), env->argv);
+        cmdline[comdline_wpos] = '\0';
+        env->argc = (int16_t)CMD_parse(cmdline, lengthof(env->argv), env->argv);
 
         /// @setup for env buf, align to 8
-        cmdline_wpos = (uint16_t)((cmdline_wpos + 8) & ~0x07);
-        env->buf = &env->cmdline[cmdline_wpos];
-        env->bufsize = sizeof(env->cmdline) - cmdline_wpos;
+        comdline_wpos = (uint16_t)((comdline_wpos + 7) & ~0x07);
+        env->buf = &cmdline[comdline_wpos];
+        env->bufsize = bufsize - comdline_wpos;
 
         if (env->argc < 0)
         {
