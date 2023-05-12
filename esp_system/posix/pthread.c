@@ -227,8 +227,7 @@ int IRAM_ATTR pthread_spin_unlock(pthread_spinlock_t *lock)
  ***************************************************************************/
 int pthread_mutex_init(pthread_mutex_t *mutex, pthread_mutexattr_t const *attr)
 {
-    mutex_t *retval = mutex_create(attr == NULL ||
-        PTHREAD_MUTEX_RECURSIVE == attr->type ? MUTEX_FLAG_RECURSIVE : MUTEX_FLAG_NORMAL);
+    mutex_t *retval = mutex_create(attr && PTHREAD_MUTEX_RECURSIVE == attr->type ? MUTEX_FLAG_RECURSIVE : MUTEX_FLAG_NORMAL);
 
     if (retval)
     {
