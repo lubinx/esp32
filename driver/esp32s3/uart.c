@@ -453,10 +453,14 @@ static ssize_t UART_read(int fd, void *buf, size_t bufsize)
 {
     struct UART_context *context = AsFD(fd)->ext;
     uart_dev_t *dev = context->dev;
+    int retval;
 
-    int retval = (int)UART_fifo_read(dev, buf, bufsize);
-    if (0 < retval)
-        return retval;
+    if (0 != dev->status.rxfifo_cnt)
+    {
+        retval = (int)UART_fifo_read(dev, buf, bufsize);
+        if (0 < retval)
+            return retval;
+    }
 
     // enable rxfifo intr
     dev->int_ena.rxfifo_full_int_ena = 1;
