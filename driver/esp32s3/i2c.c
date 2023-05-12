@@ -153,7 +153,7 @@ void I2C_initialize()
 
         mutex_init(&context->lock, MUTEX_FLAG_RECURSIVE);
         sem_init_np(&context->evt, 0, 0, 1);
-        esp_intr_alloc(ETS_I2C_EXT0_INTR_SOURCE, 0, I2C0_IntrHandler, context, &context->intr_hdl);
+        esp_intr_alloc(ETS_I2C_EXT0_INTR_SOURCE, ESP_INTR_FLAG_INTRDISABLED, I2C0_IntrHandler, context, &context->intr_hdl);
     }
     if (true)
     {
@@ -162,7 +162,7 @@ void I2C_initialize()
 
         mutex_init(&context->lock, MUTEX_FLAG_RECURSIVE);
         sem_init_np(&context->evt, 0, 0, 1);
-        esp_intr_alloc(ETS_I2C_EXT1_INTR_SOURCE, 0, I2C1_IntrHandler, context, &context->intr_hdl);
+        esp_intr_alloc(ETS_I2C_EXT1_INTR_SOURCE, ESP_INTR_FLAG_INTRDISABLED, I2C1_IntrHandler, context, &context->intr_hdl);
     }
 }
 
@@ -215,6 +215,8 @@ int I2C_createfd(int nb, uint16_t da, uint16_t kbps, uint8_t page_size, uint32_t
             ext->sa_bytes = 3;
         else
             ext->sa_bytes = 4;
+
+        esp_intr_enable(context->intr_hdl);
     }
     else
     {

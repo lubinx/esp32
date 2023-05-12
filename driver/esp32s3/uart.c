@@ -148,15 +148,13 @@ ssize_t console_write(void const *buf, size_t count)
 /****************************************************************************
  *  @implements
  ****************************************************************************/
-#include <esp_arch.h>
-
 __attribute__((constructor))
 void UART_initialize(void)
 {
     // __intr_nb_set_handler(ETS_UART0_INTR_SOURCE, UART0_IntrHandler, &uart_context[0]);
-    esp_intr_alloc(ETS_UART0_INTR_SOURCE, 0, UART0_IntrHandler, &uart_context[0], &uart_context[0].intr_hdl);
-    esp_intr_alloc(ETS_UART1_INTR_SOURCE, 0, UART1_IntrHandler, &uart_context[1], &uart_context[1].intr_hdl);
-    esp_intr_alloc(ETS_UART2_INTR_SOURCE, 0, UART2_IntrHandler, &uart_context[2], &uart_context[2].intr_hdl);
+    esp_intr_alloc(ETS_UART0_INTR_SOURCE, ESP_INTR_FLAG_INTRDISABLED, UART0_IntrHandler, &uart_context[0], &uart_context[0].intr_hdl);
+    esp_intr_alloc(ETS_UART1_INTR_SOURCE, ESP_INTR_FLAG_INTRDISABLED, UART1_IntrHandler, &uart_context[1], &uart_context[1].intr_hdl);
+    esp_intr_alloc(ETS_UART2_INTR_SOURCE, ESP_INTR_FLAG_INTRDISABLED, UART2_IntrHandler, &uart_context[2], &uart_context[2].intr_hdl);
 }
 
 int UART_createfd(int nb, uint32_t bps, enum UART_parity_t parity, enum UART_stopbits_t stopbits)
@@ -200,6 +198,7 @@ int UART_createfd(int nb, uint32_t bps, enum UART_parity_t parity, enum UART_sto
         retval = __set_errno_neg(retval);
 
     context->dev = dev;
+    esp_intr_enable(context->intr_hdl);
     return retval;
 }
 
