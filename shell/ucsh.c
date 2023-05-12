@@ -51,7 +51,7 @@ struct UCSH_dynamic_reg
 /** @private
 ****************************************************************************/
 static struct UCSH_reg const *UCSH_find_cmd(char const *cmd);
-static void *UCSH_thread(struct UCSH_env *env);
+static void *UCSH_thread(struct UCSH_env *env) __attribute__((noreturn));
 
 // const
 static struct UCSH_reg const statical_list[] =
@@ -217,7 +217,7 @@ int UCSH_help(struct UCSH_env *env)
 /***************************************************************************/
 /** @internal
 ****************************************************************************/
-static __attribute__((noreturn)) void *UCSH_thread(struct UCSH_env *env)
+static void *UCSH_thread(struct UCSH_env *env)
 {
     UCSH_startup_handle(env);
 

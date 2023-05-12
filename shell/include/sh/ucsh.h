@@ -17,6 +17,7 @@
 
 #include <features.h>
 #include <unistd.h>
+#include <string.h>
 #include <stdarg.h>
 
 #include "cmdline.h"
@@ -27,7 +28,7 @@ __BEGIN_DECLS
         int fd;             // shell input/output fd
         char *buf;
         void *arg;          // fill any value by user
-        char *argv[16];
+        char *argv[12];
 
         int16_t argc;
         uint16_t bufsize;
@@ -45,7 +46,7 @@ __BEGIN_DECLS
      *      wrapper to sprintf() => write(env->fd, ...)
      */
 #define UCSH_puts(env, text)            \
-    write(env->fd, env->buf, (unsigned)sprintf(env->buf, text))
+    write(env->fd, text, strlen(text))
 
     /**
      *  UCSH_init(): initialize UltraCore'shell context
