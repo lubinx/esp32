@@ -22,33 +22,34 @@ set(esptool_elf2image_args
     --dont-append-digest
 )
 
-add_custom_command(OUTPUT "elf2bin_project"
+add_custom_command(OUTPUT "elf2image_project"
     COMMAND ${ESPTOOLPY} elf2image ${esptool_elf2image_args}
         -o "${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}.bin" "${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}.elf"
     DEPENDS
         "${CMAKE_PROJECT_NAME}"
     VERBATIM
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-    COMMENT "Generating binary image from built executable"
+    COMMENT "Generating binary image from executable"
 )
-add_custom_command(OUTPUT "elf2bin_bootloader"
+add_custom_command(OUTPUT "elf2image_bootloader"
     COMMAND ${ESPTOOLPY} elf2image ${esptool_elf2image_args}
         -o "${CMAKE_BINARY_DIR}/bootloader.bin" "${CMAKE_BINARY_DIR}/bootloader/bootloader.elf"
     DEPENDS
         "bootloader"
     VERBATIM
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-    COMMENT "Generating binary image from built executable"
+    COMMENT "Generating binary image from bootloader"
 )
-add_custom_command(OUTPUT "size"
+add_custom_command(OUTPUT "size_utils"
     COMMAND "${_CMAKE_TOOLCHAIN_PREFIX}size" -A "${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}.elf"
     DEPENDS
     VERBATIM
+    COMMENT "${_CMAKE_TOOLCHAIN_PREFIX}size -A"
 )
 
 add_custom_target("generate_binary" ALL DEPENDS
-    "elf2bin_project" "elf2bin_bootloader")
+    "elf2image_project" "elf2image_bootloader")
 
-add_custom_target("elf_size" ALL
-    DEPENDS "${CMAKE_PROJECT_NAME}" "size"
+add_custom_target("size" ALL
+    DEPENDS "${CMAKE_PROJECT_NAME}" "size_utils"
 )

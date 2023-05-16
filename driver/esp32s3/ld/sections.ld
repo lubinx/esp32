@@ -57,7 +57,7 @@ PROVIDE(_iram_text_end = ABSOLUTE(.));
 PROVIDE(_iram_end = ABSOLUTE(.));
     } > SRAM_text_seg
 
-    .__ram_overlapped_dummy (NOLOAD):
+    .__iram.padding (NOLOAD):
     {
         . = ORIGIN(SRAM_data_seg) + (_iram_end > SRAM_TEXT_OVERLAPPED_START ? _iram_end - SRAM_TEXT_OVERLAPPED_START : 0);
     } > SRAM_data_seg
@@ -173,7 +173,7 @@ PROVIDE(_flash_rodata_end = ABSOLUTE(.));
     } > FLASH_data_seg
 PROVIDE(_flash_rodata_align = ALIGNOF(.data.ro));
 
-    .__flash_rodata_alignment (NOLOAD):
+    .__data.ro.padding (NOLOAD):
     {
         . = . + SIZEOF(.data.ro);
         . = ALIGN(MMU_PAGE_SIZE);
@@ -209,12 +209,12 @@ PROVIDE(__heap_limit__ = ABSOLUTE(.));
     } > SRAM_data_seg
 
     /* really odd, we have no way do specify the startup stack */
-    .__stacks_core0_dummy(NOLOAD) :
+    .__core0_stack(NOLOAD) :
     {
         . += 8192;
     } > SRAM_data_seg
 
-    .__stacks_core1_dummy(NOLOAD) :
+    .__core1_stack(NOLOAD) :
     {
         . += 8192;
     } > SRAM_data_seg
@@ -224,7 +224,7 @@ PROVIDE(__heap_limit__ = ABSOLUTE(.));
         . = ABSOLUTE(SRAM_ESP_RESERVED_END);
     } > SRAM_data_seg
 
-    .__dcache_unused_dummy (NOLOAD) :
+    .__dcache_unused (NOLOAD) :
     {
         . = ORIGIN(SRAM_data_seg) + LENGTH(SRAM_data_seg) - DCACHE_SIZE;
     } > SRAM_data_seg
