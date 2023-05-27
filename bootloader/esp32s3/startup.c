@@ -86,6 +86,7 @@ void __attribute__((noreturn)) Reset_Handler(void)
     #endif
     */
 
+    /* TODO: this will affect on app's esp_rom_printf(), removed these when redirected */
     #if CONFIG_ESP_SYSTEM_LOG_LEVEL
         extern void uart_tx_switch(uint8_t uart_nb);
         extern void ets_install_uart_printf(void);
@@ -153,6 +154,25 @@ void __attribute__((noreturn)) Reset_Handler(void)
 }
 
 /****************************************************************************
+ *  retarget stdout
+*****************************************************************************/
+ssize_t _write_r(struct _reent *r, int fd, void const *buf, size_t count)
+{
+    unsigned written = 0;
+
+    while (written < count)
+    {
+        while (SOC_UART_FIFO_LEN == UART0.status.txfifo_cnt);
+
+        UART0.fifo.rxfifo_rd_byte = *(uint8_t *)buf ++;
+        written ++;
+    }
+
+    ARG_UNUSED(r, fd);
+    return (ssize_t)written;
+}
+
+/****************************************************************************
  *  @internal
 *****************************************************************************/
 struct {
@@ -168,11 +188,8 @@ static void cache_hal_init(void)
     cache_ctx.inst_autoload_flag = Cache_Disable_ICache();
     Cache_Enable_ICache(cache_ctx.inst_autoload_flag);
 
-    cache_ll_l1_enable_bus(0, CACHE_BUS_DBUS0);
-    cache_ll_l1_enable_bus(0, CACHE_BUS_IBUS0);
-
-    cache_ll_l1_enable_bus(1, CACHE_BUS_DBUS0);
-    cache_ll_l1_enable_bus(1, CACHE_BUS_IBUS0);
+    EXTMEM.icache_ctrl1.val = 0;
+    EXTMEM.dcache_ctrl1.val = 0;
 }
 
 static void cache_hal_enable(enum cache_type_t type)
@@ -263,17 +280,13 @@ static kernel_entry_t KERNEL_load(uintptr_t flash_location)
     if (ro_seg.location)
     {
         MAP_flash_segment(&ro_seg);
-
-        cache_ll_l1_enable_bus(0, CACHE_BUS_DBUS0);
-        cache_ll_l1_enable_bus(1, CACHE_BUS_DBUS0);
+        EXTMEM.dcache_ctrl1.val = 0;
     }
 
     if (text_seg.location)
     {
         MAP_flash_segment(&text_seg);
-
-        cache_ll_l1_enable_bus(0, CACHE_BUS_IBUS0);
-        cache_ll_l1_enable_bus(1, CACHE_BUS_IBUS0);
+        EXTMEM.icache_ctrl1.val = 0;
     }
 
     rom_config_instruction_cache_mode(CONFIG_ESP32S3_INSTRUCTION_CACHE_SIZE,

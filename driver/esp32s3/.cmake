@@ -31,8 +31,8 @@ macro(__chip_linker_script)
 
     add_custom_command(
         OUTPUT ${ld_output}
-        COMMAND "${CMAKE_C_COMPILER}" -C -P -x c -E -o ${ld_output} -I ${config_dir}
-                -I "${CMAKE_CURRENT_LIST_DIR}" ${ld_input}
+        COMMAND "${CMAKE_C_COMPILER}" -x c ${ld_input} -C -P -E -o ${ld_output}
+            -I ${config_dir} -I "${CMAKE_CURRENT_LIST_DIR}"
         DEPENDS ${sdkconfig_header}
         VERBATIM
     )

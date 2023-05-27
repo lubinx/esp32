@@ -30,6 +30,7 @@ struct __lock
 
 // static const struct syscall_stub_table __stub_table;
 static struct _reent __reent = {0};
+
 // locks
 struct __lock    __lock___sinit_recursive_mutex     = {0};
 struct __lock    __lock___malloc_recursive_mutex    = {0};

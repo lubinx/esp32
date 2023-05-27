@@ -300,37 +300,47 @@ int IRAM_ATTR usleep(useconds_t us)
             vTaskDelay((us - 100) / us_per_rtos_tick);
     }
 
+    static spinlock_t atomic = SPINLOCK_INITIALIZER;
+    spin_lock(&atomic);
+
     unsigned ticks = us * (unsigned)(CLK_cpu_freq() / _MHZ);
     while ((unsigned)(__get_CCOUNT() - tick_start) < ticks) {}
+
+    spin_unlock(&atomic);
     return 0;
 }
 
 unsigned int IRAM_ATTR sleep(unsigned int seconds)
 {
-    vTaskDelay(seconds * 1000 / portTICK_PERIOD_MS);
+    if (seconds)
+    {
+        vTaskDelay(seconds * 1000 / portTICK_PERIOD_MS);
 
-/**
- *  TODO: usleep(20) after VTaskDelay(): vTaskDelay() halted
- *      do know if this is freertos bug
- *      or esp32 cache problem
-*/
-    usleep(20);
+        /**
+         *  TODO: usleep(20) after VTaskDelay(): vTaskDelay() halted
+         *      do know if this is freertos bug
+         *      or esp32 cache problem
+        */
+        usleep(20);
+    }
     return 0;
 }
 
 int IRAM_ATTR msleep(uint32_t msec)
 {
     if (msec)
+    {
         vTaskDelay(msec / portTICK_PERIOD_MS);
+        /**
+         *  TODO: usleep(20) after VTaskDelay(): vTaskDelay() halted
+         *      do know if this is freertos bug
+         *      or esp32 cache problem
+        */
+        usleep(20);
+    }
     else
         taskYIELD();
 
-/**
- *  TODO: usleep(20) after VTaskDelay(): vTaskDelay() halted
- *      do know if this is freertos bug
- *      or esp32 cache problem
-*/
-    usleep(20);
     return 0;
 }
 

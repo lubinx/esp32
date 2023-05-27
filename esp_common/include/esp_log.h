@@ -115,9 +115,6 @@ static inline
 extern __attribute__ ((nothrow, format(printf, 1, 2)))
     int esp_log_printf(char const *format, ...);
 
-extern  __attribute__ ((nothrow))
-    void esp_log_vprintf(char const *format, va_list arg);
-
 // avoid esp_rom_sys.h
 extern __attribute__ ((nothrow, format(printf, 1, 2)))
     int esp_rom_printf(char const *format, ...);

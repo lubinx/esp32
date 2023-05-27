@@ -1,9 +1,10 @@
+#include <stdio.h>
+#include <reent.h>
 #include <sys/types.h>
 
 #include "esp_arch.h"
 #include "esp_log.h"
 
-#include "uart.h"
 #include "sdkconfig.h"
 
 /****************************************************************************
@@ -18,4 +19,16 @@ uint32_t esp_log_timestamp(void)
 {
     // when bootup this is 20 Mhz
     return __get_CCOUNT() / (20 * 1000);
+}
+
+int esp_log_printf(char const *format, ...)
+{
+    va_list va;
+    va_start(va, format);
+
+    int retval = vprintf(format, va);
+    va_end(va);
+
+    fflush(stdout);
+    return retval;
 }

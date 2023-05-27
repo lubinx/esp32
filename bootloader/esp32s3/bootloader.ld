@@ -1,7 +1,7 @@
 ENTRY(Reset_Handler);
 
 /* alias */
-PROVIDE(esp_log_printf = ets_printf);
+PROVIDE(esp_rom_printf = esp_log_printf);
 /**
  *  Appendix: Memory Usage of ROM bootloader
  *
@@ -42,8 +42,8 @@ PROVIDE(esp_log_printf = ets_printf);
  */
 MEMORY
 {
-    BOOT_data_seg (RW) :        org = 0x3FCD7E00, len = 32K
-    BOOT_text_seg (RWX) :       org = 0x403C7E00 + 32K, len = 32K
+    BOOT_data_seg (RW) :        org = 0x3FCD7E00, len = 8K
+    BOOT_text_seg (RWX) :       org = 0x403C7E00 + 8K, len = 56K
 }
 
 SECTIONS
@@ -98,7 +98,6 @@ PROVIDE_HIDDEN(__init_array_end = ABSOLUTE(.));
     .data.zi (NOLOAD) :
     {
 PROVIDE(__bss_start__ = ABSOLUTE(.));
-
         *(.dynsbss)
         *(.dynbss)
         *(.scommon)

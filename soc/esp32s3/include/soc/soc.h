@@ -36,14 +36,6 @@
 #define REG_SPI_MEM_BASE(i)     (DR_REG_SPI0_BASE - (i) * 0x1000)
 #define REG_I2C_BASE(i)    (DR_REG_I2C_EXT_BASE + (i) * 0x14000 )
 
-//Convenient way to replace the register ops when ulp riscv projects
-//consume this file
-#ifndef ULP_RISCV_REGISTER_OPS
-
-//Registers Operation {{
-#define ETS_UNCACHED_ADDR(addr) (addr)
-#define ETS_CACHED_ADDR(addr) (addr)
-
 #ifndef __ASSEMBLER__
 
 //write value to register
@@ -106,12 +98,12 @@
 
 //read value from register
 #define READ_PERI_REG(addr) ({                                                                                         \
-            (*((volatile uint32_t *)ETS_UNCACHED_ADDR(addr)));                                                         \
+            (*((volatile uint32_t *)addr));                                                                            \
         })
 
 //write value to register
 #define WRITE_PERI_REG(addr, val) do {                                                                                 \
-            (*((volatile uint32_t *)ETS_UNCACHED_ADDR(addr))) = (uint32_t)(val);                                       \
+            (*((volatile uint32_t *)addr)) = (uint32_t)(val);                                                          \
         } while(0)
 
 //clear bits of register controlled by mask
@@ -145,8 +137,6 @@
         })
 
 #endif /* !__ASSEMBLER__ */
-//}}
-#endif /* !ULP_RISCV_REGISTER_OPS */
 
 //Periheral Clock {{
 #define  APB_CLK_FREQ_ROM                            (40*1000000)
@@ -166,126 +156,127 @@
 //}}
 
 /* Overall memory map */
-#define SOC_DROM_LOW    0x3C000000
-#define SOC_DROM_HIGH   0x3D000000
-#define SOC_IROM_LOW    0x42000000
-#define SOC_IROM_HIGH   0x44000000
-#define SOC_IRAM_LOW    0x40370000
-#define SOC_IRAM_HIGH   0x403E0000
-#define SOC_DRAM_LOW    0x3FC88000
-#define SOC_DRAM_HIGH   0x3FD00000
+    #define SOC_DROM_LOW                (0x3C000000)
+    #define SOC_DROM_HIGH               (0x3D000000)
+    #define SOC_IROM_LOW                (0x42000000)
+    #define SOC_IROM_HIGH               (0x44000000)
+    #define SOC_IRAM_LOW                (0x40370000)
+    #define SOC_IRAM_HIGH               (0x403E0000)
+    #define SOC_DRAM_LOW                (0x3FC88000)
+    #define SOC_DRAM_HIGH               (0x3FD00000)
 
-#define SOC_RTC_IRAM_LOW  0x600FE000
-#define SOC_RTC_IRAM_HIGH 0x60100000
-#define SOC_RTC_DRAM_LOW  0x600FE000
-#define SOC_RTC_DRAM_HIGH 0x60100000
+    #define SOC_RTC_IRAM_LOW            (0x600FE000)
+    #define SOC_RTC_IRAM_HIGH           (0x60100000)
+    #define SOC_RTC_DRAM_LOW            (0x600FE000)
+    #define SOC_RTC_DRAM_HIGH           (0x60100000)
 
-#define SOC_RTC_DATA_LOW  0x50000000
-#define SOC_RTC_DATA_HIGH 0x50002000
+    #define SOC_RTC_DATA_LOW            (0x50000000)
+    #define SOC_RTC_DATA_HIGH           (0x50002000)
 
-#define SOC_EXTRAM_DATA_LOW 0x3C000000
-#define SOC_EXTRAM_DATA_HIGH 0x3E000000
-#define SOC_IROM_MASK_LOW  0x40000000
-#define SOC_IROM_MASK_HIGH 0x4001A100
+    #define SOC_EXTRAM_DATA_LOW         (0x3C000000)
+    #define SOC_EXTRAM_DATA_HIGH        (0x3E000000)
+    #define SOC_IROM_MASK_LOW           (0x40000000)
+    #define SOC_IROM_MASK_HIGH          (0x4001A100)
 
-#define SOC_EXTRAM_DATA_SIZE (SOC_EXTRAM_DATA_HIGH - SOC_EXTRAM_DATA_LOW)
-#define SOC_MAX_CONTIGUOUS_RAM_SIZE (SOC_EXTRAM_DATA_HIGH - SOC_EXTRAM_DATA_LOW) ///< Largest span of contiguous memory (DRAM or IRAM) in the address space
+    #define SOC_EXTRAM_DATA_SIZE        (SOC_EXTRAM_DATA_HIGH - SOC_EXTRAM_DATA_LOW)
+    #define SOC_MAX_CONTIGUOUS_RAM_SIZE (SOC_EXTRAM_DATA_HIGH - SOC_EXTRAM_DATA_LOW) ///< Largest span of contiguous memory (DRAM or IRAM) in the address space
 
 
 //First and last words of the D/IRAM region, for both the DRAM address as well as the IRAM alias.
-#define SOC_DIRAM_IRAM_LOW    0x40378000
-#define SOC_DIRAM_IRAM_HIGH   0x403E0000
-#define SOC_DIRAM_DRAM_LOW    0x3FC88000
-#define SOC_DIRAM_DRAM_HIGH   0x3FCF0000
+    #define SOC_DIRAM_IRAM_LOW          (0x40378000)
+    #define SOC_DIRAM_IRAM_HIGH         (0x403E0000)
+    #define SOC_DIRAM_DRAM_LOW          (0x3FC88000)
+    #define SOC_DIRAM_DRAM_HIGH         (0x3FCF0000)
 
-#define SOC_I_D_OFFSET (SOC_DIRAM_IRAM_LOW - SOC_DIRAM_DRAM_LOW)
-#define MAP_DRAM_TO_IRAM(addr) (addr + SOC_I_D_OFFSET)
-#define MAP_IRAM_TO_DRAM(addr) (addr - SOC_I_D_OFFSET)
+    #define SOC_I_D_OFFSET              (SOC_DIRAM_IRAM_LOW - SOC_DIRAM_DRAM_LOW)
+    #define MAP_DRAM_TO_IRAM(addr)      (addr + SOC_I_D_OFFSET)
+    #define MAP_IRAM_TO_DRAM(addr)      (addr - SOC_I_D_OFFSET)
 
 // Region of memory accessible via DMA in internal memory. See esp_ptr_dma_capable().
-#define SOC_DMA_LOW  0x3FC88000
-#define SOC_DMA_HIGH 0x3FD00000
+    #define SOC_DMA_LOW                 (0x3FC88000)
+    #define SOC_DMA_HIGH                (0x3FD00000)
 
 // Region of memory accessible via DMA in external memory. See esp_ptr_dma_ext_capable().
-#define SOC_DMA_EXT_LOW     SOC_EXTRAM_DATA_LOW
-#define SOC_DMA_EXT_HIGH    SOC_EXTRAM_DATA_HIGH
+    #define SOC_DMA_EXT_LOW             SOC_EXTRAM_DATA_LOW
+    #define SOC_DMA_EXT_HIGH            SOC_EXTRAM_DATA_HIGH
 
 
 // Region of memory that is byte-accessible. See esp_ptr_byte_accessible().
-#define SOC_BYTE_ACCESSIBLE_LOW     0x3FC88000
-#define SOC_BYTE_ACCESSIBLE_HIGH    0x3FD00000
+    #define SOC_BYTE_ACCESSIBLE_LOW     (0x3FC88000)
+    #define SOC_BYTE_ACCESSIBLE_HIGH    (0x3FD00000)
 
 //Region of memory that is internal, as in on the same silicon die as the ESP32 CPUs
 //(excluding RTC data region, that's checked separately.) See esp_ptr_internal().
-#define SOC_MEM_INTERNAL_LOW        0x3FC88000
-#define SOC_MEM_INTERNAL_HIGH       0x403E2000
+    #define SOC_MEM_INTERNAL_LOW        (0x3FC88000)
+    #define SOC_MEM_INTERNAL_HIGH       (0x403E2000)
 
 // Start (highest address) of ROM boot stack, only relevant during early boot
-#define SOC_ROM_STACK_START         0x3fceb710
-#define SOC_ROM_STACK_SIZE          0x2000
+    #define SOC_ROM_STACK_START         (0x3FCEB710)
+    #define SOC_ROM_STACK_SIZE          (0x2000)
 
-//interrupt cpu using table, Please see the core-isa.h
-/*************************************************************************************************************
- *      Intr num                Level           Type                    PRO CPU usage           APP CPU uasge
- *      0                       1               extern level            WMAC                    Reserved
- *      1                       1               extern level            BT/BLE Host HCI DMA     BT/BLE Host HCI DMA
- *      2                       1               extern level
- *      3                       1               extern level
- *      4                       1               extern level            WBB
- *      5                       1               extern level            BT/BLE Controller       BT/BLE Controller
- *      6                       1               timer                   FreeRTOS Tick(L1)       FreeRTOS Tick(L1)
- *      7                       1               software                BT/BLE VHCI             BT/BLE VHCI
- *      8                       1               extern level            BT/BLE BB(RX/TX)        BT/BLE BB(RX/TX)
- *      9                       1               extern level
- *      10                      1               extern edge
- *      11                      3               profiling
- *      12                      1               extern level
- *      13                      1               extern level
- *      14                      7               nmi                     Reserved                Reserved
- *      15                      3               timer                   FreeRTOS Tick(L3)       FreeRTOS Tick(L3)
- *      16                      5               timer
- *      17                      1               extern level
- *      18                      1               extern level
- *      19                      2               extern level
- *      20                      2               extern level
- *      21                      2               extern level
- *      22                      3               extern edge
- *      23                      3               extern level
- *      24                      4               extern level            TG1_WDT
- *      25                      4               extern level            CACHEERR
- *      26                      5               extern level
- *      27                      3               extern level            Reserved                Reserved
- *      28                      4               extern edge             IPC_ISR                 IPC_ISR
- *      29                      3               software                Reserved                Reserved
- *      30                      4               extern edge             Reserved                Reserved
- *      31                      5               extern level
- *************************************************************************************************************
- */
+// interrupt cpu using table, Please see the core-isa.h
+
+    /*************************************************************************************************************
+     *      Intr num                Level           Type                    PRO CPU usage           APP CPU uasge
+     *      0                       1               extern level            WMAC                    Reserved
+     *      1                       1               extern level            BT/BLE Host HCI DMA     BT/BLE Host HCI DMA
+     *      2                       1               extern level
+     *      3                       1               extern level
+     *      4                       1               extern level            WBB
+     *      5                       1               extern level            BT/BLE Controller       BT/BLE Controller
+     *      6                       1               timer                   FreeRTOS Tick(L1)       FreeRTOS Tick(L1)
+     *      7                       1               software                BT/BLE VHCI             BT/BLE VHCI
+     *      8                       1               extern level            BT/BLE BB(RX/TX)        BT/BLE BB(RX/TX)
+     *      9                       1               extern level
+     *      10                      1               extern edge
+     *      11                      3               profiling
+     *      12                      1               extern level
+     *      13                      1               extern level
+     *      14                      7               nmi                     Reserved                Reserved
+     *      15                      3               timer                   FreeRTOS Tick(L3)       FreeRTOS Tick(L3)
+     *      16                      5               timer
+     *      17                      1               extern level
+     *      18                      1               extern level
+     *      19                      2               extern level
+     *      20                      2               extern level
+     *      21                      2               extern level
+     *      22                      3               extern edge
+     *      23                      3               extern level
+     *      24                      4               extern level            TG1_WDT
+     *      25                      4               extern level            CACHEERR
+     *      26                      5               extern level
+     *      27                      3               extern level            Reserved                Reserved
+     *      28                      4               extern edge             IPC_ISR                 IPC_ISR
+     *      29                      3               software                Reserved                Reserved
+     *      30                      4               extern edge             Reserved                Reserved
+     *      31                      5               extern level
+     **************************************************************************************************************/
 
 //CPU0 Interrupt number reserved, not touch this.
-#define ETS_WMAC_INUM                           0
-#define ETS_BT_HOST_INUM                        1
-#define ETS_WBB_INUM                            4
-#define ETS_TG0_T1_INUM                         10 /**< use edge interrupt*/
-#define ETS_FRC1_INUM                           22
-#define ETS_T1_WDT_INUM                         24
-#define ETS_MEMACCESS_ERR_INUM                  25
-#define ETS_CACHEERR_INUM                       ETS_MEMACCESS_ERR_INUM
-#define ETS_IPC_ISR_INUM                        28
+    #define ETS_WMAC_INUM               0
+    #define ETS_BT_HOST_INUM            1
+    #define ETS_WBB_INUM                4
+    #define ETS_TG0_T1_INUM             10 /**< use edge interrupt*/
+    #define ETS_FRC1_INUM               22
+    #define ETS_T1_WDT_INUM             24
+    #define ETS_MEMACCESS_ERR_INUM      25
+    #define ETS_CACHEERR_INUM           ETS_MEMACCESS_ERR_INUM
+    #define ETS_IPC_ISR_INUM            28
 
 //CPU0 Interrupt number used in ROM, should be cancelled in SDK
-#define ETS_SLC_INUM                            1
-#define ETS_UART0_INUM                          5
-#define ETS_UART1_INUM                          5
-#define ETS_SPI2_INUM                           1
+    #define ETS_SLC_INUM                1
+    #define ETS_SPI2_INUM               1
+    #define ETS_UART0_INUM              5
+    #define ETS_UART1_INUM              5
+
 //CPU0 Interrupt number used in ROM code only when module init function called, should pay attention here.
-#define ETS_FRC_TIMER2_INUM 10 /* use edge*/
-#define ETS_GPIO_INUM       4
+    #define ETS_FRC_TIMER2_INUM         10 /* use edge*/
+    #define ETS_GPIO_INUM               4
 
 //Other interrupt number should be managed by the user
 
 //Invalid interrupt for number interrupt matrix
-#define ETS_INVALID_INUM                        6
+    #define ETS_INVALID_INUM            6
 
 // Interrupt number for the Interrupt watchdog
-#define ETS_INT_WDT_INUM                         (ETS_T1_WDT_INUM)
+    #define ETS_INT_WDT_INUM            (ETS_T1_WDT_INUM)
