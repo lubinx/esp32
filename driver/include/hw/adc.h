@@ -26,10 +26,10 @@ __BEGIN_DECLS
     typedef struct ADC_attr_t ADC_attr_t;
     typedef void (* ADC_callback_t)(int volt, int raw, void *arg);
 
-    struct ADC_attr_hdr_t
+    struct ADC_common_attr_t
     {
-        struct ADC_attr_hdr_t *next;
-        struct ADC_attr_hdr_t **iter;
+        struct ADC_common_attr_t *next;
+        struct ADC_common_attr_t **iter;
 
         ADC_callback_t callback;
         void *arg;

@@ -35,9 +35,6 @@ extern __attribute__((nothrow))
 extern __attribute__((nothrow))
     void ADC_HAL_stop(void);
 
-extern __attribute__((nothrow))
-    void ADC_HAL_shutdown(void);
-
 /***************************************************************************
  *  ADC @interrupt callback
  ***************************************************************************/
