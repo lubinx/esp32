@@ -434,33 +434,33 @@ void IOMUX_print(void)
 /***************************************************************************/
 /** @implements
 ****************************************************************************/
-int GPIO_disable(void *gpio, uint32_t pins)
+int GPIO_disable(uint32_t pins)
 {
-    ARG_UNUSED(gpio, pins);
+    ARG_UNUSED(pins);
     return ENOSYS;
 }
 
-int GPIO_disable_with_pullup(void *gpio, uint32_t pins)
+int GPIO_disable_with_pullup(uint32_t pins)
 {
-    ARG_UNUSED(gpio, pins);
+    ARG_UNUSED(pins);
     return ENOSYS;
 }
 
-int GPIO_setdir_input(void *gpio, uint32_t pins)
+int GPIO_setdir_input(uint32_t pins)
 {
-    ARG_UNUSED(gpio, pins);
+    ARG_UNUSED(pins);
     return ENOSYS;
 }
 
-int GPIO_setdir_input_pp(void *gpio, uint32_t pins, enum GPIO_pad_pull_t pp, bool filter_en)
+int GPIO_setdir_input_pp(uint32_t pins, enum GPIO_pad_pull_t pp, bool filter_en)
 {
-    ARG_UNUSED(gpio, pins, pp, filter_en);
+    ARG_UNUSED(pins, pp, filter_en);
     return ENOSYS;
 }
 
-int GPIO_setdir_output(enum GPIO_output_mode_t mode, void *gpio, uint32_t pins)
+int GPIO_setdir_output(enum GPIO_output_mode_t mode, uint32_t pins)
 {
-    ARG_UNUSED(gpio, pins);
+    ARG_UNUSED(pins);
 
     if (OPEN_SOURCE == mode)
         return ENOTSUP;
@@ -468,38 +468,31 @@ int GPIO_setdir_output(enum GPIO_output_mode_t mode, void *gpio, uint32_t pins)
     return ENOSYS;
 }
 
-uint32_t GPIO_peek(void *gpio, uint32_t pins)
+uint32_t GPIO_peek(uint32_t pins)
 {
-    if ((uintptr_t)gpio != ((uintptr_t)gpio & pins))
-        return (uint32_t)__set_errno_nullptr(EINVAL);
-
+    ARG_UNUSED(pins);
     return 0;
 }
 
-uint32_t GPIO_peek_output(void *gpio, uint32_t pins)
+uint32_t GPIO_peek_output(uint32_t pins)
 {
-    if ((uintptr_t)gpio != ((uintptr_t)gpio & pins))
-        return (uint32_t)__set_errno_nullptr(EINVAL);
-
+    ARG_UNUSED(pins);
     return 0;
 }
 
-void GPIO_toggle(void *gpio, uint32_t pins)
+void GPIO_toggle(uint32_t pins)
 {
-    if ((uintptr_t)gpio != ((uintptr_t)gpio & pins))
-        return (void)__set_errno_nullptr(EINVAL);
+    ARG_UNUSED(pins);
 }
 
-void GPIO_set(void *gpio, uint32_t pins)
+void GPIO_set(uint32_t pins)
 {
-    if ((uintptr_t)gpio != ((uintptr_t)gpio & pins))
-        return (void)__set_errno_nullptr(EINVAL);
+    ARG_UNUSED(pins);
 }
 
-void GPIO_clear(void *gpio, uint32_t pins)
+void GPIO_clear(uint32_t pins)
 {
-    if ((uintptr_t)gpio != ((uintptr_t)gpio & pins))
-        return (void)__set_errno_nullptr(EINVAL);
+    ARG_UNUSED(pins);
 }
 
 /***************************************************************************/
@@ -659,14 +652,14 @@ int GPIO_output_toggle_pin_nb(uint8_t pin_nb)
 /***************************************************************************/
 /** @implements: interrupt hal
 ****************************************************************************/
-void GPIO_HAL_intr_enable(void *gpio, uint32_t pins, enum GPIO_trig_t trig)
+void GPIO_HAL_intr_enable(uint32_t pins, enum GPIO_trig_t trig)
 {
-    ARG_UNUSED(gpio, pins, trig);
+    ARG_UNUSED(pins, trig);
 }
 
-void GPIO_HAL_intr_disable(void *gpio, uint32_t pins)
+void GPIO_HAL_intr_disable(uint32_t pins)
 {
-    ARG_UNUSED(gpio, pins);
+    ARG_UNUSED(pins);
 }
 
 /***************************************************************************/

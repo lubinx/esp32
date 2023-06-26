@@ -19,7 +19,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-    #define GPIO_ALL_PORT               ((void *)0xFFFFFFFFUL)
     #define GPIO_ALL_PIN                (0xFFFFFFFFUL)
 
     enum GPIO_trig_t
@@ -84,13 +83,13 @@ __BEGIN_DECLS
      *  GPIO debounce for INPUT mode only
      */
 extern __attribute__((nothrow))
-    int GPIO_debounce(void *gpio, uint32_t pins, uint32_t millisecond);
+    int GPIO_debounce(uint32_t pins, uint32_t millisecond);
 
     /**
      *  GPIO hold to repeating for INPUT mode only
      */
 extern __attribute__((nothrow))
-    int GPIO_hold_repeating(void *gpio, uint32_t pins, uint32_t millisecond);
+    int GPIO_hold_repeating(uint32_t pins, uint32_t millisecond);
 
 /***************************************************************************/
 /**  GPIO direction configure
@@ -101,17 +100,17 @@ extern __attribute__((nothrow))
      *      otherwise should set direction as input with HIGH-Z / GPIO_disable_with_pullup(): PULL-UP
     */
 extern __attribute__((nothrow, nonnull))
-    int GPIO_disable(void *gpio, uint32_t pins);
+    int GPIO_disable(uint32_t pins);
 extern __attribute__((nothrow, nonnull))
-    int GPIO_disable_with_pullup(void *gpio, uint32_t pins);
+    int GPIO_disable_with_pullup(uint32_t pins);
 
 extern __attribute__((nothrow, nonnull))
-    int GPIO_setdir_input(void *gpio, uint32_t pins);
+    int GPIO_setdir_input(uint32_t pins);
 extern __attribute__((nothrow, nonnull))
-    int GPIO_setdir_input_pp(void *gpio, uint32_t pins, enum GPIO_pad_pull_t pp, bool filter_en);
+    int GPIO_setdir_input_pp(uint32_t pins, enum GPIO_pad_pull_t pp, bool filter_en);
 
 extern __attribute__((nothrow, nonnull))
-    int GPIO_setdir_output(enum GPIO_output_mode_t mode, void *gpio, uint32_t pins);
+    int GPIO_setdir_output(enum GPIO_output_mode_t mode, uint32_t pins);
 
 /***************************************************************************/
 /** GPIO IO
@@ -120,31 +119,31 @@ extern __attribute__((nothrow, nonnull))
      *  GPIO_peek(): peek Input LEVEL
      */
 extern __attribute__((nothrow, nonnull))
-    uint32_t GPIO_peek(void *gpio, uint32_t pins);
+    uint32_t GPIO_peek(uint32_t pins);
 
     /**
      *  GPIO_peek_output(): peek Output drived LEVEL
      */
 extern __attribute__((nothrow, nonnull))
-    uint32_t GPIO_peek_output(void *gpio, uint32_t pins);
+    uint32_t GPIO_peek_output(uint32_t pins);
 
     /**
      *  GPIO_toggle(): Output driven toggle LEVEL
      */
 extern  __attribute__((nothrow, nonnull))
-    void GPIO_toggle(void *gpio, uint32_t pins);
+    void GPIO_toggle(uint32_t pins);
 
     /**
      *  GPIO_set(): Output driven HIGH LEVEL
      */
 extern __attribute__((nothrow, nonnull))
-    void GPIO_set(void *gpio, uint32_t pins);
+    void GPIO_set(uint32_t pins);
 
     /**
      *  GPIO_clear(): Output driven LOW LEVEL
      */
 extern __attribute__((nothrow, nonnull))
-    void GPIO_clear(void *gpio, uint32_t pins);
+    void GPIO_clear(uint32_t pins);
 
 /***************************************************************************/
 /**  GPIO Interrupt Control
@@ -152,21 +151,21 @@ extern __attribute__((nothrow, nonnull))
     /**
      *  GPIO interrupt's @callback
      */
-typedef void (*GPIO_callback_t)(void *gpio, uint32_t pins, void *arg);
+typedef void (*GPIO_callback_t)(uint32_t pins, void *arg);
 
     /**
      *  GPIO_intr_enable_cb()
      *      updates PORT.PINs's TRIG or add a new callback
      */
-extern __attribute__((nothrow, nonnull(1, 4)))
-    int GPIO_intr_enable(void *gpio, uint32_t pins, enum GPIO_trig_t trig, GPIO_callback_t callback, void *arg);
+extern __attribute__((nothrow, nonnull(3)))
+    int GPIO_intr_enable(uint32_t pins, enum GPIO_trig_t trig, GPIO_callback_t callback, void *arg);
 
     /**
      *  GPIO_intr_disable()
      *      removes all interrupt callback associated with PORT.PINs
      */
 extern __attribute__((nothrow, nonnull))
-    void GPIO_intr_disable(void *gpio, uint32_t pins);
+    void GPIO_intr_disable(uint32_t pins);
 
     /**
      *  GPIO_intr_disable_cb()

@@ -150,7 +150,7 @@ int TIMER_deconfigure(int nb)
             TIMER_match_clear(nb);
             break;
         case TIMER_PWM:
-            TIMER_PWM_HAL_release(nb, ctx->config.PWM.gpio, ctx->config.PWM.pin);
+            TIMER_PWM_HAL_release(nb, ctx->config.PWM.pin);
             break;
         default:
         // TODO: TIMER_deconfigure() case TIMER_CAPTURE:
@@ -404,10 +404,10 @@ uint32_t TIMER_match_cached_sections(int nb)
 /***************************************************************************
  *  TIMER @PWM
  ***************************************************************************/
-int TIMER_PWM_get(uint32_t const freq, void *gpio, uint32_t pin, TIMER_callback_t callback)
+int TIMER_PWM_get(uint32_t const freq, uint32_t pin, TIMER_callback_t callback)
 {
     spin_lock(&TIMER_atomic);
-    int retval = TIMER_PWM_HAL_get_channel(gpio, pin);
+    int retval = TIMER_PWM_HAL_get_channel(pin);
 
     if (-1 != retval)
     {
@@ -415,14 +415,13 @@ int TIMER_PWM_get(uint32_t const freq, void *gpio, uint32_t pin, TIMER_callback_
         if (0 == err)
         {
             struct TIMER_context *ctx = &TIMER_context[retval];
-            ctx->config.PWM.gpio = gpio;
             ctx->config.PWM.pin = pin;
 
-            TIMER_PWM_HAL_polarity(ctx->dev, gpio, pin);
+            TIMER_PWM_HAL_polarity(ctx->dev, pin);
         }
         else
         {
-            TIMER_PWM_HAL_release(retval, gpio, pin);
+            TIMER_PWM_HAL_release(retval, pin);
             retval = __set_errno_neg(err);
         }
     }

@@ -63,7 +63,6 @@ extern
     /// timer working mode @PWM context
     struct TIMER_pwm_context
     {
-        void *gpio;
         uint32_t pin;
 
         uint16_t duty;
@@ -132,17 +131,17 @@ void TIMER_HAL_setmatch(void *const dev, uint8_t ch, uint32_t val);
 /** TIMER @PWM
 ****************************************************************************/
 extern __attribute__((nothrow, nonnull(1)))
-    int TIMER_PWM_HAL_get_channel(void *gpio, uint32_t pin);
+    int TIMER_PWM_HAL_get_channel(uint32_t pin);
 
-extern __attribute__((nothrow, nonnull(2)))
-    void TIMER_PWM_HAL_release(int nb, void *gpio, uint32_t pin);
+extern __attribute__((nothrow))
+    void TIMER_PWM_HAL_release(int nb, uint32_t pin);
 
     /**
      * TIMER_PWM_HAL_polarity()
      *  set PWM default polarity, depend by PORT'PIN default LEVEL (invert)
      */
-extern __attribute__((nothrow, nonnull(2)))
-    void TIMER_PWM_HAL_polarity(void *const dev, void *gpio, uint32_t pin);
+extern __attribute__((nothrow))
+    void TIMER_PWM_HAL_polarity(void *const dev, uint32_t pin);
 
     /**
      *  TIMER_PWM_HAL_update() should start TIMER'PWM immdiately

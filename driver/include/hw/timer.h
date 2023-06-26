@@ -211,8 +211,8 @@ extern __attribute__((nothrow, pure))
      *      ENOMEM
      *      EINVAL when PORT'PIN can not configure as PWM output
      */
-extern __attribute__((nothrow, nonnull(2)))
-    int TIMER_PWM_get(uint32_t const freq, void *gpio, uint32_t pin, TIMER_callback_t callback);
+extern __attribute__((nothrow))
+    int TIMER_PWM_get(uint32_t const freq, uint32_t pin, TIMER_callback_t callback);
 
     /**
      *  TIMER_PWM_update() / TIMER_PWM_update_duty()

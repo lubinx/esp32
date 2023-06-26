@@ -44,15 +44,14 @@ static void PWM_initialize(void)
 /***************************************************************************/
 /** @PWM configure
 ****************************************************************************/
-int PWM_get(uint32_t const freq, void *gpio, uint32_t pin, PWM_callback_t callback)
+int PWM_get(uint32_t const freq, uint32_t pin, PWM_callback_t callback)
 {
-    int retval = PWM_HAL_get_channel(freq, gpio, pin);
+    int retval = PWM_HAL_get_channel(freq, pin);
 
     if (-1 != retval)
     {
         struct PWM_config *config = &PWM_config[retval];
 
-        config->gpio = gpio;
         config->pin = pin;
         config->callback = callback;
 
@@ -67,7 +66,7 @@ int PWM_release(int nb)
     if ((uint32_t)nb > PWM_HAL_feature.DEV_count)
         return ENODEV;
 
-    PWM_HAL_release(PWM_config[nb].gpio, PWM_config[nb].pin);
+    PWM_HAL_release(PWM_config[nb].pin);
     return 0;
 }
 

@@ -34,7 +34,7 @@ typedef void (*PWM_callback_t)(uint32_t);
      *      get PWM device no associate on PORT.PIN
      */
 extern __attribute__((nothrow, nonnull(2)))
-    int PWM_get(uint32_t const freq, void *gpio, uint32_t pin, PWM_callback_t callback);
+    int PWM_get(uint32_t const freq, uint32_t pin, PWM_callback_t callback);
 
 extern __attribute__((nothrow))
     int PWM_release(int nb);

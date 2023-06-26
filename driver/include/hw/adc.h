@@ -38,8 +38,6 @@ __BEGIN_DECLS
         uint16_t q_denominator;
     };
 
-    #define ADC_NO_PORT                 ((void *)NULL)
-
 /***************************************************************************
  *  ADC @attr
  ***************************************************************************/
@@ -74,7 +72,7 @@ extern __attribute__((nothrow, nonnull))
      *          EINVAL
      */
 extern __attribute__((nothrow, nonnull(1)))
-    int ADC_attr_positive_input(struct ADC_attr_t *attr, void *gpio, uint32_t pin);
+    int ADC_attr_positive_input(struct ADC_attr_t *attr, uint32_t pin);
 
     /**
      *  ADC_attr_negative_input()
@@ -89,7 +87,7 @@ extern __attribute__((nothrow, nonnull(1)))
      *          EINVAL
      */
 extern __attribute__((nothrow, nonnull(1)))
-    int ADC_attr_negative_input(struct ADC_attr_t *attr, void *gpio, uint32_t pin);
+    int ADC_attr_negative_input(struct ADC_attr_t *attr, uint32_t pin);
 
     /**
      *  ADC_attr_scale()

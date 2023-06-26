@@ -38,7 +38,6 @@ struct GPIO_common_context
     */
 
     /// stored state
-    void *gpio;
     uint32_t pins;
     uint32_t dlvl;
 };
@@ -49,7 +48,6 @@ struct GPIO_callback_context
     GPIO_callback_t callback;
     void *arg;
 
-    void *gpio;
     uint32_t pins;
     enum GPIO_trig_t trig;
 };
@@ -77,7 +75,7 @@ static glist_t callback_list = GLIST_INITIALIZER(callback_list);
 /**  GPIO @configure
 ****************************************************************************/
 /*
-int GPIO_debounce(void *gpio, uint32_t pins, uint32_t millisecond)
+int GPIO_debounce(uint32_t pins, uint32_t millisecond)
 {
     if (0 != GPIO_context.debounce_timeout_id)
     {
@@ -94,7 +92,7 @@ int GPIO_debounce(void *gpio, uint32_t pins, uint32_t millisecond)
 */
 
 /*
-int GPIO_hold_repeating(void *gpio, uint32_t pins, uint32_t millisecond)
+int GPIO_hold_repeating(uint32_t pins, uint32_t millisecond)
 {
     if (0 != GPIO_context.hold_timeout_id)
     {
@@ -114,7 +112,7 @@ int GPIO_hold_repeating(void *gpio, uint32_t pins, uint32_t millisecond)
 /**  GPIO @Input Interrupt Control
 ****************************************************************************/
 __attribute__((weak))
-int GPIO_intr_enable(void *gpio, uint32_t pins, enum GPIO_trig_t trig, GPIO_callback_t callback, void *arg)
+int GPIO_intr_enable(uint32_t pins, enum GPIO_trig_t trig, GPIO_callback_t callback, void *arg)
 {
     int retval = 0;
     struct GPIO_callback_context *ctx = NULL;
@@ -135,6 +133,7 @@ int GPIO_intr_enable(void *gpio, uint32_t pins, enum GPIO_trig_t trig, GPIO_call
                 break;
             }
             */
+            /*
 
             if (gpio == iter_ctx->gpio)
             {
@@ -144,6 +143,7 @@ int GPIO_intr_enable(void *gpio, uint32_t pins, enum GPIO_trig_t trig, GPIO_call
                 ctx = iter_ctx;
                 break;
             }
+            */
 
             iter = glist_iter_next(&callback_list, iter);
         }
@@ -157,7 +157,6 @@ int GPIO_intr_enable(void *gpio, uint32_t pins, enum GPIO_trig_t trig, GPIO_call
             ctx->callback = callback;
             ctx->arg = arg;
 
-            ctx->gpio = gpio;
             ctx->pins = pins;
             ctx->trig = trig;
 
@@ -168,14 +167,14 @@ int GPIO_intr_enable(void *gpio, uint32_t pins, enum GPIO_trig_t trig, GPIO_call
     }
 
     if (0 == retval && pins)
-        GPIO_HAL_intr_enable(gpio, pins, trig);
+        GPIO_HAL_intr_enable(pins, trig);
 
     spin_unlock(&GPIO_atomic);
     return retval;
 }
 
 __attribute__((weak))
-void GPIO_intr_disable(void *gpio, uint32_t pins)
+void GPIO_intr_disable(uint32_t pins)
 {
     spin_lock(&GPIO_atomic);
 
@@ -184,9 +183,6 @@ void GPIO_intr_disable(void *gpio, uint32_t pins)
     {
         struct GPIO_callback_context *iter_ctx = *iter;
         uint32_t PIN_MASK;
-
-        if (gpio != iter_ctx->gpio)
-            goto iterate_next;
 
         PIN_MASK = pins & iter_ctx->pins;
         if (! PIN_MASK)
@@ -205,7 +201,7 @@ iterate_next:
         }
     }
 
-    GPIO_HAL_intr_disable(gpio, pins);
+    GPIO_HAL_intr_disable(pins);
     spin_unlock(&GPIO_atomic);
 }
 
@@ -221,7 +217,7 @@ void GPIO_intr_disable_cb(GPIO_callback_t callback)
 
         if (callback == ctx->callback)
         {
-            GPIO_HAL_intr_disable(ctx->gpio, ctx->pins);
+            GPIO_HAL_intr_disable(ctx->pins);
 
             glist_iter_extract(&callback_list, iter);
             KERNEL_mfree(ctx);
@@ -235,7 +231,7 @@ void GPIO_intr_disable_cb(GPIO_callback_t callback)
 /***************************************************************************/
 /** @INT callback
 ****************************************************************************/
-void GPIO_HAL_intr_callback(void *gpio, uint32_t pins, void *arg)
+void GPIO_HAL_intr_callback(uint32_t pins, void *arg)
 {
     /*
     if (0 != GPIO_context.debounce_timeout_id)
@@ -244,33 +240,29 @@ void GPIO_HAL_intr_callback(void *gpio, uint32_t pins, void *arg)
         timeout_stop(GPIO_context.hold_timeout_id);
     */
 
-    GPIO_context.gpio = gpio;
     GPIO_context.pins = pins;
 
     /*
     if (((uint32_t)gpio & (uint32_t)GPIO_context.GPIO_debounce_mask) &&
         (pins & GPIO_context.PIN_debounce_mask))
     {
-        GPIO_context.dlvl = GPIO_peek(gpio, pins);
+        GPIO_context.dlvl = GPIO_peek(pins);
         timeout_start(GPIO_context.debounce_timeout_id, arg);
     }
     else
     */
-        GPIO_HAL_execute_callback(gpio, pins, arg);
+        GPIO_HAL_execute_callback(pins, arg);
 }
 
-void GPIO_HAL_execute_callback(void *gpio, uint32_t pins, void *arg)
+void GPIO_HAL_execute_callback(uint32_t pins, void *arg)
 {
     for (struct GPIO_callback_context **iter = glist_iter_begin(&callback_list);
         iter != glist_iter_end(&callback_list);
         iter = glist_iter_next(&callback_list, iter))
     {
-        if (gpio != (*iter)->gpio)
-            continue;
-
         uint32_t PIN_MASK = (*iter)->pins & pins;
         if (PIN_MASK)
-            (*iter)->callback(gpio, PIN_MASK, (*iter)->arg);
+            (*iter)->callback(PIN_MASK, (*iter)->arg);
     }
 
     /*
@@ -279,7 +271,7 @@ void GPIO_HAL_execute_callback(void *gpio, uint32_t pins, void *arg)
         if (((uint32_t)gpio & (uint32_t)GPIO_context.GPIO_repeat_mask) &&
             (pins & GPIO_context.PIN_repeat_mask))
         {
-            GPIO_context.dlvl = GPIO_peek(gpio, pins);
+            GPIO_context.dlvl = GPIO_peek(pins);
             timeout_start(GPIO_context.hold_timeout_id, arg);
         }
         else
@@ -295,6 +287,6 @@ void GPIO_HAL_execute_callback(void *gpio, uint32_t pins, void *arg)
 ****************************************************************************/
 static void GPIO_timeout_callback(void *arg)
 {
-    if (GPIO_context.dlvl == GPIO_peek(GPIO_context.gpio, GPIO_context.pins))
-        GPIO_HAL_execute_callback(GPIO_context.gpio, GPIO_context.pins, arg);
+    if (GPIO_context.dlvl == GPIO_peek(GPIO_context.pins))
+        GPIO_HAL_execute_callback(GPIO_context.pins, arg);
 }
