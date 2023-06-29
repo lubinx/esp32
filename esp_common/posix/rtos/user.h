@@ -31,8 +31,8 @@ __BEGIN_DECLS
 /***************************************************************************/
 /** generic waitfor
 ****************************************************************************/
-    // infinite timeout
-    #define INFINITE                    (0xFFFFFFFFUL)
+    #define WAIT_FOREVER                (0xFFFFFFFFUL)
+    #define SLEEP_FOREVER               WAIT_FOREVER
 
     /**
      *  waitfor() generic waitfor synchronize objects
