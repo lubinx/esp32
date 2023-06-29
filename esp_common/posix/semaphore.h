@@ -23,7 +23,7 @@
 
     /* MAX semaphore supported (2^31) */
 #ifndef SEM_VALUE_MAX
-    #define SEM_VALUE_MAX               (0x7FFFFFFF)
+    #define SEM_VALUE_MAX               (0xFFFFFFFF)
 #endif
 
     /* Value returned if `sem_open' failed.  */
