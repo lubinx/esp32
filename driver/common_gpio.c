@@ -66,7 +66,6 @@ static struct GPIO_common_context GPIO_context = {0};
  *      GPIO_intr_enable
  *      GPIO_intr_disable
  *      GPIO_intr_disable_cb
- *      GPIO_HAL_execute_callback
  *
  */
 static glist_t callback_list = GLIST_INITIALIZER(callback_list);
@@ -231,29 +230,6 @@ void GPIO_intr_disable_cb(GPIO_callback_t callback)
 /***************************************************************************/
 /** @INT callback
 ****************************************************************************/
-void GPIO_HAL_intr_callback(uint32_t pins, void *arg)
-{
-    /*
-    if (0 != GPIO_context.debounce_timeout_id)
-        timeout_stop(GPIO_context.debounce_timeout_id);
-    if (0 != GPIO_context.hold_timeout_id)
-        timeout_stop(GPIO_context.hold_timeout_id);
-    */
-
-    GPIO_context.pins = pins;
-
-    /*
-    if (((uint32_t)gpio & (uint32_t)GPIO_context.GPIO_debounce_mask) &&
-        (pins & GPIO_context.PIN_debounce_mask))
-    {
-        GPIO_context.dlvl = GPIO_peek(pins);
-        timeout_start(GPIO_context.debounce_timeout_id, arg);
-    }
-    else
-    */
-        GPIO_HAL_execute_callback(pins, arg);
-}
-
 void GPIO_HAL_execute_callback(uint32_t pins, void *arg)
 {
     for (struct GPIO_callback_context **iter = glist_iter_begin(&callback_list);
@@ -280,6 +256,29 @@ void GPIO_HAL_execute_callback(uint32_t pins, void *arg)
     */
 
     ARG_UNUSED(arg);
+}
+
+void GPIO_HAL_intr_callback(uint32_t pins, void *arg)
+{
+    /*
+    if (0 != GPIO_context.debounce_timeout_id)
+        timeout_stop(GPIO_context.debounce_timeout_id);
+    if (0 != GPIO_context.hold_timeout_id)
+        timeout_stop(GPIO_context.hold_timeout_id);
+    */
+
+    GPIO_context.pins = pins;
+
+    /*
+    if (((uint32_t)gpio & (uint32_t)GPIO_context.GPIO_debounce_mask) &&
+        (pins & GPIO_context.PIN_debounce_mask))
+    {
+        GPIO_context.dlvl = GPIO_peek(pins);
+        timeout_start(GPIO_context.debounce_timeout_id, arg);
+    }
+    else
+    */
+        GPIO_HAL_execute_callback(pins, arg);
 }
 
 /***************************************************************************/

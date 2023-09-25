@@ -676,7 +676,7 @@ static ssize_t I2C_read(int fd, void *buf, size_t bufsize)
     {
         timeo = AsFD(fd)->write_timeo;
         if (0 == timeo)
-            timeo = INFINITE;
+            timeo = WAIT_FOREVER;
     }
     else
         timeo = 0;
@@ -707,7 +707,7 @@ static ssize_t I2C_write(int fd, void const *buf, size_t count)
     {
         timeo = AsFD(fd)->write_timeo;
         if (0 == timeo)
-            timeo = INFINITE;
+            timeo = WAIT_FOREVER;
     }
     else
         timeo = 0;

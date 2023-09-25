@@ -180,7 +180,7 @@ ssize_t mqueue_recv(int mqd, void *msg, unsigned int *prio)
     {
         timeo = AsFD(mqd)->read_timeo;
         if (0 == timeo)
-            timeo = INFINITE;
+            timeo = WAIT_FOREVER;
     }
     else
         timeo = 0;
@@ -220,7 +220,7 @@ ssize_t mqueue_send(int mqd, void const *msg, unsigned int prio)
     {
         timeo = AsFD(mqd)->write_timeo;
         if (0 == timeo)
-            timeo = INFINITE;
+            timeo = WAIT_FOREVER;
     }
     else
         timeo = 0;
