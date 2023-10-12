@@ -298,7 +298,7 @@ ssize_t writeln(int fd, char const *buf, size_t count)
 }
 
 /***************************************************************************/
-/** @implement: uio
+/** @implements: uio
 ****************************************************************************/
 ssize_t readv(int fd, struct iovec const *iov, int iovcnt)
 {

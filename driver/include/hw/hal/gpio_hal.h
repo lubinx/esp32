@@ -38,11 +38,5 @@ extern __attribute__((nothrow))
 extern __attribute__((nothrow))
     void GPIO_HAL_intr_callback(uint32_t pins, void *arg);
 
-    /**
-     *  GPIO HW actually execute user provide's callback function
-     */
-extern __attribute__((nothrow))
-    void GPIO_HAL_execute_callback(uint32_t pins, void *arg);
-
 __END_DECLS
 #endif

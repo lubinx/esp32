@@ -369,9 +369,9 @@ int TIMER_match(int nb, uint16_t id, uint32_t val, void *arg)
     else
         return ENOMEM;
 
-    // no section? assume its a INFINITE matching
+    // no section? assume its a WAIT_FOREVER matching
     if (! ctx->config.MATCH.section_pushing)
-        TIMER_match_section(nb, (uint16_t)-1, INFINITE);
+        TIMER_match_section(nb, (uint16_t)-1, WAIT_FOREVER);
 
     spin_lock(&TIMER_atomic);
     struct TIMER_match_section *section = ctx->config.MATCH.section_pushing;
@@ -489,7 +489,7 @@ static bool CTX_match_load_next(struct TIMER_context *ctx)
     {
         ctx->curr_repeating ++;
 
-        if (ctx->curr_repeating >= section_executing->repeat && INFINITE != ctx->curr_repeating)
+        if (ctx->curr_repeating >= section_executing->repeat && WAIT_FOREVER != ctx->curr_repeating)
         {
             ctx->callback(section_executing->id, NULL, ctx->curr_repeating);
             while (section_executing->match_entry)
@@ -525,7 +525,7 @@ static bool CTX_match_load_next(struct TIMER_context *ctx)
 
         if (! curr->link_next)
         {
-            /// @fill INFINITE
+            /// @fill WAIT_FOREVER
             for (; idx < TIMER_MR_RST; idx ++)
                 TIMER_HAL_setmatch(ctx->dev, idx, (uint32_t)-1);
 
