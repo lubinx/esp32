@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <time.h>
-#include <sys/stime.h>
+#include <rtc.h>
 #include <sys/errno.h>
 
 #include "sh/ucsh.h"
