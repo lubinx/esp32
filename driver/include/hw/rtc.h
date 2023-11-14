@@ -7,10 +7,10 @@
 __BEGIN_DECLS
 
 extern __attribute__((nothrow))
-    void RTC_HAL_get_time(struct timeval *tv);
+    void RTC_time(struct timeval *tv);
 
 extern __attribute__((nothrow))
-    void RTC_HAL_set_time(time_t ts);
+    void RTC_set_time(time_t ts);
 
 __END_DECLS
 #endif
