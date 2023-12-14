@@ -38,13 +38,13 @@ time_t time(time_t *timep)
 
 int stime(time_t const ts)
 {
-    RTC_set_time(ts);
+    RTC_set_epoch_time(ts);
     return 0;
 }
 
 /*
 __attribute__((weak))
-void RTC_time(struct timeval *tv)
+void RTC_timeval(struct timeval *tv)
 {
     tv->tv_sec = 0;
     tv->tv_usec = 0;

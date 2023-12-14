@@ -7,10 +7,10 @@
 __BEGIN_DECLS
 
 extern __attribute__((nothrow))
-    void RTC_time(struct timeval *tv);
+    void RTC_timeval(struct timeval *tv);
 
 extern __attribute__((nothrow))
-    void RTC_set_time(time_t ts);
+    void RTC_set_epoch_time(time_t ts);
 
 __END_DECLS
 #endif

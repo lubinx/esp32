@@ -33,7 +33,7 @@ uint64_t RTCCNTL_get_tick(void)
 }
 
 __attribute__((weak))
-void RTC_time(struct timeval *tv)
+void RTC_timeval(struct timeval *tv)
 {
     uint64_t tick = RTCCNTL_get_tick() + RTCC_tick_offset;
 
@@ -42,7 +42,7 @@ void RTC_time(struct timeval *tv)
 }
 
 __attribute__((weak))
-void RTC_set_time(time_t ts)
+void RTC_set_epoch_time(time_t ts)
 {
     ARG_UNUSED(ts);
 }
