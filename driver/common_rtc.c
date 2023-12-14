@@ -8,7 +8,7 @@
 ****************************************************************************/
 int gettimeofday(struct timeval *tv, void *_tz)
 {
-    RTC_time(tv);
+    RTC_timeval(tv);
 
     ARG_UNUSED(_tz);
     return 0;
@@ -16,7 +16,7 @@ int gettimeofday(struct timeval *tv, void *_tz)
 
 int _gettimeofday_r(struct _reent *r, struct timeval *tv, void *_tz)
 {
-    RTC_time(tv);
+    RTC_timeval(tv);
 
     ARG_UNUSED(r, _tz);
     return 0;
@@ -28,7 +28,7 @@ int _gettimeofday_r(struct _reent *r, struct timeval *tv, void *_tz)
 time_t time(time_t *timep)
 {
     struct timeval tv;
-    RTC_time(&tv);
+    RTC_timeval(&tv);
 
     if (timep)
         *timep = tv.tv_sec;
