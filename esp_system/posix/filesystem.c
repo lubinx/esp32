@@ -25,7 +25,7 @@ struct FS_context
     /// @collection of free ext blocks
     glist_t ext_buf_list;
     /// ext_buf_preallocated
-    struct FS_ext prealloc[20];
+    struct fsio_t prealloc[20];
 };
 
 /***************************************************************************/
@@ -108,9 +108,9 @@ void FILESYSTEM_fd_cleanup(int fd)
 {
     FS_dirfd_link_cleanup(-1, fd);
 
-    // AsFD(fd)->ext can be null
-    if (AsFD(fd)->ext)
-        FS_extbuf_release(AsFD(fd)->ext);
+    // AsFD(fd)->fsio can be null
+    if (AsFD(fd)->fsio)
+        FS_extbuf_release(AsFD(fd)->fsio);
 }
 
 /***************************************************************************/
@@ -125,7 +125,7 @@ int FILESYSTEM_format(char const *pathmnt, char const *fstype)
     if (NULL == AsFD(fd)->fs->format)
         return __set_errno_neg(EPERM);
     else
-        return AsFD(fd)->fs->format(AsFD(fd)->ext, fstype);
+        return AsFD(fd)->fs->format(AsFD(fd)->fsio, fstype);
 }
 
 int chdir(char const *pathname)
@@ -190,7 +190,7 @@ char *getcwd(char *buf, size_t size)
 
         while (0 != fd)
         {
-            struct FS_ext *ext = AsFD(fd)->ext;
+            struct fsio_t *fsio = AsFD(fd)->fsio;
 
             DIR *dirp = fdopendir(parent_fd);
             seekdir(dirp, (off_t)ext->ino_entry);
@@ -244,7 +244,7 @@ char *get_current_dir_name(void)
 }
 
 /***************************************************************************/
-/** @implements fcntl.h / io.h
+/** @implements fcntl.h / fdio.h
 ****************************************************************************/
 int creat(char const *pathname, mode_t mode)
 {
@@ -357,12 +357,12 @@ int unlinkat(int dirfd, char const *pathname, int flags)
         return fd;
 
     /// @acquire ino
-    ino_t ino = ((struct FS_ext *)AsFD(fd)->ext)->ino_entry;
+    ino_t ino = ((struct fsio_t *)AsFD(fd)->fsio)->ino_entry;
 
     /// get @parent's filesystem it should always dirfd
     struct KERNEL_fd *parent = AsFD(fd)->glist_next;
     struct FS_implement const *fs = parent->fs;
-    void *ext = (struct FS_ext *)parent->ext;
+    void *ext = (struct fsio_t *)parent->fsio;
 
     // release fd's memory
     close(fd);
@@ -389,7 +389,7 @@ int ftruncate(int fd, off_t size)
 
     struct FS_implement const *fs = (struct FS_implement const *)AsFD(fd)->fs;
     if (fs->truncate)
-        return fs->truncate(AsFD(fd)->ext, size);
+        return fs->truncate(AsFD(fd)->fsio, size);
     else
         return __set_errno_neg(ENOSYS);
 }
@@ -488,7 +488,7 @@ void rewinddir(DIR *dirp)
     AsFD(dirp->fd)->position = 0;
     ((struct dirent *)(dirp + 1))->d_ino = INO_CURRENT_DIR;
 
-    struct FS_ext *ext = (struct FS_ext *)AsFD(dirp->fd)->ext;
+    struct fsio_t *fsio = (struct fsio_t *)AsFD(dirp->fd)->fsio;
     ext->ino_entry = ext->ino_working = INO_CURRENT_DIR;
 }
 
@@ -605,7 +605,7 @@ static int FS_openat(struct _reent *r, int dirfd, char const *pathname, int flag
         {
             if (*p) p ++;
 
-            struct FS_ext *ext = FS_extbuf_alloc();
+            struct fsio_t *fsio = FS_extbuf_alloc();
             if (! ext)
             {
                 fd = __set_errno_r_neg(r, ENOMEM);
@@ -675,7 +675,7 @@ static int FS_openat(struct _reent *r, int dirfd, char const *pathname, int flag
                 break;
         }
 
-        struct FS_ext *ext = FS_extbuf_alloc();
+        struct fsio_t *fsio = FS_extbuf_alloc();
         if (! ext)
         {
             close(fd);
@@ -685,7 +685,7 @@ static int FS_openat(struct _reent *r, int dirfd, char const *pathname, int flag
             goto FS_openat_exit;
         }
         ext->ino_entry = ext->ino_working = INO_CURRENT_DIR;
-        ext->data = ((struct FS_ext *)AsFD(fd)->ext)->data;
+        ext->data = ((struct fsio_t *)AsFD(fd)->fsio)->data;
 
         struct FS_implement const *fs = (struct FS_implement const *)AsFD(parent_fd)->fs;
         if (! ent)
@@ -768,7 +768,7 @@ static void FS_dirfd_link_cleanup(int base_dirfd, int fd)
 
 static void FS_dirfd_cleanup(int fd)
 {
-    FS_extbuf_release(AsFD(fd)->ext);
+    FS_extbuf_release(AsFD(fd)->fsio);
 
     /// @prevent KERNEL_handle_release() @recursive call FILESYSTEM_fd_cleanup()
     AsFD(fd)->fs = NULL;
@@ -778,7 +778,7 @@ static void FS_dirfd_cleanup(int fd)
 static void *FS_extbuf_alloc(void)
 {
     FILESYSTEM_lock();
-    struct FS_ext *ptr = glist_pop(&FS_context.ext_buf_list);
+    struct fsio_t *ptr = glist_pop(&FS_context.ext_buf_list);
 
     if (! ptr)
     {

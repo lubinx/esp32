@@ -2,7 +2,7 @@ list(APPEND srcs
     "${CMAKE_CURRENT_LIST_DIR}/_retarget.c"
     "${CMAKE_CURRENT_LIST_DIR}/_rtos_freertos_impl.c"
     "${CMAKE_CURRENT_LIST_DIR}/_rtos_kernel.c"
-    "${CMAKE_CURRENT_LIST_DIR}/io.c"
+    "${CMAKE_CURRENT_LIST_DIR}/fdio.c"
     "${CMAKE_CURRENT_LIST_DIR}/filesystem.c"
     "${CMAKE_CURRENT_LIST_DIR}/mqueue.c"
     "${CMAKE_CURRENT_LIST_DIR}/random.c"

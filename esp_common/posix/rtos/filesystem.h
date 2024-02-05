@@ -36,7 +36,7 @@ extern __attribute__((nothrow))
     /**
      *  fd->ext of filesystem
      */
-    struct FS_ext
+    struct fsio_t
     {
         /// the data parameter pass by mount()
         void *data;
@@ -63,11 +63,11 @@ extern __attribute__((nothrow))
         uint16_t __pad;
         struct FD_implement const *fsio;
 
-        int (* open)    (struct FS_ext *ext);
-        int (* create)  (struct FS_ext *ext, char const *name, mode_t mode);
-        int (* truncate)(struct FS_ext *ext, off_t size);
-        int (* unlink)  (struct FS_ext *ext, ino_t ino);
-        int (* format)  (struct FS_ext *ext, char const *fstype);
+        int (* open)    (struct fsio_t *fsio);
+        int (* create)  (struct fsio_t *fsio, char const *name, mode_t mode);
+        int (* truncate)(struct fsio_t *fsio, off_t size);
+        int (* unlink)  (struct fsio_t *fsio, ino_t ino);
+        int (* format)  (struct fsio_t *fsio, char const *fstype);
     };
     struct FD_implement;
 

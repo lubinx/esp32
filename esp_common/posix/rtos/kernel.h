@@ -86,7 +86,6 @@
     // mqd
     #define FD_TAG_MQD                  (FD_TAG_VFD | FD_TAG_BLOCK | FD_TAG_FIFO)
 
-
     struct KERNEL_fd
     {
         void        *glist_next;
@@ -96,44 +95,26 @@
     ///----
         // fd'io implement
         struct FD_implement const *implement;
-        // ext parameters
-        //     struct FS_ext * when fs is not NULL
-        //     otherwise pointer to fd's customize data
-        void *ext;
-        // more detail see @filesystem.h
-        //     fs will contain a none NULL struct FS_implement when fd is opened by filesystem
-        //      and ext will point to a valid struct FS_ext
+        // filesystem
+        //  fs and fdio is valid when fd is open by filesystem
         struct FS_implement const *fs;
-        //
+
+        // fd parameters
+        union // __attribute__((packed))
+        {
+            /// fs parameters
+            void *fsio;
+            /// fd ext parameters
+            void *ext;
+        };
+        // fd syncobjs
         handle_t read_rdy;
         handle_t write_rdy;
-
-        // changing by seek
+        /// seek
         uintptr_t position;
         uint32_t read_timeo, write_timeo;
     };
     #define AsFD(handle)                ((struct KERNEL_fd *)handle)
-
-/***************************************************************************/
-/** @virtual file descriptor
-****************************************************************************/
-    struct KERNEL_vfd
-    {
-        void        *glist_next;
-        uint8_t     cid;
-        uint8_t     flags;
-        uint16_t    tag;
-    //---- fd
-        struct FD_implement const *implement;
-        void *ext;
-        struct FS_implement const *fs;
-        handle_t read_rdy;
-        handle_t write_rdy;
-        uintptr_t position;
-    //----
-        uint32_t size;                  // read_timeo => size
-    };
-    #define AsVFD(handle)               ((struct CORE_vfd *)handle)
 
 /***************************************************************************/
 /** @mqueue file descriptor
@@ -146,13 +127,12 @@
         uint16_t    tag;
     ///---- fd
         struct FD_implement const *implement;
+        char const *name;               // NOTE: fs => name: posix compatiable
         void *ext;
-
-        char const *name;               // fs => name: posix compatiable
         handle_t read_rdy;
         handle_t write_rdy;
-        void *rsv;
     ///----
+        void *rsv;                      // NOTE: fd'position is no used by mqd
         uint32_t read_timeo, write_timeo;
     };
     #define AsMqd(handle)               ((struct KERNEL_mqd *)handle)
